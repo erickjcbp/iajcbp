@@ -72,9 +72,13 @@
       height:92px;width:auto;margin:0 auto 16px;display:block;
       filter:drop-shadow(0 0 16px rgba(139,32,32,.3));transition:filter .3s;
     }
+    .page-footer{
+      position:fixed;bottom:20px;left:0;right:0;
+      text-align:center;z-index:1;pointer-events:none;
+    }
     .logo-pascom{
-      height:46px;width:auto;margin:12px auto 0;display:block;
-      opacity:.75;filter:drop-shadow(0 0 4px rgba(139,32,32,.15));transition:filter .3s;
+      height:28px;width:auto;display:inline-block;
+      opacity:.55;filter:drop-shadow(0 0 4px rgba(139,32,32,.15));transition:filter .3s;
     }
     .logo h1{
       font-family:'Cinzel',serif;font-size:20px;font-weight:700;
@@ -139,8 +143,9 @@
     .screen{display:none;}.screen.active{display:block;}
     @media(max-width:480px){
       .card{padding:32px 24px;}
-      .logo-img{height:72px;}.logo-pascom{height:36px;}
+      .logo-img{height:72px;}
       .logo h1{font-size:16px;}
+      .logo-pascom{height:22px;}
     }
   </style>
 </head>
@@ -157,11 +162,6 @@
       alt="JCBP">
     <h1>Central JCBP</h1>
     <p>Paróquia Jesus Cristo Bom Pastor — Limeira/SP</p>
-    <img class="logo-pascom" id="logo-pascom"
-      src="../../midia/logos/Logo%20Pascom%20Branco.png"
-      data-dark="../../midia/logos/Logo%20Pascom%20Branco.png"
-      data-light="../../midia/logos/Logo%20Pascom%20Colorido.png"
-      alt="Pascom">
   </div>
   <div class="ornament">✦ ✦ ✦</div>
 
@@ -205,6 +205,14 @@
     <a class="link-action" onclick="showTab('login')">← Voltar ao login</a>
     <div class="msg" id="msg-esqueci"></div>
   </div>
+</div>
+
+<div class="page-footer">
+  <img class="logo-pascom" id="logo-pascom"
+    src="../../midia/logos/Logo%20Pascom%20Branco.png"
+    data-dark="../../midia/logos/Logo%20Pascom%20Branco.png"
+    data-light="../../midia/logos/Logo%20Pascom%20Colorido.png"
+    alt="Pascom">
 </div>
 
 <script>
