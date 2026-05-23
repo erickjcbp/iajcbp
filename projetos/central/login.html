@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Central JCBP</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{min-height:100vh;display:flex;align-items:center;justify-content:center;
+         background:#0f172a;font-family:'Segoe UI',sans-serif;color:#f1f5f9;}
+    .card{background:#1e293b;border-radius:16px;padding:40px;width:100%;max-width:400px;
+          box-shadow:0 20px 60px rgba(0,0,0,.4);}
+    .logo{text-align:center;margin-bottom:32px;}
+    .logo h1{font-size:22px;font-weight:700;color:#fff;letter-spacing:.5px;}
+    .logo p{font-size:13px;color:#94a3b8;margin-top:6px;}
+    .tabs{display:flex;margin-bottom:28px;border-radius:8px;overflow:hidden;
+          border:1px solid #334155;}
+    .tab-btn{flex:1;padding:10px;background:transparent;border:none;
+             color:#94a3b8;cursor:pointer;font-size:14px;transition:all .2s;}
+    .tab-btn.active{background:#3b82f6;color:#fff;font-weight:600;}
+    label{display:block;font-size:13px;color:#94a3b8;margin-bottom:6px;}
+    input,textarea{width:100%;padding:10px 14px;background:#0f172a;
+                   border:1px solid #334155;border-radius:8px;color:#f1f5f9;
+                   font-size:14px;outline:none;transition:border-color .2s;
+                   margin-bottom:16px;}
+    input:focus,textarea:focus{border-color:#3b82f6;}
+    textarea{resize:vertical;min-height:80px;}
+    .btn{width:100%;padding:12px;background:#3b82f6;color:#fff;border:none;
+         border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;
+         transition:background .2s;}
+    .btn:hover{background:#2563eb;}
+    .btn:disabled{background:#334155;cursor:not-allowed;}
+    .msg{margin-top:14px;padding:10px 14px;border-radius:8px;font-size:13px;display:none;}
+    .msg.error{background:#fee2e2;color:#991b1b;display:block;}
+    .msg.success{background:#dcfce7;color:#166534;display:block;}
+    .screen{display:none;}
+    .screen.active{display:block;}
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <h1>Central JCBP</h1>
+    <p>Igreja Jesus Cristo Bom Pastor</p>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('login')">Entrar</button>
+    <button class="tab-btn" onclick="showTab('solicitar')">Solicitar Acesso</button>
+  </div>
+
+  <div id="screen-login" class="screen active">
+    <label>Email</label>
+    <input type="email" id="login-email" placeholder="seu@email.com">
+    <label>Senha</label>
+    <input type="password" id="login-senha" placeholder="••••••••"
+           onkeydown="if(event.key==='Enter')fazerLogin()">
+    <button class="btn" id="btn-login" onclick="fazerLogin()">Entrar</button>
+    <div class="msg" id="msg-login"></div>
+  </div>
+
+  <div id="screen-solicitar" class="screen">
+    <label>Nome completo</label>
+    <input type="text" id="sol-nome" placeholder="Seu nome completo">
+    <label>Email</label>
+    <input type="email" id="sol-email" placeholder="seu@email.com">
+    <label>Grupo / Ministério de interesse</label>
+    <input type="text" id="sol-grupo" placeholder="Ex: Ministério de Louvor">
+    <label>Mensagem (opcional)</label>
+    <textarea id="sol-mensagem" placeholder="Conte um pouco sobre você..."></textarea>
+    <button class="btn" id="btn-solicitar" onclick="enviarSolicitacao()">
+      Enviar Solicitação
+    </button>
+    <div class="msg" id="msg-solicitar"></div>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://fttjgsotuosjfrasttds.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGpnc290dW9zamZyYXN0dGRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MzU3NjUsImV4cCI6MjA5NTExMTc2NX0.BvofcR2cIXP7Bc3r2V0VOgc-JXPefX7JGGwtzv0d_eA';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  function showTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach((b, i) =>
+      b.classList.toggle('active', ['login','solicitar'][i] === tab));
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + tab).classList.add('active');
+  }
+
+  async function fazerLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const senha = document.getElementById('login-senha').value;
+    const msg = document.getElementById('msg-login');
+    const btn = document.getElementById('btn-login');
+    msg.className = 'msg'; msg.textContent = '';
+    if (!email || !senha) {
+      msg.className = 'msg error';
+      msg.textContent = 'Preencha email e senha.';
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Entrando...';
+    const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+    if (error) {
+      msg.className = 'msg error';
+      msg.textContent = 'Email ou senha incorretos.';
+      btn.disabled = false; btn.textContent = 'Entrar';
+      return;
+    }
+    window.location.href = 'central.html';
+  }
+
+  async function enviarSolicitacao() {
+    const nome = document.getElementById('sol-nome').value.trim();
+    const email = document.getElementById('sol-email').value.trim();
+    const grupo = document.getElementById('sol-grupo').value.trim();
+    const mensagem = document.getElementById('sol-mensagem').value.trim();
+    const msg = document.getElementById('msg-solicitar');
+    const btn = document.getElementById('btn-solicitar');
+    msg.className = 'msg'; msg.textContent = '';
+    if (!nome || !email) {
+      msg.className = 'msg error';
+      msg.textContent = 'Nome e email são obrigatórios.';
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Enviando...';
+    const { error } = await sb.from('access_requests').insert({
+      nome, email,
+      grupo_interesse: grupo || null,
+      mensagem: mensagem || null
+    });
+    if (error) {
+      msg.className = 'msg error';
+      msg.textContent = 'Erro ao enviar. Tente novamente.';
+      btn.disabled = false; btn.textContent = 'Enviar Solicitação';
+      return;
+    }
+    msg.className = 'msg success';
+    msg.textContent = 'Solicitação enviada! Aguarde a aprovação do administrador.';
+    btn.disabled = true;
+  }
+
+  sb.auth.getSession().then(({ data: { session } }) => {
+    if (session) window.location.href = 'central.html';
+  });
+</script>
+</body>
+</html>

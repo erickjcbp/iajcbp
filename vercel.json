@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/",        "destination": "/projetos/central/login.html"   },
+    { "source": "/central", "destination": "/projetos/central/central.html" }
+  ]
+}

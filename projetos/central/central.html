@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Central JCBP</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{min-height:100vh;background:#0f172a;font-family:'Segoe UI',sans-serif;color:#f1f5f9;}
+    /* Header */
+    .header{background:#1e293b;border-bottom:1px solid #334155;padding:0 24px;
+            height:60px;display:flex;align-items:center;justify-content:space-between;
+            position:sticky;top:0;z-index:10;}
+    .header-logo{font-size:18px;font-weight:700;color:#fff;}
+    .header-user{display:flex;align-items:center;gap:12px;font-size:14px;color:#94a3b8;}
+    .btn-sair{background:transparent;border:1px solid #334155;color:#94a3b8;
+              padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px;
+              transition:all .2s;}
+    .btn-sair:hover{border-color:#3b82f6;color:#3b82f6;}
+    /* Nav */
+    .nav{display:flex;padding:0 24px;background:#1e293b;border-bottom:1px solid #334155;
+         overflow-x:auto;}
+    .nav-btn{padding:14px 20px;background:transparent;border:none;
+             border-bottom:2px solid transparent;color:#94a3b8;cursor:pointer;
+             font-size:14px;transition:all .2s;white-space:nowrap;}
+    .nav-btn.active{color:#3b82f6;border-bottom-color:#3b82f6;}
+    /* Screens */
+    .screen{display:none;padding:32px 24px;max-width:1200px;}
+    .screen.active{display:block;}
+    .page-title{font-size:22px;font-weight:700;margin-bottom:24px;}
+    /* Tool grid */
+    .tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px;}
+    .tool-card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:24px;
+               cursor:pointer;transition:all .2s;text-decoration:none;color:inherit;display:block;}
+    .tool-card:hover{border-color:#3b82f6;transform:translateY(-2px);box-shadow:0 8px 24px rgba(59,130,246,.15);}
+    .tool-icon{font-size:36px;margin-bottom:12px;}
+    .tool-name{font-size:16px;font-weight:600;color:#fff;margin-bottom:6px;}
+    .tool-desc{font-size:13px;color:#94a3b8;line-height:1.5;}
+    /* Admin */
+    .admin-tabs{display:flex;border-bottom:1px solid #334155;margin-bottom:28px;overflow-x:auto;}
+    .admin-tab{padding:12px 20px;background:transparent;border:none;
+               border-bottom:2px solid transparent;color:#94a3b8;cursor:pointer;
+               font-size:14px;white-space:nowrap;transition:all .2s;}
+    .admin-tab.active{color:#3b82f6;border-bottom-color:#3b82f6;}
+    .admin-content{display:none;}
+    .admin-content.active{display:block;}
+    /* Table */
+    .table-wrap{overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;font-size:14px;min-width:560px;}
+    th{text-align:left;padding:10px 12px;color:#64748b;font-weight:500;
+       border-bottom:1px solid #334155;white-space:nowrap;}
+    td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);color:#e2e8f0;
+       vertical-align:middle;}
+    tr:hover td{background:rgba(255,255,255,.03);}
+    /* Badge */
+    .badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:600;}
+    .badge.pendente{background:#fef3c7;color:#92400e;}
+    .badge.ativo,.badge.aprovado{background:#dcfce7;color:#166534;}
+    .badge.bloqueado,.badge.rejeitado{background:#fee2e2;color:#991b1b;}
+    .badge.admin{background:#ede9fe;color:#5b21b6;}
+    .badge.lider{background:#dbeafe;color:#1e40af;}
+    .badge.membro{background:#e0e7ff;color:#3730a3;}
+    /* Buttons */
+    .btn-sm{padding:5px 12px;border-radius:6px;font-size:13px;cursor:pointer;
+            border:none;font-weight:500;transition:opacity .2s;}
+    .btn-sm:hover{opacity:.85;}
+    .btn-sm.green{background:#22c55e;color:#fff;}
+    .btn-sm.red{background:#ef4444;color:#fff;}
+    .btn-sm.blue{background:#3b82f6;color:#fff;}
+    .btn-sm.gray{background:#475569;color:#fff;}
+    .btn-sm.orange{background:#f97316;color:#fff;}
+    .row-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+    .toolbar{display:flex;justify-content:flex-end;margin-bottom:16px;}
+    /* Modal */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);
+                   display:none;align-items:center;justify-content:center;z-index:100;padding:16px;}
+    .modal-overlay.open{display:flex;}
+    .modal{background:#1e293b;border-radius:16px;padding:32px;width:100%;
+           max-width:480px;border:1px solid #334155;max-height:90vh;overflow-y:auto;}
+    .modal h3{font-size:18px;font-weight:700;margin-bottom:20px;color:#fff;}
+    .modal label{display:block;font-size:13px;color:#94a3b8;margin-bottom:6px;margin-top:14px;}
+    .modal label:first-of-type{margin-top:0;}
+    .modal input,.modal select,.modal textarea{
+      width:100%;padding:10px 12px;background:#0f172a;border:1px solid #334155;
+      border-radius:8px;color:#f1f5f9;font-size:14px;outline:none;transition:border-color .2s;}
+    .modal input:focus,.modal select:focus,.modal textarea:focus{border-color:#3b82f6;}
+    .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:24px;}
+    /* Perm list */
+    .perm-item{display:flex;align-items:center;gap:10px;padding:10px 0;
+               border-bottom:1px solid #334155;cursor:pointer;}
+    .perm-item:last-child{border-bottom:none;}
+    .perm-item input{width:16px;height:16px;cursor:pointer;flex-shrink:0;}
+    .perm-item span{font-size:14px;color:#e2e8f0;}
+    /* Util */
+    .empty{color:#64748b;font-size:15px;padding:40px 0;display:block;}
+    .loading{color:#64748b;font-size:14px;padding:20px 0;display:block;}
+    @media(max-width:640px){
+      .screen{padding:20px 16px;}
+      .tools-grid{grid-template-columns:1fr 1fr;gap:12px;}
+      .tool-card{padding:16px;}
+      .tool-icon{font-size:28px;}
+      .header{padding:0 16px;}
+      .nav{padding:0 8px;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-logo">Central JCBP</span>
+  <div class="header-user">
+    <span id="user-nome">—</span>
+    <button class="btn-sair" onclick="sair()">Sair</button>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" data-screen="home" onclick="showScreen('home')">🏠 Início</button>
+  <button class="nav-btn" data-screen="admin" id="nav-admin" style="display:none"
+          onclick="showScreen('admin')">⚙️ Admin</button>
+</div>
+
+<div id="screen-home" class="screen active">
+  <h2 class="page-title">Ferramentas</h2>
+  <div class="tools-grid" id="tools-grid">
+    <span class="loading">Carregando...</span>
+  </div>
+</div>
+
+<div id="screen-admin" class="screen"></div>
+
+<script>
+  const SUPABASE_URL = 'https://fttjgsotuosjfrasttds.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGpnc290dW9zamZyYXN0dGRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MzU3NjUsImV4cCI6MjA5NTExMTc2NX0.BvofcR2cIXP7Bc3r2V0VOgc-JXPefX7JGGwtzv0d_eA';
+  const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGpnc290dW9zamZyYXN0dGRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTUzNTc2NSwiZXhwIjoyMDk1MTExNzY1fQ.ejxL-yOGhls3v6J5JQHDkl8wE4GVEKWrSlvgxAvixY8';
+
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const sbAdmin = window.supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+  let currentUser = null;
+  let currentProfile = null;
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+           .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    const btn = document.querySelector(`.nav-btn[data-screen="${name}"]`);
+    if (btn) btn.classList.add('active');
+    if (name === 'admin') renderAdmin();
+  }
+
+  async function sair() {
+    await sb.auth.signOut();
+    window.location.href = 'login.html';
+  }
+
+  async function init() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+    currentUser = session.user;
+    const { data: profile } = await sb.from('profiles')
+      .select('*').eq('id', currentUser.id).single();
+    if (!profile) { await sb.auth.signOut(); window.location.href = 'login.html'; return; }
+    currentProfile = profile;
+    document.getElementById('user-nome').textContent = profile.nome;
+    if (profile.role === 'admin') {
+      document.getElementById('nav-admin').style.display = '';
+    }
+    await renderTools();
+  }
+
+  // ── HOME ──────────────────────────────────────────────────────────────
+
+  async function renderTools() {
+    const grid = document.getElementById('tools-grid');
+    grid.textContent = '';
+    let tools = [];
+    if (currentProfile.role === 'admin') {
+      const { data } = await sb.from('tools').select('*').eq('ativo', true).order('nome');
+      tools = data || [];
+    } else if (currentProfile.group_id) {
+      const { data } = await sb.from('group_tools')
+        .select('tool_id, tools(*)').eq('group_id', currentProfile.group_id);
+      tools = (data || []).map(r => r.tools).filter(t => t && t.ativo);
+    }
+    if (!tools.length) {
+      const em = document.createElement('span');
+      em.className = 'empty';
+      em.textContent = 'Nenhuma ferramenta disponível.';
+      grid.appendChild(em); return;
+    }
+    tools.forEach(t => {
+      const a = document.createElement('a');
+      a.className = 'tool-card'; a.href = t.url;
+      const icon = document.createElement('div');
+      icon.className = 'tool-icon'; icon.textContent = t.icone || '🔧';
+      const name = document.createElement('div');
+      name.className = 'tool-name'; name.textContent = t.nome;
+      const desc = document.createElement('div');
+      desc.className = 'tool-desc'; desc.textContent = t.descricao || '';
+      a.append(icon, name, desc);
+      grid.appendChild(a);
+    });
+  }
+
+  // ── ADMIN ─────────────────────────────────────────────────────────────
+
+  function renderAdmin() {
+    const screen = document.getElementById('screen-admin');
+    screen.textContent = '';
+    const title = document.createElement('h2');
+    title.className = 'page-title'; title.textContent = 'Painel Administrativo';
+    const tabsEl = document.createElement('div'); tabsEl.className = 'admin-tabs';
+    const tabs = [
+      { id: 'solicitacoes', label: '📋 Solicitações' },
+      { id: 'usuarios',     label: '👥 Usuários'     },
+      { id: 'grupos',       label: '🏷️ Grupos'       },
+      { id: 'ferramentas',  label: '🔧 Ferramentas'  },
+    ];
+    tabs.forEach((t, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'admin-tab' + (i === 0 ? ' active' : '');
+      btn.textContent = t.label;
+      btn.onclick = () => showAdminTab(t.id);
+      tabsEl.appendChild(btn);
+    });
+    screen.append(title, tabsEl);
+    tabs.forEach(t => {
+      const div = document.createElement('div');
+      div.id = 'admin-' + t.id;
+      div.className = 'admin-content' + (t.id === 'solicitacoes' ? ' active' : '');
+      screen.appendChild(div);
+    });
+    renderSolicitacoes();
+  }
+
+  function showAdminTab(tab) {
+    const ids = ['solicitacoes','usuarios','grupos','ferramentas'];
+    document.querySelectorAll('.admin-tab').forEach((b, i) =>
+      b.classList.toggle('active', ids[i] === tab));
+    document.querySelectorAll('.admin-content').forEach(c =>
+      c.classList.remove('active'));
+    document.getElementById('admin-' + tab).classList.add('active');
+    const fns = {
+      solicitacoes: renderSolicitacoes,
+      usuarios: renderUsuarios,
+      grupos: renderGrupos,
+      ferramentas: renderFerramentas
+    };
+    fns[tab]();
+  }
+
+  // ── SOLICITAÇÕES ──────────────────────────────────────────────────────
+
+  async function renderSolicitacoes() {
+    const el = document.getElementById('admin-solicitacoes');
+    el.textContent = '';
+    const { data } = await sb.from('access_requests')
+      .select('*').order('created_at', { ascending: false });
+    if (!data || !data.length) {
+      const p = document.createElement('span');
+      p.className = 'empty'; p.textContent = 'Nenhuma solicitação.';
+      el.appendChild(p); return;
+    }
+    const wrap = document.createElement('div'); wrap.className = 'table-wrap';
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    const hr = document.createElement('tr');
+    ['Nome','Email','Grupo','Status','Data','Ações'].forEach(h => {
+      const th = document.createElement('th'); th.textContent = h; hr.appendChild(th);
+    });
+    thead.appendChild(hr);
+    const tbody = document.createElement('tbody');
+    data.forEach(r => {
+      const tr = document.createElement('tr');
+      const tds = [r.nome, r.email, r.grupo_interesse || '—'].map(v => {
+        const td = document.createElement('td'); td.textContent = v; return td;
+      });
+      const tdStatus = document.createElement('td');
+      const badge = document.createElement('span');
+      badge.className = 'badge ' + r.status; badge.textContent = r.status;
+      tdStatus.appendChild(badge);
+      const tdData = document.createElement('td');
+      tdData.textContent = new Date(r.created_at).toLocaleDateString('pt-BR');
+      const tdAcoes = document.createElement('td'); tdAcoes.className = 'row-actions';
+      if (r.status === 'pendente') {
+        const btnA = document.createElement('button');
+        btnA.className = 'btn-sm green'; btnA.textContent = 'Aprovar';
+        btnA.onclick = () => aprovarSolicitacao(r.id, r.email, r.nome);
+        const btnR = document.createElement('button');
+        btnR.className = 'btn-sm red'; btnR.textContent = 'Rejeitar';
+        btnR.onclick = () => rejeitarSolicitacao(r.id);
+        tdAcoes.append(btnA, btnR);
+      } else {
+        tdAcoes.textContent = '—';
+      }
+      tr.append(...tds, tdStatus, tdData, tdAcoes);
+      tbody.appendChild(tr);
+    });
+    table.append(thead, tbody);
+    wrap.appendChild(table);
+    el.appendChild(wrap);
+  }
+
+  async function aprovarSolicitacao(id, email, nome) {
+    if (!confirm(`Aprovar solicitação de ${nome}?\n\nUma senha temporária será exibida para você enviar ao usuário.`)) return;
+    const senha = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-2).toUpperCase();
+    const { data, error } = await sbAdmin.auth.admin.createUser({
+      email, password: senha, email_confirm: true, user_metadata: { nome }
+    });
+    if (error) { alert('Erro ao criar usuário: ' + error.message); return; }
+    await sb.from('access_requests').update({
+      status: 'aprovado', reviewed_by: currentUser.id,
+      reviewed_at: new Date().toISOString()
+    }).eq('id', id);
+    alert(`✅ Usuário aprovado!\n\nEmail: ${email}\nSenha temporária: ${senha}\n\nCopie e envie ao usuário.`);
+    renderSolicitacoes();
+  }
+
+  async function rejeitarSolicitacao(id) {
+    if (!confirm('Rejeitar esta solicitação?')) return;
+    await sb.from('access_requests').update({
+      status: 'rejeitado', reviewed_by: currentUser.id,
+      reviewed_at: new Date().toISOString()
+    }).eq('id', id);
+    renderSolicitacoes();
+  }
+
+  // ── USUÁRIOS ──────────────────────────────────────────────────────────
+
+  async function renderUsuarios() {
+    const el = document.getElementById('admin-usuarios');
+    el.textContent = '';
+    const toolbar = document.createElement('div'); toolbar.className = 'toolbar';
+    const btnNovo = document.createElement('button');
+    btnNovo.className = 'btn-sm blue'; btnNovo.textContent = '+ Novo Usuário';
+    btnNovo.onclick = () => abrirModalUsuario();
+    toolbar.appendChild(btnNovo); el.appendChild(toolbar);
+    const { data: users } = await sb.from('profiles')
+      .select('*, groups(nome)').order('nome');
+    if (!users || !users.length) {
+      const em = document.createElement('span');
+      em.className = 'empty'; em.textContent = 'Nenhum usuário.';
+      el.appendChild(em); return;
+    }
+    const wrap = document.createElement('div'); wrap.className = 'table-wrap';
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    const hr = document.createElement('tr');
+    ['Nome','Email','Grupo','Nível','Status','Ações'].forEach(h => {
+      const th = document.createElement('th'); th.textContent = h; hr.appendChild(th);
+    });
+    thead.appendChild(hr);
+    const tbody = document.createElement('tbody');
+    users.forEach(u => {
+      const tr = document.createElement('tr');
+      [u.nome, u.email, u.groups?.nome || '—'].forEach(v => {
+        const td = document.createElement('td'); td.textContent = v; tr.appendChild(td);
+      });
+      const tdRole = document.createElement('td');
+      const bRole = document.createElement('span');
+      bRole.className = 'badge ' + u.role; bRole.textContent = u.role;
+      tdRole.appendChild(bRole);
+      const tdStatus = document.createElement('td');
+      const bStatus = document.createElement('span');
+      bStatus.className = 'badge ' + u.status; bStatus.textContent = u.status;
+      tdStatus.appendChild(bStatus);
+      const tdAcoes = document.createElement('td'); tdAcoes.className = 'row-actions';
+      const btnEdit = document.createElement('button');
+      btnEdit.className = 'btn-sm blue'; btnEdit.textContent = 'Editar';
+      btnEdit.onclick = () => abrirModalUsuario(u.id);
+      const btnToggle = document.createElement('button');
+      btnToggle.className = 'btn-sm ' + (u.status === 'ativo' ? 'gray' : 'green');
+      btnToggle.textContent = u.status === 'ativo' ? 'Bloquear' : 'Reativar';
+      btnToggle.onclick = () => toggleBloqueio(u.id, u.status === 'ativo' ? 'bloqueado' : 'ativo', u.nome);
+      tdAcoes.append(btnEdit, btnToggle);
+      if (u.id !== currentUser.id) {
+        const btnDel = document.createElement('button');
+        btnDel.className = 'btn-sm red'; btnDel.textContent = 'Excluir';
+        btnDel.onclick = () => excluirUsuario(u.id, u.nome);
+        tdAcoes.appendChild(btnDel);
+      }
+      tr.append(tdRole, tdStatus, tdAcoes);
+      tbody.appendChild(tr);
+    });
+    table.append(thead, tbody);
+    wrap.appendChild(table); el.appendChild(wrap);
+  }
+
+  async function toggleBloqueio(id, novoStatus, nome) {
+    if (!confirm(`${novoStatus === 'bloqueado' ? 'Bloquear' : 'Reativar'} ${nome}?`)) return;
+    await sb.from('profiles').update({ status: novoStatus }).eq('id', id);
+    renderUsuarios();
+  }
+
+  async function excluirUsuario(id, nome) {
+    if (!confirm(`Excluir permanentemente ${nome}?\nEsta ação não pode ser desfeita.`)) return;
+    await sbAdmin.auth.admin.deleteUser(id);
+    renderUsuarios();
+  }
+
+  async function abrirModalUsuario(id = null) {
+    const { data: groups } = await sb.from('groups').select('id,nome').order('nome');
+    let u = null;
+    if (id) {
+      const { data } = await sb.from('profiles').select('*').eq('id', id).single();
+      u = data;
+    }
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay open'; modal.id = 'modal-usuario';
+    const box = document.createElement('div'); box.className = 'modal';
+    const title = document.createElement('h3');
+    title.textContent = u ? 'Editar Usuário' : 'Novo Usuário';
+    box.appendChild(title);
+    addField(box, 'Nome', 'mu-nome', 'text', u?.nome || '');
+    if (!u) {
+      addField(box, 'Email', 'mu-email', 'email', '');
+      addField(box, 'Senha', 'mu-senha', 'password', '');
+    }
+    const lblG = document.createElement('label'); lblG.textContent = 'Grupo';
+    const selG = document.createElement('select'); selG.id = 'mu-group';
+    const optSem = document.createElement('option'); optSem.value = ''; optSem.textContent = 'Sem grupo';
+    selG.appendChild(optSem);
+    (groups || []).forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g.id; opt.textContent = g.nome;
+      if (u?.group_id === g.id) opt.selected = true;
+      selG.appendChild(opt);
+    });
+    const lblR = document.createElement('label'); lblR.textContent = 'Nível de acesso';
+    const selR = document.createElement('select'); selR.id = 'mu-role';
+    ['membro','lider','admin'].forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r; opt.textContent = r.charAt(0).toUpperCase() + r.slice(1);
+      if (u?.role === r) opt.selected = true;
+      selR.appendChild(opt);
+    });
+    box.append(lblG, selG, lblR, selR);
+    const actions = document.createElement('div'); actions.className = 'modal-actions';
+    const btnC = document.createElement('button');
+    btnC.className = 'btn-sm gray'; btnC.textContent = 'Cancelar';
+    btnC.onclick = () => fecharModal('modal-usuario');
+    const btnS = document.createElement('button');
+    btnS.className = 'btn-sm blue'; btnS.textContent = 'Salvar';
+    btnS.onclick = () => salvarUsuario(id || '');
+    actions.append(btnC, btnS); box.appendChild(actions);
+    modal.appendChild(box); document.body.appendChild(modal);
+  }
+
+  async function salvarUsuario(id) {
+    const nome = document.getElementById('mu-nome').value.trim();
+    const group_id = document.getElementById('mu-group').value || null;
+    const role = document.getElementById('mu-role').value;
+    if (!nome) { alert('Nome obrigatório.'); return; }
+    if (id) {
+      await sb.from('profiles').update({ nome, group_id, role }).eq('id', id);
+    } else {
+      const email = document.getElementById('mu-email').value.trim();
+      const senha = document.getElementById('mu-senha').value;
+      if (!email || !senha) { alert('Email e senha obrigatórios.'); return; }
+      const { data, error } = await sbAdmin.auth.admin.createUser({
+        email, password: senha, email_confirm: true, user_metadata: { nome }
+      });
+      if (error) { alert('Erro: ' + error.message); return; }
+      await sb.from('profiles').update({ nome, group_id, role }).eq('id', data.user.id);
+    }
+    fecharModal('modal-usuario'); renderUsuarios();
+  }
+
+  // ── GRUPOS ────────────────────────────────────────────────────────────
+
+  async function renderGrupos() {
+    const el = document.getElementById('admin-grupos');
+    el.textContent = '';
+    const toolbar = document.createElement('div'); toolbar.className = 'toolbar';
+    const btnNovo = document.createElement('button');
+    btnNovo.className = 'btn-sm blue'; btnNovo.textContent = '+ Novo Grupo';
+    btnNovo.onclick = () => abrirModalGrupo();
+    toolbar.appendChild(btnNovo); el.appendChild(toolbar);
+    const { data: grupos } = await sb.from('groups')
+      .select('*, profiles!lider_id(nome)').order('nome');
+    if (!grupos || !grupos.length) {
+      const em = document.createElement('span');
+      em.className = 'empty'; em.textContent = 'Nenhum grupo.';
+      el.appendChild(em); return;
+    }
+    const wrap = document.createElement('div'); wrap.className = 'table-wrap';
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    const hr = document.createElement('tr');
+    ['Nome','Descrição','Líder','Ações'].forEach(h => {
+      const th = document.createElement('th'); th.textContent = h; hr.appendChild(th);
+    });
+    thead.appendChild(hr);
+    const tbody = document.createElement('tbody');
+    grupos.forEach(g => {
+      const tr = document.createElement('tr');
+      [g.nome, g.descricao || '—', g.profiles?.nome || '—'].forEach(v => {
+        const td = document.createElement('td'); td.textContent = v; tr.appendChild(td);
+      });
+      const tdAcoes = document.createElement('td'); tdAcoes.className = 'row-actions';
+      const btnEdit = document.createElement('button');
+      btnEdit.className = 'btn-sm blue'; btnEdit.textContent = 'Editar';
+      btnEdit.onclick = () => abrirModalGrupo(g.id);
+      const btnDel = document.createElement('button');
+      btnDel.className = 'btn-sm red'; btnDel.textContent = 'Excluir';
+      btnDel.onclick = () => excluirGrupo(g.id, g.nome);
+      tdAcoes.append(btnEdit, btnDel);
+      tr.appendChild(tdAcoes); tbody.appendChild(tr);
+    });
+    table.append(thead, tbody); wrap.appendChild(table); el.appendChild(wrap);
+  }
+
+  async function excluirGrupo(id, nome) {
+    if (!confirm(`Excluir grupo "${nome}"?\nUsuários do grupo ficarão sem grupo.`)) return;
+    await sb.from('groups').delete().eq('id', id);
+    renderGrupos();
+  }
+
+  async function abrirModalGrupo(id = null) {
+    const { data: lideres } = await sb.from('profiles')
+      .select('id,nome').in('role', ['lider','admin']).order('nome');
+    let g = null;
+    if (id) {
+      const { data } = await sb.from('groups').select('*').eq('id', id).single();
+      g = data;
+    }
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay open'; modal.id = 'modal-grupo';
+    const box = document.createElement('div'); box.className = 'modal';
+    const title = document.createElement('h3');
+    title.textContent = g ? 'Editar Grupo' : 'Novo Grupo';
+    box.appendChild(title);
+    addField(box, 'Nome', 'mg-nome', 'text', g?.nome || '');
+    addField(box, 'Descrição', 'mg-desc', 'text', g?.descricao || '');
+    const lblL = document.createElement('label'); lblL.textContent = 'Líder responsável';
+    const selL = document.createElement('select'); selL.id = 'mg-lider';
+    const optSem = document.createElement('option'); optSem.value = ''; optSem.textContent = 'Sem líder';
+    selL.appendChild(optSem);
+    (lideres || []).forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.id; opt.textContent = u.nome;
+      if (g?.lider_id === u.id) opt.selected = true;
+      selL.appendChild(opt);
+    });
+    box.append(lblL, selL);
+    const actions = document.createElement('div'); actions.className = 'modal-actions';
+    const btnC = document.createElement('button');
+    btnC.className = 'btn-sm gray'; btnC.textContent = 'Cancelar';
+    btnC.onclick = () => fecharModal('modal-grupo');
+    const btnS = document.createElement('button');
+    btnS.className = 'btn-sm blue'; btnS.textContent = 'Salvar';
+    btnS.onclick = () => salvarGrupo(id || '');
+    actions.append(btnC, btnS); box.appendChild(actions);
+    modal.appendChild(box); document.body.appendChild(modal);
+  }
+
+  async function salvarGrupo(id) {
+    const nome = document.getElementById('mg-nome').value.trim();
+    const descricao = document.getElementById('mg-desc').value.trim() || null;
+    const lider_id = document.getElementById('mg-lider').value || null;
+    if (!nome) { alert('Nome obrigatório.'); return; }
+    if (id) { await sb.from('groups').update({ nome, descricao, lider_id }).eq('id', id); }
+    else    { await sb.from('groups').insert({ nome, descricao, lider_id }); }
+    fecharModal('modal-grupo'); renderGrupos();
+  }
+
+  // ── FERRAMENTAS ───────────────────────────────────────────────────────
+
+  async function renderFerramentas() {
+    const el = document.getElementById('admin-ferramentas');
+    el.textContent = '';
+    const toolbar = document.createElement('div'); toolbar.className = 'toolbar';
+    const btnNovo = document.createElement('button');
+    btnNovo.className = 'btn-sm blue'; btnNovo.textContent = '+ Nova Ferramenta';
+    btnNovo.onclick = () => abrirModalFerramenta();
+    toolbar.appendChild(btnNovo); el.appendChild(toolbar);
+    const { data: tools } = await sbAdmin.from('tools').select('*').order('nome');
+    if (!tools || !tools.length) {
+      const em = document.createElement('span');
+      em.className = 'empty'; em.textContent = 'Nenhuma ferramenta.';
+      el.appendChild(em); return;
+    }
+    const wrap = document.createElement('div'); wrap.className = 'table-wrap';
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    const hr = document.createElement('tr');
+    ['Ícone','Nome','URL','Status','Ações'].forEach(h => {
+      const th = document.createElement('th'); th.textContent = h; hr.appendChild(th);
+    });
+    thead.appendChild(hr);
+    const tbody = document.createElement('tbody');
+    tools.forEach(t => {
+      const tr = document.createElement('tr');
+      const tdIcon = document.createElement('td');
+      tdIcon.style.fontSize = '22px'; tdIcon.textContent = t.icone || '🔧';
+      const tdNome = document.createElement('td'); tdNome.textContent = t.nome;
+      const tdUrl = document.createElement('td');
+      tdUrl.textContent = t.url;
+      tdUrl.style.cssText = 'color:#64748b;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+      const tdStatus = document.createElement('td');
+      const bStatus = document.createElement('span');
+      bStatus.className = 'badge ' + (t.ativo ? 'ativo' : 'bloqueado');
+      bStatus.textContent = t.ativo ? 'Ativa' : 'Inativa';
+      tdStatus.appendChild(bStatus);
+      const tdAcoes = document.createElement('td'); tdAcoes.className = 'row-actions';
+      const btnEdit = document.createElement('button');
+      btnEdit.className = 'btn-sm blue'; btnEdit.textContent = 'Editar';
+      btnEdit.onclick = () => abrirModalFerramenta(t.id);
+      const btnGrupos = document.createElement('button');
+      btnGrupos.className = 'btn-sm orange'; btnGrupos.textContent = 'Grupos';
+      btnGrupos.onclick = () => abrirModalPermissoes(t.id, t.nome);
+      const btnToggle = document.createElement('button');
+      btnToggle.className = 'btn-sm ' + (t.ativo ? 'gray' : 'green');
+      btnToggle.textContent = t.ativo ? 'Desativar' : 'Ativar';
+      btnToggle.onclick = () => toggleFerramenta(t.id, !t.ativo, t.nome);
+      const btnDel = document.createElement('button');
+      btnDel.className = 'btn-sm red'; btnDel.textContent = 'Excluir';
+      btnDel.onclick = () => excluirFerramenta(t.id, t.nome);
+      tdAcoes.append(btnEdit, btnGrupos, btnToggle, btnDel);
+      tr.append(tdIcon, tdNome, tdUrl, tdStatus, tdAcoes);
+      tbody.appendChild(tr);
+    });
+    table.append(thead, tbody); wrap.appendChild(table); el.appendChild(wrap);
+  }
+
+  async function toggleFerramenta(id, ativo, nome) {
+    if (!confirm(`${ativo ? 'Ativar' : 'Desativar'} "${nome}"?`)) return;
+    await sb.from('tools').update({ ativo }).eq('id', id);
+    renderFerramentas();
+  }
+
+  async function excluirFerramenta(id, nome) {
+    if (!confirm(`Excluir "${nome}"?\nEsta ação não pode ser desfeita.`)) return;
+    await sb.from('tools').delete().eq('id', id);
+    renderFerramentas();
+  }
+
+  async function abrirModalFerramenta(id = null) {
+    let t = null;
+    if (id) {
+      const { data } = await sb.from('tools').select('*').eq('id', id).single();
+      t = data;
+    }
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay open'; modal.id = 'modal-ferramenta';
+    const box = document.createElement('div'); box.className = 'modal';
+    const title = document.createElement('h3');
+    title.textContent = t ? 'Editar Ferramenta' : 'Nova Ferramenta';
+    box.appendChild(title);
+    addField(box, 'Nome', 'mf-nome', 'text', t?.nome || '');
+    addField(box, 'Descrição curta', 'mf-desc', 'text', t?.descricao || '');
+    addField(box, 'Ícone (emoji)', 'mf-icone', 'text', t?.icone || '🔧');
+    addField(box, 'URL / Caminho', 'mf-url', 'text', t?.url || '');
+    const actions = document.createElement('div'); actions.className = 'modal-actions';
+    const btnC = document.createElement('button');
+    btnC.className = 'btn-sm gray'; btnC.textContent = 'Cancelar';
+    btnC.onclick = () => fecharModal('modal-ferramenta');
+    const btnS = document.createElement('button');
+    btnS.className = 'btn-sm blue'; btnS.textContent = 'Salvar';
+    btnS.onclick = () => salvarFerramenta(id || '');
+    actions.append(btnC, btnS); box.appendChild(actions);
+    modal.appendChild(box); document.body.appendChild(modal);
+  }
+
+  async function salvarFerramenta(id) {
+    const nome = document.getElementById('mf-nome').value.trim();
+    const descricao = document.getElementById('mf-desc').value.trim() || null;
+    const icone = document.getElementById('mf-icone').value.trim() || '🔧';
+    const url = document.getElementById('mf-url').value.trim();
+    if (!nome || !url) { alert('Nome e URL obrigatórios.'); return; }
+    if (id) { await sb.from('tools').update({ nome, descricao, icone, url }).eq('id', id); }
+    else    { await sb.from('tools').insert({ nome, descricao, icone, url, ativo: true }); }
+    fecharModal('modal-ferramenta'); renderFerramentas();
+  }
+
+  async function abrirModalPermissoes(toolId, toolNome) {
+    const { data: grupos } = await sb.from('groups').select('id,nome').order('nome');
+    const { data: ativos } = await sb.from('group_tools')
+      .select('group_id').eq('tool_id', toolId);
+    const ativosSet = new Set((ativos || []).map(r => r.group_id));
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay open'; modal.id = 'modal-permissoes';
+    const box = document.createElement('div'); box.className = 'modal';
+    const title = document.createElement('h3');
+    title.textContent = 'Acesso: ' + toolNome;
+    box.appendChild(title);
+    const lista = document.createElement('div'); lista.id = 'perm-lista';
+    if (!grupos || !grupos.length) {
+      const p = document.createElement('p');
+      p.style.color = '#64748b'; p.textContent = 'Nenhum grupo cadastrado.';
+      lista.appendChild(p);
+    } else {
+      grupos.forEach(g => {
+        const item = document.createElement('div'); item.className = 'perm-item';
+        const chk = document.createElement('input');
+        chk.type = 'checkbox'; chk.value = g.id;
+        if (ativosSet.has(g.id)) chk.checked = true;
+        const span = document.createElement('span'); span.textContent = g.nome;
+        item.append(chk, span);
+        item.onclick = e => { if (e.target !== chk) chk.checked = !chk.checked; };
+        lista.appendChild(item);
+      });
+    }
+    box.appendChild(lista);
+    const actions = document.createElement('div'); actions.className = 'modal-actions';
+    const btnC = document.createElement('button');
+    btnC.className = 'btn-sm gray'; btnC.textContent = 'Cancelar';
+    btnC.onclick = () => fecharModal('modal-permissoes');
+    const btnS = document.createElement('button');
+    btnS.className = 'btn-sm blue'; btnS.textContent = 'Salvar';
+    btnS.onclick = () => salvarPermissoes(toolId);
+    actions.append(btnC, btnS); box.appendChild(actions);
+    modal.appendChild(box); document.body.appendChild(modal);
+  }
+
+  async function salvarPermissoes(toolId) {
+    const checks = document.querySelectorAll('#perm-lista input[type=checkbox]');
+    const selecionados = [...checks].filter(c => c.checked)
+      .map(c => ({ group_id: c.value, tool_id: toolId }));
+    await sb.from('group_tools').delete().eq('tool_id', toolId);
+    if (selecionados.length) await sb.from('group_tools').insert(selecionados);
+    fecharModal('modal-permissoes'); renderFerramentas();
+  }
+
+  // ── UTIL ──────────────────────────────────────────────────────────────
+
+  function addField(parent, labelText, inputId, type, value) {
+    const lbl = document.createElement('label'); lbl.textContent = labelText;
+    const inp = document.createElement('input');
+    inp.type = type; inp.id = inputId; inp.value = value;
+    parent.append(lbl, inp);
+  }
+
+  function fecharModal(id) { document.getElementById(id)?.remove(); }
+
+  init();
+</script>
+</body>
+</html>
