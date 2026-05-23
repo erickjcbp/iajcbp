@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,26 +9,49 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root{
-      --bg:#0c0404;
-      --surface:#180a0a;
-      --surface2:#220d0d;
-      --border:#3d1515;
-      --border-wine:#6b2020;
-      --wine:#8b2020;
-      --wine-light:#c04040;
-      --wine-dim:#4a1515;
-      --text:#f5e8e8;
-      --text-muted:#a07070;
-      --wine-bright:#d45050;
+      --bg:#0c0404;--surface:#180a0a;--surface2:#220d0d;
+      --border:#3d1515;--border-wine:#6b2020;
+      --wine:#8b2020;--wine-light:#c04040;--wine-dim:#4a1515;
+      --text:#f5e8e8;--text-muted:#a07070;--wine-bright:#d45050;
+      --focus-bg:#2a0e0e;
+      --shadow-modal:0 0 0 1px var(--border),0 32px 80px rgba(0,0,0,.8),inset 0 1px 0 rgba(139,32,32,.1);
+    }
+    [data-theme="light"]{
+      --bg:#f2e8e8;--surface:#fdf6f6;--surface2:#f5e2e2;
+      --border:#d4a8a8;--border-wine:#a04040;
+      --wine:#7a1515;--wine-light:#5a0e0e;--wine-dim:#c08080;
+      --text:#1a0505;--text-muted:#6a3030;--wine-bright:#8a1a1a;
+      --focus-bg:#ffe8e8;
+      --shadow-modal:0 0 0 1px var(--border),0 8px 32px rgba(0,0,0,.12),inset 0 1px 0 rgba(139,32,32,.06);
     }
     *{box-sizing:border-box;margin:0;padding:0;}
     body{
       min-height:100vh;background:var(--bg);
       font-family:'Lora',serif;color:var(--text);
+      transition:background .3s,color .3s;
       background-image:
-        radial-gradient(ellipse at 10% 0%, rgba(139,32,32,.04) 0%, transparent 50%),
-        radial-gradient(ellipse at 90% 100%, rgba(139,32,32,.03) 0%, transparent 50%);
+        radial-gradient(ellipse at 10% 0%,rgba(139,32,32,.04) 0%,transparent 50%),
+        radial-gradient(ellipse at 90% 100%,rgba(139,32,32,.03) 0%,transparent 50%);
     }
+    /* BG SYMBOLS */
+    .bg-symbols{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+    .bg-symbol{position:absolute;bottom:-80px;color:var(--wine);opacity:0;animation:bgFloat linear infinite;}
+    .bg-symbol svg{width:100%;height:100%;display:block;}
+    @keyframes bgFloat{
+      0%  {transform:translate(0,0) rotate(0deg);opacity:0;}
+      8%  {opacity:var(--sym-op);}
+      50% {transform:translate(var(--sym-dx),-55vh) rotate(var(--sym-rh));}
+      92% {opacity:var(--sym-op);}
+      100%{transform:translate(0,-110vh) rotate(var(--sym-r));opacity:0;}
+    }
+    /* THEME TOGGLE */
+    .theme-toggle{
+      background:transparent;border:1px solid var(--border-wine);
+      color:var(--text-muted);width:32px;height:32px;border-radius:50%;
+      cursor:pointer;font-size:15px;transition:all .2s;
+      display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    }
+    .theme-toggle:hover{border-color:var(--wine-light);color:var(--wine-light);}
 
     /* ── HEADER ── */
     .header{
@@ -75,6 +98,7 @@
     .nav{
       display:flex;padding:0 28px;background:var(--surface);
       border-bottom:1px solid var(--border);overflow-x:auto;
+      position:relative;z-index:1;
     }
     .nav-btn{
       padding:14px 22px;background:transparent;border:none;
@@ -87,7 +111,7 @@
     .nav-btn:hover:not(.active){color:var(--text);border-bottom-color:var(--border-wine);}
 
     /* ── SCREENS ── */
-    .screen{display:none;padding:36px 28px;max-width:1200px;}
+    .screen{display:none;padding:36px 28px;max-width:1200px;position:relative;z-index:1;}
     .screen.active{display:block;}
     .page-title{
       font-family:'Cinzel',serif;font-size:20px;font-weight:700;
@@ -200,8 +224,7 @@
       background:var(--surface);border:1px solid var(--border-wine);
       border-radius:3px;padding:36px 32px;width:100%;max-width:480px;
       max-height:90vh;overflow-y:auto;position:relative;
-      box-shadow:0 0 0 1px var(--border), 0 32px 80px rgba(0,0,0,.8),
-                 inset 0 1px 0 rgba(139,32,32,.1);
+      box-shadow:var(--shadow-modal);
     }
     .modal::before{
       content:'';position:absolute;left:12px;right:12px;top:10px;height:1px;
@@ -229,7 +252,7 @@
     .modal input:focus,.modal select:focus,.modal textarea:focus{
       border-color:var(--border-wine);
       box-shadow:0 2px 0 var(--wine-dim),inset 0 1px 4px rgba(0,0,0,.3);
-      background:#2a0e0e;
+      background:var(--focus-bg);
     }
     .modal select option{background:var(--surface2);}
     .modal textarea{resize:vertical;min-height:80px;}
@@ -275,15 +298,26 @@
 </head>
 <body>
 
+<div class="bg-symbols" id="bg-symbols"></div>
 <div class="header">
   <span class="header-logo">
-    <img src="../../midia/logos/Logo%20Igreja%20branco.png" alt="JCBP">
+    <img id="logo-igreja" style="height:38px;width:auto;filter:drop-shadow(0 0 8px rgba(139,32,32,.3));transition:filter .3s"
+      src="../../midia/logos/Logo%20Igreja%20branco.png"
+      data-dark="../../midia/logos/Logo%20Igreja%20branco.png"
+      data-light="../../midia/logos/Logo%20Igreja%20colorido.png"
+      alt="JCBP">
     Central JCBP
   </span>
   <div class="header-right">
     <div class="header-pascom">
-      <img src="../../midia/logos/Logo%20Pascom%20Branco.png" alt="Pascom">
+      <img id="logo-pascom" style="height:19px;width:auto;opacity:.75;transition:filter .3s"
+        src="../../midia/logos/Logo%20Pascom%20Branco.png"
+        data-dark="../../midia/logos/Logo%20Pascom%20Branco.png"
+        data-light="../../midia/logos/Logo%20Pascom%20Colorido.png"
+        alt="Pascom">
     </div>
+    <div class="header-divider"></div>
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Alternar tema">☀</button>
     <div class="header-divider"></div>
     <div class="header-user">
       <span id="user-nome">—</span>
@@ -906,6 +940,53 @@
     fecharModal('modal-permissoes'); renderFerramentas();
   }
 
+  // ── THEME ─────────────────────────────────────────────────────────────
+  function initTheme(){applyTheme(localStorage.getItem('jcbp-theme')||'dark',false);}
+  function toggleTheme(){
+    applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark',true);
+  }
+  function applyTheme(theme,save){
+    document.documentElement.setAttribute('data-theme',theme);
+    if(save)localStorage.setItem('jcbp-theme',theme);
+    const btn=document.getElementById('theme-toggle');
+    if(btn)btn.textContent=theme==='dark'?'☀':'☾';
+    ['logo-igreja','logo-pascom'].forEach(id=>{
+      const img=document.getElementById(id);
+      if(img&&img.dataset[theme])img.src=img.dataset[theme];
+    });
+  }
+
+  // ── BG SYMBOLS ────────────────────────────────────────────────────────
+  const _SYMS=[
+    '<svg viewBox="0 0 20 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="10" y1="1" x2="10" y2="27"/><line x1="2" y1="8" x2="18" y2="8"/></svg>',
+    '<svg viewBox="0 0 24 30" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3 L20 3 L16 14 C16 18 18 20 18 20 L6 20 C6 20 8 18 8 14 Z"/><line x1="12" y1="20" x2="12" y2="25"/><line x1="7" y1="25" x2="17" y2="25"/><line x1="7" y1="28" x2="17" y2="28"/></svg>',
+    '<svg viewBox="0 0 32 38" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="16" cy="14" r="6"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="16" y1="22" x2="16" y2="26"/><line x1="4" y1="14" x2="8" y2="14"/><line x1="24" y1="14" x2="28" y2="14"/><line x1="7.5" y1="5.5" x2="10.2" y2="8.2"/><line x1="21.8" y1="19.8" x2="24.5" y2="22.5"/><line x1="24.5" y1="5.5" x2="21.8" y2="8.2"/><line x1="10.2" y1="19.8" x2="7.5" y2="22.5"/><line x1="16" y1="26" x2="16" y2="32"/><line x1="10" y1="32" x2="22" y2="32"/><line x1="8" y1="36" x2="24" y2="36"/></svg>',
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="17"/><line x1="7" y1="12" x2="17" y2="12"/></svg>',
+    '<svg viewBox="0 0 32 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10 C7 3 20 3 26 10 C20 17 7 17 2 10 Z"/><path d="M23 6 L30 10 L23 14"/></svg>',
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>',
+  ];
+  function _parseSVG(str){return new DOMParser().parseFromString(str,'image/svg+xml').documentElement;}
+  function initBgSymbols(){
+    const c=document.getElementById('bg-symbols');if(!c)return;
+    for(let i=0;i<16;i++){
+      const el=document.createElement('div');
+      el.className='bg-symbol';
+      el.appendChild(_parseSVG(_SYMS[i%_SYMS.length]));
+      const size=16+Math.random()*52,dur=45+Math.random()*70;
+      el.style.cssText=[
+        'width:'+size.toFixed(1)+'px','height:'+size.toFixed(1)+'px',
+        'left:'+(2+Math.random()*96).toFixed(1)+'%',
+        '--sym-op:'+(0.03+Math.random()*0.07).toFixed(3),
+        '--sym-dx:'+((Math.random()-.5)*130).toFixed(1)+'px',
+        '--sym-rh:'+((Math.random()-.5)*40).toFixed(1)+'deg',
+        '--sym-r:'+((Math.random()-.5)*80).toFixed(1)+'deg',
+        'animation-duration:'+dur.toFixed(1)+'s',
+        'animation-delay:'+(-Math.random()*dur).toFixed(1)+'s',
+      ].join(';');
+      c.appendChild(el);
+    }
+  }
+
   // ── UTIL ──────────────────────────────────────────────────────────────
 
   function addField(parent, labelText, inputId, type, value) {
@@ -917,6 +998,8 @@
 
   function fecharModal(id) { document.getElementById(id)?.remove(); }
 
+  initTheme();
+  initBgSymbols();
   init();
 </script>
 </body>
