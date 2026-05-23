@@ -975,10 +975,10 @@
       items.push({el,
         x:Math.random()*window.innerWidth,
         y:H+60+Math.random()*H,
-        vy:-(0.15+Math.random()*0.4),
-        vx:(Math.random()-.5)*.2,
-        op:0,maxOp:.12+Math.random()*.14,
-        rot:Math.random()*360,rotV:(Math.random()-.5)*.25
+        vy:-(0.5+Math.random()*0.9),
+        vx:(Math.random()-.5)*.35,
+        op:0,maxOp:.28+Math.random()*.22,
+        rot:Math.random()*360,rotV:(Math.random()-.5)*.5
       });
     }
     (function tick(){
@@ -987,9 +987,9 @@
       items.forEach(p=>{
         p.y+=p.vy;p.x+=p.vx;p.rot+=p.rotV;
         const prog=1-(p.y/H);
-        if(prog<.12)p.op=Math.min(p.op+.003,p.maxOp*(prog/.12));
+        if(prog<.12)p.op=Math.min(p.op+.008,p.maxOp*(prog/.12));
         else if(prog>.88)p.op=Math.max(0,p.maxOp*((1-prog)/.12));
-        else p.op=Math.min(p.op+.002,p.maxOp);
+        else p.op=Math.min(p.op+.005,p.maxOp);
         if(p.y<-80){p.y=H+60;p.x=Math.random()*W;p.op=0;}
         p.el.style.left=p.x.toFixed(0)+'px';
         p.el.style.top=p.y.toFixed(0)+'px';
