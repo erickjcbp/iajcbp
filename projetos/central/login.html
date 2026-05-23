@@ -258,13 +258,17 @@
       el.style.width=size+'px';el.style.height=size+'px';
       el.appendChild(_parseSVG(_SYMS[i%_SYMS.length]));
       c.appendChild(el);
-      const H=window.innerHeight;
+      const H=window.innerHeight,W=window.innerWidth;
+      const maxOp=.28+Math.random()*.22;
+      const startY=Math.random()*(H+80);
+      const prog=1-(startY/H);
+      const startOp=prog<0?0:prog<.12?maxOp*(prog/.12):prog>.88?maxOp*((1-prog)/.12):maxOp;
       items.push({el,
-        x:Math.random()*window.innerWidth,
-        y:H+60+Math.random()*H,
+        x:Math.random()*W,
+        y:startY,
         vy:-(0.5+Math.random()*0.9),
         vx:(Math.random()-.5)*.35,
-        op:0,maxOp:.28+Math.random()*.22,
+        op:startOp,maxOp,
         rot:Math.random()*360,rotV:(Math.random()-.5)*.5
       });
     }
