@@ -35,14 +35,10 @@
     }
     /* BG SYMBOLS */
     .bg-symbols{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
-    .bg-symbol{position:absolute;bottom:-80px;color:var(--wine);opacity:0;animation:bgFloat linear infinite;}
-    .bg-symbol svg{width:100%;height:100%;display:block;}
-    @keyframes bgFloat{
-      0%  {transform:translate(0,0) rotate(0deg);opacity:0;}
-      8%  {opacity:var(--sym-op);}
-      50% {transform:translate(var(--sym-dx),-55vh) rotate(var(--sym-rh));}
-      92% {opacity:var(--sym-op);}
-      100%{transform:translate(0,-110vh) rotate(var(--sym-r));opacity:0;}
+    .bg-symbol{
+      position:absolute;color:var(--wine-bright);
+      line-height:1;user-select:none;pointer-events:none;
+      font-family:'Georgia','Times New Roman',serif;
     }
     /* THEME TOGGLE */
     .theme-toggle{
@@ -957,34 +953,42 @@
   }
 
   // ── BG SYMBOLS ────────────────────────────────────────────────────────
-  const _SYMS=[
-    '<svg viewBox="0 0 20 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="10" y1="1" x2="10" y2="27"/><line x1="2" y1="8" x2="18" y2="8"/></svg>',
-    '<svg viewBox="0 0 24 30" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3 L20 3 L16 14 C16 18 18 20 18 20 L6 20 C6 20 8 18 8 14 Z"/><line x1="12" y1="20" x2="12" y2="25"/><line x1="7" y1="25" x2="17" y2="25"/><line x1="7" y1="28" x2="17" y2="28"/></svg>',
-    '<svg viewBox="0 0 32 38" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="16" cy="14" r="6"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="16" y1="22" x2="16" y2="26"/><line x1="4" y1="14" x2="8" y2="14"/><line x1="24" y1="14" x2="28" y2="14"/><line x1="7.5" y1="5.5" x2="10.2" y2="8.2"/><line x1="21.8" y1="19.8" x2="24.5" y2="22.5"/><line x1="24.5" y1="5.5" x2="21.8" y2="8.2"/><line x1="10.2" y1="19.8" x2="7.5" y2="22.5"/><line x1="16" y1="26" x2="16" y2="32"/><line x1="10" y1="32" x2="22" y2="32"/><line x1="8" y1="36" x2="24" y2="36"/></svg>',
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="17"/><line x1="7" y1="12" x2="17" y2="12"/></svg>',
-    '<svg viewBox="0 0 32 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10 C7 3 20 3 26 10 C20 17 7 17 2 10 Z"/><path d="M23 6 L30 10 L23 14"/></svg>',
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>',
-  ];
-  function _parseSVG(str){return new DOMParser().parseFromString(str,'image/svg+xml').documentElement;}
+  const _SYMS=['✝','✞','⊕','✦','✸','☩'];
   function initBgSymbols(){
     const c=document.getElementById('bg-symbols');if(!c)return;
-    for(let i=0;i<16;i++){
-      const el=document.createElement('div');
-      el.className='bg-symbol';
-      el.appendChild(_parseSVG(_SYMS[i%_SYMS.length]));
-      const size=16+Math.random()*52,dur=45+Math.random()*70;
-      el.style.cssText=[
-        'width:'+size.toFixed(1)+'px','height:'+size.toFixed(1)+'px',
-        'left:'+(2+Math.random()*96).toFixed(1)+'%',
-        '--sym-op:'+(0.03+Math.random()*0.07).toFixed(3),
-        '--sym-dx:'+((Math.random()-.5)*130).toFixed(1)+'px',
-        '--sym-rh:'+((Math.random()-.5)*40).toFixed(1)+'deg',
-        '--sym-r:'+((Math.random()-.5)*80).toFixed(1)+'deg',
-        'animation-duration:'+dur.toFixed(1)+'s',
-        'animation-delay:'+(-Math.random()*dur).toFixed(1)+'s',
-      ].join(';');
+    const items=[];
+    for(let i=0;i<18;i++){
+      const el=document.createElement('span');
+      el.className='bg-symbol';el.textContent=_SYMS[i%_SYMS.length];
+      const size=20+Math.random()*52;
+      el.style.fontSize=size+'px';
       c.appendChild(el);
+      const H=window.innerHeight;
+      items.push({el,
+        x:Math.random()*window.innerWidth,
+        y:H+60+Math.random()*H,
+        vy:-(0.2+Math.random()*0.5),
+        vx:(Math.random()-.5)*.25,
+        op:0,maxOp:.10+Math.random()*.12,
+        rot:Math.random()*360,rotV:(Math.random()-.5)*.3
+      });
     }
+    (function tick(){
+      requestAnimationFrame(tick);
+      const H=window.innerHeight,W=window.innerWidth;
+      items.forEach(p=>{
+        p.y+=p.vy;p.x+=p.vx;p.rot+=p.rotV;
+        const prog=1-(p.y/H);
+        if(prog<.12)p.op=Math.min(p.op+.003,p.maxOp*(prog/.12));
+        else if(prog>.88)p.op=Math.max(0,p.maxOp*((1-prog)/.12));
+        else p.op=Math.min(p.op+.002,p.maxOp);
+        if(p.y<-80){p.y=H+60;p.x=Math.random()*W;p.op=0;}
+        p.el.style.left=p.x.toFixed(0)+'px';
+        p.el.style.top=p.y.toFixed(0)+'px';
+        p.el.style.opacity=p.op.toFixed(3);
+        p.el.style.transform='rotate('+p.rot.toFixed(1)+'deg)';
+      });
+    })();
   }
 
   // ── UTIL ──────────────────────────────────────────────────────────────
