@@ -226,6 +226,7 @@
       const img=document.getElementById(id);
       if(img&&img.dataset[theme])img.src=img.dataset[theme];
     });
+    _refreshSymColors();
   }
 
   // ── BG SYMBOLS ─────────────────────────────────────────────────────
@@ -247,7 +248,17 @@
     // Peixe Ichthus com cruz
     '<svg viewBox="0 0 48 28" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14 C10 4 28 4 36 14 C28 24 10 24 4 14Z"/><path d="M36 14 L44 5 M36 14 L44 23"/><line x1="36" y1="14" x2="47" y2="14"/><circle cx="12" cy="11" r="1.5" fill="currentColor"/><line x1="18" y1="8" x2="18" y2="20"/><line x1="12" y1="14" x2="24" y2="14"/></svg>',
   ];
-  function _parseSVG(str){return new DOMParser().parseFromString(str,'image/svg+xml').documentElement;}
+  function _symColor(){return document.documentElement.getAttribute('data-theme')==='light'?'#7a1515':'#ffd8d0';}
+  function _parseSVG(str){
+    return new DOMParser().parseFromString(str.replace(/currentColor/g,_symColor()),'image/svg+xml').documentElement;
+  }
+  function _refreshSymColors(){
+    const c=_symColor();
+    document.querySelectorAll('#bg-symbols svg').forEach(s=>{
+      s.setAttribute('stroke',c);s.setAttribute('fill','none');
+      s.querySelectorAll('[fill="currentColor"]').forEach(el=>el.setAttribute('fill',c));
+    });
+  }
   function initBgSymbols(){
     const c=document.getElementById('bg-symbols');if(!c)return;
     const items=[];
