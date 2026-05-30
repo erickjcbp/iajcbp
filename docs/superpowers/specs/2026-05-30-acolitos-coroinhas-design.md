@@ -16,6 +16,22 @@ Módulo pastoral integrado à Central JCBP que digitaliza toda a operação da P
 
 **Padrão arquitetural:** Approach B — um arquivo HTML por ferramenta, pasta `projetos/acolitos/`. Cada arquivo registrado como tool na Central JCBP.
 
+### Mobile-First — Princípio Central de Design
+
+**80% dos usuários acessam pelo celular.** Todo o módulo é projetado mobile-first:
+
+- Layout base projetado para viewport 375px–430px (iPhone SE → iPhone Pro Max)
+- Desktop é expansão do mobile, não o contrário
+- Navegação principal: bottom nav bar fixa (não sidebar) em mobile
+- Cards em coluna única no mobile, grid no desktop
+- Botões de ação com área de toque mínima de 44×44px
+- Modais ocupam tela cheia em mobile (não janela flutuante)
+- Tabelas complexas (Planilha, Escala) têm versão mobile simplificada com scroll horizontal e colunas fixas reduzidas
+- Formulários com campos espaçados, inputs grandes, teclado numérico quando aplicável
+- Foto de perfil editável via câmera do celular (input type="file" accept="image/*" capture="user")
+- Sem hover-only interactions — tudo acessível via toque
+- Performance: sem dependências pesadas, imagens otimizadas, carregamento progressivo
+
 ---
 
 ## 2. Arquitetura do Módulo
