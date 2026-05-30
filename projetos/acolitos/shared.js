@@ -3,10 +3,11 @@
 // ── SUPABASE ─────────────────────────────────────────────────
 const SUPABASE_URL = 'https://fttjgsotuosjfrasttds.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGpnc290dW9zamZyYXN0dGRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MzU3NjUsImV4cCI6MjA5NTExMTc2NX0.BvofcR2cIXP7Bc3r2V0VOgc-JXPefX7JGGwtzv0d_eA';
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGpnc290dW9zamZyYXN0dGRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTUzNTc2NSwiZXhwIjoyMDk1MTExNzY1fQ.ejxL-yOGhls3v6J5JQHDkl8wE4GVEKWrSlvgxAvixY8';
 
+// Apenas anon key no browser. Autorização feita via RLS no banco.
+// service_role key pertence somente a Edge Functions (variável de ambiente no servidor).
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const sbAdmin = window.supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+const sbAdmin = sb; // alias — todas as operações elevadas são via RLS com o JWT do usuário
 
 // ── UTILS ─────────────────────────────────────────────────────
 function escHtml(s) {

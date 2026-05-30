@@ -338,10 +338,12 @@
 <script>
   const SUPABASE_URL = 'https://fttjgsotuosjfrasttds.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGpnc290dW9zamZyYXN0dGRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MzU3NjUsImV4cCI6MjA5NTExMTc2NX0.BvofcR2cIXP7Bc3r2V0VOgc-JXPefX7JGGwtzv0d_eA';
-  const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGpnc290dW9zamZyYXN0dGRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTUzNTc2NSwiZXhwIjoyMDk1MTExNzY1fQ.ejxL-yOGhls3v6J5JQHDkl8wE4GVEKWrSlvgxAvixY8';
 
+  // service_role key REMOVIDA do browser. Autorização via RLS + JWT do usuário.
+  // TODO: createUser, deleteUser precisam migrar para Supabase Edge Functions
+  // que recebam o JWT do chamador e usem o service key como variável de ambiente.
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  const sbAdmin = window.supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  const sbAdmin = sb; // alias — operações via RLS com JWT do admin autenticado
 
   let currentUser = null;
   let currentProfile = null;
@@ -369,8 +371,16 @@
     const { data: { session } } = await sb.auth.getSession();
     if (!session) { window.location.href = 'login.html'; return; }
     currentUser = session.user;
-    const { data: profile } = await sb.from('profiles')
+    let { data: profile, error: profileError } = await sb.from('profiles')
       .select('*').eq('id', currentUser.id).single();
+    if (!profile) {
+      // Perfil não encontrado: tenta criar (fallback para trigger não aplicado)
+      const nome = currentUser.user_metadata?.nome || currentUser.email.split('@')[0];
+      const { data: inserted } = await sbAdmin.from('profiles')
+        .upsert({ id: currentUser.id, nome, email: currentUser.email }, { onConflict: 'id' })
+        .select().single();
+      profile = inserted;
+    }
     if (!profile) { await sb.auth.signOut(); window.location.href = 'login.html'; return; }
     currentProfile = profile;
     document.getElementById('user-nome').textContent = profile.nome;
@@ -520,6 +530,11 @@
       email, password: senha, email_confirm: true, user_metadata: { nome }
     });
     if (error) { alert('Erro ao criar usuário: ' + error.message); return; }
+    // Garante que o perfil existe mesmo se o trigger do banco não estiver ativo
+    await sbAdmin.from('profiles').upsert(
+      { id: data.user.id, nome, email },
+      { onConflict: 'id' }
+    );
     await sb.from('access_requests').update({
       status: 'aprovado', reviewed_by: currentUser.id,
       reviewed_at: new Date().toISOString()
@@ -673,7 +688,10 @@
         email, password: senha, email_confirm: true, user_metadata: { nome }
       });
       if (error) { alert('Erro: ' + error.message); return; }
-      await sb.from('profiles').update({ nome, group_id, role }).eq('id', data.user.id);
+      await sbAdmin.from('profiles').upsert(
+        { id: data.user.id, nome, email, group_id, role },
+        { onConflict: 'id' }
+      );
     }
     fecharModal('modal-usuario'); renderUsuarios();
   }

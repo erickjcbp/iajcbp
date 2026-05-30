@@ -255,11 +255,14 @@ function abrirModal(entry) {
   const idx = ETAPAS.indexOf(entry.etapa);
   const prox = ETAPAS[idx + 1];
   const nome = entry.acolitos_membros?.nome || '—';
+  const podeAtribuirRole = ['coord_admin','subadmin'].includes(ctx.membership.role);
 
   document.getElementById('modal-title').textContent = nome;
   document.getElementById('modal-desc').textContent = ETAPA_ACAO[entry.etapa];
   document.getElementById('modal-obs').value = '';
-  document.getElementById('bloco-role').style.display = prox === 'integrado' ? '' : 'none';
+  // Seletor de role só aparece para coord_admin/subadmin ao integrar
+  document.getElementById('bloco-role').style.display =
+    (prox === 'integrado' && podeAtribuirRole) ? '' : 'none';
   document.getElementById('modal-avancar').classList.add('open');
 }
 
@@ -290,17 +293,21 @@ async function confirmarAvancar() {
     changed_by: ctx.user.id
   });
 
-  // Se integrado → atualiza role no pastoral_members
+  // Se integrado → atualiza role (apenas coord_admin e subadmin)
   if (proximaEtapa === 'integrado') {
-    const { data: membroRow } = await sbAdmin
-      .from('acolitos_membros').select('user_id').eq('id', membroId).maybeSingle();
-    const { data: modulo } = await sbAdmin
-      .from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
-    if (membroRow?.user_id && modulo) {
-      await sbAdmin.from('pastoral_members')
-        .update({ role: roleFinal })
-        .eq('user_id', membroRow.user_id)
-        .eq('module_id', modulo.id);
+    const podeAtribuirRole = ['coord_admin','subadmin'].includes(ctx.membership.role);
+    if (podeAtribuirRole) {
+      const { data: membroRow } = await sb
+        .from('acolitos_membros').select('user_id').eq('id', membroId).maybeSingle();
+      const { data: modulo } = await sb
+        .from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
+      if (membroRow?.user_id && modulo) {
+        // RLS com WITH CHECK garante que subadmin não pode atribuir coord_admin
+        await sb.from('pastoral_members')
+          .update({ role: roleFinal })
+          .eq('user_id', membroRow.user_id)
+          .eq('module_id', modulo.id);
+      }
     }
   }
 
