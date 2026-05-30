@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Membros — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .filtros-wrap { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+    .ficha-tabs { display:flex; border-bottom:1px solid var(--border-wine); margin-bottom:16px; overflow-x:auto; gap:0; }
+    .ficha-tab {
+      padding:10px 14px; background:transparent; border:none;
+      border-bottom:2px solid transparent; color:var(--text-muted);
+      cursor:pointer; font-size:11px; font-family:'Cinzel',serif;
+      letter-spacing:1px; text-transform:uppercase; white-space:nowrap;
+      transition:all .2s; -webkit-tap-highlight-color:transparent; flex-shrink:0;
+    }
+    .ficha-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
+    .tab-content { display:none; }
+    .tab-content.active { display:block; }
+    .hab-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+    @media(min-width:480px){ .hab-grid { grid-template-columns:repeat(3,1fr); } }
+    .hab-card {
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:3px; padding:10px; transition:border-color .2s;
+    }
+    .hab-card.nao_treinado  { border-color:var(--border); }
+    .hab-card.em_formacao   { border-color:#d4a060; }
+    .hab-card.apto          { border-color:var(--success); }
+    .hab-card.experiente    { border-color:#4a90c4; }
+    .hab-card.referencia    { border-color:#9b59d4; }
+    .hab-nome  { font-size:11px; color:var(--text); font-family:'Cinzel',serif; margin-bottom:4px; letter-spacing:.5px; }
+    .hab-nivel { font-size:10px; color:var(--text-muted); margin-bottom:6px; }
+    .hab-sel   { width:100%; padding:5px 8px; background:var(--surface); border:1px solid var(--border-wine); border-radius:2px; color:var(--text); font-size:11px; outline:none; }
+    .ficha-header { text-align:center; padding-bottom:16px; margin-bottom:16px; border-bottom:1px solid var(--border-wine); }
+    .ficha-nome { font-family:'Cinzel',serif; font-size:16px; font-weight:700; margin-top:10px; color:var(--text); }
+    .ficha-sub  { font-size:12px; color:var(--text-muted); margin-top:4px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+
+<div class="main">
+  <div class="toolbar">
+    <input class="search-input" id="busca" placeholder="🔍 Buscar nome..." oninput="filtrar()">
+    <button class="btn-sm gold" onclick="window.location.href='novos.html'">+ Novo</button>
+  </div>
+
+  <div class="filtros-wrap" id="filtros">
+    <button class="form-toggle active" onclick="setFiltro(this,'')">Todos</button>
+    <button class="form-toggle" onclick="setFiltro(this,'cerimonario')">Cerimoniários</button>
+    <button class="form-toggle" onclick="setFiltro(this,'acolito')">Acólitos</button>
+    <button class="form-toggle" onclick="setFiltro(this,'coroinha')">Coroinhas</button>
+    <button class="form-toggle" onclick="setFiltro(this,'aspirante')">Aspirantes</button>
+  </div>
+
+  <div class="cards-grid" id="grid">
+    <span class="loading">Carregando...</span>
+  </div>
+</div>
+
+<!-- Ficha do membro -->
+<div class="modal-overlay" id="modal-ficha">
+  <div class="modal" style="max-height:95vh;">
+    <div class="modal-handle"></div>
+    <div class="ficha-header" id="ficha-header"></div>
+    <div class="ficha-tabs" id="ficha-tabs"></div>
+    <div id="ficha-conteudo"></div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button class="btn-sm gray" onclick="fecharFicha()">Fechar</button>
+      <button class="btn-sm gold" id="btn-salvar" onclick="salvarFicha()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+const FUNCOES = [
+  {id:'apoio',          label:'Apoio',           cat:'Básica'},
+  {id:'cruz',           label:'Cruz',            cat:'Básica'},
+  {id:'vela',           label:'Vela',            cat:'Básica'},
+  {id:'sineta',         label:'Sineta',          cat:'Básica'},
+  {id:'sinao',          label:'Sinão',           cat:'Básica'},
+  {id:'altar',          label:'Altar',           cat:'Intermediária'},
+  {id:'turibulo',       label:'Turíbulo',        cat:'Intermediária'},
+  {id:'naveta',         label:'Naveta',          cat:'Intermediária'},
+  {id:'missal',         label:'Missal',          cat:'Avançada'},
+  {id:'cred_altar',     label:'Cred. Altar',     cat:'Avançada'},
+  {id:'cred_credencia', label:'Cred. Credência', cat:'Avançada'},
+  {id:'mitra',          label:'Mitra',           cat:'Episcopal'},
+  {id:'baculo',         label:'Báculo',          cat:'Episcopal'},
+];
+const NIVEIS = ['nao_treinado','em_formacao','apto','experiente','referencia'];
+const NIVEL_LABEL = {
+  nao_treinado:'Não Treinado', em_formacao:'Em Formação',
+  apto:'Apto', experiente:'Experiente', referencia:'Referência'
+};
+const ROLE_LABEL = {
+  cerimonario:'Cerimoniário', acolito:'Acólito', coroinha:'Coroinha',
+  aspirante:'Aspirante', membro_equipe:'Equipe', subadmin:'Sub-Admin',
+  coord_admin:'Coord. Admin', novo:'Novo'
+};
+const HORARIOS = [
+  {dia:'sabado',  horario:'17h',   label:'Sábado 17h'},
+  {dia:'sabado',  horario:'18h30', label:'Sáb. 18h30 (Sto. Antônio)'},
+  {dia:'domingo', horario:'7h',    label:'Domingo 7h'},
+  {dia:'domingo', horario:'9h',    label:'Domingo 9h'},
+  {dia:'domingo', horario:'19h',   label:'Domingo 19h'},
+];
+
+let ctx = null;
+let todos = [];
+let filtroAtivo = '';
+let membroAtual = null;
+let habAtual = {};
+let roleMap = {};
+
+async function init() {
+  ctx = await initModulo(['coord_admin','subadmin','membro_equipe']);
+  if (!ctx) return;
+  renderHeader(ctx, 'membros');
+  renderBottomNav(ctx.membership.role, 'membros');
+  await loadMembros();
+}
+
+async function loadMembros() {
+  const { data: membros } = await sbAdmin
+    .from('acolitos_membros').select('*').eq('status','ativo').order('nome');
+  const { data: modulo } = await sbAdmin
+    .from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
+  if (modulo) {
+    const { data: pm } = await sbAdmin
+      .from('pastoral_members').select('user_id,role').eq('module_id', modulo.id);
+    roleMap = {};
+    (pm || []).forEach(r => { roleMap[r.user_id] = r.role; });
+  }
+  todos = (membros || []).map(m => ({ ...m, role: (m.user_id && roleMap[m.user_id]) || 'aspirante' }));
+  renderGrid();
+}
+
+function filtrar() { renderGrid(); }
+function setFiltro(btn, role) {
+  filtroAtivo = role;
+  document.querySelectorAll('#filtros .form-toggle').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+}
+
+function renderGrid() {
+  const busca = document.getElementById('busca').value.toLowerCase();
+  const grid = document.getElementById('grid');
+  grid.textContent = '';
+  const lista = todos.filter(m =>
+    m.nome.toLowerCase().includes(busca) &&
+    (!filtroAtivo || m.role === filtroAtivo)
+  );
+  if (!lista.length) {
+    const em = document.createElement('span'); em.className = 'empty';
+    em.textContent = 'Nenhum membro encontrado.'; grid.appendChild(em); return;
+  }
+  lista.forEach(m => {
+    const card = document.createElement('div'); card.className = 'member-card';
+    card.onclick = () => abrirFicha(m);
+
+    const avatarWrap = document.createElement('div'); avatarWrap.className = 'member-card-avatar';
+    avatarWrap.appendChild(buildAvatarEl(m.foto_url, m.role, 60));
+
+    const nome = document.createElement('div'); nome.className = 'member-card-name';
+    nome.textContent = m.nome;
+
+    const meta = document.createElement('div'); meta.className = 'member-card-meta';
+    const badge = document.createElement('span'); badge.className = 'badge ' + m.role;
+    badge.textContent = ROLE_LABEL[m.role] || m.role;
+    meta.appendChild(badge);
+
+    const com = document.createElement('div'); com.className = 'member-card-meta';
+    com.style.marginTop = '4px';
+    com.textContent = m.comunidade === 'matriz' ? 'Matriz'
+                    : m.comunidade === 'santo_antonio' ? 'Sto. Antônio' : 'Outra';
+
+    card.append(avatarWrap, nome, meta, com);
+    grid.appendChild(card);
+  });
+}
+
+async function abrirFicha(membro) {
+  membroAtual = membro;
+  habAtual = {};
+
+  // Header
+  const hdr = document.getElementById('ficha-header');
+  hdr.textContent = '';
+  hdr.appendChild(buildAvatarEl(membro.foto_url, membro.role, 72));
+  const nomeEl = document.createElement('div'); nomeEl.className = 'ficha-nome'; nomeEl.textContent = membro.nome;
+  const subEl  = document.createElement('div'); subEl.className  = 'ficha-sub';
+  subEl.textContent = (ROLE_LABEL[membro.role] || membro.role) + ' · ' +
+    (membro.comunidade === 'matriz' ? 'Matriz' : membro.comunidade === 'santo_antonio' ? 'Sto. Antônio' : 'Outra');
+  hdr.append(nomeEl, subEl);
+
+  // Tabs
+  const tabs = ['Pessoal','Habilitações','Disponibilidade','Família','Observações'];
+  const tabsEl = document.getElementById('ficha-tabs'); tabsEl.textContent = '';
+  tabs.forEach((t, i) => {
+    const btn = document.createElement('button'); btn.className = 'ficha-tab' + (i === 0 ? ' active' : '');
+    btn.textContent = t;
+    btn.onclick = () => {
+      document.querySelectorAll('.ficha-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderTab(t);
+    };
+    tabsEl.appendChild(btn);
+  });
+
+  await renderTab('Pessoal');
+  document.getElementById('modal-ficha').classList.add('open');
+}
+
+async function renderTab(tab) {
+  const el = document.getElementById('ficha-conteudo');
+  el.textContent = '';
+  const m = membroAtual;
+
+  if (tab === 'Pessoal') {
+    [
+      ['Nome', m.nome],
+      ['Nascimento', m.data_nascimento ? formatDate(m.data_nascimento) : '—'],
+      ['Idade', m.data_nascimento ? calcIdade(m.data_nascimento) + ' anos' : '—'],
+      ['Telefone', m.telefone || '—'],
+      ['Responsável', m.responsavel || '—'],
+      ['Comunidade', m.comunidade === 'matriz' ? 'Matriz' : m.comunidade === 'santo_antonio' ? 'Sto. Antônio' : '—'],
+      ['Pode outras comunidades?', m.pode_outras_comunidades ? 'Sim' : 'Não'],
+    ].forEach(([label, value]) => {
+      const row = document.createElement('div'); row.className = 'stat-row';
+      const lbl = document.createElement('span'); lbl.className = 'stat-label'; lbl.textContent = label;
+      const val = document.createElement('span'); val.className = 'stat-value'; val.textContent = value;
+      row.append(lbl, val); el.appendChild(row);
+    });
+  }
+
+  if (tab === 'Habilitações') {
+    const { data: habs } = await sbAdmin
+      .from('acolitos_habilitacoes').select('*').eq('membro_id', m.id);
+    habAtual = {};
+    (habs || []).forEach(h => { habAtual[h.funcao] = h.proficiencia; });
+
+    const grid = document.createElement('div'); grid.className = 'hab-grid';
+    FUNCOES.forEach(fn => {
+      const nivel = habAtual[fn.id] || 'nao_treinado';
+      const card = document.createElement('div'); card.className = 'hab-card ' + nivel; card.id = 'hc-' + fn.id;
+      const nome = document.createElement('div'); nome.className = 'hab-nome'; nome.textContent = fn.label;
+      const nivelEl = document.createElement('div'); nivelEl.className = 'hab-nivel'; nivelEl.id = 'hn-' + fn.id;
+      nivelEl.textContent = NIVEL_LABEL[nivel];
+      const sel = document.createElement('select'); sel.className = 'hab-sel';
+      NIVEIS.forEach(n => {
+        const opt = document.createElement('option'); opt.value = n;
+        opt.textContent = NIVEL_LABEL[n]; if (n === nivel) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.onchange = () => {
+        const v = sel.value; habAtual[fn.id] = v;
+        card.className = 'hab-card ' + v;
+        document.getElementById('hn-' + fn.id).textContent = NIVEL_LABEL[v];
+      };
+      card.append(nome, nivelEl, sel); grid.appendChild(card);
+    });
+    el.appendChild(grid);
+  }
+
+  if (tab === 'Disponibilidade') {
+    const { data: disp } = await sbAdmin
+      .from('acolitos_disponibilidade').select('*').eq('membro_id', m.id);
+    const dispSet = new Set((disp || []).map(d => d.dia + '_' + d.horario));
+    HORARIOS.forEach(h => {
+      const row = document.createElement('div'); row.className = 'toggle-row';
+      const lbl = document.createElement('label'); lbl.textContent = h.label;
+      const chk = document.createElement('input'); chk.type = 'checkbox';
+      chk.className = 'toggle-checkbox';
+      chk.checked = dispSet.has(h.dia + '_' + h.horario);
+      chk.setAttribute('data-dia', h.dia); chk.setAttribute('data-horario', h.horario);
+      row.append(lbl, chk); el.appendChild(row);
+    });
+  }
+
+  if (tab === 'Família') {
+    [
+      ['Pai ministro?',         m.tem_pai_ministro ? 'Sim' : 'Não'],
+      ['Nome pai ministro',     m.nome_pai_ministro || '—'],
+      ['Mãe ministra?',         m.tem_mae_ministro ? 'Sim' : 'Não'],
+      ['Nome mãe ministra',     m.nome_mae_ministro || '—'],
+      ['Comunidade ministros',  m.comunidade_ministro || '—'],
+      ['Escalar com pais?',     m.escalar_com_pais ? 'Sim' : 'Não'],
+      ['Irmão na pastoral?',    m.tem_irmao_pastoral ? 'Sim' : 'Não'],
+      ['Escalar com irmão?',    m.escalar_com_irmao ? 'Sim' : 'Não'],
+    ].forEach(([label, value]) => {
+      const row = document.createElement('div'); row.className = 'stat-row';
+      const lbl = document.createElement('span'); lbl.className = 'stat-label'; lbl.textContent = label;
+      const val = document.createElement('span'); val.className = 'stat-value'; val.textContent = value;
+      row.append(lbl, val); el.appendChild(row);
+    });
+  }
+
+  if (tab === 'Observações') {
+    const grpNec = document.createElement('div'); grpNec.className = 'form-group';
+    const lblNec = document.createElement('label'); lblNec.className = 'form-label';
+    lblNec.textContent = 'Necessidades Especiais';
+    const inpNec = document.createElement('textarea'); inpNec.className = 'form-textarea';
+    inpNec.id = 'obs-nec'; inpNec.rows = 3;
+    inpNec.value = m.necessidades_especiais || '';
+    inpNec.placeholder = 'TEA, TDAH, limitações...';
+    grpNec.append(lblNec, inpNec);
+
+    const grpObs = document.createElement('div'); grpObs.className = 'form-group';
+    const lblObs = document.createElement('label'); lblObs.className = 'form-label';
+    lblObs.textContent = 'Observações Gerais';
+    const inpObs = document.createElement('textarea'); inpObs.className = 'form-textarea';
+    inpObs.id = 'obs-geral'; inpObs.rows = 3;
+    inpObs.value = m.observacoes || '';
+    inpObs.placeholder = 'Restrições, preferências, anotações...';
+    grpObs.append(lblObs, inpObs);
+
+    const grpProx = document.createElement('div'); grpProx.className = 'form-group';
+    const lblProx = document.createElement('label'); lblProx.className = 'form-label';
+    lblProx.textContent = 'Próxima Etapa de Formação';
+    const inpProx = document.createElement('input'); inpProx.className = 'form-input';
+    inpProx.id = 'obs-prox';
+    inpProx.value = m.proxima_etapa || '';
+    inpProx.placeholder = 'Ex: Preparando para Turíbulo';
+    grpProx.append(lblProx, inpProx);
+
+    el.append(grpNec, grpObs, grpProx);
+  }
+}
+
+async function salvarFicha() {
+  if (!membroAtual) return;
+  const btn = document.getElementById('btn-salvar');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  // Habilitações
+  if (Object.keys(habAtual).length) {
+    const upserts = Object.entries(habAtual).map(([funcao, proficiencia]) => ({
+      membro_id: membroAtual.id, funcao, proficiencia,
+      updated_at: new Date().toISOString()
+    }));
+    await sbAdmin.from('acolitos_habilitacoes')
+      .upsert(upserts, { onConflict: 'membro_id,funcao' });
+  }
+
+  // Disponibilidade
+  const chks = document.querySelectorAll('.toggle-checkbox[data-dia]');
+  if (chks.length) {
+    await sbAdmin.from('acolitos_disponibilidade').delete().eq('membro_id', membroAtual.id);
+    const selecionados = [...chks].filter(c => c.checked).map(c => ({
+      membro_id: membroAtual.id,
+      dia: c.getAttribute('data-dia'),
+      horario: c.getAttribute('data-horario')
+    }));
+    if (selecionados.length) await sbAdmin.from('acolitos_disponibilidade').insert(selecionados);
+  }
+
+  // Observações
+  const necEl  = document.getElementById('obs-nec');
+  const obsEl  = document.getElementById('obs-geral');
+  const proxEl = document.getElementById('obs-prox');
+  if (necEl || obsEl || proxEl) {
+    const upd = {};
+    if (necEl)  upd.necessidades_especiais = necEl.value.trim() || null;
+    if (obsEl)  upd.observacoes            = obsEl.value.trim() || null;
+    if (proxEl) upd.proxima_etapa          = proxEl.value.trim() || null;
+    if (Object.keys(upd).length) {
+      await sbAdmin.from('acolitos_membros').update(upd).eq('id', membroAtual.id);
+      // Atualiza cache local
+      Object.assign(membroAtual, upd);
+    }
+  }
+
+  btn.disabled = false; btn.textContent = 'Salvar';
+  fecharFicha();
+  await loadMembros();
+}
+
+function fecharFicha() {
+  document.getElementById('modal-ficha').classList.remove('open');
+  membroAtual = null; habAtual = {};
+}
+
+init();
+</script>
+</body>
+</html>

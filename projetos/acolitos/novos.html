@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Novo Membro — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    body { padding-bottom: 24px; }
+    .registro-wrap { max-width: 560px; margin: 0 auto; padding: 20px 16px 40px; }
+    .intro-card {
+      background: var(--surface); border: 1px solid var(--gold-dim);
+      border-radius: 4px; padding: 16px; margin-bottom: 24px; text-align: center;
+    }
+    .intro-icon { font-size: 36px; margin-bottom: 8px; }
+    .intro-title {
+      font-family: 'Cinzel', serif; font-size: 15px; color: var(--gold-light);
+      letter-spacing: 1px; margin-bottom: 6px;
+    }
+    .intro-sub { font-size: 12px; color: var(--text-muted); font-style: italic; }
+    .bloco-membro {
+      background: var(--surface); border: 1px solid var(--border-wine);
+      border-radius: 4px; padding: 18px 14px; margin-bottom: 14px; position: relative;
+    }
+    .bloco-title {
+      font-family: 'Cinzel', serif; font-size: 11px; color: var(--gold);
+      letter-spacing: 1px; text-transform: uppercase; margin-bottom: 14px;
+    }
+    .btn-remover {
+      position: absolute; top: 10px; right: 10px;
+      background: transparent; border: none; color: var(--text-muted);
+      cursor: pointer; font-size: 20px; padding: 4px; line-height: 1;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .expand-block { display: none; margin-top: 8px; }
+    .expand-block.show { display: block; }
+    .section-divider { border: none; border-top: 1px solid var(--border-wine); margin: 20px 0; opacity: .4; }
+    .resp-section {
+      background: var(--surface); border: 1px solid var(--border-wine);
+      border-radius: 4px; padding: 18px 14px; margin-bottom: 20px;
+    }
+    .btn-add-membro {
+      width: 100%; padding: 14px; min-height: 48px;
+      background: transparent; border: 1px dashed var(--border-wine);
+      color: var(--text-muted); border-radius: 2px; cursor: pointer;
+      font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1.5px;
+      text-transform: uppercase; transition: all .2s; margin-bottom: 16px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-add-membro:hover { border-color: var(--gold); color: var(--gold); }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-header"></div>
+
+<div class="registro-wrap">
+  <div class="intro-card">
+    <div class="intro-icon">⛪</div>
+    <div class="intro-title">Pastoral de Acólitos e Coroinhas</div>
+    <div class="intro-sub">Preencha os dados abaixo para ingressar na pastoral</div>
+  </div>
+
+  <div id="blocos-membros"></div>
+
+  <button type="button" class="btn-add-membro" onclick="addBlocoMembro()">
+    + Adicionar outro membro (irmão / filho)
+  </button>
+
+  <hr class="section-divider">
+
+  <div class="resp-section">
+    <div class="bloco-title">Dados do Responsável / Contato</div>
+
+    <div class="form-group">
+      <label class="form-label">Nome do Pai</label>
+      <input class="form-input" id="r-pai" placeholder="Nome completo do pai" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nome da Mãe</label>
+      <input class="form-input" id="r-mae" placeholder="Nome completo da mãe" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Celular da Mãe</label>
+      <input class="form-input" id="r-cel-mae" type="tel" placeholder="(99) 99999-9999">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Celular de Recado</label>
+      <input class="form-input" id="r-cel-recado" type="tel" placeholder="(99) 99999-9999">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Endereço</label>
+      <input class="form-input" id="r-endereco" placeholder="Rua, número, bairro">
+    </div>
+
+    <div class="toggle-row">
+      <label>Os pais são ministros extraordinários?</label>
+      <input class="toggle-checkbox" type="checkbox" id="r-ministros" onchange="toggleMinistros()">
+    </div>
+    <div class="expand-block" id="bloco-ministros">
+      <div class="form-group">
+        <label class="form-label">Nome do Ministro (pai ou mãe)</label>
+        <input class="form-input" id="r-ministro-nome" placeholder="Nome completo">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Comunidade onde serve</label>
+        <select class="form-select" id="r-ministro-comunidade">
+          <option value="">Selecionar...</option>
+          <option value="matriz">Matriz</option>
+          <option value="santo_antonio">Santo Antônio</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="msg-cadastro" class="msg"></div>
+  <button type="button" class="btn gold" id="btn-cadastrar" onclick="enviarCadastro()">
+    Concluir Cadastro
+  </button>
+</div>
+
+<script src="shared.js"></script>
+<script>
+let currentUser = null;
+let blocoCount = 0;
+
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = '../central/login.html'; return; }
+  currentUser = session.user;
+
+  // Redireciona se já tem vínculo pastoral
+  const { data: modulo } = await sbAdmin
+    .from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
+  if (modulo) {
+    const { data: vinculo } = await sbAdmin
+      .from('pastoral_members')
+      .select('id').eq('user_id', session.user.id).eq('module_id', modulo.id).maybeSingle();
+    if (vinculo) { window.location.href = 'index.html'; return; }
+  }
+
+  renderHeader({ user: session.user, membership: null, membro: null }, null);
+  addBlocoMembro();
+}
+
+function addBlocoMembro() {
+  blocoCount++;
+  const n = blocoCount;
+  const container = document.getElementById('blocos-membros');
+  const bloco = document.createElement('div');
+  bloco.className = 'bloco-membro';
+  bloco.id = 'bloco-' + n;
+
+  // Título
+  const title = document.createElement('div');
+  title.className = 'bloco-title';
+  title.textContent = 'Membro ' + n;
+  bloco.appendChild(title);
+
+  // Botão remover (somente do 2º em diante)
+  if (n > 1) {
+    const btnRem = document.createElement('button');
+    btnRem.type = 'button';
+    btnRem.className = 'btn-remover';
+    btnRem.title = 'Remover';
+    btnRem.textContent = '✕';
+    btnRem.onclick = () => bloco.remove();
+    bloco.appendChild(btnRem);
+  }
+
+  // Campos — todos usando DOM para evitar XSS
+  const campos = [
+    { id: 'nome',   label: 'Nome Completo *',          type: 'text',  placeholder: 'Nome completo', required: true },
+    { id: 'nasc',   label: 'Data de Nascimento *',      type: 'date',  placeholder: '',              required: true },
+    { id: 'cel',    label: 'Celular do Membro (opcion.)',type: 'tel',   placeholder: '(99) 99999-9999',required: false },
+  ];
+  campos.forEach(c => {
+    const grp = document.createElement('div'); grp.className = 'form-group';
+    const lbl = document.createElement('label'); lbl.className = 'form-label'; lbl.textContent = c.label;
+    const inp = document.createElement('input');
+    inp.className = 'form-input'; inp.id = 'm' + n + '-' + c.id;
+    inp.type = c.type; inp.placeholder = c.placeholder;
+    grp.append(lbl, inp); bloco.appendChild(grp);
+  });
+
+  // Comunidade
+  const grpCom = document.createElement('div'); grpCom.className = 'form-group';
+  const lblCom = document.createElement('label'); lblCom.className = 'form-label'; lblCom.textContent = 'Comunidade Principal *';
+  const selCom = document.createElement('select'); selCom.className = 'form-select'; selCom.id = 'm' + n + '-comunidade';
+  [['matriz','Matriz'],['santo_antonio','Santo Antônio'],['outra','Outra']].forEach(([v,t]) => {
+    const opt = document.createElement('option'); opt.value = v; opt.textContent = t; selCom.appendChild(opt);
+  });
+  grpCom.append(lblCom, selCom); bloco.appendChild(grpCom);
+
+  // Sacramentos
+  const grpSac = document.createElement('div'); grpSac.className = 'form-group';
+  const lblSac = document.createElement('label'); lblSac.className = 'form-label'; lblSac.textContent = 'Sacramentos';
+  const togGrp = document.createElement('div'); togGrp.className = 'form-toggle-group';
+  [['batismo','Batismo'],['eucaristia','1ª Eucaristia'],['crisma','Crisma']].forEach(([id,label]) => {
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'form-toggle';
+    btn.id = 'm' + n + '-' + id; btn.textContent = label;
+    btn.onclick = () => btn.classList.toggle('active');
+    togGrp.appendChild(btn);
+  });
+  grpSac.append(lblSac, togGrp); bloco.appendChild(grpSac);
+
+  // Toggles sim/não
+  [['tunica','Já possui túnica?'],['whatsapp','Já está no grupo de WhatsApp?']].forEach(([id,label]) => {
+    const row = document.createElement('div'); row.className = 'toggle-row';
+    const lbl = document.createElement('label'); lbl.textContent = label;
+    const chk = document.createElement('input'); chk.type = 'checkbox'; chk.className = 'toggle-checkbox';
+    chk.id = 'm' + n + '-' + id;
+    row.append(lbl, chk); bloco.appendChild(row);
+  });
+
+  container.appendChild(bloco);
+}
+
+function toggleMinistros() {
+  const checked = document.getElementById('r-ministros').checked;
+  document.getElementById('bloco-ministros').classList.toggle('show', checked);
+}
+
+function showMsg(text, tipo) {
+  const el = document.getElementById('msg-cadastro');
+  el.className = 'msg ' + tipo;
+  el.textContent = text;
+}
+
+async function enviarCadastro() {
+  const btn = document.getElementById('btn-cadastrar');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  const resp = {
+    pai:       document.getElementById('r-pai').value.trim(),
+    mae:       document.getElementById('r-mae').value.trim(),
+    celMae:    document.getElementById('r-cel-mae').value.trim(),
+    celRecado: document.getElementById('r-cel-recado').value.trim(),
+    endereco:  document.getElementById('r-endereco').value.trim(),
+    ministros: document.getElementById('r-ministros').checked,
+    ministroNome:      document.getElementById('r-ministro-nome').value.trim(),
+    ministroComunidade:document.getElementById('r-ministro-comunidade').value,
+  };
+
+  const blocos = document.querySelectorAll('.bloco-membro');
+  if (!blocos.length) {
+    showMsg('Adicione ao menos um membro.', 'error');
+    btn.disabled = false; btn.textContent = 'Concluir Cadastro'; return;
+  }
+
+  // Valida campos obrigatórios
+  for (const bloco of blocos) {
+    const idx = bloco.id.replace('bloco-','');
+    const nome = document.getElementById('m' + idx + '-nome')?.value.trim();
+    const nasc = document.getElementById('m' + idx + '-nasc')?.value;
+    if (!nome || !nasc) {
+      showMsg('Nome e data de nascimento são obrigatórios para todos os membros.', 'error');
+      btn.disabled = false; btn.textContent = 'Concluir Cadastro'; return;
+    }
+  }
+
+  // Busca module_id
+  const { data: modulo } = await sbAdmin
+    .from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
+  if (!modulo) {
+    showMsg('Erro interno. Contate o administrador.', 'error');
+    btn.disabled = false; btn.textContent = 'Concluir Cadastro'; return;
+  }
+
+  const responsavelObs = [
+    resp.pai       ? 'Pai: ' + resp.pai         : null,
+    resp.mae       ? 'Mãe: ' + resp.mae          : null,
+    resp.celMae    ? 'Cel. mãe: ' + resp.celMae  : null,
+    resp.celRecado ? 'Recado: ' + resp.celRecado  : null,
+    resp.endereco  ? 'End.: ' + resp.endereco     : null,
+  ].filter(Boolean).join(' | ');
+
+  // Insere cada membro
+  for (let i = 0; i < blocos.length; i++) {
+    const idx = blocos[i].id.replace('bloco-','');
+    const nome = document.getElementById('m' + idx + '-nome').value.trim();
+    const nasc = document.getElementById('m' + idx + '-nasc').value;
+
+    const mData = {
+      nome,
+      data_nascimento: nasc || null,
+      telefone: document.getElementById('m' + idx + '-cel')?.value.trim() || null,
+      comunidade: document.getElementById('m' + idx + '-comunidade')?.value || 'matriz',
+      responsavel: [resp.pai, resp.mae].filter(Boolean).join(' / ') || null,
+      tem_pai_ministro: resp.ministros,
+      nome_pai_ministro: resp.ministros ? resp.ministroNome || null : null,
+      tem_mae_ministro: resp.ministros,
+      nome_mae_ministro: resp.ministros ? resp.ministroNome || null : null,
+      comunidade_ministro: resp.ministros ? resp.ministroComunidade || null : null,
+      escalar_com_pais: resp.ministros,
+      observacoes: responsavelObs || null,
+    };
+
+    // Primeiro membro → vincula ao usuário logado
+    if (i === 0) mData.user_id = currentUser.id;
+
+    const { data: membro, error: eM } = await sbAdmin
+      .from('acolitos_membros').insert(mData).select('id').single();
+
+    if (eM || !membro) {
+      showMsg('Erro ao salvar dados. Tente novamente.', 'error');
+      btn.disabled = false; btn.textContent = 'Concluir Cadastro'; return;
+    }
+
+    // Vínculo pastoral apenas para o usuário logado (primeiro membro)
+    if (i === 0) {
+      await sbAdmin.from('pastoral_members').upsert({
+        user_id: currentUser.id, module_id: modulo.id, role: 'novo'
+      }, { onConflict: 'user_id,module_id' });
+    }
+
+    // Abre CRM
+    await sbAdmin.from('acolitos_crm').insert({ membro_id: membro.id, etapa: 'integracao' });
+  }
+
+  showMsg('Cadastro realizado! Em breve a equipe entrará em contato.', 'success');
+  setTimeout(() => { window.location.href = 'index.html'; }, 2200);
+}
+
+init();
+</script>
+</body>
+</html>

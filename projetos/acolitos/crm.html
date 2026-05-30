@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .view-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
+    .view-btn {
+      padding: 8px 18px; min-height: 40px; background: var(--surface2);
+      border: 1px solid var(--border); color: var(--text-muted); border-radius: 2px;
+      cursor: pointer; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px;
+      text-transform: uppercase; transition: all .2s; -webkit-tap-highlight-color: transparent;
+    }
+    .view-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,.08); }
+    .list-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 480px; }
+    .list-table th {
+      text-align: left; padding: 9px 12px; font-family: 'Cinzel', serif;
+      font-size: 10px; letter-spacing: 1.5px; color: var(--text-muted);
+      border-bottom: 1px solid var(--border-wine); white-space: nowrap; text-transform: uppercase;
+    }
+    .list-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .days-pill {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 10px; font-family: 'Cinzel', serif; border: 1px solid;
+    }
+    .days-pill.ok   { background: rgba(30,80,30,.2); color: var(--success-text); border-color: var(--success); }
+    .days-pill.warn { background: rgba(120,60,0,.2); color: var(--warn-text); border-color: var(--warn); }
+    .etapa-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 2px;
+      font-size: 10px; font-family: 'Cinzel', serif; letter-spacing: .5px;
+      background: rgba(201,168,76,.1); color: var(--gold); border: 1px solid var(--gold-dim);
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+
+<div class="main">
+  <div class="kpi-grid" id="crm-kpis"></div>
+  <h1 class="page-title">Pipeline de Integração</h1>
+
+  <div class="view-toggle">
+    <button class="view-btn active" id="btn-v-pipeline" onclick="setView('pipeline')">Pipeline</button>
+    <button class="view-btn" id="btn-v-lista" onclick="setView('lista')">Lista</button>
+  </div>
+
+  <div id="view-pipeline" class="crm-pipeline"></div>
+
+  <div id="view-lista" style="display:none;overflow-x:auto;">
+    <table class="list-table">
+      <thead>
+        <tr>
+          <th>Nome</th><th>Idade</th><th>Etapa</th>
+          <th>Dias</th><th>Entrada</th><th>Ação</th>
+        </tr>
+      </thead>
+      <tbody id="crm-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal avançar etapa -->
+<div class="modal-overlay" id="modal-avancar">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">Avançar Etapa</div>
+    <p id="modal-desc" style="color:var(--text-muted);font-size:13px;margin-bottom:16px;line-height:1.5;"></p>
+
+    <div id="bloco-role" style="display:none;" class="form-group">
+      <label class="form-label">Definir nível do membro</label>
+      <select class="form-select" id="sel-role">
+        <option value="aspirante">Aspirante — em fase inicial</option>
+        <option value="coroinha">Coroinha — funções básicas</option>
+        <option value="acolito">Acólito — funções de altar</option>
+      </select>
+    </div>
+
+    <div class="form-group" style="margin-top:12px;">
+      <label class="form-label">Observação (opcional)</label>
+      <input class="form-input" id="modal-obs" placeholder="Anotação desta etapa...">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-sm gray" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-sm gold" id="btn-confirmar" onclick="confirmarAvancar()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+const ETAPAS = ['integracao','whatsapp','tunica','disponivel_escala','integrado'];
+const ETAPA_LABEL = {
+  integracao:'Integração', whatsapp:'WhatsApp', tunica:'Túnica',
+  disponivel_escala:'Disp. Escala', integrado:'Integrado'
+};
+const ETAPA_ACAO = {
+  integracao:      'Reunião de integração realizada com o membro.',
+  whatsapp:        'Entrada nos grupos de WhatsApp confirmada.',
+  tunica:          'Recebimento da túnica confirmado.',
+  disponivel_escala:'Disponibilidade preenchida. Membro pronto para ser escalado.',
+  integrado:       'Membro totalmente integrado! Defina o nível pastoral.'
+};
+
+let ctx = null;
+let crmData = [];
+let pendingEntry = null;
+let currentView = 'pipeline';
+
+async function init() {
+  ctx = await initModulo(['coord_admin','subadmin','membro_equipe']);
+  if (!ctx) return;
+  renderHeader(ctx, 'crm');
+  renderBottomNav(ctx.membership.role, 'crm');
+  await loadCrm();
+}
+
+async function loadCrm() {
+  const { data } = await sbAdmin
+    .from('acolitos_crm')
+    .select('*, acolitos_membros(id,nome,data_nascimento,foto_url)')
+    .neq('etapa','integrado')
+    .order('etapa_iniciada_em', { ascending: true });
+  crmData = data || [];
+  renderKpis();
+  currentView === 'pipeline' ? renderPipeline() : renderLista();
+}
+
+function renderKpis() {
+  const el = document.getElementById('crm-kpis');
+  el.textContent = '';
+  const total    = crmData.length;
+  const travados = crmData.filter(c => diasNaEtapa(c.etapa_iniciada_em) > 30).length;
+  const naInteg  = crmData.filter(c => c.etapa === 'integracao').length;
+  const quaseLa  = crmData.filter(c => c.etapa === 'disponivel_escala').length;
+  [
+    { label:'Em Onboarding',  value: total,    sub: 'aguardando' },
+    { label:'Travados +30d',  value: travados, sub: 'precisam atenção' },
+    { label:'Na Integração',  value: naInteg,  sub: '1ª etapa' },
+    { label:'Quase lá',       value: quaseLa,  sub: 'disp. escala' },
+  ].forEach(k => {
+    const card = document.createElement('div'); card.className = 'kpi-card';
+    const lbl = document.createElement('div'); lbl.className = 'kpi-label'; lbl.textContent = k.label;
+    const val = document.createElement('div'); val.className = 'kpi-value'; val.textContent = k.value;
+    const sub = document.createElement('div'); sub.className = 'kpi-sub';   sub.textContent = k.sub;
+    card.append(lbl, val, sub); el.appendChild(card);
+  });
+}
+
+function renderPipeline() {
+  const el = document.getElementById('view-pipeline');
+  el.textContent = '';
+  ETAPAS.slice(0,-1).forEach(etapa => {
+    const membros = crmData.filter(c => c.etapa === etapa);
+
+    const col = document.createElement('div'); col.className = 'crm-col';
+
+    // Header da coluna
+    const hdr = document.createElement('div'); hdr.className = 'crm-col-header';
+    const htitle = document.createElement('span'); htitle.textContent = ETAPA_LABEL[etapa];
+    const hcount = document.createElement('span');
+    hcount.style.cssText = 'background:var(--wine-dim);color:var(--text);border-radius:10px;padding:1px 7px;font-size:10px;';
+    hcount.textContent = membros.length;
+    hdr.append(htitle, hcount);
+
+    // Body da coluna
+    const body = document.createElement('div'); body.className = 'crm-col-body';
+    if (!membros.length) {
+      const empty = document.createElement('span');
+      empty.style.cssText = 'color:var(--text-muted);font-size:11px;font-style:italic;padding:8px 0;text-align:center;';
+      empty.textContent = 'Nenhum';
+      body.appendChild(empty);
+    }
+    membros.forEach(c => {
+      const m = c.acolitos_membros;
+      const dias = diasNaEtapa(c.etapa_iniciada_em);
+      const card = document.createElement('div'); card.className = 'crm-card';
+      card.onclick = () => abrirModal(c);
+
+      const name = document.createElement('div'); name.className = 'crm-card-name';
+      name.textContent = m?.nome || '—';
+
+      const meta = document.createElement('div'); meta.className = 'crm-card-meta';
+      meta.textContent = m?.data_nascimento ? calcIdade(m.data_nascimento) + ' anos' : '—';
+
+      const daysEl = document.createElement('div');
+      daysEl.className = 'crm-card-days' + (dias > 30 ? ' alert' : '');
+      daysEl.textContent = dias + ' dias nesta etapa';
+
+      card.append(name, meta, daysEl);
+      body.appendChild(card);
+    });
+
+    col.append(hdr, body);
+    el.appendChild(col);
+  });
+}
+
+function renderLista() {
+  const tbody = document.getElementById('crm-tbody');
+  tbody.textContent = '';
+  if (!crmData.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td'); td.colSpan = 6; td.className = 'empty';
+    td.textContent = 'Nenhum membro em onboarding.';
+    tr.appendChild(td); tbody.appendChild(tr); return;
+  }
+  crmData.forEach(c => {
+    const m = c.acolitos_membros;
+    const dias = diasNaEtapa(c.etapa_iniciada_em);
+    const tr = document.createElement('tr');
+
+    const tdNome = document.createElement('td'); tdNome.textContent = m?.nome || '—';
+    const tdIdade = document.createElement('td');
+    tdIdade.textContent = m?.data_nascimento ? calcIdade(m.data_nascimento) + 'a' : '—';
+
+    const tdEtapa = document.createElement('td');
+    const etBadge = document.createElement('span'); etBadge.className = 'etapa-badge';
+    etBadge.textContent = ETAPA_LABEL[c.etapa]; tdEtapa.appendChild(etBadge);
+
+    const tdDias = document.createElement('td');
+    const pill = document.createElement('span');
+    pill.className = 'days-pill ' + (dias > 30 ? 'warn' : 'ok');
+    pill.textContent = dias + 'd'; tdDias.appendChild(pill);
+
+    const tdData = document.createElement('td'); tdData.textContent = formatDate(c.etapa_iniciada_em);
+
+    const tdAcao = document.createElement('td');
+    const btn = document.createElement('button'); btn.className = 'btn-sm gold';
+    btn.textContent = 'Avançar'; btn.onclick = () => abrirModal(c);
+    tdAcao.appendChild(btn);
+
+    tr.append(tdNome, tdIdade, tdEtapa, tdDias, tdData, tdAcao);
+    tbody.appendChild(tr);
+  });
+}
+
+function setView(view) {
+  currentView = view;
+  document.getElementById('view-pipeline').style.display = view === 'pipeline' ? '' : 'none';
+  document.getElementById('view-lista').style.display    = view === 'lista'    ? '' : 'none';
+  document.getElementById('btn-v-pipeline').classList.toggle('active', view === 'pipeline');
+  document.getElementById('btn-v-lista').classList.toggle('active', view === 'lista');
+  view === 'pipeline' ? renderPipeline() : renderLista();
+}
+
+function abrirModal(entry) {
+  pendingEntry = entry;
+  const idx = ETAPAS.indexOf(entry.etapa);
+  const prox = ETAPAS[idx + 1];
+  const nome = entry.acolitos_membros?.nome || '—';
+
+  document.getElementById('modal-title').textContent = nome;
+  document.getElementById('modal-desc').textContent = ETAPA_ACAO[entry.etapa];
+  document.getElementById('modal-obs').value = '';
+  document.getElementById('bloco-role').style.display = prox === 'integrado' ? '' : 'none';
+  document.getElementById('modal-avancar').classList.add('open');
+}
+
+async function confirmarAvancar() {
+  if (!pendingEntry) return;
+  const btn = document.getElementById('btn-confirmar');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  const etapaAtual = pendingEntry.etapa;
+  const idx = ETAPAS.indexOf(etapaAtual);
+  const proximaEtapa = ETAPAS[idx + 1];
+  const obs = document.getElementById('modal-obs').value.trim();
+  const roleFinal = document.getElementById('sel-role').value;
+  const membroId = pendingEntry.membro_id;
+
+  // Avança etapa no CRM
+  await sbAdmin.from('acolitos_crm').update({
+    etapa: proximaEtapa,
+    etapa_iniciada_em: new Date().toISOString(),
+    observacoes: obs || null
+  }).eq('membro_id', membroId);
+
+  // Registra histórico
+  await sbAdmin.from('acolitos_crm_historico').insert({
+    membro_id: membroId,
+    etapa_de: etapaAtual,
+    etapa_para: proximaEtapa,
+    changed_by: ctx.user.id
+  });
+
+  // Se integrado → atualiza role no pastoral_members
+  if (proximaEtapa === 'integrado') {
+    const { data: membroRow } = await sbAdmin
+      .from('acolitos_membros').select('user_id').eq('id', membroId).maybeSingle();
+    const { data: modulo } = await sbAdmin
+      .from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
+    if (membroRow?.user_id && modulo) {
+      await sbAdmin.from('pastoral_members')
+        .update({ role: roleFinal })
+        .eq('user_id', membroRow.user_id)
+        .eq('module_id', modulo.id);
+    }
+  }
+
+  fecharModal();
+  btn.disabled = false; btn.textContent = 'Confirmar';
+  pendingEntry = null;
+  await loadCrm();
+}
+
+function fecharModal() {
+  document.getElementById('modal-avancar').classList.remove('open');
+}
+
+init();
+</script>
+</body>
+</html>

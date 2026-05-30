@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acólitos e Coroinhas — JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* CRM Status */
+    .status-card {
+      background: var(--surface); border: 1px solid var(--gold-dim);
+      border-radius: 4px; padding: 20px 16px; text-align: center; margin-bottom: 20px;
+    }
+    .status-icon { font-size: 40px; margin-bottom: 10px; }
+    .status-title { font-family:'Cinzel',serif; font-size:16px; color:var(--gold-light); letter-spacing:1px; margin-bottom:6px; }
+    .status-sub   { font-size:13px; color:var(--text-muted); font-style:italic; line-height:1.5; }
+
+    /* Dashboard membro */
+    .greet-section { text-align:center; margin-bottom:24px; }
+    .greet-nome { font-family:'Cinzel',serif; font-size:18px; font-weight:700; margin-top:12px; color:var(--text); }
+    .greet-sub  { font-size:12px; color:var(--text-muted); margin-top:6px; font-style:italic; }
+
+    /* Próximas escalas */
+    .escala-item {
+      background:var(--surface); border:1px solid var(--border-wine);
+      border-radius:4px; padding:14px 16px; margin-bottom:10px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    .escala-info { flex:1; }
+    .escala-data { font-size:11px; color:var(--text-muted); margin-bottom:3px; }
+    .escala-funcao { font-family:'Cinzel',serif; font-size:13px; color:var(--gold); letter-spacing:.5px; }
+
+    /* Dashboard equipe — links rápidos */
+    .quick-link {
+      background:var(--surface); border:1px solid var(--border-wine);
+      border-radius:4px; padding:16px; margin-bottom:10px;
+      display:flex; align-items:center; gap:14px; text-decoration:none;
+      transition:border-color .2s; -webkit-tap-highlight-color:transparent;
+    }
+    .quick-link:active { border-color:var(--gold); }
+    .quick-link-icon { font-size:26px; flex-shrink:0; }
+    .quick-link-text { flex:1; }
+    .quick-link-title { font-family:'Cinzel',serif; font-size:13px; color:var(--text); margin-bottom:3px; }
+    .quick-link-sub   { font-size:11px; color:var(--text-muted); }
+    .quick-link-arrow { color:var(--text-muted); font-size:16px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+<div class="main" id="main">
+  <span class="loading">Carregando...</span>
+</div>
+
+<script src="shared.js"></script>
+<script>
+const EQUIPE_ROLES = ['coord_admin','subadmin','membro_equipe'];
+const CRM_ETAPAS = ['integracao','whatsapp','tunica','disponivel_escala','integrado'];
+const CRM_LABEL = {
+  integracao:'Integração', whatsapp:'WhatsApp', tunica:'Túnica',
+  disponivel_escala:'Disponível para Escala', integrado:'Integrado ✓'
+};
+const CRM_DESC = {
+  integracao:'Em breve entraremos em contato para agendar sua reunião de integração.',
+  whatsapp:'Aguardando sua confirmação de entrada nos grupos de WhatsApp.',
+  tunica:'Em processo de recebimento da túnica.',
+  disponivel_escala:'A equipe está registrando sua disponibilidade para as escalas.',
+  integrado:'Você já está integrado! Bem-vindo à pastoral.'
+};
+const JORNADA = [
+  {role:'aspirante',   label:'Aspirante',    icon:'✦'},
+  {role:'coroinha',    label:'Coroinha',     icon:'♛'},
+  {role:'acolito',     label:'Acólito',      icon:'⊕'},
+  {role:'cerimonario', label:'Cerimoniário', icon:'✵'},
+];
+const ROLE_LABEL = {
+  cerimonario:'Cerimoniário', acolito:'Acólito', coroinha:'Coroinha',
+  aspirante:'Aspirante', membro_equipe:'Equipe', subadmin:'Sub-Admin', coord_admin:'Coordenador'
+};
+
+async function init() {
+  const ctx = await initModulo();
+  if (!ctx) return;
+  renderHeader(ctx, 'home');
+  const role = ctx.membership?.role;
+  renderBottomNav(role || 'novo', 'home');
+
+  if (!ctx.membership || role === 'novo') {
+    await renderStatusCrm(ctx);
+  } else if (EQUIPE_ROLES.includes(role)) {
+    await renderDashboardEquipe(ctx);
+  } else {
+    await renderDashboardMembro(ctx);
+  }
+}
+
+/* ── STATUS CRM (role = novo) ──────────────────────────────── */
+async function renderStatusCrm(ctx) {
+  const main = document.getElementById('main');
+  main.textContent = '';
+
+  let etapa = 'integracao';
+  if (ctx.membro) {
+    const { data: crm } = await sb
+      .from('acolitos_crm').select('etapa').eq('membro_id', ctx.membro.id).maybeSingle();
+    if (crm) etapa = crm.etapa;
+  }
+
+  // Card de status
+  const card = document.createElement('div'); card.className = 'status-card';
+  const icon = document.createElement('div'); icon.className = 'status-icon'; icon.textContent = '⛪';
+  const title = document.createElement('div'); title.className = 'status-title';
+  title.textContent = 'Sua Integração na Pastoral';
+  const sub = document.createElement('div'); sub.className = 'status-sub';
+  sub.textContent = CRM_DESC[etapa];
+  card.append(icon, title, sub);
+  main.appendChild(card);
+
+  // Barra de progresso
+  const track = document.createElement('div'); track.className = 'jornada-track';
+  const etapaIdx = CRM_ETAPAS.indexOf(etapa);
+  CRM_ETAPAS.forEach((e, i) => {
+    const step = document.createElement('div'); step.className = 'jornada-step';
+    const dot = document.createElement('div');
+    dot.className = 'jornada-dot' + (i < etapaIdx ? ' done' : i === etapaIdx ? ' current' : '');
+    dot.textContent = i < etapaIdx ? '✓' : String(i + 1);
+    const lbl = document.createElement('div');
+    lbl.className = 'jornada-label' + (i === etapaIdx ? ' current' : '');
+    lbl.textContent = CRM_LABEL[e].split(' ')[0];
+    step.append(dot, lbl); track.appendChild(step);
+    if (i < CRM_ETAPAS.length - 1) {
+      const line = document.createElement('div');
+      line.className = 'jornada-line' + (i < etapaIdx ? ' done' : '');
+      track.appendChild(line);
+    }
+  });
+  main.appendChild(track);
+
+  const info = document.createElement('p');
+  info.style.cssText = 'color:var(--text-muted);font-size:12px;text-align:center;font-style:italic;margin-top:12px;';
+  info.textContent = 'Em caso de dúvidas, entre em contato com a equipe da pastoral.';
+  main.appendChild(info);
+}
+
+/* ── DASHBOARD MEMBRO ──────────────────────────────────────── */
+async function renderDashboardMembro(ctx) {
+  const main = document.getElementById('main');
+  main.textContent = '';
+  const m = ctx.membro;
+  const role = ctx.membership.role;
+
+  // Saudação
+  const greet = document.createElement('div'); greet.className = 'greet-section';
+  greet.appendChild(buildAvatarEl(m?.foto_url, role, 80));
+  const nomeEl = document.createElement('div'); nomeEl.className = 'greet-nome';
+  nomeEl.textContent = m?.nome || ctx.user.email;
+  const subEl = document.createElement('div'); subEl.className = 'greet-sub';
+  subEl.textContent = (ROLE_LABEL[role] || role) + (m?.comunidade ? ' · ' + (m.comunidade === 'matriz' ? 'Matriz' : 'Sto. Antônio') : '');
+  greet.append(nomeEl, subEl);
+  main.appendChild(greet);
+
+  // Jornada
+  const track = document.createElement('div'); track.className = 'jornada-track';
+  const roleIdx = JORNADA.findIndex(j => j.role === role);
+  JORNADA.forEach((j, i) => {
+    const step = document.createElement('div'); step.className = 'jornada-step';
+    const dot = document.createElement('div');
+    dot.className = 'jornada-dot' + (i < roleIdx ? ' done' : i === roleIdx ? ' current' : '');
+    dot.textContent = i <= roleIdx ? j.icon : '○';
+    const lbl = document.createElement('div');
+    lbl.className = 'jornada-label' + (i === roleIdx ? ' current' : '');
+    lbl.textContent = j.label;
+    step.append(dot, lbl); track.appendChild(step);
+    if (i < JORNADA.length - 1) {
+      const line = document.createElement('div');
+      line.className = 'jornada-line' + (i < roleIdx ? ' done' : '');
+      track.appendChild(line);
+    }
+  });
+  main.appendChild(track);
+
+  // Próximas escalas (placeholder)
+  const sTitle = document.createElement('div'); sTitle.className = 'page-title';
+  sTitle.style.fontSize = '14px'; sTitle.textContent = 'Próximas Escalas';
+  const empty = document.createElement('span'); empty.className = 'empty';
+  empty.style.padding = '20px 0'; empty.textContent = 'Nenhuma escala publicada ainda.';
+  main.append(sTitle, empty);
+}
+
+/* ── DASHBOARD EQUIPE ──────────────────────────────────────── */
+async function renderDashboardEquipe(ctx) {
+  const main = document.getElementById('main');
+  main.textContent = '';
+
+  const title = document.createElement('h1'); title.className = 'page-title';
+  title.textContent = 'Painel Operacional';
+  main.appendChild(title);
+
+  // KPIs
+  const [{ count: ativos }, { count: crm }] = await Promise.all([
+    sbAdmin.from('acolitos_membros').select('*', { count:'exact', head:true }).eq('status','ativo'),
+    sbAdmin.from('acolitos_crm').select('*', { count:'exact', head:true }).neq('etapa','integrado'),
+  ]);
+
+  const kpiGrid = document.createElement('div'); kpiGrid.className = 'kpi-grid';
+  [
+    { label:'Membros Ativos',  value: ativos || 0, sub:'na pastoral' },
+    { label:'Em Onboarding',   value: crm    || 0, sub:'no CRM' },
+    { label:'Freq. Média',     value: '—',         sub:'em breve' },
+    { label:'Alertas',         value: '—',         sub:'em breve' },
+  ].forEach(k => {
+    const card = document.createElement('div'); card.className = 'kpi-card';
+    const lbl = document.createElement('div'); lbl.className = 'kpi-label'; lbl.textContent = k.label;
+    const val = document.createElement('div'); val.className = 'kpi-value'; val.textContent = k.value;
+    const sub = document.createElement('div'); sub.className = 'kpi-sub';   sub.textContent = k.sub;
+    card.append(lbl, val, sub); kpiGrid.appendChild(card);
+  });
+  main.appendChild(kpiGrid);
+
+  // Acesso rápido
+  const sTitle = document.createElement('div'); sTitle.className = 'page-title';
+  sTitle.style.cssText = 'font-size:13px;margin-top:4px;'; sTitle.textContent = 'Acesso Rápido';
+  main.appendChild(sTitle);
+
+  [
+    { href:'membros.html', icon:'👥', title:'Gestão de Membros',    sub:'Fichas, habilitações, disponibilidade' },
+    { href:'crm.html',     icon:'🔄', title:'Pipeline CRM',         sub:'Acompanhar integração de novos membros' },
+    { href:'escala.html',  icon:'📅', title:'Gestão de Escala',     sub:'Montar e publicar escalas' },
+    { href:'novos.html',   icon:'➕', title:'Cadastrar Novo Membro', sub:'Adicionar membro diretamente' },
+  ].forEach(item => {
+    const a = document.createElement('a'); a.className = 'quick-link'; a.href = item.href;
+    const ic = document.createElement('span'); ic.className = 'quick-link-icon'; ic.textContent = item.icon;
+    const txt = document.createElement('div'); txt.className = 'quick-link-text';
+    const t = document.createElement('div'); t.className = 'quick-link-title'; t.textContent = item.title;
+    const s = document.createElement('div'); s.className = 'quick-link-sub';   s.textContent = item.sub;
+    txt.append(t, s);
+    const arr = document.createElement('span'); arr.className = 'quick-link-arrow'; arr.textContent = '›';
+    a.append(ic, txt, arr); main.appendChild(a);
+  });
+}
+
+init();
+</script>
+</body>
+</html>

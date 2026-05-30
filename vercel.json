@@ -1,7 +1,11 @@
 {
   "rewrites": [
-    { "source": "/",        "destination": "/projetos/central/login.html"   },
-    { "source": "/central", "destination": "/projetos/central/central.html" }
+    { "source": "/",                    "destination": "/projetos/central/login.html"    },
+    { "source": "/central",             "destination": "/projetos/central/central.html"  },
+    { "source": "/acolitos",            "destination": "/projetos/acolitos/index.html"   },
+    { "source": "/acolitos/novos",      "destination": "/projetos/acolitos/novos.html"   },
+    { "source": "/acolitos/crm",        "destination": "/projetos/acolitos/crm.html"     },
+    { "source": "/acolitos/membros",    "destination": "/projetos/acolitos/membros.html" }
   ],
   "headers": [
     {
@@ -12,15 +16,19 @@
     },
     {
       "source": "/",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }]
     },
     {
       "source": "/central",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }]
+    },
+    {
+      "source": "/acolitos",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }]
+    },
+    {
+      "source": "/acolitos/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }]
     }
   ]
 }
