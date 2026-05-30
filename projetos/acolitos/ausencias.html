@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ausências — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .motivo-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+    .motivo-btn {
+      padding:12px 8px; min-height:52px; background:var(--surface2);
+      border:1px solid var(--border); border-radius:3px; color:var(--text-muted);
+      cursor:pointer; font-size:13px; text-align:center; transition:all .2s;
+      -webkit-tap-highlight-color:transparent; line-height:1.3;
+    }
+    .motivo-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,.08); }
+    .ausencia-item {
+      background:var(--surface); border:1px solid var(--border-wine);
+      border-radius:4px; padding:14px; margin-bottom:10px;
+    }
+    .ausencia-data { font-family:'Cinzel',serif; font-size:13px; color:var(--text); margin-bottom:4px; }
+    .ausencia-meta { font-size:12px; color:var(--text-muted); }
+    .equipe-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); }
+    .equipe-row-info { flex:1; }
+    .equipe-row-nome { font-size:13px; color:var(--text); margin-bottom:2px; }
+    .equipe-row-meta { font-size:11px; color:var(--text-muted); }
+    .view-toggle { display:flex; gap:8px; margin-bottom:16px; }
+    .view-btn {
+      padding:8px 16px; min-height:40px; background:var(--surface2);
+      border:1px solid var(--border); color:var(--text-muted); border-radius:2px;
+      cursor:pointer; font-family:'Cinzel',serif; font-size:11px; letter-spacing:1px;
+      text-transform:uppercase; transition:all .2s; -webkit-tap-highlight-color:transparent;
+    }
+    .view-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,.08); }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+<div class="main" id="main-content">
+  <span class="loading">Carregando...</span>
+</div>
+
+<script src="shared.js"></script>
+<script>
+const MOTIVOS = { doenca:'🤒 Doença', viagem:'✈️ Viagem', familia:'👨‍👩‍👧 Família', outro:'📌 Outro' };
+const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const EQUIPE_ROLES = ['coord_admin','subadmin','membro_equipe'];
+
+let ctx = null;
+let motivoSelecionado = 'doenca';
+
+async function init() {
+  ctx = await initModulo();
+  if (!ctx) return;
+  renderHeader(ctx, 'ausencias');
+  renderBottomNav(ctx.membership.role, 'ausencias');
+  EQUIPE_ROLES.includes(ctx.membership.role) ? renderViewEquipe() : renderViewMembro();
+}
+
+// ── VIEW MEMBRO ───────────────────────────────────────────────
+async function renderViewMembro() {
+  const main = document.getElementById('main-content');
+  main.textContent = '';
+
+  if (!ctx.membro) {
+    const em = document.createElement('span'); em.className = 'empty';
+    em.textContent = 'Perfil não encontrado.'; main.appendChild(em); return;
+  }
+
+  const title = document.createElement('h1'); title.className = 'page-title';
+  title.textContent = 'Informar Ausência'; main.appendChild(title);
+
+  // Busca próximas escalas ativas do membro
+  const hoje = new Date().toISOString().slice(0,10);
+  const { data: escalas } = await sb
+    .from('acolitos_escalas')
+    .select('id, funcao, celebracao_id, acolitos_celebracoes(id,data,horario,comunidade)')
+    .eq('membro_id', ctx.membro.id)
+    .eq('status', 'escalado')
+    .gte('acolitos_celebracoes.data', hoje);
+
+  const proximas = (escalas||[]).filter(e => e.acolitos_celebracoes);
+
+  if (!proximas.length) {
+    const info = document.createElement('div'); info.className = 'section-card';
+    info.style.color = 'var(--text-muted)';
+    info.style.fontStyle = 'italic';
+    info.textContent = 'Você não possui escalas futuras no momento.';
+    main.appendChild(info);
+  } else {
+    const card = document.createElement('div'); card.className = 'section-card';
+
+    // Seletor de missa
+    const g1 = document.createElement('div'); g1.className = 'form-group';
+    const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Selecione a missa *';
+    const sel = document.createElement('select'); sel.className = 'form-select'; sel.id = 'sel-esc';
+    const optV = document.createElement('option'); optV.value = ''; optV.textContent = 'Selecionar...';
+    sel.appendChild(optV);
+    proximas.forEach(e => {
+      const c = e.acolitos_celebracoes;
+      const d = new Date(c.data+'T00:00:00');
+      const opt = document.createElement('option'); opt.value = e.id;
+      opt.textContent = DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' '+c.horario+' · '+(c.comunidade==='matriz'?'Matriz':'Sto. Antônio');
+      sel.appendChild(opt);
+    });
+    g1.append(l1,sel); card.appendChild(g1);
+
+    // Motivo
+    const lMot = document.createElement('label'); lMot.className = 'form-label'; lMot.textContent = 'Motivo *';
+    const mGrid = document.createElement('div'); mGrid.className = 'motivo-grid';
+    Object.entries(MOTIVOS).forEach(([val,label]) => {
+      const btn = document.createElement('button'); btn.type = 'button';
+      btn.className = 'motivo-btn'+(val==='doenca'?' active':'');
+      btn.textContent = label; btn.setAttribute('data-motivo', val);
+      btn.onclick = () => {
+        motivoSelecionado = val;
+        document.querySelectorAll('.motivo-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+      };
+      mGrid.appendChild(btn);
+    });
+    card.append(lMot, mGrid);
+
+    // Observação
+    const g2 = document.createElement('div'); g2.className = 'form-group';
+    const l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'Observação (opcional)';
+    const inp = document.createElement('input'); inp.className = 'form-input'; inp.id = 'obs-aus'; inp.placeholder = 'Detalhes...';
+    g2.append(l2,inp); card.appendChild(g2);
+
+    const btnEnv = document.createElement('button'); btnEnv.className = 'btn gold';
+    btnEnv.id = 'btn-env'; btnEnv.textContent = 'Confirmar Ausência';
+    btnEnv.onclick = () => enviarAusencia(proximas);
+    card.appendChild(btnEnv);
+
+    const msg = document.createElement('div'); msg.id = 'msg-aus'; msg.className = 'msg';
+    card.appendChild(msg);
+    main.appendChild(card);
+  }
+
+  // Histórico
+  const hTitle = document.createElement('div'); hTitle.className = 'page-title';
+  hTitle.style.cssText = 'font-size:14px;margin-top:20px;'; hTitle.textContent = 'Últimas Ausências';
+  main.appendChild(hTitle);
+
+  const { data: hist } = await sb
+    .from('acolitos_ausencias')
+    .select('*, acolitos_celebracoes(data,horario,comunidade)')
+    .eq('membro_id', ctx.membro.id)
+    .order('created_at',{ascending:false}).limit(10);
+
+  if (!hist?.length) {
+    const em = document.createElement('span'); em.className = 'empty'; em.style.paddingTop='16px';
+    em.textContent = 'Nenhuma ausência registrada.'; main.appendChild(em);
+  } else {
+    hist.forEach(a => {
+      const c = a.acolitos_celebracoes;
+      const d = c ? new Date(c.data+'T00:00:00') : null;
+      const item = document.createElement('div'); item.className = 'ausencia-item';
+      const dt = document.createElement('div'); dt.className = 'ausencia-data';
+      dt.textContent = d ? DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' · '+c.horario : '—';
+      const mt = document.createElement('div'); mt.className = 'ausencia-meta';
+      mt.textContent = (MOTIVOS[a.motivo]||a.motivo)+(a.observacao?' · '+a.observacao:'');
+      const st = document.createElement('span'); st.style.cssText = 'display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-family:Cinzel,serif;background:rgba(30,80,30,.2);color:var(--success-text);border:1px solid var(--success);margin-top:6px;';
+      st.textContent = 'Registrada';
+      item.append(dt,mt,st); main.appendChild(item);
+    });
+  }
+}
+
+async function enviarAusencia(proximas) {
+  const escalaId = document.getElementById('sel-esc').value;
+  const obs = document.getElementById('obs-aus').value.trim();
+  const msg = document.getElementById('msg-aus');
+  const btn = document.getElementById('btn-env');
+  if (!escalaId) { msg.className='msg error'; msg.textContent='Selecione a missa.'; return; }
+  btn.disabled=true; btn.textContent='Enviando...';
+
+  const escala = proximas.find(e=>e.id===escalaId);
+  if (!escala) { btn.disabled=false; btn.textContent='Confirmar Ausência'; return; }
+
+  const { error: e1 } = await sb.from('acolitos_ausencias').upsert({
+    membro_id: ctx.membro.id,
+    celebracao_id: escala.acolitos_celebracoes.id,
+    motivo: motivoSelecionado,
+    observacao: obs||null
+  }, { onConflict:'membro_id,celebracao_id' });
+
+  if (e1) { msg.className='msg error'; msg.textContent='Erro. Tente novamente.'; btn.disabled=false; btn.textContent='Confirmar Ausência'; return; }
+
+  await sb.from('acolitos_escalas').update({status:'ausente_justificado'}).eq('id',escalaId);
+
+  msg.className='msg success'; msg.textContent='Ausência registrada!';
+  btn.disabled=true; btn.textContent='Registrado ✓';
+  setTimeout(()=>renderViewMembro(), 1500);
+}
+
+// ── VIEW EQUIPE ───────────────────────────────────────────────
+async function renderViewEquipe() {
+  const main = document.getElementById('main-content');
+  main.textContent = '';
+
+  const title = document.createElement('h1'); title.className = 'page-title';
+  title.textContent = 'Ausências Informadas'; main.appendChild(title);
+
+  // KPIs
+  const { count: totalAus } = await sb.from('acolitos_ausencias')
+    .select('*',{count:'exact',head:true});
+  const { count: sem30 } = await sb.from('acolitos_ausencias')
+    .select('*',{count:'exact',head:true})
+    .gte('created_at', new Date(Date.now()-30*86400000).toISOString());
+
+  const kpi = document.createElement('div'); kpi.className='kpi-grid'; kpi.style.gridTemplateColumns='1fr 1fr';
+  [{label:'Total Registradas',value:totalAus||0,sub:'histórico'},{label:'Últimos 30 dias',value:sem30||0,sub:'recentes'}].forEach(k=>{
+    const c=document.createElement('div');c.className='kpi-card';
+    const l=document.createElement('div');l.className='kpi-label';l.textContent=k.label;
+    const v=document.createElement('div');v.className='kpi-value';v.textContent=k.value;
+    const s=document.createElement('div');s.className='kpi-sub';s.textContent=k.sub;
+    c.append(l,v,s);kpi.appendChild(c);
+  });
+  main.appendChild(kpi);
+
+  const { data: ausencias } = await sb
+    .from('acolitos_ausencias')
+    .select('*, acolitos_membros(nome), acolitos_celebracoes(data,horario,comunidade)')
+    .order('created_at',{ascending:false}).limit(60);
+
+  if (!ausencias?.length) {
+    const em=document.createElement('span');em.className='empty';em.textContent='Nenhuma ausência informada.';main.appendChild(em);return;
+  }
+
+  ausencias.forEach(a => {
+    const c=a.acolitos_celebracoes; const d=c?new Date(c.data+'T00:00:00'):null;
+    const row=document.createElement('div');row.className='equipe-row';
+    const info=document.createElement('div');info.className='equipe-row-info';
+    const n=document.createElement('div');n.className='equipe-row-nome';n.textContent=a.acolitos_membros?.nome||'—';
+    const m=document.createElement('div');m.className='equipe-row-meta';
+    m.textContent=(d?DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' · '+c.horario:'—')+' · '+(MOTIVOS[a.motivo]||a.motivo);
+    info.append(n,m);
+    const badge=document.createElement('span');badge.className='badge coroinha';badge.textContent='AJ';
+    row.append(info,badge);main.appendChild(row);
+  });
+}
+
+init();
+</script>
+</body>
+</html>

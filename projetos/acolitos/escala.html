@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Escala — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .aba-toggle { display:flex; gap:8px; margin-bottom:16px; }
+    .aba-btn {
+      padding:10px 20px; min-height:44px; background:var(--surface2);
+      border:1px solid var(--border); color:var(--text-muted); border-radius:2px;
+      cursor:pointer; font-family:'Cinzel',serif; font-size:11px; letter-spacing:1px;
+      text-transform:uppercase; transition:all .2s; -webkit-tap-highlight-color:transparent;
+    }
+    .aba-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,.08); }
+    .semana-grupo { margin-bottom:20px; }
+    .semana-titulo {
+      font-family:'Cinzel',serif; font-size:11px; color:var(--text-muted);
+      letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px;
+      padding-bottom:6px; border-bottom:1px solid var(--border);
+    }
+    .celebracoes-grid { display:grid; grid-template-columns:1fr; gap:10px; }
+    @media(min-width:600px){ .celebracoes-grid{ grid-template-columns:repeat(2,1fr); } }
+    @media(min-width:900px){ .celebracoes-grid{ grid-template-columns:repeat(3,1fr); } }
+    .celeb-card {
+      background:var(--surface); border:1px solid var(--border-wine);
+      border-radius:4px; padding:14px; position:relative; overflow:hidden;
+    }
+    .celeb-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+    .celeb-card.status-completa::before { background:var(--success); }
+    .celeb-card.status-parcial::before  { background:var(--warn-text); }
+    .celeb-card.status-critica::before  { background:var(--danger-text); }
+    .celeb-card.status-vazia::before    { background:var(--border-wine); }
+    .celeb-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; gap:8px; }
+    .celeb-data { font-family:'Cinzel',serif; font-size:13px; color:var(--text); font-weight:600; }
+    .celeb-sub  { font-size:11px; color:var(--text-muted); margin-top:2px; }
+    .status-pill {
+      display:inline-block; padding:2px 8px; border-radius:10px;
+      font-size:9px; font-family:'Cinzel',serif; letter-spacing:.5px; border:1px solid; flex-shrink:0;
+    }
+    .status-pill.completa { background:rgba(30,80,30,.2); color:var(--success-text); border-color:var(--success); }
+    .status-pill.parcial  { background:rgba(120,80,0,.2); color:var(--warn-text); border-color:var(--warn); }
+    .status-pill.critica  { background:rgba(100,10,10,.3); color:var(--danger-text); border-color:var(--danger); }
+    .status-pill.vazia    { background:var(--surface2); color:var(--text-muted); border-color:var(--border); }
+    .cobertura-row { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+    .cobertura-label { color:var(--text-muted); width:72px; flex-shrink:0; font-size:10px; }
+    .cobertura-bar  { flex:1; height:4px; background:var(--surface2); border-radius:2px; overflow:hidden; }
+    .cobertura-fill { height:100%; border-radius:2px; }
+    .cobertura-fill.ok      { background:var(--success); }
+    .cobertura-fill.parcial { background:var(--warn-text); }
+    .cobertura-fill.critico { background:var(--danger-text); }
+    .cobertura-num { color:var(--text-muted); font-size:10px; width:32px; text-align:right; }
+    .celeb-actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+    /* Planilha */
+    .planilha-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--border-wine); border-radius:4px; }
+    .planilha-table { border-collapse:collapse; font-size:12px; white-space:nowrap; width:100%; }
+    .planilha-table th, .planilha-table td { padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    .planilha-table th {
+      font-family:'Cinzel',serif; font-size:9px; letter-spacing:1px; color:var(--text-muted);
+      text-transform:uppercase; background:var(--surface); position:sticky; top:0; z-index:2;
+      border-bottom:1px solid var(--border-wine);
+    }
+    .planilha-table th.sticky-left, .planilha-table td.sticky-left {
+      position:sticky; left:0; background:var(--surface); z-index:1; border-right:1px solid var(--border-wine);
+    }
+    .planilha-table tr:hover td { background:rgba(201,168,76,.03); }
+    .escala-cell {
+      display:inline-block; padding:2px 6px; border-radius:2px;
+      font-size:10px; font-family:'Cinzel',serif;
+    }
+    .escala-cell.escalado  { background:rgba(201,168,76,.12); color:var(--gold); }
+    .escala-cell.presente  { background:rgba(30,80,30,.2); color:var(--success-text); }
+    .escala-cell.ausente   { background:rgba(100,10,10,.3); color:var(--danger-text); }
+    .escala-cell.aj        { background:rgba(120,80,0,.2); color:var(--warn-text); }
+    /* Modal montagem */
+    .montagem-cols { display:grid; grid-template-columns:1fr; gap:16px; }
+    @media(min-width:600px){ .montagem-cols { grid-template-columns:1fr 1fr; } }
+    .cat-titulo {
+      font-family:'Cinzel',serif; font-size:10px; color:var(--gold);
+      letter-spacing:1px; text-transform:uppercase; padding:10px 0 4px;
+      border-bottom:1px solid var(--border-wine); margin-bottom:2px;
+    }
+    .pos-item { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); }
+    .pos-item:last-child { border-bottom:none; }
+    .pos-label { font-family:'Cinzel',serif; font-size:11px; color:var(--text); flex:1; }
+    .pos-select {
+      flex:0 0 150px; padding:6px 8px; min-height:34px;
+      background:var(--surface2); border:1px solid var(--border-wine);
+      border-radius:2px; color:var(--text); font-size:11px; outline:none; max-width:150px;
+    }
+    .pos-select.filled { border-color:var(--gold); }
+    .mems-list { max-height:300px; overflow-y:auto; }
+    .mem-row { padding:8px 0; border-bottom:1px solid var(--border); }
+    .mem-row:last-child { border-bottom:none; }
+    .mem-nome { font-size:12px; color:var(--text); margin-bottom:3px; }
+    .mem-fns  { font-size:10px; color:var(--gold); }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+
+<div class="main">
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+    <select id="filtro-com" class="form-select" style="flex:1;min-width:140px;max-width:200px;" onchange="loadDados()">
+      <option value="">Todas as comunidades</option>
+      <option value="matriz">Matriz</option>
+      <option value="santo_antonio">Santo Antônio</option>
+    </select>
+    <button class="btn-sm gold" style="flex-shrink:0;" onclick="abrirNovaCeleb()">+ Celebração</button>
+  </div>
+  <div class="aba-toggle">
+    <button class="aba-btn active" id="btn-cards"    onclick="setAba('cards')">Operacional</button>
+    <button class="aba-btn"        id="btn-planilha" onclick="setAba('planilha')">Planilha</button>
+  </div>
+  <div id="view-cards"></div>
+  <div id="view-planilha" style="display:none;"></div>
+</div>
+
+<!-- Modal montagem -->
+<div class="modal-overlay" id="modal-montagem">
+  <div class="modal" style="max-width:720px;max-height:95vh;">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="mt-titulo">Montar Escala</div>
+    <p id="mt-sub" style="color:var(--text-muted);font-size:11px;margin-bottom:14px;"></p>
+    <div class="montagem-cols" id="mt-body"></div>
+    <div class="modal-actions">
+      <button class="btn-sm gray" onclick="fecharModal('modal-montagem')">Fechar</button>
+      <button class="btn-sm gold" id="btn-sv-escala" onclick="salvarEscala()">Salvar Escala</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal nova celebração -->
+<div class="modal-overlay" id="modal-nova-celeb">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nova Celebração</div>
+    <div class="form-group">
+      <label class="form-label">Data *</label>
+      <input class="form-input" id="nc-data" type="date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Horário *</label>
+      <select class="form-select" id="nc-horario">
+        <option value="17h">17h</option><option value="18h30">18h30</option>
+        <option value="7h">7h</option><option value="9h">9h</option>
+        <option value="19h">19h</option><option value="outro">Outro</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Comunidade *</label>
+      <select class="form-select" id="nc-com">
+        <option value="matriz">Matriz</option>
+        <option value="santo_antonio">Santo Antônio</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tipo</label>
+      <select class="form-select" id="nc-tipo">
+        <option value="missa_comum">Missa Comum</option>
+        <option value="solenidade">Solenidade</option>
+        <option value="casamento">Casamento</option>
+        <option value="batizado">Batizado</option>
+        <option value="crisma">Crisma</option>
+        <option value="ordenacao">Ordenação</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Observação</label>
+      <input class="form-input" id="nc-obs" placeholder="Ex: Corpus Christi">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm gray" onclick="fecharModal('modal-nova-celeb')">Cancelar</button>
+      <button class="btn-sm gold" onclick="salvarNovaCeleb()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+const TEMPLATE_MATRIZ = [
+  {funcao:'cred_altar',    label:'Cerimonial de Altar',    cat:'Cerimoniais'},
+  {funcao:'cred_credencia',label:'Cerimonial de Credência',cat:'Cerimoniais'},
+  {funcao:'missal',        label:'Missal',                 cat:'Cerimoniais'},
+  {funcao:'altar',         label:'Altar 1',                cat:'Altares'},
+  {funcao:'altar',         label:'Altar 2',                cat:'Altares'},
+  {funcao:'altar',         label:'Altar 3',                cat:'Altares'},
+  {funcao:'cruz',          label:'Cruz',                   cat:'Litúrgicos'},
+  {funcao:'vela',          label:'Vela 1',                 cat:'Litúrgicos'},
+  {funcao:'vela',          label:'Vela 2',                 cat:'Litúrgicos'},
+  {funcao:'sineta',        label:'Sineta',                 cat:'Litúrgicos'},
+  {funcao:'sinao',         label:'Sinão',                  cat:'Litúrgicos'},
+  {funcao:'apoio',         label:'Apoio 1',                cat:'Apoios'},
+  {funcao:'apoio',         label:'Apoio 2',                cat:'Apoios'},
+  {funcao:'apoio',         label:'Apoio 3',                cat:'Apoios'},
+  {funcao:'apoio',         label:'Apoio 4',                cat:'Apoios'},
+  {funcao:'apoio',         label:'Apoio 5',                cat:'Apoios'},
+  {funcao:'apoio',         label:'Apoio 6',                cat:'Apoios'},
+];
+const TEMPLATE_STO = [
+  {funcao:'cred_altar',    label:'Cerimonial',  cat:'Cerimoniais'},
+  {funcao:'missal',        label:'Missal',      cat:'Cerimoniais'},
+  {funcao:'altar',         label:'Altar 1',     cat:'Altares'},
+  {funcao:'altar',         label:'Altar 2',     cat:'Altares'},
+  {funcao:'altar',         label:'Altar 3',     cat:'Altares'},
+  {funcao:'cruz',          label:'Cruz',        cat:'Litúrgicos'},
+  {funcao:'vela',          label:'Vela 1',      cat:'Litúrgicos'},
+  {funcao:'vela',          label:'Vela 2',      cat:'Litúrgicos'},
+];
+const FUNCAO_LABEL = {
+  apoio:'Apoio', cruz:'Cruz', vela:'Vela', sineta:'Sineta', sinao:'Sinão',
+  altar:'Altar', turibulo:'Turíbulo', naveta:'Naveta', missal:'Missal',
+  cred_altar:'Cred.Alt', cred_credencia:'Cred.Cred', mitra:'Mitra', baculo:'Báculo'
+};
+const TIPO_LABEL = {
+  missa_comum:'Missa', solenidade:'Solenidade', casamento:'Casamento',
+  batizado:'Batizado', crisma:'Crisma', ordenacao:'Ordenação'
+};
+const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+let ctx = null, celebracoes = [], escalasMap = {}, membros = [], habMap = {}, dispMap = {};
+let pendingCelebId = null, pendingEdicao = [], abaAtual = 'cards';
+
+async function init() {
+  ctx = await initModulo(['coord_admin','subadmin','membro_equipe']);
+  if (!ctx) return;
+  renderHeader(ctx, 'escala');
+  renderBottomNav(ctx.membership.role, 'escala');
+  await loadDados();
+}
+
+async function loadDados() {
+  const com = document.getElementById('filtro-com').value;
+  const hoje = new Date(); const fim = new Date(hoje); fim.setDate(hoje.getDate()+56);
+  let q = sb.from('acolitos_celebracoes').select('*')
+    .gte('data', hoje.toISOString().slice(0,10))
+    .lte('data', fim.toISOString().slice(0,10))
+    .order('data').order('horario');
+  if (com) q = q.eq('comunidade', com);
+  const { data: celebs } = await q;
+  celebracoes = celebs || [];
+
+  if (celebracoes.length) {
+    const ids = celebracoes.map(c=>c.id);
+    const { data: esc } = await sb.from('acolitos_escalas')
+      .select('*, acolitos_membros(id,nome)').in('celebracao_id', ids);
+    escalasMap = {};
+    (esc||[]).forEach(e => {
+      if (!escalasMap[e.celebracao_id]) escalasMap[e.celebracao_id]=[];
+      escalasMap[e.celebracao_id].push(e);
+    });
+    const [{ data: mems }, { data: habs }, { data: disps }] = await Promise.all([
+      sb.from('acolitos_membros').select('id,nome,comunidade').eq('status','ativo').order('nome'),
+      sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia'),
+      sb.from('acolitos_disponibilidade').select('membro_id,dia,horario'),
+    ]);
+    membros = mems||[];
+    habMap = {}; (habs||[]).forEach(h=>{if(!habMap[h.membro_id])habMap[h.membro_id]={};habMap[h.membro_id][h.funcao]=h.proficiencia;});
+    dispMap = {}; (disps||[]).forEach(d=>{if(!dispMap[d.membro_id])dispMap[d.membro_id]=[];dispMap[d.membro_id].push(d.dia+'_'+d.horario);});
+  }
+
+  abaAtual==='cards' ? renderCards() : renderPlanilha();
+}
+
+function setAba(a) {
+  abaAtual=a;
+  document.getElementById('view-cards').style.display = a==='cards'?'':'none';
+  document.getElementById('view-planilha').style.display = a==='planilha'?'':'none';
+  document.getElementById('btn-cards').classList.toggle('active',a==='cards');
+  document.getElementById('btn-planilha').classList.toggle('active',a==='planilha');
+  a==='cards' ? renderCards() : renderPlanilha();
+}
+
+function getCobertura(celebId, comunidade) {
+  const tmpl = comunidade==='santo_antonio' ? TEMPLATE_STO : TEMPLATE_MATRIZ;
+  const esc = escalasMap[celebId]||[];
+  const cats={};
+  tmpl.forEach(p=>{if(!cats[p.cat])cats[p.cat]={min:0,atual:0};cats[p.cat].min++;});
+  esc.forEach(e=>{const p=tmpl.find(x=>x.funcao===e.funcao);if(p&&cats[p.cat])cats[p.cat].atual++;});
+  const total=Object.values(cats).reduce((a,c)=>a+c.min,0);
+  const preen=Object.values(cats).reduce((a,c)=>a+Math.min(c.atual,c.min),0);
+  let status='vazia';
+  if(preen>=total)status='completa';
+  else if(preen>=total*.6)status='parcial';
+  else if(preen>0)status='critica';
+  return {cats,total,preenchido:preen,status};
+}
+
+function renderCards() {
+  const el=document.getElementById('view-cards'); el.textContent='';
+  if(!celebracoes.length){const em=document.createElement('span');em.className='empty';em.textContent='Nenhuma celebração no período.';el.appendChild(em);return;}
+  const semanas={};
+  celebracoes.forEach(c=>{
+    const d=new Date(c.data+'T00:00:00');
+    const mon=new Date(d);mon.setDate(d.getDate()-((d.getDay()+6)%7));
+    const key=mon.toISOString().slice(0,10);
+    if(!semanas[key])semanas[key]={label:'Semana de '+mon.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}),items:[]};
+    semanas[key].items.push(c);
+  });
+  Object.values(semanas).forEach(sem=>{
+    const grp=document.createElement('div');grp.className='semana-grupo';
+    const tit=document.createElement('div');tit.className='semana-titulo';tit.textContent=sem.label;
+    const grid=document.createElement('div');grid.className='celebracoes-grid';
+    sem.items.forEach(c=>{
+      const cob=getCobertura(c.id,c.comunidade);
+      const d=new Date(c.data+'T00:00:00');
+      const card=document.createElement('div');card.className='celeb-card status-'+cob.status;
+      const hdr=document.createElement('div');hdr.className='celeb-header';
+      const info=document.createElement('div');
+      const dataEl=document.createElement('div');dataEl.className='celeb-data';
+      dataEl.textContent=DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' · '+c.horario;
+      const subEl=document.createElement('div');subEl.className='celeb-sub';
+      subEl.textContent=(c.comunidade==='matriz'?'Matriz':'Sto. Antônio')+' · '+(TIPO_LABEL[c.tipo]||c.tipo);
+      info.append(dataEl,subEl);
+      const pill=document.createElement('span');pill.className='status-pill '+cob.status;
+      pill.textContent=cob.status.charAt(0).toUpperCase()+cob.status.slice(1);
+      hdr.append(info,pill);card.appendChild(hdr);
+      Object.entries(cob.cats).forEach(([cat,v])=>{
+        const row=document.createElement('div');row.className='cobertura-row';
+        const lbl=document.createElement('span');lbl.className='cobertura-label';lbl.textContent=cat;
+        const bar=document.createElement('div');bar.className='cobertura-bar';
+        const fill=document.createElement('div');
+        const pct=v.min>0?Math.min(v.atual/v.min,1)*100:0;
+        fill.className='cobertura-fill '+(pct>=100?'ok':pct>=50?'parcial':'critico');
+        fill.style.width=pct+'%';bar.appendChild(fill);
+        const num=document.createElement('span');num.className='cobertura-num';num.textContent=v.atual+'/'+v.min;
+        row.append(lbl,bar,num);card.appendChild(row);
+      });
+      const acts=document.createElement('div');acts.className='celeb-actions';
+      const btnM=document.createElement('button');btnM.className='btn-sm '+(cob.preenchido>0?'gold':'wine');
+      btnM.textContent=cob.preenchido>0?'Editar Escala':'Montar Escala';
+      btnM.onclick=()=>abrirMontagem(c);acts.appendChild(btnM);
+      card.appendChild(acts);grid.appendChild(card);
+    });
+    grp.append(tit,grid);el.appendChild(grp);
+  });
+}
+
+function abrirMontagem(celeb) {
+  pendingCelebId=celeb.id;
+  const tmpl=celeb.comunidade==='santo_antonio'?TEMPLATE_STO:TEMPLATE_MATRIZ;
+  const d=new Date(celeb.data+'T00:00:00');
+  document.getElementById('mt-titulo').textContent=DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})+' · '+celeb.horario;
+  document.getElementById('mt-sub').textContent=(celeb.comunidade==='matriz'?'Matriz':'Sto. Antônio')+' · '+(TIPO_LABEL[celeb.tipo]||celeb.tipo);
+  const esc=escalasMap[celeb.id]||[];
+  const body=document.getElementById('mt-body');body.textContent='';
+  const dObj=new Date(celeb.data+'T00:00:00');
+  const dow=dObj.getDay();
+  const diaKey=dow===0?'domingo':dow===6?'sabado':null;
+  const horKey=diaKey?diaKey+'_'+celeb.horario:null;
+  pendingEdicao=[];
+
+  // Coluna posições
+  const colPos=document.createElement('div');
+  const t1=document.createElement('div');t1.style.cssText='font-family:Cinzel,serif;font-size:12px;color:var(--gold);margin-bottom:10px;';t1.textContent='Posições';colPos.appendChild(t1);
+  let catAtual='';
+  tmpl.forEach((pos,idx)=>{
+    if(pos.cat!==catAtual){catAtual=pos.cat;const c=document.createElement('div');c.className='cat-titulo';c.textContent=pos.cat;colPos.appendChild(c);}
+    const existFn=esc.filter(e=>e.funcao===pos.funcao);
+    const idxDessaFn=tmpl.slice(0,idx).filter(p=>p.funcao===pos.funcao).length;
+    const exist=existFn[idxDessaFn];
+    const row=document.createElement('div');row.className='pos-item';
+    const lbl=document.createElement('span');lbl.className='pos-label';lbl.textContent=pos.label;
+    const sel=document.createElement('select');sel.className='pos-select'+(exist?' filled':'');
+    sel.setAttribute('data-funcao',pos.funcao);
+    const optV=document.createElement('option');optV.value='';optV.textContent='— vazio —';sel.appendChild(optV);
+    membros.filter(m=>{const h=(habMap[m.id]||{})[pos.funcao];return h&&['apto','experiente','referencia'].includes(h);})
+      .forEach(m=>{
+        const opt=document.createElement('option');opt.value=m.id;
+        const disp=!horKey||(dispMap[m.id]||[]).includes(horKey);
+        opt.textContent=(disp?'':' ⚠ ')+m.nome;
+        if(exist?.membro_id===m.id)opt.selected=true;
+        sel.appendChild(opt);
+      });
+    sel.onchange=()=>sel.classList.toggle('filled',!!sel.value);
+    pendingEdicao.push({sel,funcao:pos.funcao});
+    row.append(lbl,sel);colPos.appendChild(row);
+  });
+
+  // Coluna membros
+  const colMems=document.createElement('div');
+  const t2=document.createElement('div');t2.style.cssText='font-family:Cinzel,serif;font-size:12px;color:var(--gold);margin-bottom:10px;';t2.textContent='Membros Aptos';colMems.appendChild(t2);
+  const ml=document.createElement('div');ml.className='mems-list';
+  membros.forEach(m=>{
+    const habs=habMap[m.id]||{};
+    const apt=['cred_credencia','cred_altar','missal','altar','turibulo','naveta','cruz','vela','sineta','sinao','apoio']
+      .filter(f=>['apto','experiente','referencia'].includes(habs[f]));
+    if(!apt.length)return;
+    const disp=!horKey||(dispMap[m.id]||[]).includes(horKey);
+    const row=document.createElement('div');row.className='mem-row';row.style.opacity=disp?'1':'.45';
+    const n=document.createElement('div');n.className='mem-nome';n.textContent=(disp?'':' ⚠ ')+m.nome;
+    const f=document.createElement('div');f.className='mem-fns';f.textContent=apt.map(x=>FUNCAO_LABEL[x]).join(', ');
+    row.append(n,f);ml.appendChild(row);
+  });
+  colMems.appendChild(ml);
+  body.append(colPos,colMems);
+  document.getElementById('modal-montagem').classList.add('open');
+}
+
+async function salvarEscala() {
+  if(!pendingCelebId)return;
+  const btn=document.getElementById('btn-sv-escala');
+  btn.disabled=true;btn.textContent='Salvando...';
+  await sb.from('acolitos_escalas').delete().eq('celebracao_id',pendingCelebId);
+  const novas=[];const seen={};
+  pendingEdicao.forEach(({sel,funcao})=>{
+    if(!sel.value)return;
+    const key=sel.value+'_'+funcao+novas.filter(n=>n.membro_id===sel.value&&n.funcao===funcao).length;
+    novas.push({celebracao_id:pendingCelebId,membro_id:sel.value,funcao,created_by:ctx.user.id});
+  });
+  if(novas.length){const{error}=await sb.from('acolitos_escalas').insert(novas);if(error){alert('Erro: '+error.message);btn.disabled=false;btn.textContent='Salvar Escala';return;}}
+  btn.disabled=false;btn.textContent='Salvar Escala';
+  fecharModal('modal-montagem');
+  await loadDados();
+}
+
+function renderPlanilha() {
+  const el=document.getElementById('view-planilha');el.textContent='';
+  if(!membros.length||!celebracoes.length){const em=document.createElement('span');em.className='empty';em.textContent='Sem dados para exibir.';el.appendChild(em);return;}
+  const wrap=document.createElement('div');wrap.className='planilha-wrap';
+  const table=document.createElement('table');table.className='planilha-table';
+  const thead=document.createElement('thead');const hr=document.createElement('tr');
+  ['Membro','Fn.Máx'].forEach((h,i)=>{const th=document.createElement('th');if(i===0)th.className='sticky-left';th.textContent=h;hr.appendChild(th);});
+  celebracoes.forEach(c=>{
+    const d=new Date(c.data+'T00:00:00');
+    const th=document.createElement('th');th.style.minWidth='80px';th.style.textAlign='center';
+    const l1=document.createElement('div');l1.textContent=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    const l2=document.createElement('div');l2.style.cssText='color:var(--text-muted);font-size:8px;';l2.textContent=c.horario+' '+(c.comunidade==='matriz'?'M':'SA');
+    th.append(l1,l2);hr.appendChild(th);
+  });
+  thead.appendChild(hr);table.appendChild(thead);
+  const tbody=document.createElement('tbody');
+  membros.forEach(m=>{
+    const tr=document.createElement('tr');
+    const tdN=document.createElement('td');tdN.className='sticky-left';tdN.style.minWidth='120px';
+    const nEl=document.createElement('span');nEl.style.cssText='font-size:12px;';nEl.textContent=m.nome;tdN.appendChild(nEl);tr.appendChild(tdN);
+    const habs=habMap[m.id]||{};
+    let fnMax='—';
+    for(const fn of['cred_credencia','cred_altar','missal','altar','turibulo','naveta','cruz','vela','sineta','sinao','apoio']){if(['apto','experiente','referencia'].includes(habs[fn])){fnMax=FUNCAO_LABEL[fn];break;}}
+    const tdFn=document.createElement('td');tdFn.style.cssText='font-size:10px;color:var(--gold);';tdFn.textContent=fnMax;tr.appendChild(tdFn);
+    celebracoes.forEach(c=>{
+      const td=document.createElement('td');td.style.textAlign='center';
+      const e=(escalasMap[c.id]||[]).find(x=>x.membro_id===m.id);
+      if(e){const cell=document.createElement('span');cell.className='escala-cell '+(e.status==='ausente_justificado'?'aj':e.status==='escalado'?'escalado':e.status);cell.textContent=FUNCAO_LABEL[e.funcao]||e.funcao;td.appendChild(cell);}
+      else{td.textContent='—';td.style.color='var(--border)';}
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);wrap.appendChild(table);el.appendChild(wrap);
+}
+
+function abrirNovaCeleb(){document.getElementById('nc-data').value=new Date().toISOString().slice(0,10);document.getElementById('modal-nova-celeb').classList.add('open');}
+async function salvarNovaCeleb(){
+  const data=document.getElementById('nc-data').value;
+  const horario=document.getElementById('nc-horario').value;
+  const comunidade=document.getElementById('nc-com').value;
+  const tipo=document.getElementById('nc-tipo').value;
+  const obs=document.getElementById('nc-obs').value.trim();
+  if(!data||!horario){alert('Data e horário obrigatórios.');return;}
+  const{error}=await sb.from('acolitos_celebracoes').insert({data,horario,comunidade,tipo,observacoes:obs||null,created_by:ctx.user.id});
+  if(error){alert('Erro: '+error.message);return;}
+  fecharModal('modal-nova-celeb');await loadDados();
+}
+function fecharModal(id){document.getElementById(id)?.classList.remove('open');}
+init();
+</script>
+</body>
+</html>

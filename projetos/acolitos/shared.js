@@ -167,13 +167,13 @@ const EQUIPE_ROLES = ['coord_admin','subadmin','membro_equipe'];
 const NAV_EQUIPE = [
   { id:'home',    href:'index.html',   label:'Início',  icon:'home' },
   { id:'membros', href:'membros.html', label:'Membros', icon:'users' },
-  { id:'crm',     href:'crm.html',     label:'CRM',     icon:'shuffle' },
   { id:'escala',  href:'escala.html',  label:'Escala',  icon:'calendar' },
+  { id:'crm',     href:'crm.html',     label:'CRM',     icon:'shuffle' },
 ];
 const NAV_MEMBRO = [
-  { id:'home',      href:'index.html',        label:'Início',   icon:'home' },
-  { id:'ausencias', href:'ausencias.html',    label:'Ausência', icon:'x-circle' },
-  { id:'tarcisio',  href:'sao-tarcisio.html', label:'Tarcísio', icon:'message-circle' },
+  { id:'home',      href:'index.html',     label:'Início',   icon:'home' },
+  { id:'ausencias', href:'ausencias.html', label:'Ausência', icon:'x-circle' },
+  { id:'chamada',   href:'chamada.html',   label:'Chamada',  icon:'message-circle' },
 ];
 
 function _svgIcon(name) {

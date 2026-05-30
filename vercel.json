@@ -4,8 +4,11 @@
     { "source": "/central",             "destination": "/projetos/central/central.html"  },
     { "source": "/acolitos",            "destination": "/projetos/acolitos/index.html"   },
     { "source": "/acolitos/novos",      "destination": "/projetos/acolitos/novos.html"   },
-    { "source": "/acolitos/crm",        "destination": "/projetos/acolitos/crm.html"     },
-    { "source": "/acolitos/membros",    "destination": "/projetos/acolitos/membros.html" }
+    { "source": "/acolitos/crm",        "destination": "/projetos/acolitos/crm.html"       },
+    { "source": "/acolitos/membros",    "destination": "/projetos/acolitos/membros.html"   },
+    { "source": "/acolitos/escala",     "destination": "/projetos/acolitos/escala.html"    },
+    { "source": "/acolitos/ausencias",  "destination": "/projetos/acolitos/ausencias.html" },
+    { "source": "/acolitos/chamada",    "destination": "/projetos/acolitos/chamada.html"   }
   ],
   "headers": [
     {

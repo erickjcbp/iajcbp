@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chamada — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .celeb-opt {
+      background:var(--surface); border:1px solid var(--border-wine);
+      border-radius:4px; padding:14px 16px; cursor:pointer; margin-bottom:10px;
+      transition:border-color .2s; -webkit-tap-highlight-color:transparent;
+    }
+    .celeb-opt:active,.celeb-opt.sel { border-color:var(--gold); }
+    .celeb-opt-data { font-family:'Cinzel',serif; font-size:14px; color:var(--text); }
+    .celeb-opt-sub  { font-size:11px; color:var(--text-muted); margin-top:3px; }
+    .chamada-cat {
+      font-family:'Cinzel',serif; font-size:10px; color:var(--gold);
+      letter-spacing:1px; text-transform:uppercase; padding:12px 0 4px;
+    }
+    .chamada-item { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); }
+    .chamada-info { flex:1; }
+    .chamada-nome-el { font-size:14px; color:var(--text); margin-bottom:2px; }
+    .chamada-fn    { font-size:11px; color:var(--gold); font-family:'Cinzel',serif; }
+    .r-btns { display:flex; gap:8px; flex-shrink:0; }
+    .r-btn {
+      width:38px; height:38px; border-radius:50%; border:1px solid var(--border);
+      background:var(--surface2); cursor:pointer; font-size:15px;
+      display:flex; align-items:center; justify-content:center;
+      transition:all .2s; -webkit-tap-highlight-color:transparent;
+    }
+    .r-btn.sel-presente { background:rgba(30,80,30,.35); border-color:var(--success); }
+    .r-btn.sel-atrasado { background:rgba(120,80,0,.25); border-color:var(--warn-text); }
+    .r-btn.sel-ausente  { background:rgba(100,10,10,.35); border-color:var(--danger-text); }
+    .summary-bar {
+      display:flex; gap:12px; background:var(--surface); border:1px solid var(--border-wine);
+      border-radius:4px; padding:12px 16px; margin-bottom:16px; flex-wrap:wrap;
+    }
+    .summary-item { text-align:center; flex:1; min-width:60px; }
+    .summary-num { font-family:'Cinzel',serif; font-size:22px; font-weight:700; }
+    .summary-lbl { font-size:9px; color:var(--text-muted); font-family:'Cinzel',serif; letter-spacing:.5px; text-transform:uppercase; }
+    .summary-num.p { color:var(--success-text); }
+    .summary-num.a { color:var(--warn-text); }
+    .summary-num.f { color:var(--danger-text); }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+<div class="main" id="main-content">
+  <span class="loading">Carregando...</span>
+</div>
+
+<script src="shared.js"></script>
+<script>
+const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const FUNCAO_LABEL = {
+  apoio:'Apoio', cruz:'Cruz', vela:'Vela', sineta:'Sineta', sinao:'Sinão',
+  altar:'Altar', turibulo:'Turíbulo', naveta:'Naveta', missal:'Missal',
+  cred_altar:'Cred. Altar', cred_credencia:'Cred. Credência', mitra:'Mitra', baculo:'Báculo'
+};
+
+let ctx = null;
+let celebAtual = null;
+let escalasAtuais = [];
+let resultados = {};
+
+async function init() {
+  ctx = await initModulo(['coord_admin','subadmin','membro_equipe','cerimonario']);
+  if (!ctx) return;
+  renderHeader(ctx, 'chamada');
+  renderBottomNav(ctx.membership.role, 'chamada');
+  await renderSelecao();
+}
+
+async function renderSelecao() {
+  const main = document.getElementById('main-content');
+  main.textContent = '';
+  celebAtual = null; resultados = {};
+
+  const title = document.createElement('h1'); title.className = 'page-title';
+  title.textContent = 'Chamada de Escala'; main.appendChild(title);
+
+  const sub = document.createElement('p');
+  sub.style.cssText = 'color:var(--text-muted);font-size:13px;margin-bottom:16px;font-style:italic;';
+  sub.textContent = 'Selecione a celebração:'; main.appendChild(sub);
+
+  const hoje = new Date(); const limit = new Date(hoje); limit.setDate(hoje.getDate()+7);
+  const { data: celebs } = await sb
+    .from('acolitos_celebracoes')
+    .select('*, acolitos_escalas(id)')
+    .gte('data', new Date(Date.now()-2*86400000).toISOString().slice(0,10))
+    .lte('data', limit.toISOString().slice(0,10))
+    .order('data').order('horario');
+
+  const comEscala = (celebs||[]).filter(c=>c.acolitos_escalas?.length>0);
+
+  if (!comEscala.length) {
+    const em = document.createElement('span'); em.className = 'empty';
+    em.textContent = 'Nenhuma celebração com escala publicada nos próximos 7 dias.';
+    main.appendChild(em); return;
+  }
+
+  comEscala.forEach(c => {
+    const d = new Date(c.data+'T00:00:00');
+    const opt = document.createElement('div'); opt.className = 'celeb-opt';
+    opt.onclick = () => abrirChamada(c);
+    const dt = document.createElement('div'); dt.className = 'celeb-opt-data';
+    dt.textContent = DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})+' · '+c.horario;
+    const sb2 = document.createElement('div'); sb2.className = 'celeb-opt-sub';
+    sb2.textContent = (c.comunidade==='matriz'?'Matriz':'Sto. Antônio')+' · '+c.acolitos_escalas.length+' escalados';
+    opt.append(dt,sb2); main.appendChild(opt);
+  });
+}
+
+async function abrirChamada(celeb) {
+  celebAtual = celeb; resultados = {};
+  const main = document.getElementById('main-content'); main.textContent = '';
+
+  const d = new Date(celeb.data+'T00:00:00');
+  const title = document.createElement('h1'); title.className = 'page-title';
+  title.textContent = DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' · '+celeb.horario;
+  main.appendChild(title);
+
+  // Busca escala
+  const { data: esc } = await sb
+    .from('acolitos_escalas')
+    .select('id, funcao, status, membro_id, acolitos_membros(nome,foto_url)')
+    .eq('celebracao_id', celeb.id).order('funcao');
+  escalasAtuais = esc||[];
+
+  if (!escalasAtuais.length) {
+    const em=document.createElement('span');em.className='empty';em.textContent='Nenhum membro escalado.';main.appendChild(em);return;
+  }
+
+  // Verifica chamada existente
+  const { data: chExist } = await sb.from('acolitos_chamadas').select('id').eq('celebracao_id',celeb.id).maybeSingle();
+  if (chExist) {
+    const av=document.createElement('div');av.className='msg warn';av.textContent='Chamada já realizada. Você pode editá-la.';main.appendChild(av);
+  }
+
+  // Inicializa resultados
+  escalasAtuais.forEach(e=>{
+    if(['presente','ausente','atrasado'].includes(e.status)) resultados[e.id]=e.status;
+    else if(e.status==='ausente_justificado') resultados[e.id]='ausente';
+    else resultados[e.id]='presente';
+  });
+
+  // Barra de resumo dinâmica
+  const summaryBar = document.createElement('div'); summaryBar.className = 'summary-bar'; summaryBar.id = 'summary-bar';
+  main.appendChild(summaryBar); updateSummary();
+
+  // Lista por categoria
+  const catMap = {};
+  escalasAtuais.forEach(e=>{
+    const cat = getCat(e.funcao);
+    if(!catMap[cat])catMap[cat]=[];
+    catMap[cat].push(e);
+  });
+
+  Object.entries(catMap).forEach(([cat,items])=>{
+    const catEl=document.createElement('div');catEl.className='chamada-cat';catEl.textContent=cat;main.appendChild(catEl);
+    items.forEach(e=>{
+      const m=e.acolitos_membros;
+      const item=document.createElement('div');item.className='chamada-item';
+      const av=buildAvatarEl(m?.foto_url,'aspirante',40);av.style.flexShrink='0';
+      const info=document.createElement('div');info.className='chamada-info';
+      const nEl=document.createElement('div');nEl.className='chamada-nome-el';nEl.textContent=m?.nome||'—';
+      const fEl=document.createElement('div');fEl.className='chamada-fn';fEl.textContent=FUNCAO_LABEL[e.funcao]||e.funcao;
+      info.append(nEl,fEl);
+      const btns=document.createElement('div');btns.className='r-btns';
+      [{val:'presente',icon:'✅',title:'Presente'},{val:'atrasado',icon:'⏰',title:'Atrasado'},{val:'ausente',icon:'❌',title:'Ausente'}].forEach(({val,icon,title})=>{
+        const btn=document.createElement('button');btn.type='button';
+        btn.className='r-btn'+(resultados[e.id]===val?' sel-'+val:'');
+        btn.title=title;btn.textContent=icon;
+        btn.setAttribute('data-id',e.id);btn.setAttribute('data-val',val);
+        btn.onclick=()=>setRes(e.id,val);
+        btns.appendChild(btn);
+      });
+      item.append(av,info,btns);main.appendChild(item);
+    });
+  });
+
+  // Botões
+  const btnConf=document.createElement('button');btnConf.className='btn gold';
+  btnConf.style.marginTop='20px';btnConf.textContent='Confirmar Chamada';
+  btnConf.id='btn-conf-ch';btnConf.onclick=confirmarChamada;
+  const btnVolt=document.createElement('button');btnVolt.className='btn';
+  btnVolt.style.cssText='margin-top:8px;background:transparent;border:1px solid var(--border);color:var(--text-muted);';
+  btnVolt.textContent='← Escolher outra celebração';btnVolt.onclick=renderSelecao;
+  main.append(btnConf,btnVolt);
+}
+
+function getCat(f){
+  if(['cred_altar','cred_credencia','missal'].includes(f))return'Cerimoniais';
+  if(['altar','turibulo','naveta'].includes(f))return'Altares';
+  if(['cruz','vela','sineta','sinao'].includes(f))return'Litúrgicos';
+  if(['mitra','baculo'].includes(f))return'Episcopal';
+  return'Apoio';
+}
+
+function setRes(id,val){
+  resultados[id]=val;
+  document.querySelectorAll(`.r-btn[data-id="${id}"]`).forEach(b=>{
+    const bv=b.getAttribute('data-val');
+    b.className='r-btn'+(bv===val?' sel-'+val:'');
+  });
+  updateSummary();
+}
+
+function updateSummary(){
+  const bar=document.getElementById('summary-bar');
+  if(!bar)return;
+  bar.textContent='';
+  const p=Object.values(resultados).filter(v=>v==='presente').length;
+  const a=Object.values(resultados).filter(v=>v==='atrasado').length;
+  const f=Object.values(resultados).filter(v=>v==='ausente').length;
+  [{val:p,label:'Presentes',cls:'p'},{val:a,label:'Atrasados',cls:'a'},{val:f,label:'Ausentes',cls:'f'}].forEach(({val,label,cls})=>{
+    const item=document.createElement('div');item.className='summary-item';
+    const num=document.createElement('div');num.className='summary-num '+cls;num.textContent=val;
+    const lbl=document.createElement('div');lbl.className='summary-lbl';lbl.textContent=label;
+    item.append(num,lbl);bar.appendChild(item);
+  });
+}
+
+async function confirmarChamada(){
+  const btn=document.getElementById('btn-conf-ch');
+  btn.disabled=true;btn.textContent='Salvando...';
+
+  // Cria ou reutiliza chamada
+  let chamadaId;
+  const {data:ex}=await sb.from('acolitos_chamadas').select('id').eq('celebracao_id',celebAtual.id).maybeSingle();
+  if(ex){
+    chamadaId=ex.id;
+    await sb.from('acolitos_chamadas_itens').delete().eq('chamada_id',chamadaId);
+  }else{
+    const{data:nova,error:e1}=await sb.from('acolitos_chamadas').insert({
+      celebracao_id:celebAtual.id,realizada_por:ctx.user.id
+    }).select('id').single();
+    if(e1){btn.disabled=false;btn.textContent='Confirmar Chamada';return;}
+    chamadaId=nova?.id;
+  }
+  if(!chamadaId){btn.disabled=false;btn.textContent='Confirmar Chamada';return;}
+
+  // Insere itens
+  const itens=Object.entries(resultados).map(([escalaId,resultado])=>({
+    chamada_id:chamadaId,escala_id:escalaId,resultado
+  }));
+  if(itens.length)await sb.from('acolitos_chamadas_itens').insert(itens);
+
+  // Atualiza status das escalas
+  for(const[escalaId,resultado]of Object.entries(resultados)){
+    await sb.from('acolitos_escalas').update({status:resultado}).eq('id',escalaId);
+  }
+
+  btn.textContent='Chamada Confirmada ✓';
+  setTimeout(()=>renderSelecao(),1500);
+}
+
+init();
+</script>
+</body>
+</html>
