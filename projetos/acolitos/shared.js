@@ -297,7 +297,7 @@ function buildAvatarEl(fotoUrl, role, size, opts) {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.capture = 'user';
+    // sem 'capture': no celular abre o seletor nativo (galeria/Fotos + câmera)
     input.style.display = 'none';
 
     const badge = document.createElement('button');
