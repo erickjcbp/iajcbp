@@ -191,12 +191,16 @@ function renderRankProgress(main, nivel) {
   // Jornada em grade 3 colunas (colapsável) — 10º nível centralizado
   const jorToggle = document.createElement('button'); jorToggle.className = 'jor-toggle';
   const grid = document.createElement('div'); grid.className = 'jornada-grid';
+  const hint = document.createElement('div'); hint.className = 'jor-hint'; hint.textContent = '↳ Sua trilha — siga do nível 1 ao 10';
+  grid.appendChild(hint);
   NIVEIS.forEach((j, i) => {
-    const cell = document.createElement('div'); cell.className = 'jor-cell';
+    const cell = document.createElement('div'); cell.className = 'jor-cell' + (i === idx ? ' atual' : i < idx ? ' done' : '');
+    const num = document.createElement('span'); num.className = 'jor-num' + (i < idx ? ' done' : i === idx ? ' atual' : '');
+    num.textContent = String(i + 1);
     const dot = document.createElement('div'); dot.className = 'jornada-dot' + (i < idx ? ' done' : i === idx ? ' current' : '');
     dot.textContent = i <= idx ? (_JOR_ICON[j.base] || String(i + 1)) : '○';
     const lbl = document.createElement('div'); lbl.className = 'jornada-label' + (i === idx ? ' current' : ''); lbl.textContent = j.label;
-    cell.append(dot, lbl); grid.appendChild(cell);
+    cell.append(num, dot, lbl); grid.appendChild(cell);
   });
   function setJorCollapsed(c) {
     grid.style.display = c ? 'none' : 'grid';

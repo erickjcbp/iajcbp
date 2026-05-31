@@ -302,6 +302,41 @@ function nivelFromRole(role) {
   return 'aspirante';
 }
 
+// SVG do emblema por NÍVEL (escudo + símbolos que evoluem). Aspirante/Coroinha
+// usam os patches base; acólito e cerimoniário ganham composições próprias.
+function getNivelSvg(slug, size) {
+  size = size || 80; const s = String(size);
+  if (slug === 'aspirante') return getPatchSvg('aspirante', size);
+  if (slug === 'coroinha')  return getPatchSvg('coroinha', size);
+  const cer = nivelInfo(slug).base === 'cerimonario';
+  const C = cer
+    ? { fill:'#1c0b2e', edge:'#9b59d4', edge2:'#5a1a9a', acc:'#d8b3ff' }
+    : { fill:'#2a1a00', edge:'#e8b94a', edge2:'#7a5800', acc:'#ffe08a' };
+
+  const shieldA = `<path d="M13 14 H51 V38 Q51 54 32 62 Q13 54 13 38 Z" fill="${C.fill}" stroke="${C.edge}" stroke-width="2.6"/>`;
+  const shieldB = `<path d="M32 8 L51 15 V38 Q51 54 32 62 Q13 54 13 38 V15 Z" fill="${C.fill}" stroke="${C.edge}" stroke-width="2.6"/>`;
+  const innerA  = `<path d="M18 19 H46 V37 Q46 50 32 57 Q18 50 18 37 Z" fill="none" stroke="${C.edge2}" stroke-width="1.3"/>`;
+  const innerB  = `<path d="M32 13 L46 19 V37 Q46 50 32 57 Q18 50 18 37 V19 Z" fill="none" stroke="${C.edge2}" stroke-width="1.3"/>`;
+  const cross   = `<g stroke="${C.acc}" stroke-width="3" stroke-linecap="round"><line x1="32" y1="25" x2="32" y2="45"/><line x1="23" y1="33" x2="41" y2="33"/></g>`;
+  const sword   = `<g stroke="${C.acc}" stroke-linecap="round"><line x1="32" y1="22" x2="32" y2="44" stroke-width="3.2"/><line x1="25" y1="40" x2="39" y2="40" stroke-width="2.4"/><circle cx="32" cy="48" r="2.3" fill="${C.acc}" stroke="none"/></g>`;
+  const swords  = `<g stroke="${C.acc}" stroke-width="2.6" stroke-linecap="round"><line x1="22" y1="48" x2="43" y2="24"/><line x1="42" y1="48" x2="21" y2="24"/></g>`;
+  const thurible= `<g stroke="${C.acc}" stroke-width="1.8" fill="none" stroke-linecap="round"><circle cx="32" cy="18" r="1.9"/><line x1="31" y1="19.5" x2="28" y2="29"/><line x1="33" y1="19.5" x2="36" y2="29"/><path d="M27 29 H37 L35.5 33 H28.5 Z" fill="${C.fill}"/><path d="M28 33 Q28 43 32 43 Q36 43 36 33" fill="${C.fill}"/><line x1="29" y1="37" x2="35" y2="37"/><circle cx="32" cy="46" r="1.3" fill="${C.acc}" stroke="none"/></g>`;
+  const crown   = `<g fill="${C.acc}" stroke="${C.edge2}" stroke-width="0.6" stroke-linejoin="round"><path d="M20 12 L23 4 L28 9 L32 2 L36 9 L41 4 L44 12 Z"/></g>`;
+
+  const map = {
+    acolito_aspirante:      shieldA + cross,
+    acolito_guardiao:       shieldA + innerA + cross,
+    acolito_sentinela:      shieldA + innerA + sword,
+    aspirante_cerimoniario: shieldA + innerA + thurible,
+    cerimoniario_aspirante: shieldB + thurible,
+    cerimoniario_guardiao:  shieldB + innerB + thurible,
+    cerimoniario_magistral: shieldB + innerB + swords + thurible,
+    cerimoniario_mor:       shieldB + innerB + sword + thurible + crown,
+  };
+  const body = map[slug] || (shieldA + cross);
+  return `<svg width="${s}" height="${s}" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
+}
+
 // Emblema do rank com animação que intensifica por nível (patch + raios + pips)
 function buildRankEmblem(slug, size) {
   const info = nivelInfo(slug); size = size || 80;
@@ -320,7 +355,7 @@ function buildRankEmblem(slug, size) {
   }
   const pdiv = document.createElement('div');
   pdiv.style.cssText = `position:relative;z-index:1;line-height:0;--glow:${glow}px;--glow2:${glow2}px;--spd:${spd}s;--sc:${sc};animation:emblemPulse var(--spd) ease-in-out infinite;`;
-  pdiv.innerHTML = getPatchSvg(info.base, size); // SVG hardcoded — seguro
+  pdiv.innerHTML = getNivelSvg(slug, size); // SVG hardcoded — seguro
   core.appendChild(pdiv);
   wrap.appendChild(core);
   if (info.pips > 0) {
