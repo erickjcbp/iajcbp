@@ -428,6 +428,25 @@ body {
   50%     { box-shadow: inset 0 0 0 2px var(--gold-light), 0 0 26px var(--red-soft); transform: scale(1.08); }
 }
 
+/* ── JORNADA EM GRADE (member dashboard, colapsável) ─────────── */
+.jor-toggle {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;
+  background: var(--surface2); border: 1px solid var(--border-wine); color: var(--gold);
+  font-family: 'Sora', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 11px; cursor: pointer; border-radius: 4px; margin-bottom: 12px; transition: all .2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.jor-toggle:hover { border-color: var(--gold); box-shadow: 0 0 12px var(--red-glow); }
+.jornada-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 6px; margin-bottom: 14px;
+  background: linear-gradient(165deg, var(--surface2), var(--surface));
+  border: 1px solid var(--border-wine);
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  padding: 16px 10px;
+}
+.jornada-grid > .jor-cell:last-child { grid-column: 2; }
+.jor-cell { display: flex; flex-direction: column; align-items: center; gap: 7px; text-align: center; }
+
 /* ── RANK PROGRESS (destaque animado do nível atual) ─────────── */
 .rank-card {
   position: relative; text-align: center; overflow: hidden;

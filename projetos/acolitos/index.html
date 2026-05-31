@@ -188,17 +188,24 @@ function renderRankProgress(main, nivel) {
   card.append(patch, name, nx, bar);
   main.appendChild(card);
 
-  // Jornada (hexágonos) logo abaixo — 10 níveis, scroll horizontal
-  const track = document.createElement('div'); track.className = 'jornada-track';
+  // Jornada em grade 3 colunas (colapsável) — 10º nível centralizado
+  const jorToggle = document.createElement('button'); jorToggle.className = 'jor-toggle';
+  const grid = document.createElement('div'); grid.className = 'jornada-grid';
   NIVEIS.forEach((j, i) => {
-    const step = document.createElement('div'); step.className = 'jornada-step';
+    const cell = document.createElement('div'); cell.className = 'jor-cell';
     const dot = document.createElement('div'); dot.className = 'jornada-dot' + (i < idx ? ' done' : i === idx ? ' current' : '');
     dot.textContent = i <= idx ? (_JOR_ICON[j.base] || String(i + 1)) : '○';
     const lbl = document.createElement('div'); lbl.className = 'jornada-label' + (i === idx ? ' current' : ''); lbl.textContent = j.label;
-    step.append(dot, lbl); track.appendChild(step);
-    if (i < NIVEIS.length - 1) { const line = document.createElement('div'); line.className = 'jornada-line' + (i < idx ? ' done' : ''); track.appendChild(line); }
+    cell.append(dot, lbl); grid.appendChild(cell);
   });
-  main.appendChild(track);
+  function setJorCollapsed(c) {
+    grid.style.display = c ? 'none' : 'grid';
+    jorToggle.textContent = c ? '▸  Mostrar jornada' : '▾  Ocultar jornada';
+    localStorage.setItem('jor-collapsed', c ? '1' : '0');
+  }
+  jorToggle.onclick = () => setJorCollapsed(grid.style.display !== 'none');
+  main.append(jorToggle, grid);
+  setJorCollapsed(localStorage.getItem('jor-collapsed') === '1');
 
   const verBtn = document.createElement('button'); verBtn.className = 'btn-sm gold';
   verBtn.style.cssText = 'margin:2px auto 16px;display:block;'; verBtn.textContent = 'Ver minha jornada ▸';

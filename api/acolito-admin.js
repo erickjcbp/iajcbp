@@ -33,6 +33,17 @@ export default async function handler(req, res) {
   const callerRole = (await pmRes.json())[0]?.role;
   if (!['coord_admin', 'subadmin'].includes(callerRole)) return res.status(403).json({ error: 'Acesso negado' });
 
+  // Anti-IDOR / anti-escalonamento: só mexe em alvo do MÓDULO acolitos e com
+  // privilégio MENOR que o do chamador (subadmin não mexe em coord_admin, etc.).
+  const RANK = { coord_admin: 4, subadmin: 3, membro_equipe: 2, cerimonario: 1, acolito: 1, coroinha: 1, aspirante: 1, novo: 1 };
+  async function podeMexer(targetUid) {
+    if (!targetUid) return false;
+    const tRes = await fetch(`${URL}/rest/v1/pastoral_members?user_id=eq.${targetUid}&module_id=eq.${mod.id}&select=role`, { headers: h });
+    const t = (await tRes.json())[0];
+    if (!t) return false; // alvo não pertence ao módulo acolitos
+    return (RANK[t.role] || 0) < (RANK[callerRole] || 0);
+  }
+
   const { action, user_id, usuario, password, nome, membro_id } = req.body || {};
   const jh = { ...h, 'Content-Type': 'application/json' };
 
@@ -52,6 +63,7 @@ export default async function handler(req, res) {
   if (action === 'password') {
     if (!user_id || !password) return res.status(400).json({ error: 'Faltam dados.' });
     if (String(password).length < 6) return res.status(400).json({ error: 'Senha muito curta.' });
+    if (!(await podeMexer(user_id))) return res.status(403).json({ error: 'Sem permissão sobre este usuário.' });
     const r = await fetch(`${URL}/auth/v1/admin/users/${user_id}`, { method: 'PUT', headers: jh, body: JSON.stringify({ password }) });
     const d = await r.json(); if (!r.ok) return res.status(r.status).json({ error: d.msg || d.message || 'Erro' });
     return res.status(200).json({ ok: true });
@@ -59,6 +71,7 @@ export default async function handler(req, res) {
 
   if (action === 'username') {
     if (!user_id || !usuario) return res.status(400).json({ error: 'Faltam dados.' });
+    if (!(await podeMexer(user_id))) return res.status(403).json({ error: 'Sem permissão sobre este usuário.' });
     const r = await fetch(`${URL}/auth/v1/admin/users/${user_id}`, { method: 'PUT', headers: jh, body: JSON.stringify({ email: synthEmail(usuario), email_confirm: true }) });
     const d = await r.json(); if (!r.ok) { const ja = /registered|already|exists/i.test(d.msg || d.message || ''); return res.status(r.status).json({ error: ja ? 'Usuário já em uso.' : (d.msg || d.message || 'Erro') }); }
     return res.status(200).json({ ok: true });
