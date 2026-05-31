@@ -92,7 +92,36 @@ async function initModulo(requiredRoles = null) {
   const { data: membro } = await sb
     .from('acolitos_membros').select('*').eq('user_id', session.user.id).maybeSingle();
 
+  if (membro && Array.isArray(membro.avisos) && membro.avisos.length) showAvisos(membro);
+
   return { user: session.user, membership, membro };
+}
+
+// Mostra avisos da coordenação ao acessar; limpa após exibir; encerra sessão se necessário
+async function showAvisos(membro) {
+  const avisos = membro.avisos || []; if (!avisos.length) return;
+  const precisaLogout = avisos.some(a => a && a.logout);
+  try { await sb.from('acolitos_membros').update({ avisos: [] }).eq('id', membro.id); } catch (e) {}
+  membro.avisos = [];
+
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '500';
+  const modal = document.createElement('div'); modal.className = 'modal';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Avisos da Coordenação';
+  modal.append(handle, tt);
+  avisos.forEach(a => {
+    const p = document.createElement('div'); p.style.cssText = 'font-size:14px;line-height:1.6;color:var(--text);margin-bottom:12px;padding:12px;background:var(--surface);border-left:3px solid var(--gold);border-radius:4px;';
+    p.textContent = (a && a.msg) ? a.msg : String(a);
+    modal.appendChild(p);
+  });
+  const btn = document.createElement('button'); btn.className = 'btn gold'; btn.style.marginTop = '8px';
+  btn.textContent = precisaLogout ? 'Entendi — sair e entrar de novo' : 'Entendi';
+  btn.onclick = async () => {
+    if (precisaLogout) { try { await sb.auth.signOut(); } catch (e) {} window.location.href = 'login.html'; }
+    else ov.remove();
+  };
+  modal.appendChild(btn);
+  ov.appendChild(modal); document.body.appendChild(ov);
 }
 
 // ── THEME ─────────────────────────────────────────────────────

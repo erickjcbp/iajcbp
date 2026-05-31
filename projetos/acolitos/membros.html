@@ -290,7 +290,7 @@ async function abrirFicha(membro) {
 
   // Tabs
   const tabs = ['Pessoal','Habilitações','Disponibilidade','Família','Frequência','Evolução','Observações'];
-  if (['coord_admin','subadmin'].includes(ctx.membership.role)) { tabs.push('Equipe'); tabs.push('Acesso'); }
+  if (['coord_admin','subadmin'].includes(ctx.membership.role)) tabs.push('Acessos');
   const tabsEl = document.getElementById('ficha-tabs'); tabsEl.textContent = '';
   tabs.forEach((t, i) => {
     const btn = document.createElement('button'); btn.className = 'ficha-tab' + (i === 0 ? ' active' : '');
@@ -368,24 +368,25 @@ function editMulti(label, col, current, options) {
   g.appendChild(box); return g;
 }
 
+// Campos de equipe/coordenação (serve, coordenação, setores, permissões)
+function appendEquipeFields(el, m) {
+  el.appendChild(editBool('Serve no altar? (tem jornada/ausências)', 'serve', m.serve !== false));
+  const reveal = document.createElement('div');
+  reveal.style.cssText = 'display:' + (m.eh_equipe ? 'block' : 'none') + ';margin:2px 0 6px;padding:12px;background:var(--surface);border:1px solid var(--border-wine);border-radius:8px;';
+  el.appendChild(editBool('É da coordenação / equipe?', 'eh_equipe', m.eh_equipe, (on) => { reveal.style.display = on ? 'block' : 'none'; }));
+  const lblS = document.createElement('div'); lblS.className = 'form-label'; lblS.textContent = 'Setores (um ou mais)';
+  reveal.appendChild(lblS);
+  reveal.appendChild(editMulti('', 'setores', m.setores, SETORES));
+  const lblP = document.createElement('div'); lblP.className = 'form-label'; lblP.style.marginTop = '10px'; lblP.textContent = 'Módulos liberados para esta pessoa';
+  reveal.appendChild(lblP);
+  reveal.appendChild(editMulti('', 'permissoes', m.permissoes, MODULOS_LIBERAVEIS.map(x => [x[0], x[1]])));
+  el.appendChild(reveal);
+}
+
 async function renderTab(tab) {
   const el = document.getElementById('ficha-conteudo');
   el.textContent = '';
   const m = membroAtual;
-
-  if (tab === 'Equipe') {
-    el.appendChild(editBool('Serve no altar? (tem jornada/ausências)', 'serve', m.serve !== false));
-    const reveal = document.createElement('div');
-    reveal.style.cssText = 'display:' + (m.eh_equipe ? 'block' : 'none') + ';margin:2px 0 6px;padding:12px;background:var(--surface);border:1px solid var(--border-wine);border-radius:8px;';
-    el.appendChild(editBool('É da coordenação / equipe?', 'eh_equipe', m.eh_equipe, (on) => { reveal.style.display = on ? 'block' : 'none'; }));
-    const lblS = document.createElement('div'); lblS.className = 'form-label'; lblS.textContent = 'Setores (um ou mais)';
-    reveal.appendChild(lblS);
-    reveal.appendChild(editMulti('', 'setores', m.setores, SETORES));
-    const lblP = document.createElement('div'); lblP.className = 'form-label'; lblP.style.marginTop = '10px'; lblP.textContent = 'Módulos liberados para esta pessoa';
-    reveal.appendChild(lblP);
-    reveal.appendChild(editMulti('', 'permissoes', m.permissoes, MODULOS_LIBERAVEIS.map(x => [x[0], x[1]])));
-    el.appendChild(reveal);
-  }
 
   if (tab === 'Pessoal') {
     el.appendChild(editText('Apelido (opcional)', 'apelido', m.apelido));
@@ -582,7 +583,8 @@ async function renderTab(tab) {
     el.appendChild(pe);
   }
 
-  if (tab === 'Acesso') {
+  if (tab === 'Acessos') {
+    const tLogin = document.createElement('div'); tLogin.className = 'section-card-title'; tLogin.textContent = 'Login'; el.appendChild(tLogin);
     const info = document.createElement('p'); info.style.cssText = 'font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.5;';
     el.appendChild(info);
     const msgEl = document.createElement('div'); msgEl.id = 'ac-msg'; msgEl.className = 'msg'; msgEl.style.marginTop = '12px';
@@ -629,11 +631,17 @@ async function renderTab(tab) {
       const b = document.createElement('button'); b.className = 'btn gold'; b.textContent = 'Criar acesso';
       b.onclick = async () => {
         const d = await acAction('create', { membro_id: m.id, usuario: i1.value.trim(), password: i2.value, nome: m.nome }, b);
-        if (d) renderTab('Acesso'); // re-renderiza no modo "já tem acesso", mostrando o usuário
+        if (d) renderTab('Acessos'); // re-renderiza no modo "já tem acesso", mostrando o usuário
       };
       el.appendChild(b);
     }
     el.appendChild(msgEl);
+
+    // Coordenação / equipe / setores
+    const hr = document.createElement('div'); hr.style.cssText = 'border-top:1px solid var(--border-wine);margin:18px 0 14px;';
+    el.appendChild(hr);
+    const tEq = document.createElement('div'); tEq.className = 'section-card-title'; tEq.textContent = 'Coordenação & Setores'; el.appendChild(tEq);
+    appendEquipeFields(el, m);
   }
 
   if (tab === 'Observações') {
@@ -828,6 +836,17 @@ async function salvarFicha() {
     if (fmsg) { fmsg.className = 'msg error'; fmsg.textContent = 'Erro ao salvar: ' + (e.message || 'tente novamente.'); }
     btn.disabled = false; btn.textContent = 'Salvar'; return;
   }
+  // Aviso informativo ao membro (mudanças que não são só de nível — nível já tem comemoração)
+  const camposNaoNivel = Object.keys(fichaEdits).filter(k => k !== 'nivel');
+  if (camposNaoNivel.length && membroAtual.user_id) {
+    try {
+      const cur = Array.isArray(membroAtual.avisos) ? membroAtual.avisos : [];
+      const av = [...cur, { msg: 'A coordenação atualizou suas informações no sistema.', logout: false }];
+      await sbAdmin.from('acolitos_membros').update({ avisos: av }).eq('id', membroAtual.id);
+      membroAtual.avisos = av;
+    } catch (e) { /* best-effort */ }
+  }
+
   // Sucesso — NÃO fecha; zera o "não salvo" e mostra confirmação
   fichaEdits = {}; fichaDirty = false; updateDirtyUI();
   btn.disabled = false; btn.textContent = 'Salvar';

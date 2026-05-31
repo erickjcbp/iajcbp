@@ -44,6 +44,18 @@ export default async function handler(req, res) {
     return (RANK[t.role] || 0) < (RANK[callerRole] || 0);
   }
 
+  // Anexa um aviso (mostrado ao membro no próximo acesso) ao membro do user alvo
+  async function addAviso(targetUid, aviso) {
+    try {
+      const r = await fetch(`${URL}/rest/v1/acolitos_membros?user_id=eq.${targetUid}&select=id,avisos`, { headers: h });
+      const m = (await r.json())[0]; if (!m) return;
+      const novos = Array.isArray(m.avisos) ? m.avisos : [];
+      novos.push(aviso);
+      await fetch(`${URL}/rest/v1/acolitos_membros?id=eq.${m.id}`, { method: 'PATCH', headers: { ...jh, Prefer: 'return=minimal' }, body: JSON.stringify({ avisos: novos }) });
+    } catch (e) { /* aviso é best-effort */ }
+  }
+  const SESSAO_MSG = ' Guarde esses dados, pois sua sessão será encerrada e você voltará à tela de login para usar os dados corretos. Após acessar novamente você pode alterar qualquer informação.';
+
   const { action, user_id, usuario, password, nome, membro_id } = req.body || {};
   const jh = { ...h, 'Content-Type': 'application/json' };
 
@@ -75,14 +87,17 @@ export default async function handler(req, res) {
     if (!(await podeMexer(user_id))) return res.status(403).json({ error: 'Sem permissão sobre este usuário.' });
     const r = await fetch(`${URL}/auth/v1/admin/users/${user_id}`, { method: 'PUT', headers: jh, body: JSON.stringify({ password }) });
     const d = await r.json(); if (!r.ok) return res.status(r.status).json({ error: d.msg || d.message || 'Erro' });
+    await addAviso(user_id, { msg: 'Sua senha foi redefinida pela coordenação para: ' + password + '.' + SESSAO_MSG, logout: true });
     return res.status(200).json({ ok: true });
   }
 
   if (action === 'username') {
     if (!user_id || !usuario) return res.status(400).json({ error: 'Faltam dados.' });
     if (!(await podeMexer(user_id))) return res.status(403).json({ error: 'Sem permissão sobre este usuário.' });
+    const novoUser = synthEmail(usuario).includes('@coroinhas.') ? synthEmail(usuario).split('@')[0] : usuario;
     const r = await fetch(`${URL}/auth/v1/admin/users/${user_id}`, { method: 'PUT', headers: jh, body: JSON.stringify({ email: synthEmail(usuario), email_confirm: true }) });
     const d = await r.json(); if (!r.ok) { const ja = /registered|already|exists/i.test(d.msg || d.message || ''); return res.status(r.status).json({ error: ja ? 'Usuário já em uso.' : (d.msg || d.message || 'Erro') }); }
+    await addAviso(user_id, { msg: 'Seu usuário (login) foi alterado para: ' + novoUser + '.' + SESSAO_MSG, logout: true });
     return res.status(200).json({ ok: true });
   }
 
