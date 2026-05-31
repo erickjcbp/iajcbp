@@ -49,7 +49,8 @@
     .quick-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px; }
     .quick-link { background:var(--surface); border:1px solid var(--border-wine); border-radius:4px; padding:14px; display:flex; align-items:center; gap:10px; text-decoration:none; transition:border-color .2s; -webkit-tap-highlight-color:transparent; }
     .quick-link:active { border-color:var(--gold); }
-    .quick-link-icon { font-size:22px; flex-shrink:0; }
+    .quick-link-icon { flex-shrink:0; width:26px; height:26px; display:flex; }
+    .quick-link-icon svg { width:26px; height:26px; fill:none; stroke:var(--gold); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; filter:drop-shadow(0 0 6px var(--red-glow)); }
     .quick-link-title { font-family:'Sora',sans-serif; font-size:12px; color:var(--text); }
     .section-head { font-family:'Sora',sans-serif; font-size:13px; color:var(--text); letter-spacing:1px; margin:18px 0 12px; }
   </style>
@@ -92,7 +93,7 @@ async function init() {
   if (!ctx) return;
   renderHeader(ctx, 'home');
   const role = ctx.membership?.role;
-  renderBottomNav(role || 'novo', 'home');
+  renderBottomNav(role || 'novo', 'home', ctx.membro?.nivel);
   const { data: mod } = await sb.from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
   moduloId = mod?.id || null;
 
@@ -463,13 +464,13 @@ async function renderDashboardEquipe(ctx) {
   const qh = document.createElement('div'); qh.className='section-head'; qh.textContent='Acesso Rápido'; main.appendChild(qh);
   const qrow = document.createElement('div'); qrow.className='quick-row';
   [
-    { href:'escala.html', icon:'📅', title:'Montar Escala' },
-    { href:'membros.html', icon:'👥', title:'Membros' },
-    { href:'chamada.html', icon:'✅', title:'Chamada' },
-    { href:'crm.html', icon:'🔄', title:'Integração' },
+    { href:'escala.html', icon:'calendar', title:'Montar Escala' },
+    { href:'membros.html', icon:'users', title:'Membros' },
+    { href:'chamada.html', icon:'message-circle', title:'Chamada' },
+    { href:'crm.html', icon:'shuffle', title:'Integração' },
   ].forEach(q => {
     const a=document.createElement('a'); a.className='quick-link'; a.href=q.href;
-    const ic=document.createElement('span'); ic.className='quick-link-icon'; ic.textContent=q.icon;
+    const ic=document.createElement('span'); ic.className='quick-link-icon'; ic.innerHTML=_svgIcon(q.icon); // SVG hardcoded — seguro
     const t=document.createElement('span'); t.className='quick-link-title'; t.textContent=q.title;
     a.append(ic,t); qrow.appendChild(a);
   });

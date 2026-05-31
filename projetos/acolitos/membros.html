@@ -154,7 +154,7 @@ async function init() {
   ctx = await initModulo(['coord_admin','subadmin','membro_equipe']);
   if (!ctx) return;
   renderHeader(ctx, 'membros');
-  renderBottomNav(ctx.membership.role, 'membros');
+  renderBottomNav(ctx.membership.role, 'membros', ctx.membro?.nivel);
   document.getElementById('vt-cards').classList.toggle('active', vista === 'cards');
   document.getElementById('vt-lista').classList.toggle('active', vista === 'lista');
   await loadMembros();

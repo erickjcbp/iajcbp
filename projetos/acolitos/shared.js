@@ -279,16 +279,17 @@ function _svgIcon(name) {
   return `<svg viewBox="0 0 24 24"><path d="${d[name] || ''}"/></svg>`;
 }
 
-function renderBottomNav(role, activePage) {
+function renderBottomNav(role, activePage, nivel) {
   const el = document.getElementById('app-nav');
   if (!el) return;
   el.className = 'app-nav';
   el.textContent = '';
-  // Chamada só aparece para cerimoniário (e equipe usa NAV_EQUIPE);
-  // aspirante/coroinha/acólito não veem chamada.
+  // Chamada aparece para quem está em NÍVEL de cerimoniário (decoupled do role);
+  // equipe usa NAV_EQUIPE; aspirante/coroinha/acólito não veem chamada.
+  const isCerimo = nivelInfo(nivel || nivelFromRole(role)).base === 'cerimonario';
   let items;
   if (EQUIPE_ROLES.includes(role)) items = NAV_EQUIPE;
-  else if (role === 'cerimonario') items = NAV_MEMBRO;
+  else if (isCerimo || role === 'cerimonario') items = NAV_MEMBRO;
   else items = NAV_MEMBRO.filter(i => i.id !== 'chamada');
   items.forEach(item => {
     const a = document.createElement('a');

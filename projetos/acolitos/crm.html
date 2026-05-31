@@ -120,7 +120,7 @@ async function init() {
   ctx = await initModulo(['coord_admin','subadmin','membro_equipe']);
   if (!ctx) return;
   renderHeader(ctx, 'crm');
-  renderBottomNav(ctx.membership.role, 'crm');
+  renderBottomNav(ctx.membership.role, 'crm', ctx.membro?.nivel);
   await loadCrm();
 }
 

@@ -61,7 +61,7 @@ async function init() {
   ctx = await initModulo();
   if (!ctx) return;
   renderHeader(ctx, 'ausencias');
-  renderBottomNav(ctx.membership.role, 'ausencias');
+  renderBottomNav(ctx.membership.role, 'ausencias', ctx.membro?.nivel);
   EQUIPE_ROLES.includes(ctx.membership.role) ? renderViewEquipe() : renderViewMembro();
 }
 
