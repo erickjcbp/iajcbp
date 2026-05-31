@@ -206,6 +206,10 @@ async function renderViewEquipe() {
   const title = document.createElement('h1'); title.className = 'page-title';
   title.textContent = 'Ausências Informadas'; main.appendChild(title);
 
+  const btnAdd = document.createElement('button'); btnAdd.className = 'btn-sm gold';
+  btnAdd.style.marginBottom = '16px'; btnAdd.textContent = '+ Registrar ausência';
+  btnAdd.onclick = abrirRegistroAusencia; main.appendChild(btnAdd);
+
   // KPIs
   const { count: totalAus } = await sb.from('acolitos_ausencias')
     .select('*',{count:'exact',head:true});
@@ -243,6 +247,89 @@ async function renderViewEquipe() {
     const badge=document.createElement('span');badge.className='badge coroinha';badge.textContent='AJ';
     row.append(info,badge);main.appendChild(row);
   });
+}
+
+// ── REGISTRAR AUSÊNCIA (equipe/admin, em nome de um membro) ───
+async function abrirRegistroAusencia() {
+  const hoje = new Date().toISOString().slice(0,10);
+  const { data: escs } = await sb.from('acolitos_escalas')
+    .select('id, membro_id, celebracao_id, acolitos_membros(nome), acolitos_celebracoes!inner(data,horario,comunidade)')
+    .eq('status','escalado').gte('acolitos_celebracoes.data', hoje);
+  const porMembro = {};
+  (escs||[]).filter(e => e.acolitos_celebracoes && e.acolitos_membros).forEach(e => {
+    if (!porMembro[e.membro_id]) porMembro[e.membro_id] = { nome: e.acolitos_membros.nome, escalas: [] };
+    porMembro[e.membro_id].escalas.push(e);
+  });
+
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open';
+  ov.onclick = (ev) => { if (ev.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className = 'modal';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Registrar Ausência';
+  modal.append(handle, tt); ov.appendChild(modal); document.body.appendChild(ov);
+
+  const ids = Object.keys(porMembro);
+  if (!ids.length) {
+    const em = document.createElement('div'); em.style.cssText = 'color:var(--text-muted);font-size:13px;line-height:1.5;';
+    em.textContent = 'Nenhum membro com escala futura. Monte a escala primeiro para poder registrar ausências.';
+    const close = document.createElement('button'); close.className = 'btn-sm gray'; close.style.marginTop = '16px';
+    close.textContent = 'Fechar'; close.onclick = () => ov.remove();
+    modal.append(em, close); return;
+  }
+
+  const g1 = document.createElement('div'); g1.className = 'form-group';
+  const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Membro *';
+  const selM = document.createElement('select'); selM.className = 'form-select';
+  ids.forEach(id => { const o = document.createElement('option'); o.value = id; o.textContent = porMembro[id].nome; selM.appendChild(o); });
+  g1.append(l1, selM); modal.appendChild(g1);
+
+  const g2 = document.createElement('div'); g2.className = 'form-group';
+  const l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'Missa escalada *';
+  const selC = document.createElement('select'); selC.className = 'form-select';
+  g2.append(l2, selC); modal.appendChild(g2);
+  function popMissas() {
+    selC.textContent = '';
+    porMembro[selM.value].escalas.forEach(e => {
+      const c = e.acolitos_celebracoes; const d = new Date(c.data + 'T00:00:00');
+      const o = document.createElement('option'); o.value = e.id;
+      o.textContent = DIAS[d.getDay()] + ' ' + d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}) + ' ' + c.horario + ' · ' + (c.comunidade==='matriz'?'Matriz':'Sto. Antônio');
+      selC.appendChild(o);
+    });
+  }
+  selM.onchange = popMissas; popMissas();
+
+  const lMot = document.createElement('label'); lMot.className = 'form-label'; lMot.textContent = 'Motivo *'; modal.appendChild(lMot);
+  const mGrid = document.createElement('div'); mGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;';
+  let motivoSel = 'doenca';
+  Object.entries(MOTIVOS).forEach(([val,label]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'form-toggle' + (val==='doenca'?' active':''); b.textContent = label;
+    b.onclick = () => { motivoSel = val; mGrid.querySelectorAll('.form-toggle').forEach(x => x.classList.remove('active')); b.classList.add('active'); };
+    mGrid.appendChild(b);
+  });
+  modal.appendChild(mGrid);
+
+  const g3 = document.createElement('div'); g3.className = 'form-group';
+  const l3 = document.createElement('label'); l3.className = 'form-label'; l3.textContent = 'Observação (opcional)';
+  const inpObs = document.createElement('input'); inpObs.className = 'form-input'; inpObs.placeholder = 'Detalhes...';
+  g3.append(l3, inpObs); modal.appendChild(g3);
+
+  const msg = document.createElement('div'); msg.className = 'msg'; modal.appendChild(msg);
+
+  const acts = document.createElement('div'); acts.className = 'modal-actions';
+  const cancel = document.createElement('button'); cancel.className = 'btn-sm gray'; cancel.textContent = 'Cancelar'; cancel.onclick = () => ov.remove();
+  const conf = document.createElement('button'); conf.className = 'btn-sm gold'; conf.textContent = 'Registrar';
+  conf.onclick = async () => {
+    const escalaId = selC.value; if (!escalaId) return;
+    const e = porMembro[selM.value].escalas.find(x => x.id === escalaId); if (!e) return;
+    conf.disabled = true; conf.textContent = 'Salvando...';
+    const { error: e1 } = await sb.from('acolitos_ausencias').upsert({
+      membro_id: selM.value, celebracao_id: e.celebracao_id, motivo: motivoSel, observacao: inpObs.value.trim() || null
+    }, { onConflict: 'membro_id,celebracao_id' });
+    if (e1) { msg.className = 'msg error'; msg.textContent = 'Erro ao registrar. Tente novamente.'; conf.disabled = false; conf.textContent = 'Registrar'; return; }
+    await sb.from('acolitos_escalas').update({ status: 'ausente_justificado' }).eq('id', escalaId);
+    ov.remove(); renderViewEquipe();
+  };
+  acts.append(cancel, conf); modal.appendChild(acts);
 }
 
 init();
