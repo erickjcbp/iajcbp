@@ -94,7 +94,7 @@ const FUNCOES = [
   {id:'mitra',          label:'Mitra',           cat:'Episcopal'},
   {id:'baculo',         label:'Báculo',          cat:'Episcopal'},
 ];
-const NIVEIS = ['nao_treinado','em_formacao','apto','experiente','referencia'];
+const PROF_NIVEIS = ['nao_treinado','em_formacao','apto','experiente','referencia']; // proficiência (não confundir com NIVEIS da jornada, em shared.js)
 const NIVEL_LABEL = {
   nao_treinado:'Não Treinado', em_formacao:'Em Formação',
   apto:'Apto', experiente:'Experiente', referencia:'Referência'
@@ -279,7 +279,7 @@ async function renderTab(tab) {
       const nivelEl = document.createElement('div'); nivelEl.className = 'hab-nivel'; nivelEl.id = 'hn-' + fn.id;
       nivelEl.textContent = NIVEL_LABEL[nivel];
       const sel = document.createElement('select'); sel.className = 'hab-sel';
-      NIVEIS.forEach(n => {
+      PROF_NIVEIS.forEach(n => {
         const opt = document.createElement('option'); opt.value = n;
         opt.textContent = NIVEL_LABEL[n]; if (n === nivel) opt.selected = true;
         sel.appendChild(opt);

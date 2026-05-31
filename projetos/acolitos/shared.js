@@ -349,9 +349,10 @@ function buildRankEmblem(slug, size) {
   const core = document.createElement('div');
   core.style.cssText = 'position:relative;display:inline-flex;align-items:center;justify-content:center;line-height:0;';
   if (info.int >= 6) {
-    const rays = document.createElement('div'); rays.className = 'emblem-rays';
-    rays.style.cssText = `position:absolute;top:50%;left:50%;width:${Math.round(size*1.8)}px;height:${Math.round(size*1.8)}px;transform:translate(-50%,-50%);z-index:0;`;
-    core.appendChild(rays);
+    const halo = document.createElement('div'); halo.className = 'emblem-halo';
+    halo.style.cssText = `position:absolute;top:50%;left:50%;width:${Math.round(size*1.55)}px;height:${Math.round(size*1.55)}px;transform:translate(-50%,-50%);z-index:0;`;
+    for (let k = 0; k < 3; k++) { const ring = document.createElement('i'); ring.style.animationDelay = (k * 0.8) + 's'; halo.appendChild(ring); }
+    core.appendChild(halo);
   }
   const pdiv = document.createElement('div');
   pdiv.style.cssText = `position:relative;z-index:1;line-height:0;--glow:${glow}px;--glow2:${glow2}px;--spd:${spd}s;--sc:${sc};animation:emblemPulse var(--spd) ease-in-out infinite;`;

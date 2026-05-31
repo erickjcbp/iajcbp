@@ -514,13 +514,21 @@ body {
   0%,100% { transform: scale(1);              filter: drop-shadow(0 0 var(--glow) var(--red-glow)); }
   50%     { transform: scale(var(--sc,1.07)); filter: drop-shadow(0 0 var(--glow2) var(--red-soft)); }
 }
-.emblem-rays {
-  pointer-events: none; border-radius: 50%; opacity: .85;
-  background: conic-gradient(from 0deg, transparent 0 10deg, rgba(255,70,84,.20) 10deg 14deg, transparent 14deg 40deg, rgba(232,185,74,.18) 40deg 44deg, transparent 44deg 90deg);
-  animation: luSpin 8s linear infinite;
+.emblem-halo { pointer-events: none; }
+.emblem-halo i {
+  position: absolute; inset: 14%; border-radius: 50%;
+  border: 2px solid var(--gold); box-shadow: 0 0 16px var(--red-glow), inset 0 0 10px var(--red-glow);
+  opacity: 0; animation: haloPulse 2.7s ease-out infinite;
+}
+.emblem-halo i:nth-child(2) { border-color: var(--red-soft); }
+.emblem-halo i:nth-child(3) { border-color: var(--gold-light); }
+@keyframes haloPulse {
+  0%   { transform: scale(.42); opacity: .75; }
+  70%  { opacity: .18; }
+  100% { transform: scale(1.18); opacity: 0; }
 }
 .emblem-pip { width: 7px; height: 7px; background: var(--gold); transform: rotate(45deg); box-shadow: 0 0 7px var(--red-glow); }
-@media (prefers-reduced-motion: reduce) { .emblem-rays { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .emblem-halo i { animation: none; opacity: .25; } }
 
 /* ── JORNADA DETALHADA (modal) ───────────────────────────────── */
 .jor-row { border: 1px solid var(--border); border-radius: 7px; margin-bottom: 8px; overflow: hidden; background: var(--surface2); transition: border-color .2s; }
