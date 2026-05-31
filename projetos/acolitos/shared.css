@@ -279,29 +279,28 @@ body {
 .toggle-row label { font-size: 14px; color: var(--text); flex: 1; font-weight: 600; }
 .toggle-checkbox { width: 22px; height: 22px; accent-color: var(--red-soft); cursor: pointer; flex-shrink: 0; }
 
-/* ── MODAL (full-screen mobile) ──────────────────────────────── */
+/* ── MODAL (centralizado em todos os tamanhos, sem corte) ──────── */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.88);
   -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
-  display: none; align-items: flex-end; justify-content: center;
-  z-index: 200; padding: 0;
+  display: none; align-items: center; justify-content: center;
+  z-index: 200; padding: 14px; overflow-y: auto;
 }
 .modal-overlay.open { display: flex; }
-@media (min-width: 640px) { .modal-overlay { align-items: center; padding: 20px; overflow-y: auto; } }
 .modal {
   background: linear-gradient(165deg, var(--surface2), var(--surface));
   border: 1px solid var(--border-wine);
   border-top: 2px solid var(--gold);
-  border-radius: 16px 16px 0 0;
-  padding: 12px 16px calc(26px + env(safe-area-inset-bottom));
-  width: 100%; max-height: 90vh; max-height: 90dvh;
+  border-radius: 12px;
+  padding: 16px 16px calc(18px + env(safe-area-inset-bottom));
+  width: 100%; max-width: 480px; margin: auto;
+  max-height: 90vh; max-height: 90dvh;
   overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
   position: relative; will-change: transform;
-  box-shadow: 0 -8px 40px rgba(0,0,0,.7), 0 0 40px var(--red-glow);
+  box-shadow: 0 12px 50px rgba(0,0,0,.7), 0 0 40px var(--red-glow);
 }
 @media (min-width: 640px) {
   .modal {
-    max-width: 480px; max-height: 88vh; max-height: 88dvh; margin: auto;
     padding: 26px 24px; border-top: none; border-radius: 4px;
     clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
   }
@@ -602,7 +601,7 @@ body {
 }
 .levelup-overlay.closing { opacity: 0; transition: opacity .3s ease; }
 @keyframes luFade { from { opacity: 0; } to { opacity: 1; } }
-.levelup-card { position: relative; text-align: center; max-width: 360px; width: 100%; padding: 30px 26px 26px; animation: luPop .6s cubic-bezier(.18,1.4,.4,1) both; }
+.levelup-card { position: relative; text-align: center; max-width: 360px; width: 100%; padding: 30px 26px 26px; max-height: 92dvh; overflow-y: auto; animation: luPop .6s cubic-bezier(.18,1.4,.4,1) both; }
 @keyframes luPop { 0% { transform: scale(.6); opacity: 0; } 60% { transform: scale(1.04); } 100% { transform: scale(1); opacity: 1; } }
 .levelup-rays {
   position: absolute; top: 14px; left: 50%; width: 330px; height: 330px; transform: translateX(-50%);
