@@ -259,15 +259,21 @@ function renderRankProgress(main, nivel, membro) {
   const grid = document.createElement('div'); grid.className = 'jornada-grid';
   const hint = document.createElement('div'); hint.className = 'jor-hint'; hint.textContent = '↳ Sua trilha — siga do nível 1 ao 10';
   grid.appendChild(hint);
-  NIVEIS.forEach((j, i) => {
-    const state = i < idx ? 'done' : i === idx ? 'atual' : 'locked';
-    // linha de fluxo à direita, exceto fim de linha (3ª coluna) e o último nível
-    const link = (i % 3 !== 2 && i !== NIVEIS.length - 1) ? ' jor-link' : '';
-    const cell = document.createElement('div'); cell.className = 'jor-cell ' + state + link;
-    const num = document.createElement('span'); num.className = 'jor-num ' + state; num.textContent = String(i + 1);
+  // Trilha em S (serpentina): 1→2→3 ↓ 6←5←4 ↓ 7→8→9 ↓ 10. Conectores formam o caminho.
+  const serp = [0, 1, 2, 5, 4, 3, 6, 7, 8, 9];
+  const linkRight = new Set([0, 1, 3, 4, 6, 7]); // conector horizontal à direita
+  const linkDown = new Set([2, 3]);              // conector vertical (vira de fileira)
+  serp.forEach((li, p) => {
+    const j = NIVEIS[li];
+    const state = li < idx ? 'done' : li === idx ? 'atual' : 'locked';
+    let cls = 'jor-cell ' + state;
+    if (linkRight.has(p)) cls += ' link-right';
+    if (linkDown.has(p)) cls += ' link-down';
+    const cell = document.createElement('div'); cell.className = cls;
+    const num = document.createElement('span'); num.className = 'jor-num ' + state; num.textContent = String(li + 1);
     const emb = document.createElement('div'); emb.className = 'jor-emb';
     emb.innerHTML = getNivelSvg(j.slug, 48); // SVG hardcoded — seguro
-    const lbl = document.createElement('div'); lbl.className = 'jornada-label' + (i === idx ? ' current' : ''); lbl.textContent = j.label;
+    const lbl = document.createElement('div'); lbl.className = 'jornada-label' + (li === idx ? ' current' : ''); lbl.textContent = j.label;
     cell.append(num, emb, lbl); grid.appendChild(cell);
   });
   function setJorCollapsed(c) {
