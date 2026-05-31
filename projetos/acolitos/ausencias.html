@@ -61,7 +61,14 @@ async function init() {
   EQUIPE_ROLES.includes(ctx.membership.role) ? renderViewEquipe() : renderViewMembro();
 }
 
+// Rótulo amigável de uma celebração (missa)
+function celLabel(c) {
+  const d = new Date(c.data + 'T00:00:00');
+  return DIAS[d.getDay()] + ' ' + d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}) + ' ' + c.horario + ' · ' + (c.comunidade==='matriz'?'Matriz':'Sto. Antônio');
+}
+
 // ── VIEW MEMBRO ───────────────────────────────────────────────
+// Declara em quais missas o membro NÃO poderá servir (pré-indisponibilidade).
 async function renderViewMembro() {
   const main = document.getElementById('main-content');
   main.textContent = '';
@@ -73,129 +80,103 @@ async function renderViewMembro() {
 
   const title = document.createElement('h1'); title.className = 'page-title';
   title.textContent = 'Informar Ausência'; main.appendChild(title);
+  const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 14px;line-height:1.5;';
+  hint.textContent = 'Marque as missas em que você NÃO poderá servir. A escala vai considerar isso automaticamente.';
+  main.appendChild(hint);
 
-  // Busca próximas escalas ativas do membro
   const hoje = new Date().toISOString().slice(0,10);
-  const { data: escalas } = await sb
-    .from('acolitos_escalas')
-    .select('id, funcao, celebracao_id, acolitos_celebracoes(id,data,horario,comunidade)')
-    .eq('membro_id', ctx.membro.id)
-    .eq('status', 'escalado')
-    .gte('acolitos_celebracoes.data', hoje);
+  const { data: cels } = await sb.from('acolitos_celebracoes')
+    .select('id,data,horario,comunidade').gte('data', hoje).order('data').order('horario');
+  let futuras = cels || [];
+  if (ctx.membro.comunidade && !ctx.membro.pode_outras_comunidades) {
+    futuras = futuras.filter(c => c.comunidade === ctx.membro.comunidade);
+  }
 
-  const proximas = (escalas||[]).filter(e => e.acolitos_celebracoes);
+  const { data: aus } = await sb.from('acolitos_ausencias')
+    .select('*, acolitos_celebracoes(data,horario,comunidade)')
+    .eq('membro_id', ctx.membro.id).order('created_at',{ascending:false});
+  const declaredIds = new Set((aus||[]).map(a => a.celebracao_id));
+  const disponiveis = futuras.filter(c => !declaredIds.has(c.id));
 
-  if (!proximas.length) {
+  if (!disponiveis.length) {
     const info = document.createElement('div'); info.className = 'section-card';
-    info.style.color = 'var(--text-muted)';
-    info.style.fontStyle = 'italic';
-    info.textContent = 'Você não possui escalas futuras no momento.';
+    info.style.cssText = 'color:var(--text-muted);font-style:italic;';
+    info.textContent = futuras.length ? 'Você já informou ausência em todas as próximas missas.' : 'Não há missas futuras cadastradas.';
     main.appendChild(info);
   } else {
     const card = document.createElement('div'); card.className = 'section-card';
-
-    // Seletor de missa
     const g1 = document.createElement('div'); g1.className = 'form-group';
-    const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Selecione a missa *';
-    const sel = document.createElement('select'); sel.className = 'form-select'; sel.id = 'sel-esc';
-    const optV = document.createElement('option'); optV.value = ''; optV.textContent = 'Selecionar...';
-    sel.appendChild(optV);
-    proximas.forEach(e => {
-      const c = e.acolitos_celebracoes;
-      const d = new Date(c.data+'T00:00:00');
-      const opt = document.createElement('option'); opt.value = e.id;
-      opt.textContent = DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' '+c.horario+' · '+(c.comunidade==='matriz'?'Matriz':'Sto. Antônio');
-      sel.appendChild(opt);
-    });
-    g1.append(l1,sel); card.appendChild(g1);
+    const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Missa em que estarei ausente *';
+    const sel = document.createElement('select'); sel.className = 'form-select'; sel.id = 'sel-cel';
+    const optV = document.createElement('option'); optV.value = ''; optV.textContent = 'Selecionar...'; sel.appendChild(optV);
+    disponiveis.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = celLabel(c); sel.appendChild(o); });
+    g1.append(l1, sel); card.appendChild(g1);
 
-    // Motivo
     const lMot = document.createElement('label'); lMot.className = 'form-label'; lMot.textContent = 'Motivo *';
     const mGrid = document.createElement('div'); mGrid.className = 'motivo-grid';
+    motivoSelecionado = 'doenca';
     Object.entries(MOTIVOS).forEach(([val,label]) => {
       const btn = document.createElement('button'); btn.type = 'button';
-      btn.className = 'motivo-btn'+(val==='doenca'?' active':'');
-      btn.textContent = label; btn.setAttribute('data-motivo', val);
-      btn.onclick = () => {
-        motivoSelecionado = val;
-        document.querySelectorAll('.motivo-btn').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-      };
+      btn.className = 'motivo-btn'+(val==='doenca'?' active':''); btn.textContent = label;
+      btn.onclick = () => { motivoSelecionado = val; mGrid.querySelectorAll('.motivo-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); };
       mGrid.appendChild(btn);
     });
     card.append(lMot, mGrid);
 
-    // Observação
     const g2 = document.createElement('div'); g2.className = 'form-group';
     const l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'Observação (opcional)';
     const inp = document.createElement('input'); inp.className = 'form-input'; inp.id = 'obs-aus'; inp.placeholder = 'Detalhes...';
-    g2.append(l2,inp); card.appendChild(g2);
+    g2.append(l2, inp); card.appendChild(g2);
 
-    const btnEnv = document.createElement('button'); btnEnv.className = 'btn gold';
-    btnEnv.id = 'btn-env'; btnEnv.textContent = 'Confirmar Ausência';
-    btnEnv.onclick = () => enviarAusencia(proximas);
+    const btnEnv = document.createElement('button'); btnEnv.className = 'btn gold'; btnEnv.id = 'btn-env'; btnEnv.textContent = 'Confirmar Ausência';
+    btnEnv.onclick = () => enviarAusencia();
     card.appendChild(btnEnv);
-
-    const msg = document.createElement('div'); msg.id = 'msg-aus'; msg.className = 'msg';
-    card.appendChild(msg);
+    const msg = document.createElement('div'); msg.id = 'msg-aus'; msg.className = 'msg'; card.appendChild(msg);
     main.appendChild(card);
   }
 
-  // Histórico
+  // Ausências já declaradas (com opção de cancelar)
   const hTitle = document.createElement('div'); hTitle.className = 'page-title';
-  hTitle.style.cssText = 'font-size:14px;margin-top:20px;'; hTitle.textContent = 'Últimas Ausências';
+  hTitle.style.cssText = 'font-size:14px;margin-top:20px;'; hTitle.textContent = 'Minhas Ausências';
   main.appendChild(hTitle);
 
-  const { data: hist } = await sb
-    .from('acolitos_ausencias')
-    .select('*, acolitos_celebracoes(data,horario,comunidade)')
-    .eq('membro_id', ctx.membro.id)
-    .order('created_at',{ascending:false}).limit(10);
-
-  if (!hist?.length) {
+  if (!aus || !aus.length) {
     const em = document.createElement('span'); em.className = 'empty'; em.style.paddingTop='16px';
-    em.textContent = 'Nenhuma ausência registrada.'; main.appendChild(em);
+    em.textContent = 'Nenhuma ausência declarada.'; main.appendChild(em);
   } else {
-    hist.forEach(a => {
+    aus.forEach(a => {
       const c = a.acolitos_celebracoes;
-      const d = c ? new Date(c.data+'T00:00:00') : null;
       const item = document.createElement('div'); item.className = 'ausencia-item';
-      const dt = document.createElement('div'); dt.className = 'ausencia-data';
-      dt.textContent = d ? DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' · '+c.horario : '—';
+      const dt = document.createElement('div'); dt.className = 'ausencia-data'; dt.textContent = c ? celLabel(c) : '—';
       const mt = document.createElement('div'); mt.className = 'ausencia-meta';
       mt.textContent = (MOTIVOS[a.motivo]||a.motivo)+(a.observacao?' · '+a.observacao:'');
-      const st = document.createElement('span'); st.style.cssText = 'display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-family:Sora,sans-serif;background:rgba(30,80,30,.2);color:var(--success-text);border:1px solid var(--success);margin-top:6px;';
-      st.textContent = 'Registrada';
-      item.append(dt,mt,st); main.appendChild(item);
+      const cancel = document.createElement('button'); cancel.className = 'btn-sm gray'; cancel.style.marginTop = '8px'; cancel.textContent = 'Cancelar';
+      cancel.onclick = async () => { cancel.disabled = true; await sb.from('acolitos_ausencias').delete().eq('id', a.id); renderViewMembro(); };
+      item.append(dt, mt, cancel); main.appendChild(item);
     });
   }
 }
 
-async function enviarAusencia(proximas) {
-  const escalaId = document.getElementById('sel-esc').value;
+async function enviarAusencia() {
+  const celId = document.getElementById('sel-cel').value;
   const obs = document.getElementById('obs-aus').value.trim();
   const msg = document.getElementById('msg-aus');
   const btn = document.getElementById('btn-env');
-  if (!escalaId) { msg.className='msg error'; msg.textContent='Selecione a missa.'; return; }
+  if (!celId) { msg.className='msg error'; msg.textContent='Selecione a missa.'; return; }
   btn.disabled=true; btn.textContent='Enviando...';
 
-  const escala = proximas.find(e=>e.id===escalaId);
-  if (!escala) { btn.disabled=false; btn.textContent='Confirmar Ausência'; return; }
-
-  const { error: e1 } = await sb.from('acolitos_ausencias').upsert({
+  const { error } = await sb.from('acolitos_ausencias').upsert({
     membro_id: ctx.membro.id,
-    celebracao_id: escala.acolitos_celebracoes.id,
+    celebracao_id: celId,
     motivo: motivoSelecionado,
     observacao: obs||null
   }, { onConflict:'membro_id,celebracao_id' });
 
-  if (e1) { msg.className='msg error'; msg.textContent='Erro. Tente novamente.'; btn.disabled=false; btn.textContent='Confirmar Ausência'; return; }
-
-  await sb.from('acolitos_escalas').update({status:'ausente_justificado'}).eq('id',escalaId);
+  if (error) { msg.className='msg error'; msg.textContent='Erro. Tente novamente.'; btn.disabled=false; btn.textContent='Confirmar Ausência'; return; }
 
   msg.className='msg success'; msg.textContent='Ausência registrada!';
   btn.disabled=true; btn.textContent='Registrado ✓';
-  setTimeout(()=>renderViewMembro(), 1500);
+  setTimeout(()=>renderViewMembro(), 1200);
 }
 
 // ── VIEW EQUIPE ───────────────────────────────────────────────
@@ -252,14 +233,11 @@ async function renderViewEquipe() {
 // ── REGISTRAR AUSÊNCIA (equipe/admin, em nome de um membro) ───
 async function abrirRegistroAusencia() {
   const hoje = new Date().toISOString().slice(0,10);
-  const { data: escs } = await sb.from('acolitos_escalas')
-    .select('id, membro_id, celebracao_id, acolitos_membros(nome), acolitos_celebracoes!inner(data,horario,comunidade)')
-    .eq('status','escalado').gte('acolitos_celebracoes.data', hoje);
-  const porMembro = {};
-  (escs||[]).filter(e => e.acolitos_celebracoes && e.acolitos_membros).forEach(e => {
-    if (!porMembro[e.membro_id]) porMembro[e.membro_id] = { nome: e.acolitos_membros.nome, escalas: [] };
-    porMembro[e.membro_id].escalas.push(e);
-  });
+  const { data: membros } = await sb.from('acolitos_membros')
+    .select('id,nome,comunidade,pode_outras_comunidades').eq('status','ativo').order('nome');
+  const { data: cels } = await sb.from('acolitos_celebracoes')
+    .select('id,data,horario,comunidade').gte('data', hoje).order('data').order('horario');
+  const futuras = cels || [];
 
   const ov = document.createElement('div'); ov.className = 'modal-overlay open';
   ov.onclick = (ev) => { if (ev.target === ov) ov.remove(); };
@@ -268,33 +246,33 @@ async function abrirRegistroAusencia() {
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Registrar Ausência';
   modal.append(handle, tt); ov.appendChild(modal); document.body.appendChild(ov);
 
-  const ids = Object.keys(porMembro);
-  if (!ids.length) {
+  if (!membros || !membros.length || !futuras.length) {
     const em = document.createElement('div'); em.style.cssText = 'color:var(--text-muted);font-size:13px;line-height:1.5;';
-    em.textContent = 'Nenhum membro com escala futura. Monte a escala primeiro para poder registrar ausências.';
+    em.textContent = !futuras.length ? 'Nenhuma missa futura cadastrada. Cadastre as celebrações primeiro.' : 'Nenhum membro ativo cadastrado.';
     const close = document.createElement('button'); close.className = 'btn-sm gray'; close.style.marginTop = '16px';
     close.textContent = 'Fechar'; close.onclick = () => ov.remove();
     modal.append(em, close); return;
   }
 
+  // Membro
   const g1 = document.createElement('div'); g1.className = 'form-group';
   const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Membro *';
   const selM = document.createElement('select'); selM.className = 'form-select';
-  ids.forEach(id => { const o = document.createElement('option'); o.value = id; o.textContent = porMembro[id].nome; selM.appendChild(o); });
+  membros.forEach(m => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.nome; selM.appendChild(o); });
   g1.append(l1, selM); modal.appendChild(g1);
 
+  // Missa (filtra pela comunidade do membro, salvo se pode servir em outras)
   const g2 = document.createElement('div'); g2.className = 'form-group';
-  const l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'Missa escalada *';
+  const l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'Missa *';
   const selC = document.createElement('select'); selC.className = 'form-select';
   g2.append(l2, selC); modal.appendChild(g2);
   function popMissas() {
+    const m = membros.find(x => x.id === selM.value) || membros[0];
+    let lista = futuras;
+    if (m && m.comunidade && !m.pode_outras_comunidades) lista = futuras.filter(c => c.comunidade === m.comunidade);
     selC.textContent = '';
-    porMembro[selM.value].escalas.forEach(e => {
-      const c = e.acolitos_celebracoes; const d = new Date(c.data + 'T00:00:00');
-      const o = document.createElement('option'); o.value = e.id;
-      o.textContent = DIAS[d.getDay()] + ' ' + d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}) + ' ' + c.horario + ' · ' + (c.comunidade==='matriz'?'Matriz':'Sto. Antônio');
-      selC.appendChild(o);
-    });
+    if (!lista.length) { const o = document.createElement('option'); o.value=''; o.textContent='(sem missas para a comunidade)'; selC.appendChild(o); return; }
+    lista.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = celLabel(c); selC.appendChild(o); });
   }
   selM.onchange = popMissas; popMissas();
 
@@ -319,14 +297,12 @@ async function abrirRegistroAusencia() {
   const cancel = document.createElement('button'); cancel.className = 'btn-sm gray'; cancel.textContent = 'Cancelar'; cancel.onclick = () => ov.remove();
   const conf = document.createElement('button'); conf.className = 'btn-sm gold'; conf.textContent = 'Registrar';
   conf.onclick = async () => {
-    const escalaId = selC.value; if (!escalaId) return;
-    const e = porMembro[selM.value].escalas.find(x => x.id === escalaId); if (!e) return;
+    const celId = selC.value; if (!celId) { msg.className='msg error'; msg.textContent='Selecione a missa.'; return; }
     conf.disabled = true; conf.textContent = 'Salvando...';
-    const { error: e1 } = await sb.from('acolitos_ausencias').upsert({
-      membro_id: selM.value, celebracao_id: e.celebracao_id, motivo: motivoSel, observacao: inpObs.value.trim() || null
+    const { error } = await sb.from('acolitos_ausencias').upsert({
+      membro_id: selM.value, celebracao_id: celId, motivo: motivoSel, observacao: inpObs.value.trim() || null
     }, { onConflict: 'membro_id,celebracao_id' });
-    if (e1) { msg.className = 'msg error'; msg.textContent = 'Erro ao registrar. Tente novamente.'; conf.disabled = false; conf.textContent = 'Registrar'; return; }
-    await sb.from('acolitos_escalas').update({ status: 'ausente_justificado' }).eq('id', escalaId);
+    if (error) { msg.className = 'msg error'; msg.textContent = 'Erro ao registrar. Tente novamente.'; conf.disabled = false; conf.textContent = 'Registrar'; return; }
     ov.remove(); renderViewEquipe();
   };
   acts.append(cancel, conf); modal.appendChild(acts);

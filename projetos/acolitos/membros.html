@@ -124,6 +124,7 @@ let filtroAtivo = '';
 let membroAtual = null;
 let habAtual = {};
 let roleMap = {};
+let fichaEdits = {}; // alterações da ficha (Pessoal/Família/Observações) — persiste entre abas
 
 async function init() {
   ctx = await initModulo(['coord_admin','subadmin','membro_equipe']);
@@ -196,6 +197,7 @@ function renderGrid() {
 async function abrirFicha(membro) {
   membroAtual = membro;
   habAtual = {};
+  fichaEdits = {};
 
   // Header — avatar editável (equipe sobe/edita foto do membro)
   const hdr = document.getElementById('ficha-header');
@@ -235,34 +237,70 @@ async function abrirFicha(membro) {
   document.getElementById('modal-ficha').classList.add('open');
 }
 
+// ── Campos editáveis (gravam em fichaEdits, que sobrevive à troca de aba) ──
+function fGroup(label) {
+  const g = document.createElement('div'); g.className = 'form-group';
+  const l = document.createElement('label'); l.className = 'form-label'; l.textContent = label;
+  g.appendChild(l); return g;
+}
+function editText(label, col, val, type) {
+  const g = fGroup(label);
+  const i = document.createElement('input'); i.className = 'form-input'; i.type = type || 'text';
+  i.value = val == null ? '' : val;
+  i.oninput = () => { fichaEdits[col] = type === 'date' ? (i.value || null) : (i.value.trim() === '' ? (type ? null : '') : i.value); };
+  g.appendChild(i); return g;
+}
+function editArea(label, col, val) {
+  const g = fGroup(label);
+  const t = document.createElement('textarea'); t.className = 'form-textarea'; t.rows = 3; t.value = val || '';
+  t.oninput = () => { fichaEdits[col] = t.value.trim() || null; };
+  g.appendChild(t); return g;
+}
+function editSelect(label, col, val, opts) {
+  const g = fGroup(label);
+  const s = document.createElement('select'); s.className = 'form-select';
+  opts.forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; if (String(v) === String(val)) o.selected = true; s.appendChild(o); });
+  s.onchange = () => { fichaEdits[col] = s.value; };
+  g.appendChild(s); return g;
+}
+function editBool(label, col, val) {
+  const g = fGroup(label);
+  const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;gap:8px;';
+  let cur = !!val;
+  [['Sim', true], ['Não', false]].forEach(([t, v]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'form-toggle' + (cur === v ? ' active' : ''); b.textContent = t;
+    b.onclick = () => { cur = v; fichaEdits[col] = v; wrap.querySelectorAll('.form-toggle').forEach(x => x.classList.remove('active')); b.classList.add('active'); };
+    wrap.appendChild(b);
+  });
+  g.appendChild(wrap); return g;
+}
+
 async function renderTab(tab) {
   const el = document.getElementById('ficha-conteudo');
   el.textContent = '';
   const m = membroAtual;
 
   if (tab === 'Pessoal') {
-    [
-      ['Nome', m.nome],
-      ['Nascimento', m.data_nascimento ? formatDate(m.data_nascimento) : '—'],
-      ['Idade', m.data_nascimento ? calcIdade(m.data_nascimento) + ' anos' : '—'],
-      ['Telefone', m.telefone || '—'],
-      ['Responsável', m.responsavel || '—'],
-      ['Comunidade', m.comunidade === 'matriz' ? 'Matriz' : m.comunidade === 'santo_antonio' ? 'Sto. Antônio' : '—'],
-      ['Pode outras comunidades?', m.pode_outras_comunidades ? 'Sim' : 'Não'],
-      ['Cel. mãe', m.celular_mae || '—'],
-      ['Cel. recado', m.celular_recado || '—'],
-      ['Endereço', m.endereco || '—'],
-      ['Batismo', m.batismo ? 'Sim' : 'Não'],
-      ['1ª Eucaristia', m.primeira_eucaristia ? 'Sim' : 'Não'],
-      ['Crisma', m.crisma ? 'Sim' : 'Não'],
-      ['Túnica', m.tem_tunica ? 'Sim' : 'Não'],
-      ['Grupo WhatsApp', m.no_grupo_whatsapp ? 'Sim' : 'Não'],
-    ].forEach(([label, value]) => {
+    el.appendChild(editText('Nome', 'nome', m.nome));
+    el.appendChild(editText('Data de nascimento', 'data_nascimento', m.data_nascimento, 'date'));
+    if (m.data_nascimento) {
       const row = document.createElement('div'); row.className = 'stat-row';
-      const lbl = document.createElement('span'); lbl.className = 'stat-label'; lbl.textContent = label;
-      const val = document.createElement('span'); val.className = 'stat-value'; val.textContent = value;
+      const lbl = document.createElement('span'); lbl.className = 'stat-label'; lbl.textContent = 'Idade';
+      const val = document.createElement('span'); val.className = 'stat-value'; val.textContent = calcIdade(m.data_nascimento) + ' anos';
       row.append(lbl, val); el.appendChild(row);
-    });
+    }
+    el.appendChild(editText('Telefone', 'telefone', m.telefone));
+    el.appendChild(editText('Responsável', 'responsavel', m.responsavel));
+    el.appendChild(editSelect('Comunidade', 'comunidade', m.comunidade || 'matriz', [['matriz','Matriz'],['santo_antonio','Sto. Antônio'],['outra','Outra']]));
+    el.appendChild(editBool('Pode servir em outras comunidades?', 'pode_outras_comunidades', m.pode_outras_comunidades));
+    el.appendChild(editText('Cel. mãe', 'celular_mae', m.celular_mae));
+    el.appendChild(editText('Cel. recado', 'celular_recado', m.celular_recado));
+    el.appendChild(editText('Endereço', 'endereco', m.endereco));
+    el.appendChild(editBool('Batismo', 'batismo', m.batismo));
+    el.appendChild(editBool('1ª Eucaristia', 'primeira_eucaristia', m.primeira_eucaristia));
+    el.appendChild(editBool('Crisma', 'crisma', m.crisma));
+    el.appendChild(editBool('Túnica própria', 'tem_tunica', m.tem_tunica));
+    el.appendChild(editBool('No grupo do WhatsApp', 'no_grupo_whatsapp', m.no_grupo_whatsapp));
   }
 
   if (tab === 'Habilitações') {
@@ -310,21 +348,14 @@ async function renderTab(tab) {
   }
 
   if (tab === 'Família') {
-    [
-      ['Pai ministro?',         m.tem_pai_ministro ? 'Sim' : 'Não'],
-      ['Nome pai ministro',     m.nome_pai_ministro || '—'],
-      ['Mãe ministra?',         m.tem_mae_ministro ? 'Sim' : 'Não'],
-      ['Nome mãe ministra',     m.nome_mae_ministro || '—'],
-      ['Comunidade ministros',  m.comunidade_ministro || '—'],
-      ['Escalar com pais?',     m.escalar_com_pais ? 'Sim' : 'Não'],
-      ['Irmão na pastoral?',    m.tem_irmao_pastoral ? 'Sim' : 'Não'],
-      ['Escalar com irmão?',    m.escalar_com_irmao ? 'Sim' : 'Não'],
-    ].forEach(([label, value]) => {
-      const row = document.createElement('div'); row.className = 'stat-row';
-      const lbl = document.createElement('span'); lbl.className = 'stat-label'; lbl.textContent = label;
-      const val = document.createElement('span'); val.className = 'stat-value'; val.textContent = value;
-      row.append(lbl, val); el.appendChild(row);
-    });
+    el.appendChild(editBool('Pai é ministro?', 'tem_pai_ministro', m.tem_pai_ministro));
+    el.appendChild(editText('Nome do pai ministro', 'nome_pai_ministro', m.nome_pai_ministro));
+    el.appendChild(editBool('Mãe é ministra?', 'tem_mae_ministro', m.tem_mae_ministro));
+    el.appendChild(editText('Nome da mãe ministra', 'nome_mae_ministro', m.nome_mae_ministro));
+    el.appendChild(editText('Comunidade dos ministros', 'comunidade_ministro', m.comunidade_ministro));
+    el.appendChild(editBool('Escalar junto com os pais?', 'escalar_com_pais', m.escalar_com_pais));
+    el.appendChild(editBool('Tem irmão na pastoral?', 'tem_irmao_pastoral', m.tem_irmao_pastoral));
+    el.appendChild(editBool('Escalar junto com o irmão?', 'escalar_com_irmao', m.escalar_com_irmao));
   }
 
   if (tab === 'Frequência') {
@@ -455,41 +486,11 @@ async function renderTab(tab) {
   }
 
   if (tab === 'Observações') {
-    const grpNec = document.createElement('div'); grpNec.className = 'form-group';
-    const lblNec = document.createElement('label'); lblNec.className = 'form-label';
-    lblNec.textContent = 'Necessidades Especiais';
-    const inpNec = document.createElement('textarea'); inpNec.className = 'form-textarea';
-    inpNec.id = 'obs-nec'; inpNec.rows = 3;
-    inpNec.value = m.necessidades_especiais || '';
-    inpNec.placeholder = 'TEA, TDAH, limitações...';
-    grpNec.append(lblNec, inpNec);
-
-    const grpObs = document.createElement('div'); grpObs.className = 'form-group';
-    const lblObs = document.createElement('label'); lblObs.className = 'form-label';
-    lblObs.textContent = 'Observações Gerais';
-    const inpObs = document.createElement('textarea'); inpObs.className = 'form-textarea';
-    inpObs.id = 'obs-geral'; inpObs.rows = 3;
-    inpObs.value = m.observacoes || '';
-    inpObs.placeholder = 'Restrições, preferências, anotações...';
-    grpObs.append(lblObs, inpObs);
-
-    const grpProx = document.createElement('div'); grpProx.className = 'form-group';
-    const lblProx = document.createElement('label'); lblProx.className = 'form-label';
-    lblProx.textContent = 'Próxima Etapa de Formação';
-    const inpProx = document.createElement('input'); inpProx.className = 'form-input';
-    inpProx.id = 'obs-prox';
-    inpProx.value = m.proxima_etapa || '';
-    inpProx.placeholder = 'Ex: Preparando para Turíbulo';
-    grpProx.append(lblProx, inpProx);
-
-    const grpNivel = document.createElement('div'); grpNivel.className = 'form-group';
-    const lblNivel = document.createElement('label'); lblNivel.className = 'form-label'; lblNivel.textContent = 'Nível na Jornada (rank)';
-    const selNivel = document.createElement('select'); selNivel.className = 'form-select'; selNivel.id = 'obs-nivel';
     const nivelAtual = m.nivel || nivelFromRole(m.role);
-    NIVEIS.forEach(n => { const o = document.createElement('option'); o.value = n.slug; o.textContent = (n.emoji ? n.emoji + ' ' : '') + n.label; if (n.slug === nivelAtual) o.selected = true; selNivel.appendChild(o); });
-    grpNivel.append(lblNivel, selNivel);
-
-    el.append(grpNivel, grpNec, grpObs, grpProx);
+    el.appendChild(editSelect('Nível na Jornada (rank)', 'nivel', nivelAtual, NIVEIS.map(n => [n.slug, (n.emoji ? n.emoji + ' ' : '') + n.label])));
+    el.appendChild(editArea('Necessidades Especiais', 'necessidades_especiais', m.necessidades_especiais));
+    el.appendChild(editArea('Observações Gerais', 'observacoes', m.observacoes));
+    el.appendChild(editText('Próxima Etapa de Formação', 'proxima_etapa', m.proxima_etapa));
   }
 }
 
@@ -549,22 +550,14 @@ async function salvarFicha() {
     if (selecionados.length) await sbAdmin.from('acolitos_disponibilidade').insert(selecionados);
   }
 
-  // Observações
-  const necEl  = document.getElementById('obs-nec');
-  const obsEl  = document.getElementById('obs-geral');
-  const proxEl = document.getElementById('obs-prox');
-  const nivelEl = document.getElementById('obs-nivel');
-  if (necEl || obsEl || proxEl || nivelEl) {
-    const upd = {};
-    if (nivelEl) upd.nivel                 = nivelEl.value;
-    if (necEl)  upd.necessidades_especiais = necEl.value.trim() || null;
-    if (obsEl)  upd.observacoes            = obsEl.value.trim() || null;
-    if (proxEl) upd.proxima_etapa          = proxEl.value.trim() || null;
-    if (Object.keys(upd).length) {
-      await sbAdmin.from('acolitos_membros').update(upd).eq('id', membroAtual.id);
-      // Atualiza cache local
-      Object.assign(membroAtual, upd);
+  // Campos editáveis (Pessoal / Família / Observações / Nível) — em fichaEdits
+  if (Object.keys(fichaEdits).length) {
+    const { error } = await sbAdmin.from('acolitos_membros').update(fichaEdits).eq('id', membroAtual.id);
+    if (error) {
+      alert('Erro ao salvar: ' + (error.message || 'tente novamente.'));
+      btn.disabled = false; btn.textContent = 'Salvar'; return;
     }
+    Object.assign(membroAtual, fichaEdits); // atualiza cache local
   }
 
   btn.disabled = false; btn.textContent = 'Salvar';

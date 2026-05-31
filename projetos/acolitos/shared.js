@@ -105,8 +105,9 @@ function applyTheme(theme, save) {
 function renderHeader(ctx, activePage) {
   const el = document.getElementById('app-header');
   if (!el) return;
-  const theme = localStorage.getItem('jcbp-theme') || 'dark';
-  applyTheme(theme, false);
+  const theme = 'dark'; // tema claro removido — somente escuro
+  localStorage.setItem('jcbp-theme', 'dark');
+  applyTheme('dark', false);
   el.className = 'app-header';
   el.textContent = '';
 
@@ -149,20 +150,6 @@ function renderHeader(ctx, activePage) {
   const actions = document.createElement('div');
   actions.className = 'header-actions';
 
-  const themeBtn = document.createElement('button');
-  themeBtn.className = 'btn-icon';
-  themeBtn.title = 'Alternar tema';
-  themeBtn.textContent = theme === 'dark' ? '☀' : '☾';
-  themeBtn.onclick = () => {
-    const next = (localStorage.getItem('jcbp-theme') || 'dark') === 'dark' ? 'light' : 'dark';
-    applyTheme(next, true);
-    themeBtn.textContent = next === 'dark' ? '☀' : '☾';
-    const img = document.getElementById('header-logo-img');
-    if (img) img.src = next === 'dark'
-      ? '../../midia/logos/Logo%20Igreja%20branco.png'
-      : '../../midia/logos/Logo%20Igreja%20colorido.png';
-  };
-
   const sairBtn = document.createElement('button');
   sairBtn.className = 'btn-icon';
   sairBtn.title = 'Sair';
@@ -172,8 +159,70 @@ function renderHeader(ctx, activePage) {
     window.location.href = 'login.html';
   };
 
-  actions.append(themeBtn, sairBtn);
+  const contaBtn = document.createElement('button');
+  contaBtn.className = 'btn-icon';
+  contaBtn.title = 'Minha conta';
+  contaBtn.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>'; // ícone hardcoded — seguro
+  contaBtn.onclick = () => openContaModal(ctx);
+
+  actions.append(contaBtn, sairBtn);
   el.appendChild(actions);
+}
+
+// ── MINHA CONTA (autosserviço: trocar próprio usuário/senha/nome) ──
+async function meUpdate(action, payload, btn, msgEl) {
+  const prev = btn.textContent; btn.disabled = true; btn.textContent = 'Aguarde...';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const r = await fetch('/api/me-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ action, ...payload })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Erro');
+    msgEl.className = 'msg success';
+    msgEl.textContent = action === 'password' ? 'Senha alterada!' : action === 'username' ? 'Usuário alterado!' : 'Salvo!';
+  } catch (e) {
+    msgEl.className = 'msg error'; msgEl.textContent = e.message || 'Não foi possível concluir.';
+  } finally { btn.disabled = false; btn.textContent = prev; }
+}
+
+function openContaModal(ctx) {
+  const email = (ctx && ctx.user && ctx.user.email) || '';
+  const userAtual = email.includes('@coroinhas.') ? email.split('@')[0] : email;
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className = 'modal';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Minha Conta';
+  const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-8px 0 16px;font-weight:600;';
+  sub.textContent = 'Usuário atual: ' + userAtual;
+  modal.append(handle, tt, sub);
+
+  const msgEl = document.createElement('div'); msgEl.id = 'conta-msg'; msgEl.className = 'msg';
+
+  // Trocar usuário
+  const g1 = document.createElement('div'); g1.className = 'form-group';
+  const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Novo usuário';
+  const i1 = document.createElement('input'); i1.className = 'form-input'; i1.placeholder = 'ex: joao.silva';
+  const b1 = document.createElement('button'); b1.className = 'btn-sm gold'; b1.style.marginTop = '8px'; b1.textContent = 'Trocar usuário';
+  b1.onclick = () => { if (!i1.value.trim()) { msgEl.className='msg error'; msgEl.textContent='Digite o novo usuário.'; return; } meUpdate('username', { usuario: i1.value.trim() }, b1, msgEl); };
+  g1.append(l1, i1, b1);
+
+  // Trocar senha
+  const g2 = document.createElement('div'); g2.className = 'form-group'; g2.style.marginTop = '14px';
+  const l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'Nova senha';
+  const i2 = document.createElement('input'); i2.className = 'form-input'; i2.type = 'text'; i2.placeholder = 'mínimo 6 caracteres';
+  const b2 = document.createElement('button'); b2.className = 'btn-sm gold'; b2.style.marginTop = '8px'; b2.textContent = 'Alterar senha';
+  b2.onclick = () => { if ((i2.value||'').length < 6) { msgEl.className='msg error'; msgEl.textContent='Senha muito curta (mín. 6).'; return; } meUpdate('password', { password: i2.value }, b2, msgEl); };
+  g2.append(l2, i2, b2);
+
+  modal.append(g1, g2, msgEl);
+  const close = document.createElement('button'); close.className = 'btn gold'; close.style.marginTop = '16px';
+  close.textContent = 'Fechar'; close.onclick = () => ov.remove();
+  modal.appendChild(close);
+  ov.appendChild(modal); document.body.appendChild(ov);
 }
 
 // ── BOTTOM NAV ────────────────────────────────────────────────
