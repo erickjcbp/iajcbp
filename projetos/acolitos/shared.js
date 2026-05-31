@@ -128,7 +128,22 @@ function renderHeader(ctx, activePage) {
   const logoText2 = document.createElement('span');
   logoText2.textContent = ' Coroinhas';
   logo.append(logoImg, logoText, goldSpan, logoText2);
-  el.appendChild(logo);
+
+  // Grupo esquerdo: botão Voltar (telas internas) + logo
+  const left = document.createElement('div'); left.className = 'header-left';
+  if (activePage && activePage !== 'home') {
+    const back = document.createElement('button');
+    back.className = 'btn-icon header-back';
+    back.title = 'Voltar';
+    back.textContent = '‹';
+    back.onclick = () => {
+      if (window.history.length > 1) window.history.back();
+      else window.location.href = 'index.html';
+    };
+    left.appendChild(back);
+  }
+  left.appendChild(logo);
+  el.appendChild(left);
 
   // Actions
   const actions = document.createElement('div');

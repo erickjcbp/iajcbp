@@ -194,17 +194,19 @@ function renderRankProgress(main, nivel) {
   const hint = document.createElement('div'); hint.className = 'jor-hint'; hint.textContent = '↳ Sua trilha — siga do nível 1 ao 10';
   grid.appendChild(hint);
   NIVEIS.forEach((j, i) => {
-    const cell = document.createElement('div'); cell.className = 'jor-cell' + (i === idx ? ' atual' : i < idx ? ' done' : '');
-    const num = document.createElement('span'); num.className = 'jor-num' + (i < idx ? ' done' : i === idx ? ' atual' : '');
-    num.textContent = String(i + 1);
-    const dot = document.createElement('div'); dot.className = 'jornada-dot' + (i < idx ? ' done' : i === idx ? ' current' : '');
-    dot.textContent = i <= idx ? (_JOR_ICON[j.base] || String(i + 1)) : '○';
+    const state = i < idx ? 'done' : i === idx ? 'atual' : 'locked';
+    // linha de fluxo à direita, exceto fim de linha (3ª coluna) e o último nível
+    const link = (i % 3 !== 2 && i !== NIVEIS.length - 1) ? ' jor-link' : '';
+    const cell = document.createElement('div'); cell.className = 'jor-cell ' + state + link;
+    const num = document.createElement('span'); num.className = 'jor-num ' + state; num.textContent = String(i + 1);
+    const emb = document.createElement('div'); emb.className = 'jor-emb';
+    emb.innerHTML = getNivelSvg(j.slug, 48); // SVG hardcoded — seguro
     const lbl = document.createElement('div'); lbl.className = 'jornada-label' + (i === idx ? ' current' : ''); lbl.textContent = j.label;
-    cell.append(num, dot, lbl); grid.appendChild(cell);
+    cell.append(num, emb, lbl); grid.appendChild(cell);
   });
   function setJorCollapsed(c) {
     grid.style.display = c ? 'none' : 'grid';
-    jorToggle.textContent = c ? '▸  Mostrar jornada' : '▾  Ocultar jornada';
+    jorToggle.textContent = c ? '▸  Mostrar minha jornada' : '▾  Ocultar minha jornada';
     localStorage.setItem('jor-collapsed', c ? '1' : '0');
   }
   jorToggle.onclick = () => setJorCollapsed(grid.style.display !== 'none');
@@ -212,7 +214,7 @@ function renderRankProgress(main, nivel) {
   setJorCollapsed(localStorage.getItem('jor-collapsed') === '1');
 
   const verBtn = document.createElement('button'); verBtn.className = 'btn-sm gold';
-  verBtn.style.cssText = 'margin:2px auto 16px;display:block;'; verBtn.textContent = 'Ver minha jornada ▸';
+  verBtn.style.cssText = 'margin:2px auto 16px;display:block;'; verBtn.textContent = 'O caminho ▸';
   verBtn.onclick = () => showJornada(nivel);
   main.appendChild(verBtn);
 }
