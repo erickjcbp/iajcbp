@@ -44,6 +44,9 @@
     .summary-num.p { color:var(--success-text); }
     .summary-num.a { color:var(--warn-text); }
     .summary-num.f { color:var(--danger-text); }
+    .sub-row { display:flex; align-items:center; gap:8px; padding:0 0 10px 52px; }
+    .sub-lbl { font-size:11px; color:var(--text-muted); font-family:'Cinzel',serif; flex-shrink:0; }
+    .sub-sel { flex:1; min-height:38px; font-size:13px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
 </head>
@@ -67,6 +70,16 @@ let ctx = null;
 let celebAtual = null;
 let escalasAtuais = [];
 let resultados = {};
+let membrosCh = [], habMapCh = {}, substitutos = {}, subRows = {};
+
+function eligiveis(funcao) {
+  const scheduled = new Set(escalasAtuais.map(e => e.membro_id));
+  return membrosCh.filter(m => {
+    if (scheduled.has(m.id)) return false;
+    const h = (habMapCh[m.id] || {})[funcao];
+    return ['apto','experiente','referencia'].includes(h);
+  });
+}
 
 async function init() {
   ctx = await initModulo(['coord_admin','subadmin','membro_equipe','cerimonario']);
@@ -117,7 +130,7 @@ async function renderSelecao() {
 }
 
 async function abrirChamada(celeb) {
-  celebAtual = celeb; resultados = {};
+  celebAtual = celeb; resultados = {}; substitutos = {}; subRows = {};
   const main = document.getElementById('main-content'); main.textContent = '';
 
   const d = new Date(celeb.data+'T00:00:00');
@@ -135,6 +148,14 @@ async function abrirChamada(celeb) {
   if (!escalasAtuais.length) {
     const em=document.createElement('span');em.className='empty';em.textContent='Nenhum membro escalado.';main.appendChild(em);return;
   }
+
+  // Membros aptos para eventual substituição
+  const [{ data: mems }, { data: habs }] = await Promise.all([
+    sb.from('acolitos_membros').select('id,nome').eq('status','ativo').order('nome'),
+    sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia'),
+  ]);
+  membrosCh = mems||[];
+  habMapCh = {}; (habs||[]).forEach(h=>{if(!habMapCh[h.membro_id])habMapCh[h.membro_id]={};habMapCh[h.membro_id][h.funcao]=h.proficiencia;});
 
   // Verifica chamada existente
   const { data: chExist } = await sb.from('acolitos_chamadas').select('id').eq('celebracao_id',celeb.id).maybeSingle();
@@ -165,6 +186,7 @@ async function abrirChamada(celeb) {
     const catEl=document.createElement('div');catEl.className='chamada-cat';catEl.textContent=cat;main.appendChild(catEl);
     items.forEach(e=>{
       const m=e.acolitos_membros;
+      const block=document.createElement('div');
       const item=document.createElement('div');item.className='chamada-item';
       const av=buildAvatarEl(m?.foto_url,'aspirante',40);av.style.flexShrink='0';
       const info=document.createElement('div');info.className='chamada-info';
@@ -180,7 +202,22 @@ async function abrirChamada(celeb) {
         btn.onclick=()=>setRes(e.id,val);
         btns.appendChild(btn);
       });
-      item.append(av,info,btns);main.appendChild(item);
+      item.append(av,info,btns);
+      block.appendChild(item);
+
+      // Seletor de substituto — aparece quando marcado ausente
+      const subRow=document.createElement('div');subRow.className='sub-row';
+      subRow.style.display = resultados[e.id]==='ausente' ? '' : 'none';
+      const subLbl=document.createElement('span');subLbl.className='sub-lbl';subLbl.textContent='Trocado por:';
+      const subSel=document.createElement('select');subSel.className='form-select sub-sel';
+      const o0=document.createElement('option');o0.value='';o0.textContent='— ninguém / vaga aberta —';subSel.appendChild(o0);
+      eligiveis(e.funcao).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.nome;if(substitutos[e.id]===s.id)o.selected=true;subSel.appendChild(o);});
+      subSel.onchange=()=>{ if(subSel.value)substitutos[e.id]=subSel.value; else delete substitutos[e.id]; };
+      subRow.append(subLbl,subSel);
+      block.appendChild(subRow);
+      subRows[e.id]=subRow;
+
+      main.appendChild(block);
     });
   });
 
@@ -208,6 +245,8 @@ function setRes(id,val){
     const bv=b.getAttribute('data-val');
     b.className='r-btn'+(bv===val?' sel-'+val:'');
   });
+  if(subRows[id]) subRows[id].style.display = val==='ausente' ? '' : 'none';
+  if(val!=='ausente') delete substitutos[id];
   updateSummary();
 }
 
@@ -245,15 +284,18 @@ async function confirmarChamada(){
   }
   if(!chamadaId){btn.disabled=false;btn.textContent='Confirmar Chamada';return;}
 
-  // Insere itens
+  // Insere itens (com substituto quando ausente)
   const itens=Object.entries(resultados).map(([escalaId,resultado])=>({
-    chamada_id:chamadaId,escala_id:escalaId,resultado
+    chamada_id:chamadaId,escala_id:escalaId,resultado,
+    substituto_id: resultado==='ausente' ? (substitutos[escalaId]||null) : null
   }));
   if(itens.length)await sb.from('acolitos_chamadas_itens').insert(itens);
 
-  // Atualiza status das escalas
+  // Atualiza status das escalas (ausente com substituto → 'substituido')
   for(const[escalaId,resultado]of Object.entries(resultados)){
-    await sb.from('acolitos_escalas').update({status:resultado}).eq('id',escalaId);
+    const sub = resultado==='ausente' ? (substitutos[escalaId]||null) : null;
+    const upd = sub ? { status:'substituido', substituto_id:sub } : { status:resultado, substituto_id:null };
+    await sb.from('acolitos_escalas').update(upd).eq('id',escalaId);
   }
 
   btn.textContent='Chamada Confirmada ✓';

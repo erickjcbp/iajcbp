@@ -97,6 +97,7 @@
     .mem-row:last-child { border-bottom:none; }
     .mem-nome { font-size:12px; color:var(--text); margin-bottom:3px; }
     .mem-fns  { font-size:10px; color:var(--gold); }
+    .cell-ico { background:transparent; border:none; cursor:pointer; font-size:15px; padding:2px; line-height:1; -webkit-tap-highlight-color:transparent; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
 </head>
@@ -181,6 +182,18 @@
   </div>
 </div>
 
+<!-- Modal info (balões Obs / MECE) -->
+<div class="modal-overlay" id="modal-info">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="info-title"></div>
+    <div id="info-body"></div>
+    <div class="modal-actions">
+      <button class="btn-sm gray" onclick="fecharModal('modal-info')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <script src="shared.js"></script>
 <script>
 const TEMPLATE_MATRIZ = [
@@ -222,9 +235,28 @@ const TIPO_LABEL = {
   batizado:'Batizado', crisma:'Crisma', ordenacao:'Ordenação'
 };
 const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const FUNCOES_ORDER = ['apoio','cruz','vela','sineta','sinao','altar','turibulo','naveta','missal','cred_altar','cred_credencia','mitra','baculo'];
+const NIVEL_COR = { nao_treinado:'var(--border)', em_formacao:'#d4a060', apto:'var(--success-text)', experiente:'#4a90c4', referencia:'#9b59d4' };
+const NIVEL_LABEL = { nao_treinado:'Não treinado', em_formacao:'Em formação', apto:'Apto', experiente:'Experiente', referencia:'Referência' };
 
 let ctx = null, celebracoes = [], escalasMap = {}, membros = [], habMap = {}, dispMap = {};
+let freqMap = {}, restricaoMap = {};
 let pendingCelebId = null, pendingEdicao = [], abaAtual = 'cards';
+
+function patchRoleFromHabs(habs) {
+  const apt = f => ['apto','experiente','referencia'].includes(habs[f]);
+  if (apt('cred_credencia') || apt('cred_altar') || apt('missal')) return 'cerimonario';
+  if (apt('altar') || apt('turibulo') || apt('naveta')) return 'acolito';
+  if (apt('cruz') || apt('vela') || apt('sineta') || apt('sinao')) return 'coroinha';
+  return 'aspirante';
+}
+
+function openInfo(title, lines) {
+  document.getElementById('info-title').textContent = title;
+  const body = document.getElementById('info-body'); body.textContent = '';
+  lines.forEach(l => { const p = document.createElement('p'); p.style.cssText = 'font-size:13px;color:var(--text);margin-bottom:8px;line-height:1.45;'; p.textContent = l; body.appendChild(p); });
+  document.getElementById('modal-info').classList.add('open');
+}
 
 async function init() {
   ctx = await initModulo(['coord_admin','subadmin','membro_equipe']);
@@ -254,14 +286,21 @@ async function loadDados() {
       if (!escalasMap[e.celebracao_id]) escalasMap[e.celebracao_id]=[];
       escalasMap[e.celebracao_id].push(e);
     });
-    const [{ data: mems }, { data: habs }, { data: disps }] = await Promise.all([
-      sb.from('acolitos_membros').select('id,nome,comunidade').eq('status','ativo').order('nome'),
+    const [{ data: mems }, { data: habs }, { data: disps }, freqData] = await Promise.all([
+      sb.from('acolitos_membros').select('id,nome,comunidade,data_nascimento,foto_url,observacoes,necessidades_especiais,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro').eq('status','ativo').order('nome'),
       sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia'),
-      sb.from('acolitos_disponibilidade').select('membro_id,dia,horario'),
+      sb.from('acolitos_disponibilidade').select('membro_id,dia,horario,restricao'),
+      fetchFrequencia(),
     ]);
     membros = mems||[];
     habMap = {}; (habs||[]).forEach(h=>{if(!habMap[h.membro_id])habMap[h.membro_id]={};habMap[h.membro_id][h.funcao]=h.proficiencia;});
-    dispMap = {}; (disps||[]).forEach(d=>{if(!dispMap[d.membro_id])dispMap[d.membro_id]=[];dispMap[d.membro_id].push(d.dia+'_'+d.horario);});
+    dispMap = {}; restricaoMap = {};
+    (disps||[]).forEach(d=>{
+      if(!dispMap[d.membro_id])dispMap[d.membro_id]=[];
+      dispMap[d.membro_id].push(d.dia+'_'+d.horario);
+      if(d.restricao){ if(!restricaoMap[d.membro_id])restricaoMap[d.membro_id]=[]; restricaoMap[d.membro_id].push(d.restricao); }
+    });
+    freqMap = freqData || {};
   }
 
   abaAtual==='cards' ? renderCards() : renderPlanilha();
@@ -421,28 +460,87 @@ async function salvarEscala() {
 
 function renderPlanilha() {
   const el=document.getElementById('view-planilha');el.textContent='';
-  if(!membros.length||!celebracoes.length){const em=document.createElement('span');em.className='empty';em.textContent='Sem dados para exibir.';el.appendChild(em);return;}
+  if(!membros.length){const em=document.createElement('span');em.className='empty';em.textContent='Sem membros para exibir.';el.appendChild(em);return;}
   const wrap=document.createElement('div');wrap.className='planilha-wrap';
   const table=document.createElement('table');table.className='planilha-table';
+
+  // Cabeçalho
   const thead=document.createElement('thead');const hr=document.createElement('tr');
-  ['Membro','Fn.Máx'].forEach((h,i)=>{const th=document.createElement('th');if(i===0)th.className='sticky-left';th.textContent=h;hr.appendChild(th);});
+  ['Membro','Idade','Freq','Obs','MECE','Funções','Fn.Máx'].forEach((h,i)=>{const th=document.createElement('th');if(i===0)th.className='sticky-left';th.textContent=h;hr.appendChild(th);});
   celebracoes.forEach(c=>{
     const d=new Date(c.data+'T00:00:00');
-    const th=document.createElement('th');th.style.minWidth='80px';th.style.textAlign='center';
+    const th=document.createElement('th');th.style.minWidth='66px';th.style.textAlign='center';
     const l1=document.createElement('div');l1.textContent=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
     const l2=document.createElement('div');l2.style.cssText='color:var(--text-muted);font-size:8px;';l2.textContent=c.horario+' '+(c.comunidade==='matriz'?'M':'SA');
     th.append(l1,l2);hr.appendChild(th);
   });
   thead.appendChild(hr);table.appendChild(thead);
+
+  // Corpo
   const tbody=document.createElement('tbody');
   membros.forEach(m=>{
     const tr=document.createElement('tr');
-    const tdN=document.createElement('td');tdN.className='sticky-left';tdN.style.minWidth='120px';
-    const nEl=document.createElement('span');nEl.style.cssText='font-size:12px;';nEl.textContent=m.nome;tdN.appendChild(nEl);tr.appendChild(tdN);
     const habs=habMap[m.id]||{};
+
+    // Membro (sticky): avatar + patch + nome
+    const tdN=document.createElement('td');tdN.className='sticky-left';
+    const wrapN=document.createElement('div');wrapN.style.cssText='display:flex;align-items:center;gap:8px;';
+    wrapN.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30));
+    const nEl=document.createElement('span');nEl.style.cssText='font-size:12px;white-space:nowrap;';nEl.textContent=m.nome;
+    wrapN.appendChild(nEl);tdN.appendChild(wrapN);tr.appendChild(tdN);
+
+    // Idade
+    const tdI=document.createElement('td');tdI.style.cssText='text-align:center;font-size:11px;';tdI.textContent=m.data_nascimento?calcIdade(m.data_nascimento):'—';tr.appendChild(tdI);
+
+    // Frequência
+    const f=freqMap[m.id];
+    const tdF=document.createElement('td');tdF.style.minWidth='52px';
+    if(f&&f.taxa!=null){
+      const num=document.createElement('div');num.style.cssText='font-size:11px;color:var(--text);text-align:center;';num.textContent=f.taxa+'%';
+      const bar=document.createElement('div');bar.style.cssText='height:3px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-top:2px;';
+      const fill=document.createElement('div');fill.style.cssText='height:100%;border-radius:2px;width:'+f.taxa+'%;background:'+(f.taxa>=75?'var(--success-text)':f.taxa>=50?'var(--warn-text)':'var(--danger-text)')+';';
+      bar.appendChild(fill);tdF.append(num,bar);
+    } else { tdF.style.cssText='text-align:center;color:var(--border);';tdF.textContent='—'; }
+    tr.appendChild(tdF);
+
+    // Obs (balão)
+    const tdO=document.createElement('td');tdO.style.textAlign='center';
+    const obsParts=[];
+    if(m.necessidades_especiais)obsParts.push('Necessidades: '+m.necessidades_especiais);
+    if((restricaoMap[m.id]||[]).length)obsParts.push('Restrições: '+restricaoMap[m.id].join('; '));
+    if(m.observacoes)obsParts.push(m.observacoes);
+    if(obsParts.length){const b=document.createElement('button');b.className='cell-ico';b.textContent='💬';b.onclick=()=>openInfo('Observações — '+m.nome,obsParts);tdO.appendChild(b);}
+    else{tdO.style.color='var(--border)';tdO.textContent='—';}
+    tr.appendChild(tdO);
+
+    // MECE (pais ministros)
+    const tdM=document.createElement('td');tdM.style.textAlign='center';
+    const mece=[];
+    if(m.tem_pai_ministro&&m.nome_pai_ministro)mece.push('Pai: '+m.nome_pai_ministro);
+    if(m.tem_mae_ministro&&m.nome_mae_ministro)mece.push('Mãe: '+m.nome_mae_ministro);
+    if(m.comunidade_ministro)mece.push('Comunidade: '+(m.comunidade_ministro==='matriz'?'Matriz':m.comunidade_ministro==='santo_antonio'?'Sto. Antônio':m.comunidade_ministro));
+    if(mece.length){const b=document.createElement('button');b.className='cell-ico';b.textContent='👪';b.onclick=()=>openInfo('Pais ministros — '+m.nome,mece);tdM.appendChild(b);}
+    else{tdM.style.color='var(--border)';tdM.textContent='—';}
+    tr.appendChild(tdM);
+
+    // Funções (13 bolinhas por proficiência)
+    const tdFns=document.createElement('td');
+    const dots=document.createElement('div');dots.style.cssText='display:flex;gap:2px;';
+    FUNCOES_ORDER.forEach(fn=>{
+      const niv=habs[fn]||'nao_treinado';
+      const dot=document.createElement('span');
+      dot.style.cssText='width:8px;height:8px;border-radius:50%;flex-shrink:0;background:'+NIVEL_COR[niv]+';'+(niv==='nao_treinado'?'opacity:.35;':'');
+      dot.title=(FUNCAO_LABEL[fn]||fn)+': '+NIVEL_LABEL[niv];
+      dots.appendChild(dot);
+    });
+    tdFns.appendChild(dots);tr.appendChild(tdFns);
+
+    // Função máxima
     let fnMax='—';
     for(const fn of['cred_credencia','cred_altar','missal','altar','turibulo','naveta','cruz','vela','sineta','sinao','apoio']){if(['apto','experiente','referencia'].includes(habs[fn])){fnMax=FUNCAO_LABEL[fn];break;}}
-    const tdFn=document.createElement('td');tdFn.style.cssText='font-size:10px;color:var(--gold);';tdFn.textContent=fnMax;tr.appendChild(tdFn);
+    const tdMx=document.createElement('td');tdMx.style.cssText='font-size:10px;color:var(--gold);white-space:nowrap;';tdMx.textContent=fnMax;tr.appendChild(tdMx);
+
+    // Colunas das datas
     celebracoes.forEach(c=>{
       const td=document.createElement('td');td.style.textAlign='center';
       const e=(escalasMap[c.id]||[]).find(x=>x.membro_id===m.id);
