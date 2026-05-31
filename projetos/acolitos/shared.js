@@ -49,14 +49,14 @@ function diasNaEtapa(etapaIniciada) {
 // Retorna { user, membership, membro } ou null (e redireciona)
 async function initModulo(requiredRoles = null) {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) { window.location.href = '../central/login.html'; return null; }
+  if (!session) { window.location.href = 'login.html'; return null; }
 
   const { data: modulo } = await sbAdmin
     .from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
 
   if (!modulo) {
     console.error('Módulo acolitos não encontrado no banco.');
-    window.location.href = '../central/login.html';
+    window.location.href = 'login.html';
     return null;
   }
 
@@ -154,7 +154,7 @@ function renderHeader(ctx, activePage) {
   sairBtn.textContent = '⏻';
   sairBtn.onclick = async () => {
     await sb.auth.signOut();
-    window.location.href = '../central/login.html';
+    window.location.href = 'login.html';
   };
 
   actions.append(themeBtn, sairBtn);

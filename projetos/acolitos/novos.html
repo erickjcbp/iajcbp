@@ -128,7 +128,7 @@ let blocoCount = 0;
 
 async function init() {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) { window.location.href = '../central/login.html'; return; }
+  if (!session) { window.location.href = 'login.html'; return; }
   currentUser = session.user;
 
   // Redireciona se já tem vínculo pastoral

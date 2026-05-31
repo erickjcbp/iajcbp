@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acólitos & Coroinhas — JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800&family=Rajdhani:wght@400;500;600;700&family=Oxanium:wght@600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+  <style>
+    :root{
+      --bg:#0a0406; --surface:#16090d; --surface2:#200d13; --surface3:#2c1018;
+      --border-wine:#5a1822; --border:#3a141c;
+      --red:#ff2436; --red-soft:#ff4654; --red-glow:rgba(255,38,54,.55); --wine-dim:#7a0f1a;
+      --gold:#e8b94a; --gold-light:#ffd97a; --gold-dim:#8a6a24;
+      --text:#f7ebe7; --text-muted:#b88a8f; --focus-bg:#2a0c11;
+      --success:#2f9e57; --success-text:#74e6a0; --danger:#c8141f; --danger-text:#ff8a93;
+      --cut:13px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{
+      min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+      padding:24px 16px; overflow-y:auto;
+      background:var(--bg); color:var(--text); font-family:'Rajdhani',sans-serif; font-weight:500;
+      background-image:
+        radial-gradient(120% 80% at 50% -10%, rgba(255,38,54,.20), transparent 55%),
+        radial-gradient(100% 70% at 50% 115%, rgba(255,38,54,.12), transparent 60%),
+        repeating-linear-gradient(135deg, rgba(255,255,255,.016) 0 2px, transparent 2px 10px),
+        radial-gradient(150% 100% at 50% 50%, transparent 58%, rgba(0,0,0,.55));
+      background-attachment:fixed;
+    }
+    .hero{ text-align:center; margin-bottom:22px; position:relative; z-index:1; }
+    .crest{ height:108px; width:auto; margin:0 auto 14px; display:block;
+      filter:drop-shadow(0 0 22px rgba(255,38,54,.45)) drop-shadow(0 0 8px rgba(232,185,74,.4)); }
+    .hero h1{ font-family:'Cinzel',serif; font-size:22px; font-weight:800; letter-spacing:3px;
+      text-transform:uppercase; line-height:1.2; }
+    .hero h1 .amp{ color:var(--gold); text-shadow:0 0 14px rgba(232,185,74,.6); }
+    .hero p{ font-size:12px; color:var(--text-muted); font-weight:600; letter-spacing:2px;
+      text-transform:uppercase; margin-top:8px; }
+    .crest-rule{ width:160px; height:2px; margin:14px auto 0;
+      background:linear-gradient(90deg,transparent,var(--red-soft),var(--gold),var(--red-soft),transparent); }
+
+    .card{
+      position:relative; z-index:1; width:100%; max-width:420px;
+      background:linear-gradient(165deg, var(--surface2), var(--surface));
+      border:1px solid var(--border-wine); border-top:2px solid var(--gold);
+      clip-path:polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+      padding:30px 26px 32px;
+      box-shadow:0 20px 60px rgba(0,0,0,.7), 0 0 40px rgba(255,38,54,.14);
+    }
+    .tabs{ display:flex; gap:0; margin-bottom:24px; border:1px solid var(--border-wine);
+      clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px); overflow:hidden; }
+    .tab-btn{
+      flex:1; padding:12px 8px; background:transparent; border:none; color:var(--text-muted);
+      cursor:pointer; font-family:'Cinzel',serif; font-size:11px; font-weight:600; letter-spacing:1.5px;
+      text-transform:uppercase; transition:all .2s;
+    }
+    .tab-btn:not(:last-child){ border-right:1px solid var(--border-wine); }
+    .tab-btn.active{ background:linear-gradient(180deg,rgba(255,38,54,.2),rgba(255,38,54,.06));
+      color:var(--gold-light); box-shadow:inset 0 -2px 0 var(--red-soft); }
+
+    label{ display:block; font-size:10px; color:var(--gold); margin-bottom:7px;
+      font-family:'Rajdhani',sans-serif; font-weight:700; letter-spacing:2px; text-transform:uppercase; }
+    input{
+      width:100%; padding:13px 14px; background:var(--surface3); border:1px solid var(--border-wine);
+      border-radius:2px; color:var(--text); font-size:15px; font-weight:500; font-family:'Rajdhani',sans-serif;
+      outline:none; transition:all .2s; margin-bottom:18px;
+    }
+    input:focus{ border-color:var(--red-soft); box-shadow:0 0 0 1px var(--red-soft), 0 0 16px var(--red-glow); background:var(--focus-bg); }
+
+    .btn{
+      width:100%; padding:14px; background:linear-gradient(180deg,var(--red-soft),var(--wine-dim));
+      color:#fff; border:1px solid var(--red-soft);
+      clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut));
+      font-size:13px; font-weight:700; cursor:pointer; font-family:'Cinzel',serif; letter-spacing:2px;
+      text-transform:uppercase; transition:all .2s; box-shadow:0 3px 14px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.2);
+    }
+    .btn:hover{ filter:brightness(1.1); box-shadow:0 4px 24px var(--red-glow), inset 0 1px 0 rgba(255,255,255,.25); }
+    .btn:active{ transform:translateY(1px); }
+    .btn:disabled{ background:var(--surface3); color:var(--text-muted); border-color:var(--border); cursor:not-allowed; box-shadow:none; filter:none; }
+
+    .link-action{ display:block; text-align:center; margin-top:16px; font-size:12px; color:var(--text-muted);
+      cursor:pointer; font-family:'Rajdhani',sans-serif; font-weight:600; letter-spacing:1px; text-decoration:none; transition:color .2s; }
+    .link-action:hover{ color:var(--red-soft); }
+    .msg{ margin-top:16px; padding:11px 14px; border-radius:2px; font-size:13px; font-weight:600;
+      display:none; border-left:3px solid; }
+    .msg.error{ background:rgba(200,20,31,.18); color:var(--danger-text); border-color:var(--danger); display:block; }
+    .msg.success{ background:rgba(47,158,87,.16); color:var(--success-text); border-color:var(--success); display:block; }
+    .screen{ display:none; } .screen.active{ display:block; }
+    .hint{ font-size:12px; color:var(--text-muted); font-weight:600; margin:-6px 0 16px; line-height:1.5; font-style:italic; }
+    .footer{ margin-top:22px; font-size:11px; color:var(--text-muted); letter-spacing:1px; text-align:center; z-index:1; }
+    @media(max-width:430px){ .card{ padding:26px 20px; } .crest{ height:88px; } .hero h1{ font-size:18px; } }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <img class="crest" src="../../midia/logos/BRAS%C3%83O%20PASTORAL%20AC%C3%93LTOS%20COROINHAS%20E%20CERIMONI%C3%81RIOS.png" alt="Brasão da Pastoral" onerror="this.style.display='none'">
+    <h1>Acólitos <span class="amp">&amp;</span> Coroinhas</h1>
+    <p>Servos do Altar · JCBP Limeira</p>
+    <div class="crest-rule"></div>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab-btn active" id="t-entrar" onclick="showScreen('entrar')">Entrar</button>
+      <button class="tab-btn" id="t-cadastro" onclick="showScreen('cadastro')">Quero servir</button>
+    </div>
+
+    <!-- ENTRAR -->
+    <div id="screen-entrar" class="screen active">
+      <label>E-mail</label>
+      <input type="email" id="li-email" placeholder="seu@email.com" autocomplete="email">
+      <label>Senha</label>
+      <input type="password" id="li-senha" placeholder="••••••••" autocomplete="current-password"
+             onkeydown="if(event.key==='Enter')entrar()">
+      <button class="btn" id="btn-entrar" onclick="entrar()">Entrar</button>
+      <a class="link-action" onclick="showScreen('esqueci')">Esqueci minha senha</a>
+      <div class="msg" id="msg-entrar"></div>
+    </div>
+
+    <!-- CADASTRO -->
+    <div id="screen-cadastro" class="screen">
+      <p class="hint">Crie seu acesso para ingressar na pastoral. Depois você preenche seu cadastro e a coordenação aprova.</p>
+      <label>Nome completo</label>
+      <input type="text" id="ca-nome" placeholder="Seu nome completo">
+      <label>E-mail</label>
+      <input type="email" id="ca-email" placeholder="seu@email.com">
+      <label>Crie uma senha</label>
+      <input type="password" id="ca-senha" placeholder="mínimo 6 caracteres"
+             onkeydown="if(event.key==='Enter')criarConta()">
+      <button class="btn" id="btn-cadastro" onclick="criarConta()">Criar conta e continuar</button>
+      <a class="link-action" onclick="showScreen('entrar')">Já tenho conta — entrar</a>
+      <div class="msg" id="msg-cadastro"></div>
+    </div>
+
+    <!-- ESQUECI -->
+    <div id="screen-esqueci" class="screen">
+      <label>Seu e-mail cadastrado</label>
+      <input type="email" id="es-email" placeholder="seu@email.com"
+             onkeydown="if(event.key==='Enter')resetar()">
+      <button class="btn" id="btn-esqueci" onclick="resetar()">Enviar link de recuperação</button>
+      <a class="link-action" onclick="showScreen('entrar')">← Voltar</a>
+      <div class="msg" id="msg-esqueci"></div>
+    </div>
+  </div>
+
+  <div class="footer">Paróquia Jesus Cristo Bom Pastor — Limeira/SP</div>
+
+<script>
+  const SUPABASE_URL='https://fttjgsotuosjfrasttds.supabase.co';
+  const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGpnc290dW9zamZyYXN0dGRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MzU3NjUsImV4cCI6MjA5NTExMTc2NX0.BvofcR2cIXP7Bc3r2V0VOgc-JXPefX7JGGwtzv0d_eA';
+  const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+  function showScreen(s){
+    document.querySelectorAll('.screen').forEach(e=>e.classList.remove('active'));
+    document.getElementById('screen-'+s).classList.add('active');
+    document.getElementById('t-entrar').classList.toggle('active', s==='entrar');
+    document.getElementById('t-cadastro').classList.toggle('active', s==='cadastro');
+  }
+  function msg(id,text,tipo){ const el=document.getElementById(id); el.className='msg '+tipo; el.textContent=text; }
+
+  async function entrar(){
+    const email=document.getElementById('li-email').value.trim();
+    const senha=document.getElementById('li-senha').value;
+    const btn=document.getElementById('btn-entrar');
+    if(!email||!senha){ msg('msg-entrar','Preencha e-mail e senha.','error'); return; }
+    btn.disabled=true; btn.textContent='Entrando...';
+    const { error }=await sb.auth.signInWithPassword({ email, password:senha });
+    if(error){ msg('msg-entrar','E-mail ou senha incorretos.','error'); btn.disabled=false; btn.textContent='Entrar'; return; }
+    window.location.href='index.html';
+  }
+
+  async function criarConta(){
+    const nome=document.getElementById('ca-nome').value.trim();
+    const email=document.getElementById('ca-email').value.trim();
+    const senha=document.getElementById('ca-senha').value;
+    const btn=document.getElementById('btn-cadastro');
+    if(!nome){ msg('msg-cadastro','Informe seu nome completo.','error'); return; }
+    if(!email||!senha){ msg('msg-cadastro','Preencha e-mail e senha.','error'); return; }
+    if(senha.length<6){ msg('msg-cadastro','A senha deve ter ao menos 6 caracteres.','error'); return; }
+    btn.disabled=true; btn.textContent='Criando...';
+    const { data, error }=await sb.auth.signUp({ email, password:senha, options:{ data:{ nome } } });
+    if(error){
+      const ja=/registered|already/i.test(error.message);
+      msg('msg-cadastro', ja?'Este e-mail já tem conta. Use "Já tenho conta — entrar".':'Não foi possível criar a conta. Tente novamente.','error');
+      btn.disabled=false; btn.textContent='Criar conta e continuar'; return;
+    }
+    if(data.session){
+      window.location.href='novos.html';
+    }else{
+      msg('msg-cadastro','Conta criada! Confirme pelo link enviado ao seu e-mail e depois entre.','success');
+      btn.disabled=false; btn.textContent='Criar conta e continuar';
+      setTimeout(()=>showScreen('entrar'), 2500);
+    }
+  }
+
+  async function resetar(){
+    const email=document.getElementById('es-email').value.trim();
+    const btn=document.getElementById('btn-esqueci');
+    if(!email){ msg('msg-esqueci','Informe seu e-mail.','error'); return; }
+    btn.disabled=true; btn.textContent='Enviando...';
+    const { error }=await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin+'/projetos/acolitos/login.html' });
+    if(error){ msg('msg-esqueci','Erro ao enviar. Tente novamente.','error'); btn.disabled=false; btn.textContent='Enviar link de recuperação'; return; }
+    msg('msg-esqueci','Link enviado. Verifique seu e-mail.','success'); btn.disabled=true;
+  }
+
+  // Se já está logado, vai direto para a home do módulo
+  sb.auth.getSession().then(({ data:{ session } })=>{ if(session) window.location.href='index.html'; });
+</script>
+</body>
+</html>
