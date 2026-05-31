@@ -1,6 +1,6 @@
 {
   "redirects": [
-    { "source": "/", "has": [{ "type": "host", "value": "coroinhas.jcbplimeira.com" }], "destination": "/projetos/acolitos/login.html", "permanent": false },
+    { "source": "/", "has": [{ "type": "host", "value": "coroinhas.jcbplimeira.com.br" }], "destination": "/projetos/acolitos/login.html", "permanent": false },
     { "source": "/",          "destination": "/projetos/central/login.html",     "permanent": false },
     { "source": "/central",   "destination": "/projetos/central/central.html",   "permanent": false },
     { "source": "/pastorais", "destination": "/projetos/central/pastorais.html", "permanent": false },
