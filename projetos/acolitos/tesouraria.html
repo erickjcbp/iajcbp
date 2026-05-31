@@ -50,7 +50,18 @@ const CATEGORIAS = {
   entrada: [['dizimo','Dízimo/Doação'],['mensalidade','Mensalidade'],['evento','Evento'],['rifa','Rifa/Venda'],['outro','Outro']],
   saida:   [['compras','Compras'],['tunicas','Túnicas/Vestes'],['evento','Evento'],['transporte','Transporte'],['manutencao','Manutenção'],['outro','Outro']],
 };
-const CAT_LABEL = {}; [...CATEGORIAS.entrada, ...CATEGORIAS.saida].forEach(([k,l]) => CAT_LABEL[k] = l);
+let CAT_LABEL = {};
+let customCats = { entrada: [], saida: [] }; // categorias criadas pelo usuário
+function rebuildCatLabel() {
+  CAT_LABEL = {};
+  [...CATEGORIAS.entrada, ...CATEGORIAS.saida, ...customCats.entrada, ...customCats.saida].forEach(([k, l]) => CAT_LABEL[k] = l);
+}
+function catsFor(tipo) { // padrão + customizadas, com "Outro" sempre por último
+  const base = CATEGORIAS[tipo].filter(c => c[0] !== 'outro');
+  const outro = CATEGORIAS[tipo].find(c => c[0] === 'outro');
+  return [...base, ...customCats[tipo], ...(outro ? [outro] : [])];
+}
+rebuildCatLabel();
 const MES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 const brl = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -68,8 +79,14 @@ async function init() {
 }
 
 async function load() {
-  const { data } = await sb.from('acolitos_financeiro').select('*').order('data', { ascending: false }).order('created_at', { ascending: false });
-  lancamentos = data || [];
+  const [fin, lst] = await Promise.all([
+    sb.from('acolitos_financeiro').select('*').order('data', { ascending: false }).order('created_at', { ascending: false }),
+    sb.from('acolitos_listas').select('*').in('tipo', ['cat_entrada', 'cat_saida']).order('label'),
+  ]);
+  lancamentos = fin.data || [];
+  customCats = { entrada: [], saida: [] };
+  (lst.data || []).forEach(r => customCats[r.tipo === 'cat_entrada' ? 'entrada' : 'saida'].push([r.valor, r.label]));
+  rebuildCatLabel();
   render();
 }
 
@@ -130,8 +147,12 @@ function abrirLancamento() {
   modal.append(handle, tt);
 
   const tog = document.createElement('div'); tog.className = 'tipo-toggle';
-  const catSel = document.createElement('select'); catSel.className = 'form-select';
-  function popCat() { catSel.textContent = ''; CATEGORIAS[tipo].forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; catSel.appendChild(o); }); }
+  const catSel = document.createElement('select'); catSel.className = 'form-select'; catSel.style.flex = '1';
+  const delCat = document.createElement('button'); delCat.type = 'button'; delCat.className = 'mini-del'; delCat.textContent = '−'; delCat.title = 'Remover esta categoria'; delCat.style.display = 'none';
+  const isCustom = (t, v) => customCats[t].some(c => c[0] === v);
+  function syncDelCat() { delCat.style.display = isCustom(tipo, catSel.value) ? '' : 'none'; }
+  function popCat() { catSel.textContent = ''; catsFor(tipo).forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; catSel.appendChild(o); }); syncDelCat(); }
+  catSel.onchange = syncDelCat;
   [['entrada', 'Entrada'], ['saida', 'Saída']].forEach(([t, lab]) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'tipo-btn ' + t + (t === tipo ? ' active' : ''); b.textContent = lab;
     b.onclick = () => { tipo = t; tog.querySelectorAll('.tipo-btn').forEach(x => x.classList.remove('active')); b.classList.add('active'); popCat(); };
@@ -140,8 +161,32 @@ function abrirLancamento() {
   modal.appendChild(tog);
 
   const g1 = document.createElement('div'); g1.className = 'form-group';
-  const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Categoria *'; popCat();
-  g1.append(l1, catSel); modal.appendChild(g1);
+  const l1row = document.createElement('div'); l1row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;';
+  const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Categoria *'; l1.style.margin = '0';
+  const addCat = document.createElement('button'); addCat.type = 'button'; addCat.className = 'mini-add'; addCat.textContent = '+ nova';
+  l1row.append(l1, addCat);
+  const catRow = document.createElement('div'); catRow.style.cssText = 'display:flex;align-items:center;gap:6px;';
+  catRow.append(catSel, delCat);
+  popCat();
+  addCat.onclick = async () => {
+    const nome = (prompt('Nome da nova categoria de ' + (tipo === 'entrada' ? 'entrada' : 'saída') + ':') || '').trim();
+    if (!nome) return;
+    const valor = 'c_' + nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24) + '_' + Math.random().toString(36).slice(2, 6);
+    const t = tipo;
+    const { error } = await sb.from('acolitos_listas').insert({ tipo: t === 'entrada' ? 'cat_entrada' : 'cat_saida', valor, label: nome });
+    if (error) { alert('Não foi possível adicionar essa categoria.'); return; }
+    customCats[t].push([valor, nome]); rebuildCatLabel();
+    if (tipo === t) { popCat(); catSel.value = valor; syncDelCat(); }
+  };
+  delCat.onclick = async () => {
+    const val = catSel.value, t = tipo;
+    if (!isCustom(t, val)) return;
+    if (!confirm('Remover a categoria "' + (CAT_LABEL[val] || val) + '"?\n(Os lançamentos já feitos não são apagados.)')) return;
+    await sb.from('acolitos_listas').delete().eq('tipo', t === 'entrada' ? 'cat_entrada' : 'cat_saida').eq('valor', val);
+    customCats[t] = customCats[t].filter(c => c[0] !== val); rebuildCatLabel();
+    popCat();
+  };
+  g1.append(l1row, catRow); modal.appendChild(g1);
 
   const g2 = document.createElement('div'); g2.className = 'form-group';
   const l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'Valor (R$) *';

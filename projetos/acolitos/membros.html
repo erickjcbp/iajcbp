@@ -78,7 +78,7 @@
       <button class="view-sw active" id="vt-cards" onclick="setVista('cards')" title="Cards">▦</button>
       <button class="view-sw" id="vt-lista" onclick="setVista('lista')" title="Lista">☰</button>
     </div>
-    <button class="btn-sm gold" onclick="window.location.href='novos.html'">+ Novo</button>
+    <button class="btn-sm gold" onclick="abrirNovoMembro()">+ Novo</button>
   </div>
 
   <div class="filtros-wrap" id="filtros">
@@ -260,6 +260,49 @@ function renderGrid() {
     card.append(avatarWrap, nome, meta, com);
     grid.appendChild(card);
   });
+}
+
+function abrirNovoMembro() {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className = 'modal';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Novo membro';
+  modal.append(handle, tt);
+  const group = (txt, el) => { const g = document.createElement('div'); g.className = 'form-group'; const l = document.createElement('label'); l.className = 'form-label'; l.textContent = txt; g.append(l, el); return g; };
+  const inpNome = document.createElement('input'); inpNome.className = 'form-input'; inpNome.placeholder = 'Nome completo';
+  const inpApe = document.createElement('input'); inpApe.className = 'form-input'; inpApe.placeholder = 'Como é chamado (opcional)';
+  const selCom = document.createElement('select'); selCom.className = 'form-select';
+  [['matriz', 'Matriz'], ['santo_antonio', 'Santo Antônio'], ['outra', 'Outra']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; selCom.appendChild(o); });
+  const selNivel = document.createElement('select'); selNivel.className = 'form-select';
+  NIVEIS.forEach(n => { const o = document.createElement('option'); o.value = n.slug; o.textContent = n.label; selNivel.appendChild(o); });
+  const inpTel = document.createElement('input'); inpTel.className = 'form-input'; inpTel.type = 'tel'; inpTel.placeholder = '(00) 00000-0000';
+  const waWrap = document.createElement('label'); waWrap.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);margin-top:6px;cursor:pointer;';
+  const waChk = document.createElement('input'); waChk.type = 'checkbox'; waChk.style.cssText = 'width:18px;height:18px;accent-color:var(--gold);';
+  waWrap.append(waChk, document.createTextNode('Este número tem WhatsApp'));
+  modal.append(group('Nome *', inpNome), group('Apelido', inpApe), group('Comunidade', selCom), group('Nível inicial', selNivel), group('Telefone', inpTel));
+  modal.appendChild(waWrap);
+  const msg = document.createElement('div'); msg.className = 'msg'; modal.appendChild(msg);
+  const acts = document.createElement('div'); acts.className = 'modal-actions'; acts.style.justifyContent = 'space-between';
+  const cancel = document.createElement('button'); cancel.className = 'btn-sm gray'; cancel.textContent = 'Cancelar'; cancel.onclick = () => ov.remove();
+  const conf = document.createElement('button'); conf.className = 'btn-sm gold'; conf.textContent = 'Adicionar';
+  conf.onclick = async () => {
+    const nome = inpNome.value.trim();
+    if (!nome) { msg.className = 'msg error'; msg.textContent = 'Informe o nome.'; return; }
+    conf.disabled = true; conf.textContent = 'Adicionando...';
+    const { data, error } = await sbAdmin.from('acolitos_membros').insert({
+      nome, apelido: inpApe.value.trim() || null, comunidade: selCom.value,
+      nivel: selNivel.value, telefone: inpTel.value.trim() || null,
+      telefone_whatsapp: waChk.checked, status: 'ativo'
+    }).select().single();
+    if (error) { msg.className = 'msg error'; msg.textContent = 'Erro ao adicionar. Tente novamente.'; conf.disabled = false; conf.textContent = 'Adicionar'; return; }
+    ov.remove();
+    await loadMembros();
+    const novo = todos.find(x => x.id === data.id);
+    if (novo) abrirFicha(novo);
+  };
+  acts.append(cancel, conf); modal.appendChild(acts);
+  ov.appendChild(modal); document.body.appendChild(ov);
 }
 
 async function abrirFicha(membro) {
