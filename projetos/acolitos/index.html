@@ -5,35 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Acólitos e Coroinhas — JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <style>
     /* CRM status (membro novo) */
     .status-card { background:var(--surface); border:1px solid var(--gold-dim); border-radius:4px; padding:20px 16px; text-align:center; margin-bottom:20px; }
     .status-icon { font-size:40px; margin-bottom:10px; }
-    .status-title { font-family:'Cinzel',serif; font-size:16px; color:var(--gold-light); letter-spacing:1px; margin-bottom:6px; }
+    .status-title { font-family:'Sora',sans-serif; font-size:16px; color:var(--gold-light); letter-spacing:1px; margin-bottom:6px; }
     .status-sub { font-size:13px; color:var(--text-muted); font-style:italic; line-height:1.5; }
     /* Greet */
     .greet-section { text-align:center; margin-bottom:22px; }
-    .greet-nome { font-family:'Cinzel',serif; font-size:18px; font-weight:700; margin-top:12px; color:var(--text); }
+    .greet-nome { font-family:'Sora',sans-serif; font-size:18px; font-weight:700; margin-top:12px; color:var(--text); }
     .greet-sub { font-size:12px; color:var(--text-muted); margin-top:6px; font-style:italic; }
     /* Próxima escala / agenda item */
     .ev-item { background:var(--surface); border:1px solid var(--border-wine); border-radius:4px; padding:13px 14px; margin-bottom:10px; display:flex; align-items:center; gap:12px; }
     .ev-date { text-align:center; flex-shrink:0; width:46px; }
-    .ev-dia { font-family:'Cinzel',serif; font-size:18px; font-weight:700; color:var(--gold); line-height:1; }
+    .ev-dia { font-family:'Sora',sans-serif; font-size:18px; font-weight:700; color:var(--gold); line-height:1; }
     .ev-mes { font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-top:2px; }
     .ev-body { flex:1; min-width:0; }
     .ev-top { font-size:13px; color:var(--text); }
     .ev-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
-    .ev-funcao { font-family:'Cinzel',serif; font-size:11px; color:var(--gold); letter-spacing:.5px; }
-    .ev-badge { font-size:9px; padding:2px 7px; border-radius:10px; font-family:'Cinzel',serif; border:1px solid var(--border-wine); color:var(--text-muted); flex-shrink:0; }
+    .ev-funcao { font-family:'Sora',sans-serif; font-size:11px; color:var(--gold); letter-spacing:.5px; }
+    .ev-badge { font-size:9px; padding:2px 7px; border-radius:10px; font-family:'Sora',sans-serif; border:1px solid var(--border-wine); color:var(--text-muted); flex-shrink:0; }
     /* Chart cards */
     .chart-card { background:var(--surface); border:1px solid var(--border-wine); border-radius:4px; padding:16px; margin-bottom:14px; }
-    .chart-title { font-family:'Cinzel',serif; font-size:11px; font-weight:600; color:var(--gold); letter-spacing:1px; text-transform:uppercase; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+    .chart-title { font-family:'Sora',sans-serif; font-size:11px; font-weight:600; color:var(--gold); letter-spacing:1px; text-transform:uppercase; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid var(--border); }
     .legend-dot { width:10px; height:10px; border-radius:2px; }
     /* Níveis (barras horizontais) */
     .lvl-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
-    .lvl-name { width:96px; font-size:11px; color:var(--text); font-family:'Cinzel',serif; flex-shrink:0; }
+    .lvl-name { width:96px; font-size:11px; color:var(--text); font-family:'Sora',sans-serif; flex-shrink:0; }
     .lvl-track { flex:1; height:16px; background:var(--surface2); border-radius:3px; overflow:hidden; }
     .lvl-fill { height:100%; border-radius:3px; transition:width .4s; }
     .lvl-num { width:22px; text-align:right; font-size:12px; color:var(--text-muted); flex-shrink:0; }
@@ -50,8 +50,8 @@
     .quick-link { background:var(--surface); border:1px solid var(--border-wine); border-radius:4px; padding:14px; display:flex; align-items:center; gap:10px; text-decoration:none; transition:border-color .2s; -webkit-tap-highlight-color:transparent; }
     .quick-link:active { border-color:var(--gold); }
     .quick-link-icon { font-size:22px; flex-shrink:0; }
-    .quick-link-title { font-family:'Cinzel',serif; font-size:12px; color:var(--text); }
-    .section-head { font-family:'Cinzel',serif; font-size:13px; color:var(--text); letter-spacing:1px; margin:18px 0 12px; }
+    .quick-link-title { font-family:'Sora',sans-serif; font-size:12px; color:var(--text); }
+    .section-head { font-family:'Sora',sans-serif; font-size:13px; color:var(--text); letter-spacing:1px; margin:18px 0 12px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
 </head>
@@ -400,7 +400,7 @@ function buildDonut(segments, size) {
   });
   const txt=document.createElementNS(ns,'text');
   txt.setAttribute('x',cx); txt.setAttribute('y',cy+6); txt.setAttribute('text-anchor','middle');
-  txt.setAttribute('fill','var(--text)'); txt.setAttribute('font-family','Cinzel,serif'); txt.setAttribute('font-size','22'); txt.setAttribute('font-weight','700');
+  txt.setAttribute('fill','var(--text)'); txt.setAttribute('font-family','Sora,sans-serif'); txt.setAttribute('font-size','22'); txt.setAttribute('font-weight','700');
   txt.textContent=total; svg.appendChild(txt);
   return svg;
 }

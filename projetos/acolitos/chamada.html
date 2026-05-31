@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chamada — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <style>
     .celeb-opt {
@@ -14,16 +14,16 @@
       transition:border-color .2s; -webkit-tap-highlight-color:transparent;
     }
     .celeb-opt:active,.celeb-opt.sel { border-color:var(--gold); }
-    .celeb-opt-data { font-family:'Cinzel',serif; font-size:14px; color:var(--text); }
+    .celeb-opt-data { font-family:'Sora',sans-serif; font-size:14px; color:var(--text); }
     .celeb-opt-sub  { font-size:11px; color:var(--text-muted); margin-top:3px; }
     .chamada-cat {
-      font-family:'Cinzel',serif; font-size:10px; color:var(--gold);
+      font-family:'Sora',sans-serif; font-size:10px; color:var(--gold);
       letter-spacing:1px; text-transform:uppercase; padding:12px 0 4px;
     }
     .chamada-item { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); }
     .chamada-info { flex:1; }
     .chamada-nome-el { font-size:14px; color:var(--text); margin-bottom:2px; }
-    .chamada-fn    { font-size:11px; color:var(--gold); font-family:'Cinzel',serif; }
+    .chamada-fn    { font-size:11px; color:var(--gold); font-family:'Sora',sans-serif; }
     .r-btns { display:flex; gap:8px; flex-shrink:0; }
     .r-btn {
       width:38px; height:38px; border-radius:50%; border:1px solid var(--border);
@@ -39,13 +39,13 @@
       border-radius:4px; padding:12px 16px; margin-bottom:16px; flex-wrap:wrap;
     }
     .summary-item { text-align:center; flex:1; min-width:60px; }
-    .summary-num { font-family:'Cinzel',serif; font-size:22px; font-weight:700; }
-    .summary-lbl { font-size:9px; color:var(--text-muted); font-family:'Cinzel',serif; letter-spacing:.5px; text-transform:uppercase; }
+    .summary-num { font-family:'Sora',sans-serif; font-size:22px; font-weight:700; }
+    .summary-lbl { font-size:9px; color:var(--text-muted); font-family:'Sora',sans-serif; letter-spacing:.5px; text-transform:uppercase; }
     .summary-num.p { color:var(--success-text); }
     .summary-num.a { color:var(--warn-text); }
     .summary-num.f { color:var(--danger-text); }
     .sub-row { display:flex; align-items:center; gap:8px; padding:0 0 10px 52px; }
-    .sub-lbl { font-size:11px; color:var(--text-muted); font-family:'Cinzel',serif; flex-shrink:0; }
+    .sub-lbl { font-size:11px; color:var(--text-muted); font-family:'Sora',sans-serif; flex-shrink:0; }
     .sub-sel { flex:1; min-height:38px; font-size:13px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>

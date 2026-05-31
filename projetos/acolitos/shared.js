@@ -425,7 +425,7 @@ function buildPresencaChart(escalas) {
     f.title = b.falt + ' faltas';
     pair.append(s, f);
     const lbl = document.createElement('div');
-    lbl.style.cssText = 'font-size:9px;color:var(--text-muted);font-family:Cinzel,serif;margin-top:5px;text-transform:uppercase;';
+    lbl.style.cssText = 'font-size:9px;color:var(--text-muted);font-family:Sora,sans-serif;margin-top:5px;text-transform:uppercase;';
     lbl.textContent = b.mes;
     g.append(pair, lbl); row.appendChild(g);
   });

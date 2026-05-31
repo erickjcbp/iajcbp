@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ausências — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <style>
     .motivo-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
@@ -20,7 +20,7 @@
       background:var(--surface); border:1px solid var(--border-wine);
       border-radius:4px; padding:14px; margin-bottom:10px;
     }
-    .ausencia-data { font-family:'Cinzel',serif; font-size:13px; color:var(--text); margin-bottom:4px; }
+    .ausencia-data { font-family:'Sora',sans-serif; font-size:13px; color:var(--text); margin-bottom:4px; }
     .ausencia-meta { font-size:12px; color:var(--text-muted); }
     .equipe-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); }
     .equipe-row-info { flex:1; }
@@ -30,7 +30,7 @@
     .view-btn {
       padding:8px 16px; min-height:40px; background:var(--surface2);
       border:1px solid var(--border); color:var(--text-muted); border-radius:2px;
-      cursor:pointer; font-family:'Cinzel',serif; font-size:11px; letter-spacing:1px;
+      cursor:pointer; font-family:'Sora',sans-serif; font-size:11px; letter-spacing:1px;
       text-transform:uppercase; transition:all .2s; -webkit-tap-highlight-color:transparent;
     }
     .view-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,.08); }
@@ -164,7 +164,7 @@ async function renderViewMembro() {
       dt.textContent = d ? DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' · '+c.horario : '—';
       const mt = document.createElement('div'); mt.className = 'ausencia-meta';
       mt.textContent = (MOTIVOS[a.motivo]||a.motivo)+(a.observacao?' · '+a.observacao:'');
-      const st = document.createElement('span'); st.style.cssText = 'display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-family:Cinzel,serif;background:rgba(30,80,30,.2);color:var(--success-text);border:1px solid var(--success);margin-top:6px;';
+      const st = document.createElement('span'); st.style.cssText = 'display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-family:Sora,sans-serif;background:rgba(30,80,30,.2);color:var(--success-text);border:1px solid var(--success);margin-top:6px;';
       st.textContent = 'Registrada';
       item.append(dt,mt,st); main.appendChild(item);
     });

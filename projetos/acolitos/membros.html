@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Membros — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <style>
     .filtros-wrap { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
@@ -13,7 +13,7 @@
     .ficha-tab {
       padding:10px 14px; background:transparent; border:none;
       border-bottom:2px solid transparent; color:var(--text-muted);
-      cursor:pointer; font-size:11px; font-family:'Cinzel',serif;
+      cursor:pointer; font-size:11px; font-family:'Sora',sans-serif;
       letter-spacing:1px; text-transform:uppercase; white-space:nowrap;
       transition:all .2s; -webkit-tap-highlight-color:transparent; flex-shrink:0;
     }
@@ -31,11 +31,11 @@
     .hab-card.apto          { border-color:var(--success); }
     .hab-card.experiente    { border-color:#4a90c4; }
     .hab-card.referencia    { border-color:#9b59d4; }
-    .hab-nome  { font-size:11px; color:var(--text); font-family:'Cinzel',serif; margin-bottom:4px; letter-spacing:.5px; }
+    .hab-nome  { font-size:11px; color:var(--text); font-family:'Sora',sans-serif; margin-bottom:4px; letter-spacing:.5px; }
     .hab-nivel { font-size:10px; color:var(--text-muted); margin-bottom:6px; }
     .hab-sel   { width:100%; padding:5px 8px; background:var(--surface); border:1px solid var(--border-wine); border-radius:2px; color:var(--text); font-size:11px; outline:none; }
     .ficha-header { text-align:center; padding-bottom:16px; margin-bottom:16px; border-bottom:1px solid var(--border-wine); }
-    .ficha-nome { font-family:'Cinzel',serif; font-size:16px; font-weight:700; margin-top:10px; color:var(--text); }
+    .ficha-nome { font-family:'Sora',sans-serif; font-size:16px; font-weight:700; margin-top:10px; color:var(--text); }
     .ficha-sub  { font-size:12px; color:var(--text-muted); margin-top:4px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
@@ -342,10 +342,10 @@ async function renderTab(tab) {
       const dest = document.createElement('div');
       dest.style.cssText = 'text-align:center;padding:14px 0 18px;';
       const tNum = document.createElement('div');
-      tNum.style.cssText = "font-family:'Cinzel',serif;font-size:34px;font-weight:700;color:var(--gold);line-height:1;";
+      tNum.style.cssText = "font-family:'Sora',sans-serif;font-size:34px;font-weight:700;color:var(--gold);line-height:1;";
       tNum.textContent = taxa + (taxa === '—' ? '' : '%');
       const tLbl = document.createElement('div');
-      tLbl.style.cssText = 'font-size:11px;color:var(--text-muted);font-family:Cinzel,serif;letter-spacing:1px;text-transform:uppercase;margin-top:6px;';
+      tLbl.style.cssText = 'font-size:11px;color:var(--text-muted);font-family:Sora,sans-serif;letter-spacing:1px;text-transform:uppercase;margin-top:6px;';
       tLbl.textContent = 'Taxa de Comparecimento';
       dest.append(tNum, tLbl); el.appendChild(dest);
 
