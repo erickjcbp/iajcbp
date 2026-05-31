@@ -199,17 +199,34 @@ function renderHeader(ctx, activePage) {
 }
 
 // ── MINHA CONTA (autosserviço: trocar próprio usuário/senha/nome) ──
+// Garante um access_token válido (renova se vencido/perto de vencer)
+async function freshToken() {
+  let { data: { session } } = await sb.auth.getSession();
+  if (!session) return '';
+  const expMs = (session.expires_at || 0) * 1000;
+  if (expMs - Date.now() < 60000) { // expira em menos de 60s → renova
+    try { const r = await sb.auth.refreshSession(); if (r.data && r.data.session) session = r.data.session; } catch (e) {}
+  }
+  return session.access_token || '';
+}
+// POST autenticado com retry em 401 (token expirado → refresh → tenta de novo)
+async function apiPost(path, body) {
+  const call = (t) => fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t }, body: JSON.stringify(body) });
+  let r = await call(await freshToken());
+  if (r.status === 401) {
+    try { await sb.auth.refreshSession(); } catch (e) {}
+    r = await call(await freshToken());
+  }
+  let data = {}; try { data = await r.json(); } catch (e) {}
+  return { ok: r.ok, status: r.status, data };
+}
+
 async function meUpdate(action, payload, btn, msgEl) {
   const prev = btn.textContent; btn.disabled = true; btn.textContent = 'Aguarde...';
   try {
-    const { data: { session } } = await sb.auth.getSession();
-    const r = await fetch('/api/me-update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
-      body: JSON.stringify({ action, ...payload })
-    });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'Erro');
+    const { ok, status, data } = await apiPost('/api/me-update', { action, ...payload });
+    if (status === 401) throw new Error('Sessão expirada. Saia e entre novamente.');
+    if (!ok) throw new Error(data.error || 'Erro');
     msgEl.className = 'msg success';
     msgEl.textContent = action === 'password' ? 'Senha alterada!' : action === 'username' ? 'Usuário alterado!' : 'Salvo!';
   } catch (e) {
