@@ -218,6 +218,7 @@ async function abrirFicha(membro) {
 
   // Tabs
   const tabs = ['Pessoal','Habilitações','Disponibilidade','Família','Frequência','Evolução','Observações'];
+  if (['coord_admin','subadmin'].includes(ctx.membership.role)) tabs.push('Acesso');
   const tabsEl = document.getElementById('ficha-tabs'); tabsEl.textContent = '';
   tabs.forEach((t, i) => {
     const btn = document.createElement('button'); btn.className = 'ficha-tab' + (i === 0 ? ' active' : '');
@@ -420,6 +421,39 @@ async function renderTab(tab) {
     el.appendChild(pe);
   }
 
+  if (tab === 'Acesso') {
+    const info = document.createElement('p'); info.style.cssText = 'font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.5;';
+    if (m.user_id) {
+      info.textContent = 'Este membro já tem acesso. Você pode trocar o usuário ou resetar a senha.'; el.appendChild(info);
+      const g1 = document.createElement('div'); g1.className = 'form-group';
+      const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Novo usuário';
+      const i1 = document.createElement('input'); i1.className = 'form-input'; i1.placeholder = 'ex: joao.silva';
+      const b1 = document.createElement('button'); b1.className = 'btn-sm gold'; b1.style.marginTop = '8px'; b1.textContent = 'Trocar usuário';
+      b1.onclick = () => acAction('username', { user_id: m.user_id, usuario: i1.value.trim() }, b1);
+      g1.append(l1, i1, b1); el.appendChild(g1);
+      const g2 = document.createElement('div'); g2.className = 'form-group'; g2.style.marginTop = '12px';
+      const l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'Nova senha';
+      const i2 = document.createElement('input'); i2.className = 'form-input'; i2.type = 'text'; i2.placeholder = 'mínimo 6 caracteres';
+      const b2 = document.createElement('button'); b2.className = 'btn-sm gold'; b2.style.marginTop = '8px'; b2.textContent = 'Resetar senha';
+      b2.onclick = () => acAction('password', { user_id: m.user_id, password: i2.value }, b2);
+      g2.append(l2, i2, b2); el.appendChild(g2);
+    } else {
+      info.textContent = 'Este membro ainda NÃO tem login. Crie um usuário e senha para ele acessar.'; el.appendChild(info);
+      const g1 = document.createElement('div'); g1.className = 'form-group';
+      const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Usuário';
+      const i1 = document.createElement('input'); i1.className = 'form-input'; i1.placeholder = 'ex: joao.silva';
+      g1.append(l1, i1); el.appendChild(g1);
+      const g2 = document.createElement('div'); g2.className = 'form-group';
+      const l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'Senha';
+      const i2 = document.createElement('input'); i2.className = 'form-input'; i2.type = 'text'; i2.placeholder = 'mínimo 6 caracteres';
+      g2.append(l2, i2); el.appendChild(g2);
+      const b = document.createElement('button'); b.className = 'btn gold'; b.textContent = 'Criar acesso';
+      b.onclick = () => acAction('create', { membro_id: m.id, usuario: i1.value.trim(), password: i2.value, nome: m.nome }, b);
+      el.appendChild(b);
+    }
+    const msgEl = document.createElement('div'); msgEl.id = 'ac-msg'; msgEl.className = 'msg'; msgEl.style.marginTop = '12px'; el.appendChild(msgEl);
+  }
+
   if (tab === 'Observações') {
     const grpNec = document.createElement('div'); grpNec.className = 'form-group';
     const lblNec = document.createElement('label'); lblNec.className = 'form-label';
@@ -464,6 +498,28 @@ function renderMesChart(el, escalas) {
   const t=document.createElement('div'); t.className='section-card-title'; t.textContent='Presença — últimos 6 meses'; card.appendChild(t);
   card.appendChild(buildPresencaChart(escalas)); // helper compartilhado (shared.js)
   el.appendChild(card);
+}
+
+async function acAction(action, payload, btn) {
+  const msgEl = document.getElementById('ac-msg');
+  const prev = btn.textContent; btn.disabled = true; btn.textContent = 'Aguarde...';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const r = await fetch('/api/acolito-admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ action, ...payload })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Erro');
+    if (action === 'create' && d.user_id) membroAtual.user_id = d.user_id;
+    msgEl.className = 'msg success';
+    msgEl.textContent = action === 'create' ? 'Acesso criado!' : action === 'password' ? 'Senha atualizada!' : 'Usuário atualizado!';
+  } catch (e) {
+    msgEl.className = 'msg error'; msgEl.textContent = e.message || 'Não foi possível concluir.';
+  } finally {
+    btn.disabled = false; btn.textContent = prev;
+  }
 }
 
 async function salvarFicha() {

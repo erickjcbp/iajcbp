@@ -108,8 +108,8 @@
 
     <!-- ENTRAR -->
     <div id="screen-entrar" class="screen active">
-      <label>E-mail</label>
-      <input type="email" id="li-email" placeholder="seu@email.com" autocomplete="email">
+      <label>Usuário</label>
+      <input type="text" id="li-email" placeholder="seu usuário" autocomplete="username">
       <label>Senha</label>
       <input type="password" id="li-senha" placeholder="••••••••" autocomplete="current-password"
              onkeydown="if(event.key==='Enter')entrar()">
@@ -123,8 +123,8 @@
       <p class="hint">Crie seu acesso para ingressar na pastoral. Depois você preenche seu cadastro e a coordenação aprova.</p>
       <label>Nome completo</label>
       <input type="text" id="ca-nome" placeholder="Seu nome completo">
-      <label>E-mail</label>
-      <input type="email" id="ca-email" placeholder="seu@email.com">
+      <label>Usuário (escolha o seu)</label>
+      <input type="text" id="ca-email" placeholder="ex: joao.silva" autocomplete="username">
       <label>Crie uma senha</label>
       <input type="password" id="ca-senha" placeholder="mínimo 6 caracteres"
              onkeydown="if(event.key==='Enter')criarConta()">
@@ -159,39 +159,39 @@
   }
   function msg(id,text,tipo){ const el=document.getElementById(id); el.className='msg '+tipo; el.textContent=text; }
 
+  // usuário → e-mail interno (se tiver "@", usa como e-mail; senão monta o sintético)
+  const DOMINIO='@coroinhas.jcbplimeira.com.br';
+  function synthEmail(u){ const c=String(u||'').trim().toLowerCase(); return c.includes('@')?c:c.replace(/[^a-z0-9._-]/g,'')+DOMINIO; }
+
   async function entrar(){
-    const email=document.getElementById('li-email').value.trim();
+    const id=document.getElementById('li-email').value.trim();
     const senha=document.getElementById('li-senha').value;
     const btn=document.getElementById('btn-entrar');
-    if(!email||!senha){ msg('msg-entrar','Preencha e-mail e senha.','error'); return; }
+    if(!id||!senha){ msg('msg-entrar','Preencha usuário e senha.','error'); return; }
     btn.disabled=true; btn.textContent='Entrando...';
-    const { error }=await sb.auth.signInWithPassword({ email, password:senha });
-    if(error){ msg('msg-entrar','E-mail ou senha incorretos.','error'); btn.disabled=false; btn.textContent='Entrar'; return; }
+    const { error }=await sb.auth.signInWithPassword({ email: synthEmail(id), password:senha });
+    if(error){ msg('msg-entrar','Usuário ou senha incorretos.','error'); btn.disabled=false; btn.textContent='Entrar'; return; }
     window.location.href='index.html';
   }
 
   async function criarConta(){
     const nome=document.getElementById('ca-nome').value.trim();
-    const email=document.getElementById('ca-email').value.trim();
+    const usuario=document.getElementById('ca-email').value.trim();
     const senha=document.getElementById('ca-senha').value;
     const btn=document.getElementById('btn-cadastro');
     if(!nome){ msg('msg-cadastro','Informe seu nome completo.','error'); return; }
-    if(!email||!senha){ msg('msg-cadastro','Preencha e-mail e senha.','error'); return; }
+    if(!usuario||!senha){ msg('msg-cadastro','Preencha usuário e senha.','error'); return; }
     if(senha.length<6){ msg('msg-cadastro','A senha deve ter ao menos 6 caracteres.','error'); return; }
     btn.disabled=true; btn.textContent='Criando...';
-    const { data, error }=await sb.auth.signUp({ email, password:senha, options:{ data:{ nome } } });
-    if(error){
-      const ja=/registered|already/i.test(error.message);
-      msg('msg-cadastro', ja?'Este e-mail já tem conta. Use "Já tenho conta — entrar".':'Não foi possível criar a conta. Tente novamente.','error');
-      btn.disabled=false; btn.textContent='Criar conta e continuar'; return;
-    }
-    if(data.session){
-      window.location.href='novos.html';
-    }else{
-      msg('msg-cadastro','Conta criada! Confirme pelo link enviado ao seu e-mail e depois entre.','success');
-      btn.disabled=false; btn.textContent='Criar conta e continuar';
-      setTimeout(()=>showScreen('entrar'), 2500);
-    }
+    try {
+      const r=await fetch('/api/signup-acolito',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ usuario, password:senha, nome }) });
+      const d=await r.json();
+      if(!r.ok) throw new Error(d.error||'Erro ao criar conta.');
+    } catch(e){ msg('msg-cadastro', e.message||'Não foi possível criar a conta.','error'); btn.disabled=false; btn.textContent='Criar conta e continuar'; return; }
+    // já criada e confirmada — entra direto
+    const { error }=await sb.auth.signInWithPassword({ email: synthEmail(usuario), password:senha });
+    if(error){ msg('msg-cadastro','Conta criada! Agora é só entrar.','success'); btn.disabled=false; btn.textContent='Criar conta e continuar'; setTimeout(()=>showScreen('entrar'),1500); return; }
+    window.location.href='novos.html';
   }
 
   async function resetar(){
