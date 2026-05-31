@@ -37,6 +37,13 @@
     .ficha-header { text-align:center; padding-bottom:16px; margin-bottom:16px; border-bottom:1px solid var(--border-wine); }
     .ficha-nome { font-family:'Cinzel',serif; font-size:16px; font-weight:700; margin-top:10px; color:var(--text); }
     .ficha-sub  { font-size:12px; color:var(--text-muted); margin-top:4px; }
+    .mc-row { display:flex; align-items:flex-end; gap:6px; height:104px; margin-top:10px; }
+    .mc-group { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
+    .mc-pair { display:flex; gap:3px; align-items:flex-end; height:80px; }
+    .mc-bar { width:10px; border-radius:2px 2px 0 0; min-height:2px; }
+    .mc-bar.serv { background:var(--gold); }
+    .mc-bar.falt { background:var(--wine); }
+    .mc-lbl { font-size:9px; color:var(--text-muted); font-family:'Cinzel',serif; margin-top:5px; text-transform:uppercase; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
 </head>
@@ -111,6 +118,13 @@ const HORARIOS = [
   {dia:'domingo', horario:'9h',    label:'Domingo 9h'},
   {dia:'domingo', horario:'19h',   label:'Domingo 19h'},
 ];
+const JORNADA = [
+  {role:'aspirante',label:'Aspirante',icon:'✦'},
+  {role:'coroinha',label:'Coroinha',icon:'♛'},
+  {role:'acolito',label:'Acólito',icon:'⊕'},
+  {role:'cerimonario',label:'Cerimoniário',icon:'✵'},
+];
+const MES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 
 let ctx = null;
 let todos = [];
@@ -211,7 +225,7 @@ async function abrirFicha(membro) {
   hdr.append(nomeEl, subEl);
 
   // Tabs
-  const tabs = ['Pessoal','Habilitações','Disponibilidade','Família','Frequência','Observações'];
+  const tabs = ['Pessoal','Habilitações','Disponibilidade','Família','Frequência','Evolução','Observações'];
   const tabsEl = document.getElementById('ficha-tabs'); tabsEl.textContent = '';
   tabs.forEach((t, i) => {
     const btn = document.createElement('button'); btn.className = 'ficha-tab' + (i === 0 ? ' active' : '');
@@ -242,6 +256,14 @@ async function renderTab(tab) {
       ['Responsável', m.responsavel || '—'],
       ['Comunidade', m.comunidade === 'matriz' ? 'Matriz' : m.comunidade === 'santo_antonio' ? 'Sto. Antônio' : '—'],
       ['Pode outras comunidades?', m.pode_outras_comunidades ? 'Sim' : 'Não'],
+      ['Cel. mãe', m.celular_mae || '—'],
+      ['Cel. recado', m.celular_recado || '—'],
+      ['Endereço', m.endereco || '—'],
+      ['Batismo', m.batismo ? 'Sim' : 'Não'],
+      ['1ª Eucaristia', m.primeira_eucaristia ? 'Sim' : 'Não'],
+      ['Crisma', m.crisma ? 'Sim' : 'Não'],
+      ['Túnica', m.tem_tunica ? 'Sim' : 'Não'],
+      ['Grupo WhatsApp', m.no_grupo_whatsapp ? 'Sim' : 'Não'],
     ].forEach(([label, value]) => {
       const row = document.createElement('div'); row.className = 'stat-row';
       const lbl = document.createElement('span'); lbl.className = 'stat-label'; lbl.textContent = label;
@@ -358,7 +380,52 @@ async function renderTab(tab) {
       const uv = document.createElement('span'); uv.className = 'stat-value';
       uv.textContent = f.ultima_participacao ? formatDate(f.ultima_participacao) : '—';
       ult.append(ul, uv); el.appendChild(ult);
+
+      // Gráfico — presença nos últimos 6 meses
+      const seis = new Date(); seis.setMonth(seis.getMonth()-5); seis.setDate(1);
+      const { data: escs } = await sb.from('acolitos_escalas')
+        .select('status, acolitos_celebracoes!inner(data)')
+        .eq('membro_id', m.id).gte('acolitos_celebracoes.data', seis.toISOString().slice(0,10));
+      renderMesChart(el, escs||[]);
     }
+  }
+
+  if (tab === 'Evolução') {
+    // Jornada do membro
+    const track = document.createElement('div'); track.className = 'jornada-track';
+    const roleIdx = JORNADA.findIndex(j => j.role === m.role);
+    JORNADA.forEach((j,i) => {
+      const step=document.createElement('div'); step.className='jornada-step';
+      const dot=document.createElement('div'); dot.className='jornada-dot'+(i<roleIdx?' done':i===roleIdx?' current':'');
+      dot.textContent = i<=roleIdx ? j.icon : '○';
+      const lbl=document.createElement('div'); lbl.className='jornada-label'+(i===roleIdx?' current':''); lbl.textContent=j.label;
+      step.append(dot,lbl); track.appendChild(step);
+      if (i<JORNADA.length-1){const line=document.createElement('div');line.className='jornada-line'+(i<roleIdx?' done':'');track.appendChild(line);}
+    });
+    el.appendChild(track);
+
+    // Formações concluídas (derivadas das habilitações: apto+)
+    const { data: habs } = await sbAdmin.from('acolitos_habilitacoes').select('funcao,proficiencia').eq('membro_id', m.id);
+    const formado = (habs||[]).filter(h=>['apto','experiente','referencia'].includes(h.proficiencia));
+    const emForm = (habs||[]).filter(h=>h.proficiencia==='em_formacao');
+    const fLabel = id => (FUNCOES.find(f=>f.id===id)||{}).label || id;
+
+    const tit1=document.createElement('div'); tit1.className='section-card-title'; tit1.style.marginTop='16px'; tit1.textContent='Funções formadas ('+formado.length+')';
+    el.appendChild(tit1);
+    if(!formado.length){const em=document.createElement('div');em.style.cssText='font-size:12px;color:var(--text-muted);font-style:italic;';em.textContent='Nenhuma função concluída ainda.';el.appendChild(em);}
+    else { const wrap=document.createElement('div'); wrap.style.cssText='display:flex;flex-wrap:wrap;gap:6px;'; formado.forEach(h=>{const c=document.createElement('span');c.className='badge acolito';c.textContent=fLabel(h.funcao);wrap.appendChild(c);}); el.appendChild(wrap); }
+
+    if(emForm.length){
+      const tit2=document.createElement('div'); tit2.className='section-card-title'; tit2.style.marginTop='16px'; tit2.textContent='Em formação ('+emForm.length+')';
+      el.appendChild(tit2);
+      const wrap2=document.createElement('div'); wrap2.style.cssText='display:flex;flex-wrap:wrap;gap:6px;'; emForm.forEach(h=>{const c=document.createElement('span');c.className='badge pendente';c.textContent=fLabel(h.funcao);wrap2.appendChild(c);}); el.appendChild(wrap2);
+    }
+
+    // Próxima etapa
+    const tit3=document.createElement('div'); tit3.className='section-card-title'; tit3.style.marginTop='16px'; tit3.textContent='Próxima etapa';
+    el.appendChild(tit3);
+    const pe=document.createElement('div'); pe.style.cssText='font-size:13px;color:var(--text);'; pe.textContent = m.proxima_etapa || '— (defina na aba Observações)';
+    el.appendChild(pe);
   }
 
   if (tab === 'Observações') {
@@ -391,6 +458,28 @@ async function renderTab(tab) {
 
     el.append(grpNec, grpObs, grpProx);
   }
+}
+
+function renderMesChart(el, escalas) {
+  const buckets = {};
+  for (let i=5;i>=0;i--){const d=new Date();d.setMonth(d.getMonth()-i);const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');buckets[k]={serv:0,falt:0,mes:MES[d.getMonth()]};}
+  escalas.forEach(e=>{const data=e.acolitos_celebracoes?.data;if(!data)return;const k=data.slice(0,7);if(!buckets[k])return;if(['presente','atrasado'].includes(e.status))buckets[k].serv++;else if(['ausente','ausente_justificado'].includes(e.status))buckets[k].falt++;});
+  const arr=Object.values(buckets); const max=Math.max(1,...arr.map(b=>Math.max(b.serv,b.falt)));
+  const total=arr.reduce((a,b)=>a+b.serv+b.falt,0);
+  const card=document.createElement('div'); card.style.marginTop='18px';
+  const t=document.createElement('div'); t.className='section-card-title'; t.textContent='Presença — últimos 6 meses'; card.appendChild(t);
+  if(!total){const em=document.createElement('div');em.style.cssText='font-size:12px;color:var(--text-muted);font-style:italic;';em.textContent='Sem chamadas registradas ainda.';card.appendChild(em);el.appendChild(card);return;}
+  const row=document.createElement('div'); row.className='mc-row';
+  arr.forEach(b=>{
+    const g=document.createElement('div');g.className='mc-group';
+    const pair=document.createElement('div');pair.className='mc-pair';
+    const s=document.createElement('div');s.className='mc-bar serv';s.style.height=(b.serv/max*80)+'px';s.title=b.serv+' servidas';
+    const f=document.createElement('div');f.className='mc-bar falt';f.style.height=(b.falt/max*80)+'px';f.title=b.falt+' faltas';
+    pair.append(s,f);
+    const lbl=document.createElement('div');lbl.className='mc-lbl';lbl.textContent=b.mes;
+    g.append(pair,lbl);row.appendChild(g);
+  });
+  card.appendChild(row); el.appendChild(card);
 }
 
 async function salvarFicha() {

@@ -269,15 +269,8 @@ async function enviarCadastro() {
     btn.disabled = false; btn.textContent = 'Concluir Cadastro'; return;
   }
 
-  const responsavelObs = [
-    resp.pai       ? 'Pai: ' + resp.pai         : null,
-    resp.mae       ? 'Mãe: ' + resp.mae          : null,
-    resp.celMae    ? 'Cel. mãe: ' + resp.celMae  : null,
-    resp.celRecado ? 'Recado: ' + resp.celRecado  : null,
-    resp.endereco  ? 'End.: ' + resp.endereco     : null,
-  ].filter(Boolean).join(' | ');
-
   // Insere cada membro
+  const insertedIds = [];
   for (let i = 0; i < blocos.length; i++) {
     const idx = blocos[i].id.replace('bloco-','');
     const nome = document.getElementById('m' + idx + '-nome').value.trim();
@@ -289,13 +282,20 @@ async function enviarCadastro() {
       telefone: document.getElementById('m' + idx + '-cel')?.value.trim() || null,
       comunidade: document.getElementById('m' + idx + '-comunidade')?.value || 'matriz',
       responsavel: [resp.pai, resp.mae].filter(Boolean).join(' / ') || null,
+      batismo: !!document.getElementById('m' + idx + '-batismo')?.classList.contains('active'),
+      primeira_eucaristia: !!document.getElementById('m' + idx + '-eucaristia')?.classList.contains('active'),
+      crisma: !!document.getElementById('m' + idx + '-crisma')?.classList.contains('active'),
+      tem_tunica: !!document.getElementById('m' + idx + '-tunica')?.checked,
+      no_grupo_whatsapp: !!document.getElementById('m' + idx + '-whatsapp')?.checked,
+      endereco: resp.endereco || null,
+      celular_mae: resp.celMae || null,
+      celular_recado: resp.celRecado || null,
       tem_pai_ministro: resp.ministros,
       nome_pai_ministro: resp.ministros ? resp.ministroNome || null : null,
       tem_mae_ministro: resp.ministros,
       nome_mae_ministro: resp.ministros ? resp.ministroNome || null : null,
       comunidade_ministro: resp.ministros ? resp.ministroComunidade || null : null,
       escalar_com_pais: resp.ministros,
-      observacoes: responsavelObs || null,
     };
 
     // Primeiro membro → vincula ao usuário logado
@@ -308,6 +308,7 @@ async function enviarCadastro() {
       showMsg('Erro ao salvar dados. Tente novamente.', 'error');
       btn.disabled = false; btn.textContent = 'Concluir Cadastro'; return;
     }
+    insertedIds.push(membro.id);
 
     // Vínculo pastoral apenas para o usuário logado (primeiro membro)
     if (i === 0) {
@@ -318,6 +319,16 @@ async function enviarCadastro() {
 
     // Abre CRM
     await sbAdmin.from('acolitos_crm').insert({ membro_id: membro.id, etapa: 'integracao' });
+  }
+
+  // Vários filhos no mesmo cadastro = irmãos na pastoral → linka entre si
+  if (insertedIds.length > 1) {
+    for (let i = 0; i < insertedIds.length; i++) {
+      const irmaoId = insertedIds[i === 0 ? 1 : 0];
+      await sbAdmin.from('acolitos_membros')
+        .update({ tem_irmao_pastoral: true, irmao_id: irmaoId, escalar_com_irmao: true })
+        .eq('id', insertedIds[i]);
+    }
   }
 
   showMsg('Cadastro realizado! Em breve a equipe entrará em contato.', 'success');
