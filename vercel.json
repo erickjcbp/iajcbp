@@ -1,14 +1,9 @@
 {
-  "rewrites": [
-    { "source": "/",                    "destination": "/projetos/central/login.html"    },
-    { "source": "/central",             "destination": "/projetos/central/central.html"  },
-    { "source": "/acolitos",            "destination": "/projetos/acolitos/index.html"   },
-    { "source": "/acolitos/novos",      "destination": "/projetos/acolitos/novos.html"   },
-    { "source": "/acolitos/crm",        "destination": "/projetos/acolitos/crm.html"       },
-    { "source": "/acolitos/membros",    "destination": "/projetos/acolitos/membros.html"   },
-    { "source": "/acolitos/escala",     "destination": "/projetos/acolitos/escala.html"    },
-    { "source": "/acolitos/ausencias",  "destination": "/projetos/acolitos/ausencias.html" },
-    { "source": "/acolitos/chamada",    "destination": "/projetos/acolitos/chamada.html"   }
+  "redirects": [
+    { "source": "/",          "destination": "/projetos/central/login.html",     "permanent": false },
+    { "source": "/central",   "destination": "/projetos/central/central.html",   "permanent": false },
+    { "source": "/pastorais", "destination": "/projetos/central/pastorais.html", "permanent": false },
+    { "source": "/acolitos",  "destination": "/projetos/acolitos/index.html",     "permanent": false }
   ],
   "headers": [
     {
@@ -16,22 +11,6 @@
       "headers": [
         { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }
       ]
-    },
-    {
-      "source": "/",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }]
-    },
-    {
-      "source": "/central",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }]
-    },
-    {
-      "source": "/acolitos",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }]
-    },
-    {
-      "source": "/acolitos/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }]
     }
   ]
 }
