@@ -106,17 +106,36 @@ function buildEngajamentoEl(membro) {
   const hn = document.createElement('div'); hn.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold-light);'; hn.textContent = 'Próximo objetivo: ' + nivelInfo(slug).label;
   h.appendChild(hn); box.appendChild(h);
   const sec = (title) => { const t = document.createElement('div'); t.style.cssText = 'font-size:11px;font-weight:700;color:var(--text-muted);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.5px;'; t.textContent = title; box.appendChild(t); };
-  const chips = (title, vals, map) => {
+  const chips = (title, vals, map, done) => {
     if (!vals || !vals.length) return; sec(title);
     const w = document.createElement('div'); w.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;';
-    vals.forEach(v => { const c = document.createElement('span'); c.style.cssText = 'font-size:11px;font-weight:700;color:var(--gold);background:rgba(232,185,74,.1);border:1px solid var(--gold-dim);border-radius:12px;padding:3px 10px;'; c.textContent = map[v] || v; w.appendChild(c); });
+    const css = done
+      ? 'font-size:11px;font-weight:700;color:var(--success-text);background:rgba(30,80,30,.18);border:1px solid var(--success);border-radius:12px;padding:3px 10px;'
+      : 'font-size:11px;font-weight:700;color:var(--gold);background:rgba(232,185,74,.1);border:1px solid var(--gold-dim);border-radius:12px;padding:3px 10px;';
+    vals.forEach(v => { const c = document.createElement('span'); c.style.cssText = css; c.textContent = (done ? '✓ ' : '') + (map[v] || v); w.appendChild(c); });
     box.appendChild(w);
   };
   chips('Habilidades a desenvolver', membro.desenvolvimento_habilidades, HABILIDADE_LABEL);
+  chips('Habilidades desenvolvidas', membro.habilidades_desenvolvidas, HABILIDADE_LABEL, true);
   chips('Competências a desenvolver', membro.desenvolvimento_competencias, COMPETENCIA_LABEL);
-  if (membro.observacoes) { sec('Observações'); const p = document.createElement('div'); p.style.cssText = 'font-size:13px;color:var(--text);line-height:1.5;'; p.textContent = membro.observacoes; box.appendChild(p); }
+  chips('Competências desenvolvidas', membro.competencias_desenvolvidas, COMPETENCIA_LABEL, true);
   if (membro.mensagem_coordenacao) { sec('Mensagem da coordenação'); const p = document.createElement('div'); p.style.cssText = 'font-size:13px;color:var(--text);line-height:1.5;background:var(--surface2);border-left:3px solid var(--gold);padding:10px;border-radius:4px;'; p.textContent = membro.mensagem_coordenacao; box.appendChild(p); }
   return box;
+}
+
+// Modal "Meu Desenvolvimento" — visão (somente leitura) do plano do membro
+function showMeuDesenvolvimento(membro) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '300';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className = 'modal';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Meu Desenvolvimento';
+  const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-8px 0 14px;font-weight:600;';
+  sub.textContent = 'Feedback da coordenação sobre sua evolução.';
+  modal.append(handle, tt, sub, buildEngajamentoEl(membro));
+  const close = document.createElement('button'); close.className = 'btn gold'; close.style.marginTop = '14px'; close.textContent = 'Fechar'; close.onclick = () => ov.remove();
+  modal.appendChild(close);
+  ov.appendChild(modal); document.body.appendChild(ov);
 }
 
 // Elemento de UM aviso (engajamento rico ou texto simples)

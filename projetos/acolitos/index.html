@@ -236,7 +236,7 @@ function showLevelUp(nivel, nome) {
 
 /* ── RANK PROGRESS (nível atual animado + jornada de 10 níveis) ─ */
 const _JOR_ICON = { aspirante:'✦', coroinha:'♛', acolito:'⊕', cerimonario:'✵' };
-function renderRankProgress(main, nivel) {
+function renderRankProgress(main, nivel, membro) {
   const idx = Math.max(0, nivelIndex(nivel));
   const cur = NIVEIS[idx], next = NIVEIS[idx + 1];
   const pct = Math.round(((idx + 1) / NIVEIS.length) * 100);
@@ -279,10 +279,16 @@ function renderRankProgress(main, nivel) {
   main.append(jorToggle, grid);
   setJorCollapsed(localStorage.getItem('jor-collapsed') === '1');
 
-  const verBtn = document.createElement('button'); verBtn.className = 'btn-sm gold';
-  verBtn.style.cssText = 'margin:2px auto 16px;display:block;'; verBtn.textContent = 'O caminho ▸';
+  const btnRow = document.createElement('div'); btnRow.style.cssText = 'display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:2px 0 16px;';
+  const verBtn = document.createElement('button'); verBtn.className = 'btn-sm gold'; verBtn.textContent = 'O caminho ▸';
   verBtn.onclick = () => showJornada(nivel);
-  main.appendChild(verBtn);
+  btnRow.appendChild(verBtn);
+  if (membro) {
+    const devBtn = document.createElement('button'); devBtn.className = 'btn-sm gold'; devBtn.textContent = '📈 Meu Desenvolvimento';
+    devBtn.onclick = () => showMeuDesenvolvimento(membro);
+    btnRow.appendChild(devBtn);
+  }
+  main.appendChild(btnRow);
 }
 
 /* ── JORNADA DETALHADA (modal clicável) ──────────────────────── */
@@ -350,7 +356,7 @@ async function renderDashboardMembro(ctx) {
   greet.append(nomeEl, subEl); main.appendChild(greet);
 
   // Destaque do nível atual (animado) + jornada
-  renderRankProgress(main, nivel);
+  renderRankProgress(main, nivel, m);
 
   // KPIs de frequência
   if (m) {

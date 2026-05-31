@@ -302,7 +302,7 @@ async function abrirFicha(membro) {
   const ehAdmin = ['coord_admin','subadmin'].includes(ctx.membership.role);
   const tabs = ['Pessoal'];
   if (ehAdmin) tabs.push('Acessos'); // logo no começo, bem visível
-  tabs.push('Habilitações','Disponibilidade','Família','Frequência','Evolução','Engajamento');
+  tabs.push('Evolução','Disponibilidade','Família','Frequência','Mensagem');
   const tabsEl = document.getElementById('ficha-tabs'); tabsEl.textContent = '';
   tabs.forEach((t, i) => {
     const btn = document.createElement('button'); btn.className = 'ficha-tab' + (i === 0 ? ' active' : '') + (t === 'Acessos' ? ' destaque' : '');
@@ -395,6 +395,26 @@ function appendEquipeFields(el, m) {
   el.appendChild(reveal);
 }
 
+// Grade de habilitações (proficiência por função) — usada na aba Evolução
+async function appendHabilitacoes(el, m) {
+  const { data: habs } = await sbAdmin.from('acolitos_habilitacoes').select('*').eq('membro_id', m.id);
+  habAtual = {};
+  (habs || []).forEach(h => { habAtual[h.funcao] = h.proficiencia; });
+  const grid = document.createElement('div'); grid.className = 'hab-grid';
+  FUNCOES.forEach(fn => {
+    const nivel = habAtual[fn.id] || 'nao_treinado';
+    const card = document.createElement('div'); card.className = 'hab-card ' + nivel; card.id = 'hc-' + fn.id;
+    const nome = document.createElement('div'); nome.className = 'hab-nome'; nome.textContent = fn.label;
+    const nivelEl = document.createElement('div'); nivelEl.className = 'hab-nivel'; nivelEl.id = 'hn-' + fn.id;
+    nivelEl.textContent = NIVEL_LABEL[nivel];
+    const sel = document.createElement('select'); sel.className = 'hab-sel';
+    PROF_NIVEIS.forEach(n => { const opt = document.createElement('option'); opt.value = n; opt.textContent = NIVEL_LABEL[n]; if (n === nivel) opt.selected = true; sel.appendChild(opt); });
+    sel.onchange = () => { const v = sel.value; habAtual[fn.id] = v; card.className = 'hab-card ' + v; document.getElementById('hn-' + fn.id).textContent = NIVEL_LABEL[v]; setDirty(); };
+    card.append(nome, nivelEl, sel); grid.appendChild(card);
+  });
+  el.appendChild(grid);
+}
+
 async function renderTab(tab) {
   const el = document.getElementById('ficha-conteudo');
   el.textContent = '';
@@ -426,35 +446,6 @@ async function renderTab(tab) {
     el.appendChild(editArea('Necessidades especiais (TEA, TDAH, limitações...)', 'necessidades_especiais', m.necessidades_especiais));
   }
 
-  if (tab === 'Habilitações') {
-    const { data: habs } = await sbAdmin
-      .from('acolitos_habilitacoes').select('*').eq('membro_id', m.id);
-    habAtual = {};
-    (habs || []).forEach(h => { habAtual[h.funcao] = h.proficiencia; });
-
-    const grid = document.createElement('div'); grid.className = 'hab-grid';
-    FUNCOES.forEach(fn => {
-      const nivel = habAtual[fn.id] || 'nao_treinado';
-      const card = document.createElement('div'); card.className = 'hab-card ' + nivel; card.id = 'hc-' + fn.id;
-      const nome = document.createElement('div'); nome.className = 'hab-nome'; nome.textContent = fn.label;
-      const nivelEl = document.createElement('div'); nivelEl.className = 'hab-nivel'; nivelEl.id = 'hn-' + fn.id;
-      nivelEl.textContent = NIVEL_LABEL[nivel];
-      const sel = document.createElement('select'); sel.className = 'hab-sel';
-      PROF_NIVEIS.forEach(n => {
-        const opt = document.createElement('option'); opt.value = n;
-        opt.textContent = NIVEL_LABEL[n]; if (n === nivel) opt.selected = true;
-        sel.appendChild(opt);
-      });
-      sel.onchange = () => {
-        const v = sel.value; habAtual[fn.id] = v;
-        card.className = 'hab-card ' + v;
-        document.getElementById('hn-' + fn.id).textContent = NIVEL_LABEL[v];
-        setDirty();
-      };
-      card.append(nome, nivelEl, sel); grid.appendChild(card);
-    });
-    el.appendChild(grid);
-  }
 
   if (tab === 'Disponibilidade') {
     if (fichaDisp === null) {
@@ -562,33 +553,38 @@ async function renderTab(tab) {
   if (tab === 'Evolução') {
     const slug = m.nivel || nivelFromRole(m.role);
     const idx = nivelIndex(slug);
-    // Cabeçalho: emblema + nível + título
-    const head = document.createElement('div'); head.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:10px;';
+    // Nível atual
+    const head = document.createElement('div'); head.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:4px;';
     head.appendChild(buildRankEmblem(slug, 56));
     const ht = document.createElement('div');
-    const hn = document.createElement('div'); hn.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:14px;color:var(--text);'; hn.textContent = nivelInfo(slug).label;
+    const hl = document.createElement('div'); hl.style.cssText = 'font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;'; hl.textContent = 'Nível atual';
+    const hn = document.createElement('div'); hn.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:15px;color:var(--text);'; hn.textContent = nivelInfo(slug).label;
     const htt = document.createElement('div'); htt.style.cssText = 'font-size:12px;color:var(--gold);font-style:italic;'; htt.textContent = nivelInfo(slug).titulo ? '🏆 ' + nivelInfo(slug).titulo : '';
-    ht.append(hn, htt); head.appendChild(ht); el.appendChild(head);
-    const prog = document.createElement('div'); prog.style.cssText = 'font-size:12px;color:var(--text-muted);margin-bottom:14px;';
-    prog.textContent = 'Nível ' + (idx + 1) + ' de ' + NIVEIS.length + (NIVEIS[idx + 1] ? ' · Próximo: ' + NIVEIS[idx + 1].label : ' · Nível máximo');
-    el.appendChild(prog);
+    ht.append(hl, hn, htt); head.appendChild(ht); el.appendChild(head);
 
-    const chips = (title, vals, labelMap, cls) => {
-      const t = document.createElement('div'); t.className = 'section-card-title'; t.style.marginTop = '12px'; t.textContent = title; el.appendChild(t);
-      if (!vals || !vals.length) { const e = document.createElement('div'); e.style.cssText = 'font-size:12px;color:var(--text-muted);font-style:italic;'; e.textContent = '—'; el.appendChild(e); return; }
-      const w = document.createElement('div'); w.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;'; vals.forEach(v => { const c = document.createElement('span'); c.className = cls || 'irmao-chip'; c.textContent = labelMap[v] || v; w.appendChild(c); }); el.appendChild(w);
-    };
-    chips('Habilidades a desenvolver', m.desenvolvimento_habilidades, HABILIDADE_LABEL);
-    chips('Competências a desenvolver', m.desenvolvimento_competencias, COMPETENCIA_LABEL);
+    const sec = (txt) => { const t = document.createElement('div'); t.className = 'section-card-title'; t.style.marginTop = '16px'; t.textContent = txt; el.appendChild(t); };
+    sec('Habilidades a desenvolver'); el.appendChild(editMulti('', 'desenvolvimento_habilidades', m.desenvolvimento_habilidades, HABILIDADES));
+    sec('Habilidades desenvolvidas'); el.appendChild(editMulti('', 'habilidades_desenvolvidas', m.habilidades_desenvolvidas, HABILIDADES));
+    sec('Competências a desenvolver'); el.appendChild(editMulti('', 'desenvolvimento_competencias', m.desenvolvimento_competencias, COMPETENCIAS));
+    sec('Competências desenvolvidas'); el.appendChild(editMulti('', 'competencias_desenvolvidas', m.competencias_desenvolvidas, COMPETENCIAS));
 
-    const { data: habs } = await sbAdmin.from('acolitos_habilitacoes').select('funcao,proficiencia').eq('membro_id', m.id);
-    const formado = (habs || []).filter(h => ['apto','experiente','referencia'].includes(h.proficiencia)).map(h => h.funcao);
-    chips('Funções já formadas (' + formado.length + ')', formado, HABILIDADE_LABEL, 'badge acolito');
+    sec('Habilitações (proficiência por função)');
+    await appendHabilitacoes(el, m);
 
-    if (m.mensagem_coordenacao) {
-      const tm = document.createElement('div'); tm.className = 'section-card-title'; tm.style.marginTop = '12px'; tm.textContent = 'Mensagem da coordenação'; el.appendChild(tm);
-      const pm = document.createElement('div'); pm.style.cssText = 'font-size:13px;color:var(--text);line-height:1.5;background:var(--surface);border-left:3px solid var(--gold);padding:10px;border-radius:4px;'; pm.textContent = m.mensagem_coordenacao; el.appendChild(pm);
+    // Próxima etapa: próximo nível pulsando
+    sec('Próxima etapa da jornada');
+    const next = NIVEIS[idx + 1];
+    const pe = document.createElement('div'); pe.style.cssText = 'display:flex;align-items:center;gap:12px;';
+    if (next) {
+      pe.appendChild(buildRankEmblem(next.slug, 52));
+      const pt = document.createElement('div');
+      const pn = document.createElement('div'); pn.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:14px;color:var(--gold-light);'; pn.textContent = next.label;
+      const ptt = document.createElement('div'); ptt.style.cssText = 'font-size:12px;color:var(--text-muted);'; ptt.textContent = next.titulo ? '🏆 ' + next.titulo : '';
+      pt.append(pn, ptt); pe.appendChild(pt);
+    } else {
+      const pn = document.createElement('div'); pn.style.cssText = 'font-size:13px;color:var(--gold);font-weight:700;'; pn.textContent = '🏆 Nível máximo alcançado!'; pe.appendChild(pn);
     }
+    el.appendChild(pe);
   }
 
   if (tab === 'Acessos') {
@@ -652,19 +648,12 @@ async function renderTab(tab) {
     appendEquipeFields(el, m);
   }
 
-  if (tab === 'Engajamento') {
+  if (tab === 'Mensagem') {
     const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-4px 0 12px;line-height:1.5;';
-    hint.textContent = 'Comunicação da coordenação com o membro. Tudo que você definir aqui aparece para ele ao acessar e no sino de avisos.';
+    hint.textContent = 'Mensagem direta para o membro — aparece para ele ao acessar e fica no sino de avisos.';
     el.appendChild(hint);
-    el.appendChild(editArea('Observações', 'observacoes', m.observacoes));
-    const l1 = document.createElement('div'); l1.className = 'form-label'; l1.textContent = 'Habilidades a desenvolver p/ o próximo nível'; el.appendChild(l1);
-    el.appendChild(editMulti('', 'desenvolvimento_habilidades', m.desenvolvimento_habilidades, HABILIDADES));
-    const l2 = document.createElement('div'); l2.className = 'form-label'; l2.style.marginTop = '10px'; l2.textContent = 'Competências a desenvolver p/ o próximo nível'; el.appendChild(l2);
-    el.appendChild(editMulti('', 'desenvolvimento_competencias', m.desenvolvimento_competencias, COMPETENCIAS));
-    el.appendChild(editArea('Mensagem da coordenação', 'mensagem_coordenacao', m.mensagem_coordenacao));
-    // Por último: próxima etapa da jornada (seleção do nível)
-    const nivelAtual = m.nivel || nivelFromRole(m.role);
-    el.appendChild(editSelect('Próxima etapa da jornada (nível-alvo)', 'nivel', nivelAtual, NIVEIS.map(n => [n.slug, (n.emoji ? n.emoji + ' ' : '') + n.label])));
+    el.appendChild(editArea('Mensagem para o membro', 'mensagem_coordenacao', m.mensagem_coordenacao));
+    el.appendChild(editArea('Observações internas (não aparecem ao membro)', 'observacoes', m.observacoes));
   }
 }
 
@@ -842,7 +831,7 @@ async function salvarFicha() {
   }
   // Avisos detalhados ao membro + sincronização do papel (RLS) quando muda a coordenação
   const editados = Object.keys(fichaEdits);
-  const engajCampos = ['observacoes', 'desenvolvimento_habilidades', 'desenvolvimento_competencias', 'mensagem_coordenacao'];
+  const engajCampos = ['desenvolvimento_habilidades', 'desenvolvimento_competencias', 'habilidades_desenvolvidas', 'competencias_desenvolvidas', 'mensagem_coordenacao'];
   const mudouEngaj = editados.some(k => engajCampos.includes(k));
   if (membroAtual.user_id) {
     // Sincroniza pastoral_members.role para liberar/retirar acesso de equipe (RLS)

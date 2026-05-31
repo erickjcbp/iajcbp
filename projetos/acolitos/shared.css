@@ -113,6 +113,18 @@ body.has-switch { padding-top: calc(var(--header-h) + 42px); }
   -webkit-tap-highlight-color: transparent;
 }
 .btn-icon:hover { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 14px var(--red-glow); }
+/* Top bar no celular: títulos e botões menores p/ não se cobrirem */
+@media (max-width: 520px) {
+  .app-header { padding: 0 10px; }
+  .header-logo { font-size: 11px; letter-spacing: .5px; gap: 6px; overflow: hidden; white-space: nowrap; }
+  .header-logo img { height: 22px; }
+  .header-back { font-size: 18px; }
+  .header-actions { gap: 5px; }
+  .btn-icon { width: 31px; height: 31px; font-size: 13px; }
+}
+@media (max-width: 360px) {
+  .header-logo span:not(.gold) { font-size: 10px; }
+}
 
 /* ── BOTTOM NAV ──────────────────────────────────────────────── */
 .app-nav {
