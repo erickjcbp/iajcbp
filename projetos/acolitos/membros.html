@@ -56,6 +56,8 @@
     .irmao-chip { font-size:11px; font-weight:700; color:var(--gold); background:rgba(232,185,74,.1); border:1px solid var(--gold-dim); border-radius:12px; padding:3px 10px; }
     .irmao-row { display:flex; align-items:center; gap:10px; padding:7px 8px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; cursor:pointer; }
     .irmao-row input[type=checkbox] { width:18px; height:18px; flex:none; accent-color:var(--gold); }
+    #btn-salvar.pulse { animation:salvarPulse 1.3s ease-in-out infinite; }
+    @keyframes salvarPulse { 0%,100%{ box-shadow:0 0 0 0 var(--red-glow); } 50%{ box-shadow:0 0 14px 2px var(--red-glow); } }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
 </head>
@@ -93,6 +95,8 @@
     <div class="ficha-header" id="ficha-header"></div>
     <div class="ficha-tabs" id="ficha-tabs"></div>
     <div id="ficha-conteudo"></div>
+    <div id="ficha-msg" class="msg"></div>
+    <div id="ficha-dirty" style="display:none;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--warn-text);margin-top:12px;">● Há alterações não salvas — clique em Salvar</div>
     <div class="modal-actions" style="justify-content:space-between;">
       <button class="btn-sm gray" onclick="fecharFicha()">Fechar</button>
       <button class="btn-sm gold" id="btn-salvar" onclick="salvarFicha()">Salvar</button>
@@ -148,6 +152,8 @@ let membroAtual = null;
 let habAtual = {};
 let roleMap = {};
 let fichaEdits = {}; // alterações da ficha (Pessoal/Família/Observações) — persiste entre abas
+let fichaDirty = false; // há alterações não salvas?
+let fichaDisp = null;   // estado da disponibilidade (Set 'dia_horario') enquanto a ficha está aberta
 let vista = localStorage.getItem('membros-vista') || 'cards'; // 'cards' | 'lista'
 
 async function init() {
@@ -242,6 +248,8 @@ async function abrirFicha(membro) {
   membroAtual = membro;
   habAtual = {};
   fichaEdits = {};
+  fichaDirty = false; fichaDisp = null; updateDirtyUI();
+  const fmsg = document.getElementById('ficha-msg'); if (fmsg) { fmsg.className = 'msg'; fmsg.textContent = ''; }
 
   // Header — avatar editável (equipe sobe/edita foto do membro)
   const hdr = document.getElementById('ficha-header');
@@ -295,33 +303,42 @@ function fGroup(label) {
   const l = document.createElement('label'); l.className = 'form-label'; l.textContent = label;
   g.appendChild(l); return g;
 }
+// Valor atual do campo: o que foi editado (fichaEdits) tem prioridade sobre o do registro
+function curVal(col, val) { return (col in fichaEdits) ? fichaEdits[col] : val; }
+function setDirty() { fichaDirty = true; updateDirtyUI(); }
+function updateDirtyUI() {
+  const d = document.getElementById('ficha-dirty'); if (d) d.style.display = fichaDirty ? 'flex' : 'none';
+  const b = document.getElementById('btn-salvar'); if (b) b.classList.toggle('pulse', fichaDirty);
+}
 function editText(label, col, val, type) {
   const g = fGroup(label);
   const i = document.createElement('input'); i.className = 'form-input'; i.type = type || 'text';
-  i.value = val == null ? '' : val;
-  i.oninput = () => { fichaEdits[col] = type === 'date' ? (i.value || null) : (i.value.trim() === '' ? (type ? null : '') : i.value); };
+  const v0 = curVal(col, val); i.value = v0 == null ? '' : v0;
+  i.oninput = () => { fichaEdits[col] = type === 'date' ? (i.value || null) : i.value; setDirty(); };
   g.appendChild(i); return g;
 }
 function editArea(label, col, val) {
   const g = fGroup(label);
-  const t = document.createElement('textarea'); t.className = 'form-textarea'; t.rows = 3; t.value = val || '';
-  t.oninput = () => { fichaEdits[col] = t.value.trim() || null; };
+  const v0 = curVal(col, val);
+  const t = document.createElement('textarea'); t.className = 'form-textarea'; t.rows = 3; t.value = v0 || '';
+  t.oninput = () => { fichaEdits[col] = t.value.trim() || null; setDirty(); };
   g.appendChild(t); return g;
 }
 function editSelect(label, col, val, opts) {
   const g = fGroup(label);
+  const v0 = curVal(col, val);
   const s = document.createElement('select'); s.className = 'form-select';
-  opts.forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; if (String(v) === String(val)) o.selected = true; s.appendChild(o); });
-  s.onchange = () => { fichaEdits[col] = s.value; };
+  opts.forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; if (String(v) === String(v0)) o.selected = true; s.appendChild(o); });
+  s.onchange = () => { fichaEdits[col] = s.value; setDirty(); };
   g.appendChild(s); return g;
 }
 function editBool(label, col, val, onChange) {
   const g = fGroup(label);
   const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;gap:8px;';
-  let cur = !!val;
+  let cur = !!curVal(col, val);
   [['Sim', true], ['Não', false]].forEach(([t, v]) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'form-toggle' + (cur === v ? ' active' : ''); b.textContent = t;
-    b.onclick = () => { cur = v; fichaEdits[col] = v; wrap.querySelectorAll('.form-toggle').forEach(x => x.classList.remove('active')); b.classList.add('active'); if (onChange) onChange(v); };
+    b.onclick = () => { cur = v; fichaEdits[col] = v; wrap.querySelectorAll('.form-toggle').forEach(x => x.classList.remove('active')); b.classList.add('active'); setDirty(); if (onChange) onChange(v); };
     wrap.appendChild(b);
   });
   g.appendChild(wrap); return g;
@@ -379,6 +396,7 @@ async function renderTab(tab) {
         const v = sel.value; habAtual[fn.id] = v;
         card.className = 'hab-card ' + v;
         document.getElementById('hn-' + fn.id).textContent = NIVEL_LABEL[v];
+        setDirty();
       };
       card.append(nome, nivelEl, sel); grid.appendChild(card);
     });
@@ -386,16 +404,19 @@ async function renderTab(tab) {
   }
 
   if (tab === 'Disponibilidade') {
-    const { data: disp } = await sbAdmin
-      .from('acolitos_disponibilidade').select('*').eq('membro_id', m.id);
-    const dispSet = new Set((disp || []).map(d => d.dia + '_' + d.horario));
+    if (fichaDisp === null) {
+      const { data: disp } = await sbAdmin
+        .from('acolitos_disponibilidade').select('*').eq('membro_id', m.id);
+      fichaDisp = new Set((disp || []).map(d => d.dia + '_' + d.horario));
+    }
     HORARIOS.forEach(h => {
+      const key = h.dia + '_' + h.horario;
       const row = document.createElement('div'); row.className = 'toggle-row';
       const lbl = document.createElement('label'); lbl.textContent = h.label;
       const chk = document.createElement('input'); chk.type = 'checkbox';
       chk.className = 'toggle-checkbox';
-      chk.checked = dispSet.has(h.dia + '_' + h.horario);
-      chk.setAttribute('data-dia', h.dia); chk.setAttribute('data-horario', h.horario);
+      chk.checked = fichaDisp.has(key);
+      chk.onchange = () => { if (chk.checked) fichaDisp.add(key); else fichaDisp.delete(key); setDirty(); };
       row.append(lbl, chk); el.appendChild(row);
     });
   }
@@ -742,48 +763,44 @@ async function acGetUsuario(user_id) {
 async function salvarFicha() {
   if (!membroAtual) return;
   const btn = document.getElementById('btn-salvar');
+  const fmsg = document.getElementById('ficha-msg');
   btn.disabled = true; btn.textContent = 'Salvando...';
-
-  // Habilitações
-  if (Object.keys(habAtual).length) {
-    const upserts = Object.entries(habAtual).map(([funcao, proficiencia]) => ({
-      membro_id: membroAtual.id, funcao, proficiencia,
-      updated_at: new Date().toISOString()
-    }));
-    await sbAdmin.from('acolitos_habilitacoes')
-      .upsert(upserts, { onConflict: 'membro_id,funcao' });
-  }
-
-  // Disponibilidade
-  const chks = document.querySelectorAll('.toggle-checkbox[data-dia]');
-  if (chks.length) {
-    await sbAdmin.from('acolitos_disponibilidade').delete().eq('membro_id', membroAtual.id);
-    const selecionados = [...chks].filter(c => c.checked).map(c => ({
-      membro_id: membroAtual.id,
-      dia: c.getAttribute('data-dia'),
-      horario: c.getAttribute('data-horario')
-    }));
-    if (selecionados.length) await sbAdmin.from('acolitos_disponibilidade').insert(selecionados);
-  }
-
-  // Campos editáveis (Pessoal / Família / Observações / Nível) — em fichaEdits
-  if (Object.keys(fichaEdits).length) {
-    const { error } = await sbAdmin.from('acolitos_membros').update(fichaEdits).eq('id', membroAtual.id);
-    if (error) {
-      alert('Erro ao salvar: ' + (error.message || 'tente novamente.'));
-      btn.disabled = false; btn.textContent = 'Salvar'; return;
+  try {
+    // Habilitações (só se a aba foi aberta — habAtual populado)
+    if (Object.keys(habAtual).length) {
+      const upserts = Object.entries(habAtual).map(([funcao, proficiencia]) => ({
+        membro_id: membroAtual.id, funcao, proficiencia, updated_at: new Date().toISOString()
+      }));
+      const { error } = await sbAdmin.from('acolitos_habilitacoes').upsert(upserts, { onConflict: 'membro_id,funcao' });
+      if (error) throw error;
     }
-    Object.assign(membroAtual, fichaEdits); // atualiza cache local
+    // Disponibilidade (só se a aba foi aberta — fichaDisp != null)
+    if (fichaDisp !== null) {
+      await sbAdmin.from('acolitos_disponibilidade').delete().eq('membro_id', membroAtual.id);
+      const sel = [...fichaDisp].map(k => { const i = k.indexOf('_'); return { membro_id: membroAtual.id, dia: k.slice(0, i), horario: k.slice(i + 1) }; });
+      if (sel.length) { const { error } = await sbAdmin.from('acolitos_disponibilidade').insert(sel); if (error) throw error; }
+    }
+    // Campos editáveis (Pessoal / Família / Observações / Nível) — em fichaEdits
+    if (Object.keys(fichaEdits).length) {
+      const { error } = await sbAdmin.from('acolitos_membros').update(fichaEdits).eq('id', membroAtual.id);
+      if (error) throw error;
+      Object.assign(membroAtual, fichaEdits);
+    }
+  } catch (e) {
+    if (fmsg) { fmsg.className = 'msg error'; fmsg.textContent = 'Erro ao salvar: ' + (e.message || 'tente novamente.'); }
+    btn.disabled = false; btn.textContent = 'Salvar'; return;
   }
-
+  // Sucesso — NÃO fecha; zera o "não salvo" e mostra confirmação
+  fichaEdits = {}; fichaDirty = false; updateDirtyUI();
   btn.disabled = false; btn.textContent = 'Salvar';
-  fecharFicha();
-  await loadMembros();
+  if (fmsg) { fmsg.className = 'msg success'; fmsg.textContent = '✓ Edições salvas'; }
+  renderGrid(); // atualiza os cards atrás, sem fechar a janela
 }
 
 function fecharFicha() {
+  if (fichaDirty && !confirm('Há alterações não salvas. Fechar mesmo assim?')) return;
   document.getElementById('modal-ficha').classList.remove('open');
-  membroAtual = null; habAtual = {};
+  membroAtual = null; habAtual = {}; fichaEdits = {}; fichaDirty = false; fichaDisp = null;
 }
 
 init();
