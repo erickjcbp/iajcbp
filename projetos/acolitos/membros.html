@@ -448,7 +448,14 @@ async function renderTab(tab) {
     inpProx.placeholder = 'Ex: Preparando para Turíbulo';
     grpProx.append(lblProx, inpProx);
 
-    el.append(grpNec, grpObs, grpProx);
+    const grpNivel = document.createElement('div'); grpNivel.className = 'form-group';
+    const lblNivel = document.createElement('label'); lblNivel.className = 'form-label'; lblNivel.textContent = 'Nível na Jornada (rank)';
+    const selNivel = document.createElement('select'); selNivel.className = 'form-select'; selNivel.id = 'obs-nivel';
+    const nivelAtual = m.nivel || nivelFromRole(m.role);
+    NIVEIS.forEach(n => { const o = document.createElement('option'); o.value = n.slug; o.textContent = (n.emoji ? n.emoji + ' ' : '') + n.label; if (n.slug === nivelAtual) o.selected = true; selNivel.appendChild(o); });
+    grpNivel.append(lblNivel, selNivel);
+
+    el.append(grpNivel, grpNec, grpObs, grpProx);
   }
 }
 
@@ -490,8 +497,10 @@ async function salvarFicha() {
   const necEl  = document.getElementById('obs-nec');
   const obsEl  = document.getElementById('obs-geral');
   const proxEl = document.getElementById('obs-prox');
-  if (necEl || obsEl || proxEl) {
+  const nivelEl = document.getElementById('obs-nivel');
+  if (necEl || obsEl || proxEl || nivelEl) {
     const upd = {};
+    if (nivelEl) upd.nivel                 = nivelEl.value;
     if (necEl)  upd.necessidades_especiais = necEl.value.trim() || null;
     if (obsEl)  upd.observacoes            = obsEl.value.trim() || null;
     if (proxEl) upd.proxima_etapa          = proxEl.value.trim() || null;

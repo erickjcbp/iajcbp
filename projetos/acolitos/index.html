@@ -75,12 +75,7 @@ const CRM_DESC = {
   disponivel_escala:'A equipe está registrando sua disponibilidade para as escalas.',
   integrado:'Você já está integrado! Bem-vindo à pastoral.'
 };
-const JORNADA = [
-  {role:'aspirante',label:'Aspirante',icon:'✦'},
-  {role:'coroinha',label:'Coroinha',icon:'♛'},
-  {role:'acolito',label:'Acólito',icon:'⊕'},
-  {role:'cerimonario',label:'Cerimoniário',icon:'✵'},
-];
+// JORNADA/NÍVEIS vêm do shared.js (NIVEIS, nivelInfo, nivelIndex, nivelFromRole)
 const ROLE_LABEL = { cerimonario:'Cerimoniário', acolito:'Acólito', coroinha:'Coroinha', aspirante:'Aspirante', membro_equipe:'Equipe', subadmin:'Sub-Admin', coord_admin:'Coordenador' };
 const FUNCAO_LABEL = { apoio:'Apoio', cruz:'Cruz', vela:'Vela', sineta:'Sineta', sinao:'Sinão', altar:'Altar', turibulo:'Turíbulo', naveta:'Naveta', missal:'Missal', cred_altar:'Cerimoniário Altar', cred_credencia:'Cerimoniário Credência', mitra:'Mitra', baculo:'Báculo' };
 const TIPO_LABEL = { missa_comum:'Missa', solenidade:'Solenidade', casamento:'Casamento', batizado:'Batizado', crisma:'Crisma', ordenacao:'Ordenação' };
@@ -138,33 +133,33 @@ async function renderStatusCrm(ctx) {
 }
 
 /* ── LEVEL-UP (celebração ao avançar de nível) ──────────────── */
-async function checkLevelUp(m, role) {
-  const seenIdx = m.nivel_visto ? JORNADA.findIndex(j => j.role === m.nivel_visto) : -1;
-  const curIdx = JORNADA.findIndex(j => j.role === role);
+async function checkLevelUp(m, nivel) {
+  const seenIdx = m.nivel_visto ? nivelIndex(m.nivel_visto) : -1;
+  const curIdx = nivelIndex(nivel);
   if (curIdx > -1 && curIdx > seenIdx) {
-    await sb.from('acolitos_membros').update({ nivel_visto: role }).eq('id', m.id);
-    m.nivel_visto = role;
-    showLevelUp(role);
+    await sb.from('acolitos_membros').update({ nivel_visto: nivel }).eq('id', m.id);
+    m.nivel_visto = nivel;
+    showLevelUp(nivel);
   }
 }
 
-function showLevelUp(role) {
-  const cur = JORNADA.find(j => j.role === role) || { label: ROLE_LABEL[role] || role };
+function showLevelUp(nivel) {
+  const info = nivelInfo(nivel);
   const ov = document.createElement('div'); ov.className = 'levelup-overlay';
   const card = document.createElement('div'); card.className = 'levelup-card';
   const rays = document.createElement('div'); rays.className = 'levelup-rays';
   const burst = document.createElement('div'); burst.className = 'levelup-burst';
   const patch = document.createElement('div'); patch.className = 'levelup-patch';
-  patch.innerHTML = getPatchSvg(getRoleForPatch(role), 132); // SVG hardcoded — seguro
+  patch.appendChild(buildRankEmblem(nivel, 132));
   const tag = document.createElement('div'); tag.className = 'levelup-tag'; tag.textContent = 'NÍVEL ALCANÇADO';
   const cong = document.createElement('div'); cong.className = 'levelup-congrats'; cong.textContent = 'Parabéns!';
   const txt = document.createElement('div'); txt.className = 'levelup-text'; txt.textContent = 'Você avançou na sua jornada';
-  const rank = document.createElement('div'); rank.className = 'levelup-rank'; rank.textContent = cur.label;
+  const rank = document.createElement('div'); rank.className = 'levelup-rank'; rank.textContent = info.label;
   const btn = document.createElement('button'); btn.className = 'levelup-btn'; btn.textContent = 'Continuar';
   btn.onclick = () => { ov.classList.add('closing'); setTimeout(() => ov.remove(), 300); };
   const conf = document.createElement('div'); conf.className = 'levelup-confetti';
   const cores = ['var(--red-soft)', 'var(--gold)', 'var(--gold-light)', '#fff'];
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 22; i++) {
     const c = document.createElement('i');
     c.style.cssText = `left:${Math.random()*100}%;animation-delay:${(Math.random()*0.7).toFixed(2)}s;background:${cores[i%4]};`;
     conf.appendChild(c);
@@ -174,44 +169,92 @@ function showLevelUp(role) {
   document.body.appendChild(ov);
 }
 
-/* ── RANK PROGRESS (nível atual animado + jornada) ───────────── */
-function renderRankProgress(main, role) {
-  const idx = Math.max(0, JORNADA.findIndex(j => j.role === role));
-  const cur = JORNADA[idx], next = JORNADA[idx + 1];
-  const pct = Math.round(((idx + 1) / JORNADA.length) * 100);
+/* ── RANK PROGRESS (nível atual animado + jornada de 10 níveis) ─ */
+const _JOR_ICON = { aspirante:'✦', coroinha:'♛', acolito:'⊕', cerimonario:'✵' };
+function renderRankProgress(main, nivel) {
+  const idx = Math.max(0, nivelIndex(nivel));
+  const cur = NIVEIS[idx], next = NIVEIS[idx + 1];
+  const pct = Math.round(((idx + 1) / NIVEIS.length) * 100);
 
   const card = document.createElement('div'); card.className = 'rank-card';
   const patch = document.createElement('div'); patch.className = 'rank-patch';
-  patch.innerHTML = getPatchSvg(getRoleForPatch(role), 78); // SVG hardcoded — seguro
+  patch.appendChild(buildRankEmblem(nivel, 82));
   const name = document.createElement('div'); name.className = 'rank-name'; name.textContent = cur.label;
   const nx = document.createElement('div'); nx.className = 'rank-next';
-  nx.textContent = next ? 'Próximo nível: ' + next.label : 'Nível máximo alcançado';
+  nx.textContent = next ? 'Próximo nível: ' + next.label : 'Nível máximo · Cerimoniário Mor';
   const bar = document.createElement('div'); bar.className = 'rank-bar';
   const fill = document.createElement('div'); fill.className = 'rank-fill'; fill.style.setProperty('--pct', pct + '%');
   bar.appendChild(fill);
   card.append(patch, name, nx, bar);
   main.appendChild(card);
 
-  // Jornada (hexágonos) logo abaixo
+  // Jornada (hexágonos) logo abaixo — 10 níveis, scroll horizontal
   const track = document.createElement('div'); track.className = 'jornada-track';
-  JORNADA.forEach((j, i) => {
+  NIVEIS.forEach((j, i) => {
     const step = document.createElement('div'); step.className = 'jornada-step';
     const dot = document.createElement('div'); dot.className = 'jornada-dot' + (i < idx ? ' done' : i === idx ? ' current' : '');
-    dot.textContent = i <= idx ? j.icon : '○';
+    dot.textContent = i <= idx ? (_JOR_ICON[j.base] || String(i + 1)) : '○';
     const lbl = document.createElement('div'); lbl.className = 'jornada-label' + (i === idx ? ' current' : ''); lbl.textContent = j.label;
     step.append(dot, lbl); track.appendChild(step);
-    if (i < JORNADA.length - 1) { const line = document.createElement('div'); line.className = 'jornada-line' + (i < idx ? ' done' : ''); track.appendChild(line); }
+    if (i < NIVEIS.length - 1) { const line = document.createElement('div'); line.className = 'jornada-line' + (i < idx ? ' done' : ''); track.appendChild(line); }
   });
   main.appendChild(track);
+
+  const verBtn = document.createElement('button'); verBtn.className = 'btn-sm gold';
+  verBtn.style.cssText = 'margin:2px auto 16px;display:block;'; verBtn.textContent = 'Ver minha jornada ▸';
+  verBtn.onclick = () => showJornada(nivel);
+  main.appendChild(verBtn);
+}
+
+/* ── JORNADA DETALHADA (modal clicável) ──────────────────────── */
+function showJornada(nivelAtual) {
+  const idxAtual = nivelIndex(nivelAtual);
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.maxHeight = '92vh';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Sua Jornada';
+  const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-8px 0 14px;font-weight:600;';
+  sub.textContent = 'Toque em cada nível para ver os detalhes.';
+  modal.append(handle, tt, sub);
+
+  NIVEIS.forEach((n, i) => {
+    const status = i < idxAtual ? 'done' : i === idxAtual ? 'atual' : 'futuro';
+    const row = document.createElement('div'); row.className = 'jor-row ' + status;
+    const head = document.createElement('div'); head.className = 'jor-head';
+    const em = document.createElement('span'); em.className = 'jor-emoji'; em.textContent = n.emoji || '•';
+    const nm = document.createElement('div'); nm.className = 'jor-nome'; nm.textContent = n.label;
+    const st = document.createElement('span'); st.className = 'jor-status ' + status;
+    st.textContent = status === 'done' ? '✓' : status === 'atual' ? 'VOCÊ ESTÁ AQUI' : '🔒';
+    head.append(em, nm, st);
+    const det = document.createElement('div'); det.className = 'jor-det' + (status === 'atual' ? ' open' : '');
+    const intro = document.createElement('p'); intro.className = 'jor-intro'; intro.textContent = n.intro;
+    det.appendChild(intro);
+    [['Missão', n.missao], ['Desafio', n.desafio], [i === NIVEIS.length - 1 ? 'Conquista final' : 'Próximo objetivo', n.proximo]].forEach(([k, v]) => {
+      if (!v) return;
+      const d = document.createElement('div'); d.className = 'jor-kv';
+      const ks = document.createElement('span'); ks.className = 'jor-k'; ks.textContent = k;
+      const vs = document.createElement('span'); vs.className = 'jor-v'; vs.textContent = v;
+      d.append(ks, vs); det.appendChild(d);
+    });
+    head.onclick = () => det.classList.toggle('open');
+    row.append(head, det); modal.appendChild(row);
+  });
+
+  const close = document.createElement('button'); close.className = 'btn gold'; close.style.marginTop = '16px';
+  close.textContent = 'Fechar'; close.onclick = () => ov.remove();
+  modal.appendChild(close);
+  ov.appendChild(modal); document.body.appendChild(ov);
 }
 
 /* ── DASHBOARD MEMBRO ────────────────────────────────────────── */
 async function renderDashboardMembro(ctx) {
   const main = document.getElementById('main'); main.textContent = '';
   const m = ctx.membro; const role = ctx.membership.role;
+  const nivel = (m && m.nivel) || nivelFromRole(role);
 
-  // Level-up: celebra se o admin subiu o nível desde a última visita
-  if (m) await checkLevelUp(m, role);
+  // Level-up: celebra se o nível subiu desde a última visita
+  if (m) await checkLevelUp(m, nivel);
 
   // Saudação + avatar editável (membro sobe a própria foto)
   const greet = document.createElement('div'); greet.className = 'greet-section';
@@ -225,7 +268,7 @@ async function renderDashboardMembro(ctx) {
   greet.append(nomeEl, subEl); main.appendChild(greet);
 
   // Destaque do nível atual (animado) + jornada
-  renderRankProgress(main, role);
+  renderRankProgress(main, nivel);
 
   // KPIs de frequência
   if (m) {

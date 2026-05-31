@@ -258,6 +258,79 @@ function getRoleForPatch(role) {
   return 'aspirante';
 }
 
+// ── JORNADA: 10 NÍVEIS (rank) ────────────────────────────────
+// base = forma do patch; int = intensidade da animação (0..9); pips = divisões.
+const NIVEIS = [
+  { slug:'aspirante', label:'Aspirante', base:'aspirante', int:0, pips:0, emoji:'🌱',
+    intro:'Você acaba de ingressar na jornada. Ainda está conhecendo o caminho, aprendendo os primeiros ensinamentos e descobrindo o significado do serviço ao altar.',
+    missao:'Aprender.', desafio:'Demonstrar disciplina, interesse e espírito de serviço.', proximo:'Tornar-se Coroinha.' },
+  { slug:'coroinha', label:'Coroinha', base:'coroinha', int:1, pips:0, emoji:'🕯️',
+    intro:'Você já faz parte da equipe de servidores. Agora não é apenas um observador: participa ativamente da celebração e ajuda a tornar a liturgia mais bela.',
+    missao:'Servir.', desafio:'Aprender as funções básicas e crescer na responsabilidade.', proximo:'Ingressar na formação de Acólito.' },
+  { slug:'acolito_aspirante', label:'Acólito Aspirante', base:'acolito', int:2, pips:1, emoji:'⚜️',
+    intro:'Você iniciou uma nova etapa. O altar agora está mais próximo e suas responsabilidades aumentam. É o momento de aprofundar seus conhecimentos e aperfeiçoar seu serviço.',
+    missao:'Crescer.', desafio:'Dominar novas funções e amadurecer liturgicamente.', proximo:'Tornar-se um Guardião do Altar.' },
+  { slug:'acolito_guardiao', label:'Acólito Guardião', base:'acolito', int:3, pips:2, emoji:'🛡️',
+    intro:'Você conquistou a confiança da pastoral. Seu compromisso já é reconhecido e seu exemplo começa a influenciar os mais novos.',
+    missao:'Proteger.', desafio:'Zelar pelo altar, pela organização e pelo bom exemplo.', proximo:'Alcançar o posto de Sentinela.' },
+  { slug:'acolito_sentinela', label:'Acólito Sentinela', base:'acolito', int:4, pips:3, emoji:'👁️',
+    intro:'Você está entre os acólitos mais experientes. Sua atenção aos detalhes, sua maturidade e sua dedicação fazem de você uma referência para os demais.',
+    missao:'Vigiar.', desafio:'Perceber o que os outros não percebem e ajudar a manter a excelência do serviço.', proximo:'Ser chamado para a formação de Cerimoniário.' },
+  { slug:'aspirante_cerimoniario', label:'Aspirante a Cerimoniário', base:'acolito', int:5, pips:0, emoji:'📖',
+    intro:'Você recebeu um chamado especial. Agora começa a aprender não apenas a servir, mas também a conduzir e organizar.',
+    missao:'Preparar-se.', desafio:'Conhecer os bastidores da liturgia e desenvolver liderança.', proximo:'Concluir a formação e tornar-se Cerimoniário.' },
+  { slug:'cerimoniario_aspirante', label:'Cerimoniário Aspirante', base:'cerimonario', int:6, pips:1, emoji:'🎖️',
+    intro:'Você acaba de ingressar na Ordem dos Cerimoniários. Já possui formação básica e começa a colocar em prática tudo aquilo que aprendeu.',
+    missao:'Aperfeiçoar-se.', desafio:'Transformar conhecimento em experiência.', proximo:'Tornar-se um Cerimoniário Guardião.' },
+  { slug:'cerimoniario_guardiao', label:'Cerimoniário Guardião', base:'cerimonario', int:7, pips:2, emoji:'⚔️',
+    intro:'Você domina todas as funções da pastoral. Pode assumir qualquer posição e auxiliar em qualquer necessidade litúrgica.',
+    missao:'Garantir.', desafio:'Assegurar que cada celebração aconteça com ordem, reverência e beleza.', proximo:'Tornar-se uma referência para toda a pastoral.' },
+  { slug:'cerimoniario_magistral', label:'Cerimoniário Magistral', base:'cerimonario', int:8, pips:3, emoji:'⚜️',
+    intro:'Você não é apenas experiente — você se tornou uma referência. Seu conhecimento, postura e dedicação inspiram os demais servidores.',
+    missao:'Ensinar.', desafio:'Formar novos líderes e preservar a excelência litúrgica.', proximo:'Alcançar o mais alto posto da pastoral.' },
+  { slug:'cerimoniario_mor', label:'Cerimoniário Mor', base:'cerimonario', int:9, pips:4, emoji:'👑',
+    intro:'Este é o ápice da jornada. Você se tornou um dos principais guardiões da tradição, da organização e da beleza da liturgia.',
+    missao:'Liderar.', desafio:'Garantir que o legado recebido seja transmitido às próximas gerações.', proximo:'🏆 Título conquistado: Guardião Supremo das Celebrações.',
+    titulo:'Guardião Supremo das Celebrações' },
+];
+function nivelInfo(slug) { return NIVEIS.find(n => n.slug === slug) || NIVEIS[0]; }
+function nivelIndex(slug) { return NIVEIS.findIndex(n => n.slug === slug); }
+function nivelFromRole(role) {
+  if (role === 'cerimonario') return 'cerimoniario_aspirante';
+  if (role === 'acolito') return 'acolito_aspirante';
+  if (role === 'coroinha') return 'coroinha';
+  return 'aspirante';
+}
+
+// Emblema do rank com animação que intensifica por nível (patch + raios + pips)
+function buildRankEmblem(slug, size) {
+  const info = nivelInfo(slug); size = size || 80;
+  const glow = 6 + info.int * 3, glow2 = 12 + info.int * 5;
+  const spd = (2.5 - info.int * 0.14).toFixed(2);
+  const sc = (1.05 + info.int * 0.007).toFixed(3);
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:inline-flex;flex-direction:column;align-items:center;gap:9px;';
+  const core = document.createElement('div');
+  core.style.cssText = 'position:relative;display:inline-flex;align-items:center;justify-content:center;line-height:0;';
+  if (info.int >= 6) {
+    const rays = document.createElement('div'); rays.className = 'emblem-rays';
+    rays.style.cssText = `position:absolute;top:50%;left:50%;width:${Math.round(size*1.8)}px;height:${Math.round(size*1.8)}px;transform:translate(-50%,-50%);z-index:0;`;
+    core.appendChild(rays);
+  }
+  const pdiv = document.createElement('div');
+  pdiv.style.cssText = `position:relative;z-index:1;line-height:0;--glow:${glow}px;--glow2:${glow2}px;--spd:${spd}s;--sc:${sc};animation:emblemPulse var(--spd) ease-in-out infinite;`;
+  pdiv.innerHTML = getPatchSvg(info.base, size); // SVG hardcoded — seguro
+  core.appendChild(pdiv);
+  wrap.appendChild(core);
+  if (info.pips > 0) {
+    const pr = document.createElement('div'); pr.style.cssText = 'display:flex;gap:5px;';
+    for (let i = 0; i < info.pips; i++) { const p = document.createElement('span'); p.className = 'emblem-pip'; pr.appendChild(p); }
+    wrap.appendChild(pr);
+  }
+  return wrap;
+}
+
 // Retorna HTMLElement (div container) com foto + patch sobreposto.
 // opts (opcional): { editable, membro, onUpload } — quando editable, mostra um
 // badge de câmera no canto inferior esquerdo que abre o seletor de arquivo e
