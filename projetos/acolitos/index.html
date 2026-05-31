@@ -137,6 +137,43 @@ async function renderStatusCrm(ctx) {
   main.appendChild(info);
 }
 
+/* ── LEVEL-UP (celebração ao avançar de nível) ──────────────── */
+async function checkLevelUp(m, role) {
+  const seenIdx = m.nivel_visto ? JORNADA.findIndex(j => j.role === m.nivel_visto) : -1;
+  const curIdx = JORNADA.findIndex(j => j.role === role);
+  if (curIdx > -1 && curIdx > seenIdx) {
+    await sb.from('acolitos_membros').update({ nivel_visto: role }).eq('id', m.id);
+    m.nivel_visto = role;
+    showLevelUp(role);
+  }
+}
+
+function showLevelUp(role) {
+  const cur = JORNADA.find(j => j.role === role) || { label: ROLE_LABEL[role] || role };
+  const ov = document.createElement('div'); ov.className = 'levelup-overlay';
+  const card = document.createElement('div'); card.className = 'levelup-card';
+  const rays = document.createElement('div'); rays.className = 'levelup-rays';
+  const burst = document.createElement('div'); burst.className = 'levelup-burst';
+  const patch = document.createElement('div'); patch.className = 'levelup-patch';
+  patch.innerHTML = getPatchSvg(getRoleForPatch(role), 132); // SVG hardcoded — seguro
+  const tag = document.createElement('div'); tag.className = 'levelup-tag'; tag.textContent = 'NÍVEL ALCANÇADO';
+  const cong = document.createElement('div'); cong.className = 'levelup-congrats'; cong.textContent = 'Parabéns!';
+  const txt = document.createElement('div'); txt.className = 'levelup-text'; txt.textContent = 'Você avançou na sua jornada';
+  const rank = document.createElement('div'); rank.className = 'levelup-rank'; rank.textContent = cur.label;
+  const btn = document.createElement('button'); btn.className = 'levelup-btn'; btn.textContent = 'Continuar';
+  btn.onclick = () => { ov.classList.add('closing'); setTimeout(() => ov.remove(), 300); };
+  const conf = document.createElement('div'); conf.className = 'levelup-confetti';
+  const cores = ['var(--red-soft)', 'var(--gold)', 'var(--gold-light)', '#fff'];
+  for (let i = 0; i < 20; i++) {
+    const c = document.createElement('i');
+    c.style.cssText = `left:${Math.random()*100}%;animation-delay:${(Math.random()*0.7).toFixed(2)}s;background:${cores[i%4]};`;
+    conf.appendChild(c);
+  }
+  card.append(rays, burst, patch, tag, cong, txt, rank, btn);
+  ov.append(conf, card);
+  document.body.appendChild(ov);
+}
+
 /* ── RANK PROGRESS (nível atual animado + jornada) ───────────── */
 function renderRankProgress(main, role) {
   const idx = Math.max(0, JORNADA.findIndex(j => j.role === role));
@@ -172,6 +209,9 @@ function renderRankProgress(main, role) {
 async function renderDashboardMembro(ctx) {
   const main = document.getElementById('main'); main.textContent = '';
   const m = ctx.membro; const role = ctx.membership.role;
+
+  // Level-up: celebra se o admin subiu o nível desde a última visita
+  if (m) await checkLevelUp(m, role);
 
   // Saudação + avatar editável (membro sobe a própria foto)
   const greet = document.createElement('div'); greet.className = 'greet-section';
