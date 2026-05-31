@@ -364,3 +364,78 @@ async function uploadAvatar(file, membro) {
   membro.foto_url = url; // mantém cache local em sincronia
   return url;
 }
+
+// ── PATCH POR HABILITAÇÃO ────────────────────────────────────
+// Deriva o nível (para o patch do avatar) a partir do mapa de habilitações
+// { funcao: proficiencia } quando o role real não está disponível.
+function patchRoleFromHabs(habs) {
+  habs = habs || {};
+  const apt = f => ['apto','experiente','referencia'].includes(habs[f]);
+  if (apt('cred_credencia') || apt('cred_altar') || apt('missal')) return 'cerimonario';
+  if (apt('altar') || apt('turibulo') || apt('naveta')) return 'acolito';
+  if (apt('cruz') || apt('vela') || apt('sineta') || apt('sinao')) return 'coroinha';
+  return 'aspirante';
+}
+
+// ── GRÁFICO DE PRESENÇA (6 meses) ────────────────────────────
+// Recebe linhas de acolitos_escalas com acolitos_celebracoes(data) embutido.
+// Retorna um elemento DOM (barras servidas vs faltas + legenda), estilos inline
+// para ser portátil entre páginas. Usado no dashboard e na ficha do membro.
+const _MES_ABREV = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+function buildPresencaChart(escalas) {
+  const buckets = {};
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(); d.setMonth(d.getMonth() - i);
+    const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    buckets[k] = { serv: 0, falt: 0, mes: _MES_ABREV[d.getMonth()] };
+  }
+  (escalas || []).forEach(e => {
+    const data = e.acolitos_celebracoes?.data; if (!data) return;
+    const k = data.slice(0, 7); if (!buckets[k]) return;
+    if (['presente','atrasado'].includes(e.status)) buckets[k].serv++;
+    else if (['ausente','ausente_justificado'].includes(e.status)) buckets[k].falt++;
+  });
+  const arr = Object.values(buckets);
+  const max = Math.max(1, ...arr.map(b => Math.max(b.serv, b.falt)));
+  const total = arr.reduce((a, b) => a + b.serv + b.falt, 0);
+
+  const box = document.createElement('div');
+  if (!total) {
+    box.style.cssText = 'color:var(--text-muted);font-size:12px;font-style:italic;text-align:center;padding:12px 0;';
+    box.textContent = 'Sem chamadas registradas ainda.';
+    return box;
+  }
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:flex-end;gap:6px;height:104px;';
+  arr.forEach(b => {
+    const g = document.createElement('div');
+    g.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;';
+    const pair = document.createElement('div');
+    pair.style.cssText = 'display:flex;gap:3px;align-items:flex-end;height:80px;';
+    const s = document.createElement('div');
+    s.style.cssText = 'width:11px;border-radius:2px 2px 0 0;min-height:2px;background:var(--gold);height:' + (b.serv / max * 80) + 'px;';
+    s.title = b.serv + ' servidas';
+    const f = document.createElement('div');
+    f.style.cssText = 'width:11px;border-radius:2px 2px 0 0;min-height:2px;background:var(--wine);height:' + (b.falt / max * 80) + 'px;';
+    f.title = b.falt + ' faltas';
+    pair.append(s, f);
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:9px;color:var(--text-muted);font-family:Cinzel,serif;margin-top:5px;text-transform:uppercase;';
+    lbl.textContent = b.mes;
+    g.append(pair, lbl); row.appendChild(g);
+  });
+  box.appendChild(row);
+
+  const leg = document.createElement('div');
+  leg.style.cssText = 'display:flex;gap:16px;justify-content:center;margin-top:12px;';
+  [['var(--gold)','Servidas'], ['var(--wine)','Faltas']].forEach(([col, txt]) => {
+    const it = document.createElement('div');
+    it.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-muted);';
+    const dot = document.createElement('span');
+    dot.style.cssText = 'width:10px;height:10px;border-radius:2px;background:' + col + ';';
+    const sp = document.createElement('span'); sp.textContent = txt;
+    it.append(dot, sp); leg.appendChild(it);
+  });
+  box.appendChild(leg);
+  return box;
+}

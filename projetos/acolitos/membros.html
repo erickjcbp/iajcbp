@@ -37,13 +37,6 @@
     .ficha-header { text-align:center; padding-bottom:16px; margin-bottom:16px; border-bottom:1px solid var(--border-wine); }
     .ficha-nome { font-family:'Cinzel',serif; font-size:16px; font-weight:700; margin-top:10px; color:var(--text); }
     .ficha-sub  { font-size:12px; color:var(--text-muted); margin-top:4px; }
-    .mc-row { display:flex; align-items:flex-end; gap:6px; height:104px; margin-top:10px; }
-    .mc-group { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
-    .mc-pair { display:flex; gap:3px; align-items:flex-end; height:80px; }
-    .mc-bar { width:10px; border-radius:2px 2px 0 0; min-height:2px; }
-    .mc-bar.serv { background:var(--gold); }
-    .mc-bar.falt { background:var(--wine); }
-    .mc-lbl { font-size:9px; color:var(--text-muted); font-family:'Cinzel',serif; margin-top:5px; text-transform:uppercase; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
 </head>
@@ -124,7 +117,6 @@ const JORNADA = [
   {role:'acolito',label:'Acólito',icon:'⊕'},
   {role:'cerimonario',label:'Cerimoniário',icon:'✵'},
 ];
-const MES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 
 let ctx = null;
 let todos = [];
@@ -461,25 +453,10 @@ async function renderTab(tab) {
 }
 
 function renderMesChart(el, escalas) {
-  const buckets = {};
-  for (let i=5;i>=0;i--){const d=new Date();d.setMonth(d.getMonth()-i);const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');buckets[k]={serv:0,falt:0,mes:MES[d.getMonth()]};}
-  escalas.forEach(e=>{const data=e.acolitos_celebracoes?.data;if(!data)return;const k=data.slice(0,7);if(!buckets[k])return;if(['presente','atrasado'].includes(e.status))buckets[k].serv++;else if(['ausente','ausente_justificado'].includes(e.status))buckets[k].falt++;});
-  const arr=Object.values(buckets); const max=Math.max(1,...arr.map(b=>Math.max(b.serv,b.falt)));
-  const total=arr.reduce((a,b)=>a+b.serv+b.falt,0);
   const card=document.createElement('div'); card.style.marginTop='18px';
   const t=document.createElement('div'); t.className='section-card-title'; t.textContent='Presença — últimos 6 meses'; card.appendChild(t);
-  if(!total){const em=document.createElement('div');em.style.cssText='font-size:12px;color:var(--text-muted);font-style:italic;';em.textContent='Sem chamadas registradas ainda.';card.appendChild(em);el.appendChild(card);return;}
-  const row=document.createElement('div'); row.className='mc-row';
-  arr.forEach(b=>{
-    const g=document.createElement('div');g.className='mc-group';
-    const pair=document.createElement('div');pair.className='mc-pair';
-    const s=document.createElement('div');s.className='mc-bar serv';s.style.height=(b.serv/max*80)+'px';s.title=b.serv+' servidas';
-    const f=document.createElement('div');f.className='mc-bar falt';f.style.height=(b.falt/max*80)+'px';f.title=b.falt+' faltas';
-    pair.append(s,f);
-    const lbl=document.createElement('div');lbl.className='mc-lbl';lbl.textContent=b.mes;
-    g.append(pair,lbl);row.appendChild(g);
-  });
-  card.appendChild(row); el.appendChild(card);
+  card.appendChild(buildPresencaChart(escalas)); // helper compartilhado (shared.js)
+  el.appendChild(card);
 }
 
 async function salvarFicha() {

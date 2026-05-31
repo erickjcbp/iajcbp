@@ -30,16 +30,6 @@
     /* Chart cards */
     .chart-card { background:var(--surface); border:1px solid var(--border-wine); border-radius:4px; padding:16px; margin-bottom:14px; }
     .chart-title { font-family:'Cinzel',serif; font-size:11px; font-weight:600; color:var(--gold); letter-spacing:1px; text-transform:uppercase; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid var(--border); }
-    /* Bar chart (presença/mês) */
-    .bars-row { display:flex; align-items:flex-end; gap:6px; height:120px; }
-    .bar-group { flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end; }
-    .bar-pair { display:flex; gap:3px; align-items:flex-end; height:96px; }
-    .bar { width:11px; border-radius:2px 2px 0 0; min-height:2px; transition:height .4s; }
-    .bar.serv { background:var(--gold); }
-    .bar.falt { background:var(--wine); }
-    .bar-lbl { font-size:9px; color:var(--text-muted); font-family:'Cinzel',serif; margin-top:6px; text-transform:uppercase; }
-    .legend { display:flex; gap:16px; justify-content:center; margin-top:12px; }
-    .legend-item { display:flex; align-items:center; gap:6px; font-size:10px; color:var(--text-muted); }
     .legend-dot { width:10px; height:10px; border-radius:2px; }
     /* Níveis (barras horizontais) */
     .lvl-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
@@ -247,7 +237,7 @@ async function renderDashboardEquipe(ctx) {
     sb.from('acolitos_escalas').select('status, acolitos_celebracoes!inner(data)').gte('acolitos_celebracoes.data', seisStr),
     sb.from('acolitos_membros').select('id,user_id').eq('status','ativo'),
     moduloId ? sb.from('pastoral_members').select('user_id,role').eq('module_id',moduloId) : Promise.resolve({data:[]}),
-    sb.from('acolitos_celebracoes').select('id,comunidade, acolitos_escalas(id)').gte('data',hoje).lte('data', new Date(Date.now()+28*86400000).toISOString().slice(0,10)),
+    sb.from('acolitos_celebracoes').select('id,data,horario,comunidade,tipo, acolitos_escalas(id)').gte('data',hoje).lte('data', new Date(Date.now()+28*86400000).toISOString().slice(0,10)).order('data').order('horario'),
   ]);
 
   const taxas = Object.values(freqMap||{}).map(f=>f.taxa).filter(t=>t!=null);
@@ -281,8 +271,8 @@ async function renderDashboardEquipe(ctx) {
   // Painel de alertas
   renderAlertas(main, freqMap||{});
 
-  // Agenda
-  await renderAgenda(main, 'Próximas Celebrações', 6, true);
+  // Agenda — reaproveita as celebrações já buscadas para a cobertura (sem nova query)
+  await renderAgenda(main, 'Próximas Celebrações', 6, true, cobR.data || []);
 
   // Acesso rápido
   const qh = document.createElement('div'); qh.className='section-head'; qh.textContent='Acesso Rápido'; main.appendChild(qh);
@@ -303,43 +293,9 @@ async function renderDashboardEquipe(ctx) {
 
 /* ── GRÁFICO: presença por mês ───────────────────────────────── */
 function renderGraficoPresenca(main, escalas) {
-  const buckets = {}; // 'YYYY-MM' → {serv,falt}
-  for (let i=5;i>=0;i--) { const d=new Date(); d.setMonth(d.getMonth()-i); const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); buckets[k]={serv:0,falt:0,mes:MES[d.getMonth()]}; }
-  escalas.forEach(e => {
-    const data = e.acolitos_celebracoes?.data; if (!data) return;
-    const k = data.slice(0,7);
-    if (!buckets[k]) return;
-    if (['presente','atrasado'].includes(e.status)) buckets[k].serv++;
-    else if (['ausente','ausente_justificado'].includes(e.status)) buckets[k].falt++;
-  });
-  const arr = Object.values(buckets);
-  const max = Math.max(1, ...arr.map(b=>Math.max(b.serv,b.falt)));
-
   const card = document.createElement('div'); card.className='chart-card';
   const t = document.createElement('div'); t.className='chart-title'; t.textContent='Presença — últimos 6 meses'; card.appendChild(t);
-  const total = arr.reduce((a,b)=>a+b.serv+b.falt,0);
-  if (!total) {
-    const em=document.createElement('div'); em.style.cssText='color:var(--text-muted);font-size:12px;font-style:italic;text-align:center;padding:12px 0;'; em.textContent='Sem chamadas registradas ainda.'; card.appendChild(em);
-  } else {
-    const row=document.createElement('div'); row.className='bars-row';
-    arr.forEach(b => {
-      const g=document.createElement('div'); g.className='bar-group';
-      const pair=document.createElement('div'); pair.className='bar-pair';
-      const s=document.createElement('div'); s.className='bar serv'; s.style.height=(b.serv/max*96)+'px'; s.title=b.serv+' servidas';
-      const f=document.createElement('div'); f.className='bar falt'; f.style.height=(b.falt/max*96)+'px'; f.title=b.falt+' faltas';
-      pair.append(s,f);
-      const lbl=document.createElement('div'); lbl.className='bar-lbl'; lbl.textContent=b.mes;
-      g.append(pair,lbl); row.appendChild(g);
-    });
-    card.appendChild(row);
-    const leg=document.createElement('div'); leg.className='legend';
-    [['var(--gold)','Servidas'],['var(--wine)','Faltas']].forEach(([col,txt])=>{
-      const it=document.createElement('div'); it.className='legend-item';
-      const dot=document.createElement('span'); dot.className='legend-dot'; dot.style.background=col;
-      const sp=document.createElement('span'); sp.textContent=txt; it.append(dot,sp); leg.appendChild(it);
-    });
-    card.appendChild(leg);
-  }
+  card.appendChild(buildPresencaChart(escalas)); // helper compartilhado (shared.js)
   main.appendChild(card);
 }
 
@@ -449,11 +405,17 @@ function renderAlertas(main, freqMap) {
 }
 
 /* ── AGENDA (compartilhada) ──────────────────────────────────── */
-async function renderAgenda(main, titulo, limit, comCobertura) {
+async function renderAgenda(main, titulo, limit, comCobertura, prefetched) {
   const head=document.createElement('div'); head.className='section-head'; head.textContent=titulo; main.appendChild(head);
-  const sel = comCobertura ? 'id,data,horario,comunidade,tipo, acolitos_escalas(id)' : 'id,data,horario,comunidade,tipo';
-  const { data: celebs } = await sb.from('acolitos_celebracoes').select(sel)
-    .gte('data', hojeStr()).order('data').order('horario').limit(limit);
+  let celebs;
+  if (prefetched) {
+    celebs = prefetched.slice(0, limit);
+  } else {
+    const sel = comCobertura ? 'id,data,horario,comunidade,tipo, acolitos_escalas(id)' : 'id,data,horario,comunidade,tipo';
+    const { data } = await sb.from('acolitos_celebracoes').select(sel)
+      .gte('data', hojeStr()).order('data').order('horario').limit(limit);
+    celebs = data;
+  }
   if (!celebs?.length) {
     const em=document.createElement('span'); em.className='empty'; em.style.padding='16px 0'; em.textContent='Nenhuma celebração agendada.'; main.appendChild(em); return;
   }

@@ -188,7 +188,7 @@ async function abrirChamada(celeb) {
       const m=e.acolitos_membros;
       const block=document.createElement('div');
       const item=document.createElement('div');item.className='chamada-item';
-      const av=buildAvatarEl(m?.foto_url,'aspirante',40);av.style.flexShrink='0';
+      const av=buildAvatarEl(m?.foto_url,patchRoleFromHabs(habMapCh[e.membro_id]||{}),40);av.style.flexShrink='0';
       const info=document.createElement('div');info.className='chamada-info';
       const nEl=document.createElement('div');nEl.className='chamada-nome-el';nEl.textContent=m?.nome||'—';
       const fEl=document.createElement('div');fEl.className='chamada-fn';fEl.textContent=FUNCAO_LABEL[e.funcao]||e.funcao;

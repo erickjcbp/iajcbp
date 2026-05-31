@@ -243,14 +243,6 @@ let ctx = null, celebracoes = [], escalasMap = {}, membros = [], habMap = {}, di
 let freqMap = {}, restricaoMap = {};
 let pendingCelebId = null, pendingEdicao = [], abaAtual = 'cards';
 
-function patchRoleFromHabs(habs) {
-  const apt = f => ['apto','experiente','referencia'].includes(habs[f]);
-  if (apt('cred_credencia') || apt('cred_altar') || apt('missal')) return 'cerimonario';
-  if (apt('altar') || apt('turibulo') || apt('naveta')) return 'acolito';
-  if (apt('cruz') || apt('vela') || apt('sineta') || apt('sinao')) return 'coroinha';
-  return 'aspirante';
-}
-
 function openInfo(title, lines) {
   document.getElementById('info-title').textContent = title;
   const body = document.getElementById('info-body'); body.textContent = '';
