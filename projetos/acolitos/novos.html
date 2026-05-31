@@ -321,14 +321,10 @@ async function enviarCadastro() {
     await sbAdmin.from('acolitos_crm').insert({ membro_id: membro.id, etapa: 'integracao' });
   }
 
-  // Vários filhos no mesmo cadastro = irmãos na pastoral → linka entre si
+  // Vários filhos no mesmo cadastro = irmãos na pastoral → vincula via função
+  // SECURITY DEFINER (a RLS bloqueia update direto pelo usuário 'novo').
   if (insertedIds.length > 1) {
-    for (let i = 0; i < insertedIds.length; i++) {
-      const irmaoId = insertedIds[i === 0 ? 1 : 0];
-      await sbAdmin.from('acolitos_membros')
-        .update({ tem_irmao_pastoral: true, irmao_id: irmaoId, escalar_com_irmao: true })
-        .eq('id', insertedIds[i]);
-    }
+    await sbAdmin.rpc('acolitos_link_irmaos', { p_ids: insertedIds });
   }
 
   showMsg('Cadastro realizado! Em breve a equipe entrará em contato.', 'success');
