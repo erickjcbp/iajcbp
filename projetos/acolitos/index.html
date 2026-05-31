@@ -82,7 +82,7 @@ const JORNADA = [
   {role:'cerimonario',label:'Cerimoniário',icon:'✵'},
 ];
 const ROLE_LABEL = { cerimonario:'Cerimoniário', acolito:'Acólito', coroinha:'Coroinha', aspirante:'Aspirante', membro_equipe:'Equipe', subadmin:'Sub-Admin', coord_admin:'Coordenador' };
-const FUNCAO_LABEL = { apoio:'Apoio', cruz:'Cruz', vela:'Vela', sineta:'Sineta', sinao:'Sinão', altar:'Altar', turibulo:'Turíbulo', naveta:'Naveta', missal:'Missal', cred_altar:'Cred. Altar', cred_credencia:'Cred. Credência', mitra:'Mitra', baculo:'Báculo' };
+const FUNCAO_LABEL = { apoio:'Apoio', cruz:'Cruz', vela:'Vela', sineta:'Sineta', sinao:'Sinão', altar:'Altar', turibulo:'Turíbulo', naveta:'Naveta', missal:'Missal', cred_altar:'Cerimoniário Altar', cred_credencia:'Cerimoniário Credência', mitra:'Mitra', baculo:'Báculo' };
 const TIPO_LABEL = { missa_comum:'Missa', solenidade:'Solenidade', casamento:'Casamento', batizado:'Batizado', crisma:'Crisma', ordenacao:'Ordenação' };
 const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const MES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
@@ -137,6 +137,37 @@ async function renderStatusCrm(ctx) {
   main.appendChild(info);
 }
 
+/* ── RANK PROGRESS (nível atual animado + jornada) ───────────── */
+function renderRankProgress(main, role) {
+  const idx = Math.max(0, JORNADA.findIndex(j => j.role === role));
+  const cur = JORNADA[idx], next = JORNADA[idx + 1];
+  const pct = Math.round(((idx + 1) / JORNADA.length) * 100);
+
+  const card = document.createElement('div'); card.className = 'rank-card';
+  const patch = document.createElement('div'); patch.className = 'rank-patch';
+  patch.innerHTML = getPatchSvg(getRoleForPatch(role), 78); // SVG hardcoded — seguro
+  const name = document.createElement('div'); name.className = 'rank-name'; name.textContent = cur.label;
+  const nx = document.createElement('div'); nx.className = 'rank-next';
+  nx.textContent = next ? 'Próximo nível: ' + next.label : 'Nível máximo alcançado';
+  const bar = document.createElement('div'); bar.className = 'rank-bar';
+  const fill = document.createElement('div'); fill.className = 'rank-fill'; fill.style.setProperty('--pct', pct + '%');
+  bar.appendChild(fill);
+  card.append(patch, name, nx, bar);
+  main.appendChild(card);
+
+  // Jornada (hexágonos) logo abaixo
+  const track = document.createElement('div'); track.className = 'jornada-track';
+  JORNADA.forEach((j, i) => {
+    const step = document.createElement('div'); step.className = 'jornada-step';
+    const dot = document.createElement('div'); dot.className = 'jornada-dot' + (i < idx ? ' done' : i === idx ? ' current' : '');
+    dot.textContent = i <= idx ? j.icon : '○';
+    const lbl = document.createElement('div'); lbl.className = 'jornada-label' + (i === idx ? ' current' : ''); lbl.textContent = j.label;
+    step.append(dot, lbl); track.appendChild(step);
+    if (i < JORNADA.length - 1) { const line = document.createElement('div'); line.className = 'jornada-line' + (i < idx ? ' done' : ''); track.appendChild(line); }
+  });
+  main.appendChild(track);
+}
+
 /* ── DASHBOARD MEMBRO ────────────────────────────────────────── */
 async function renderDashboardMembro(ctx) {
   const main = document.getElementById('main'); main.textContent = '';
@@ -152,6 +183,9 @@ async function renderDashboardMembro(ctx) {
   const subEl = document.createElement('div'); subEl.className = 'greet-sub';
   subEl.textContent = (ROLE_LABEL[role]||role) + (m?.comunidade ? ' · ' + (m.comunidade==='matriz'?'Matriz':'Sto. Antônio') : '');
   greet.append(nomeEl, subEl); main.appendChild(greet);
+
+  // Destaque do nível atual (animado) + jornada
+  renderRankProgress(main, role);
 
   // KPIs de frequência
   if (m) {
@@ -170,19 +204,6 @@ async function renderDashboardMembro(ctx) {
     });
     main.appendChild(grid);
   }
-
-  // Jornada
-  const track = document.createElement('div'); track.className = 'jornada-track';
-  const roleIdx = JORNADA.findIndex(j => j.role === role);
-  JORNADA.forEach((j,i) => {
-    const step=document.createElement('div'); step.className='jornada-step';
-    const dot=document.createElement('div'); dot.className='jornada-dot'+(i<roleIdx?' done':i===roleIdx?' current':'');
-    dot.textContent = i<=roleIdx ? j.icon : '○';
-    const lbl=document.createElement('div'); lbl.className='jornada-label'+(i===roleIdx?' current':''); lbl.textContent=j.label;
-    step.append(dot,lbl); track.appendChild(step);
-    if (i<JORNADA.length-1) { const line=document.createElement('div'); line.className='jornada-line'+(i<roleIdx?' done':''); track.appendChild(line); }
-  });
-  main.appendChild(track);
 
   // Próximas escalas do membro
   const psHead = document.createElement('div'); psHead.className='section-head'; psHead.textContent='Minhas Próximas Escalas';

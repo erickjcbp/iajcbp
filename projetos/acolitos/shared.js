@@ -193,7 +193,12 @@ function renderBottomNav(role, activePage) {
   if (!el) return;
   el.className = 'app-nav';
   el.textContent = '';
-  const items = EQUIPE_ROLES.includes(role) ? NAV_EQUIPE : NAV_MEMBRO;
+  // Chamada só aparece para cerimoniário (e equipe usa NAV_EQUIPE);
+  // aspirante/coroinha/acólito não veem chamada.
+  let items;
+  if (EQUIPE_ROLES.includes(role)) items = NAV_EQUIPE;
+  else if (role === 'cerimonario') items = NAV_MEMBRO;
+  else items = NAV_MEMBRO.filter(i => i.id !== 'chamada');
   items.forEach(item => {
     const a = document.createElement('a');
     a.className = 'nav-item' + (item.id === activePage ? ' active' : '');
