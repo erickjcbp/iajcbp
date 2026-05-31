@@ -34,6 +34,10 @@
       text-transform:uppercase; transition:all .2s; -webkit-tap-highlight-color:transparent;
     }
     .view-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,.08); }
+    .aus-cel-box { max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; border:1px solid var(--border-wine); border-radius:6px; padding:8px; }
+    .aus-cel-row { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text); cursor:pointer; padding:3px 4px; }
+    .aus-cel-row input[type=checkbox] { width:18px; height:18px; flex:none; accent-color:var(--gold); }
+    .aus-cel-row.sel-all { font-weight:700; color:var(--gold); margin:4px 0 2px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
 </head>
@@ -106,11 +110,21 @@ async function renderViewMembro() {
   } else {
     const card = document.createElement('div'); card.className = 'section-card';
     const g1 = document.createElement('div'); g1.className = 'form-group';
-    const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Missa em que estarei ausente *';
-    const sel = document.createElement('select'); sel.className = 'form-select'; sel.id = 'sel-cel';
-    const optV = document.createElement('option'); optV.value = ''; optV.textContent = 'Selecionar...'; sel.appendChild(optV);
-    disponiveis.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = celLabel(c); sel.appendChild(o); });
-    g1.append(l1, sel); card.appendChild(g1);
+    const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Missas em que estarei ausente * (marque uma ou mais)';
+    g1.appendChild(l1);
+    const selAll = document.createElement('label'); selAll.className = 'aus-cel-row sel-all';
+    const chkAll = document.createElement('input'); chkAll.type = 'checkbox';
+    const spAll = document.createElement('span'); spAll.textContent = 'Selecionar todas';
+    selAll.append(chkAll, spAll); g1.appendChild(selAll);
+    const box = document.createElement('div'); box.className = 'aus-cel-box';
+    disponiveis.forEach(c => {
+      const row = document.createElement('label'); row.className = 'aus-cel-row';
+      const chk = document.createElement('input'); chk.type = 'checkbox'; chk.className = 'aus-cel'; chk.value = c.id;
+      const sp = document.createElement('span'); sp.textContent = celLabel(c);
+      row.append(chk, sp); box.appendChild(row);
+    });
+    chkAll.onchange = () => { box.querySelectorAll('.aus-cel').forEach(c => { c.checked = chkAll.checked; }); };
+    g1.appendChild(box); card.appendChild(g1);
 
     const lMot = document.createElement('label'); lMot.className = 'form-label'; lMot.textContent = 'Motivo *';
     const mGrid = document.createElement('div'); mGrid.className = 'motivo-grid';
@@ -158,25 +172,21 @@ async function renderViewMembro() {
 }
 
 async function enviarAusencia() {
-  const celId = document.getElementById('sel-cel').value;
+  const ids = [...document.querySelectorAll('.aus-cel:checked')].map(c => c.value);
   const obs = document.getElementById('obs-aus').value.trim();
   const msg = document.getElementById('msg-aus');
   const btn = document.getElementById('btn-env');
-  if (!celId) { msg.className='msg error'; msg.textContent='Selecione a missa.'; return; }
+  if (!ids.length) { msg.className='msg error'; msg.textContent='Selecione ao menos uma missa.'; return; }
   btn.disabled=true; btn.textContent='Enviando...';
 
-  const { error } = await sb.from('acolitos_ausencias').upsert({
-    membro_id: ctx.membro.id,
-    celebracao_id: celId,
-    motivo: motivoSelecionado,
-    observacao: obs||null
-  }, { onConflict:'membro_id,celebracao_id' });
+  const rows = ids.map(id => ({ membro_id: ctx.membro.id, celebracao_id: id, motivo: motivoSelecionado, observacao: obs||null }));
+  const { error } = await sb.from('acolitos_ausencias').upsert(rows, { onConflict:'membro_id,celebracao_id' });
 
   if (error) { msg.className='msg error'; msg.textContent='Erro. Tente novamente.'; btn.disabled=false; btn.textContent='Confirmar Ausência'; return; }
 
-  msg.className='msg success'; msg.textContent='Ausência registrada!';
+  msg.className='msg success'; msg.textContent = ids.length + (ids.length>1 ? ' ausências registradas!' : ' ausência registrada!');
   btn.disabled=true; btn.textContent='Registrado ✓';
-  setTimeout(()=>renderViewMembro(), 1200);
+  setTimeout(()=>renderViewMembro(), 1300);
 }
 
 // ── VIEW EQUIPE ───────────────────────────────────────────────
@@ -261,18 +271,29 @@ async function abrirRegistroAusencia() {
   membros.forEach(m => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.nome; selM.appendChild(o); });
   g1.append(l1, selM); modal.appendChild(g1);
 
-  // Missa (filtra pela comunidade do membro, salvo se pode servir em outras)
+  // Missas (marque uma ou mais; filtra pela comunidade do membro, salvo se pode servir em outras)
   const g2 = document.createElement('div'); g2.className = 'form-group';
-  const l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'Missa *';
-  const selC = document.createElement('select'); selC.className = 'form-select';
-  g2.append(l2, selC); modal.appendChild(g2);
+  const l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'Missas * (marque uma ou mais)';
+  g2.appendChild(l2);
+  const selAll = document.createElement('label'); selAll.className = 'aus-cel-row sel-all';
+  const chkAll = document.createElement('input'); chkAll.type = 'checkbox';
+  const spAll = document.createElement('span'); spAll.textContent = 'Selecionar todas';
+  selAll.append(chkAll, spAll); g2.appendChild(selAll);
+  const boxC = document.createElement('div'); boxC.className = 'aus-cel-box';
+  g2.append(boxC); modal.appendChild(g2);
+  chkAll.onchange = () => { boxC.querySelectorAll('.aus-cel').forEach(c => { c.checked = chkAll.checked; }); };
   function popMissas() {
     const m = membros.find(x => x.id === selM.value) || membros[0];
     let lista = futuras;
     if (m && m.comunidade && !m.pode_outras_comunidades) lista = futuras.filter(c => c.comunidade === m.comunidade);
-    selC.textContent = '';
-    if (!lista.length) { const o = document.createElement('option'); o.value=''; o.textContent='(sem missas para a comunidade)'; selC.appendChild(o); return; }
-    lista.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = celLabel(c); selC.appendChild(o); });
+    boxC.textContent = ''; chkAll.checked = false;
+    if (!lista.length) { const e = document.createElement('div'); e.style.cssText = 'font-size:12px;color:var(--text-muted);font-style:italic;padding:4px;'; e.textContent = '(sem missas para a comunidade)'; boxC.appendChild(e); return; }
+    lista.forEach(c => {
+      const row = document.createElement('label'); row.className = 'aus-cel-row';
+      const chk = document.createElement('input'); chk.type = 'checkbox'; chk.className = 'aus-cel'; chk.value = c.id;
+      const sp = document.createElement('span'); sp.textContent = celLabel(c);
+      row.append(chk, sp); boxC.appendChild(row);
+    });
   }
   selM.onchange = popMissas; popMissas();
 
@@ -297,11 +318,11 @@ async function abrirRegistroAusencia() {
   const cancel = document.createElement('button'); cancel.className = 'btn-sm gray'; cancel.textContent = 'Cancelar'; cancel.onclick = () => ov.remove();
   const conf = document.createElement('button'); conf.className = 'btn-sm gold'; conf.textContent = 'Registrar';
   conf.onclick = async () => {
-    const celId = selC.value; if (!celId) { msg.className='msg error'; msg.textContent='Selecione a missa.'; return; }
+    const ids = [...boxC.querySelectorAll('.aus-cel:checked')].map(c => c.value);
+    if (!ids.length) { msg.className='msg error'; msg.textContent='Selecione ao menos uma missa.'; return; }
     conf.disabled = true; conf.textContent = 'Salvando...';
-    const { error } = await sb.from('acolitos_ausencias').upsert({
-      membro_id: selM.value, celebracao_id: celId, motivo: motivoSel, observacao: inpObs.value.trim() || null
-    }, { onConflict: 'membro_id,celebracao_id' });
+    const rows = ids.map(id => ({ membro_id: selM.value, celebracao_id: id, motivo: motivoSel, observacao: inpObs.value.trim() || null }));
+    const { error } = await sb.from('acolitos_ausencias').upsert(rows, { onConflict: 'membro_id,celebracao_id' });
     if (error) { msg.className = 'msg error'; msg.textContent = 'Erro ao registrar. Tente novamente.'; conf.disabled = false; conf.textContent = 'Registrar'; return; }
     ov.remove(); renderViewEquipe();
   };
