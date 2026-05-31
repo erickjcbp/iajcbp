@@ -625,6 +625,21 @@ body {
 .nivel-cnt { font-family: 'Oxanium', sans-serif; font-weight: 800; font-size: 15px; color: var(--gold-light); line-height: 1.1; }
 .nivel-cell.vazio .nivel-cnt { color: var(--text-muted); }
 .nivel-lbl { font-size: 7.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .2px; font-family: 'Sora', sans-serif; font-weight: 700; line-height: 1.15; }
+/* Aba Acesso — usuário atual */
+.acesso-atual { font-family: 'Sora', sans-serif; font-weight: 700; color: var(--gold); font-size: 13px; padding: 10px 12px; margin-bottom: 16px; background: rgba(232,185,74,.07); border: 1px solid var(--gold-dim); border-radius: 6px; }
+/* Seletor visual de nível (grade de patches) */
+.nivelsel-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px 4px; margin: 4px 0 12px; }
+.nivelsel-cell { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 2px; background: transparent; border: 1px solid transparent; border-radius: 8px; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: all .15s; }
+.nivelsel-cell:hover { background: var(--surface2); }
+.nivelsel-cell.sel { background: rgba(232,185,74,.1); border-color: var(--gold); box-shadow: 0 0 12px var(--red-glow); }
+.nivelsel-cell:not(.sel) .nivelsel-emb { filter: grayscale(.55) opacity(.7); }
+.nivelsel-num { font-family: 'Oxanium', sans-serif; font-size: 10px; font-weight: 800; color: var(--text-muted); line-height: 1; }
+.nivelsel-cell.sel .nivelsel-num { color: var(--gold-light); }
+.nivelsel-emb { width: 46px; height: 46px; }
+.nivelsel-emb svg { width: 100%; height: 100%; }
+.nivelsel-lbl { font-size: 7.5px; color: var(--text-muted); text-transform: uppercase; font-family: 'Sora', sans-serif; font-weight: 700; line-height: 1.15; text-align: center; }
+.nivelsel-cell.sel .nivelsel-lbl { color: var(--text); }
+.nivelsel-titulo { text-align: center; font-family: 'Sora', sans-serif; font-style: italic; font-weight: 700; color: var(--gold); font-size: 14px; margin-bottom: 14px; }
 .levelup-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1; }
 .levelup-confetti i { position: absolute; top: -16px; width: 9px; height: 9px; border-radius: 2px; animation: luConfetti 2.6s linear forwards; }
 @keyframes luConfetti { to { transform: translateY(112vh) rotate(600deg); opacity: .15; } }

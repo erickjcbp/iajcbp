@@ -219,6 +219,13 @@ async function abrirFicha(membro) {
     (membro.comunidade === 'matriz' ? 'Matriz' : membro.comunidade === 'santo_antonio' ? 'Sto. Antônio' : 'Outra');
   hdr.append(nomeEl, subEl);
 
+  // Botão visual para alterar o nível (rank) na jornada
+  const curNivel = membro.nivel || nivelFromRole(membro.role);
+  const rankBtn = document.createElement('button'); rankBtn.className = 'btn-sm gold nivel-btn'; rankBtn.style.marginTop = '12px';
+  rankBtn.textContent = '⬆  Alterar nível · ' + nivelInfo(curNivel).label;
+  rankBtn.onclick = () => abrirSeletorNivel(membro, rankBtn);
+  hdr.appendChild(rankBtn);
+
   // Tabs
   const tabs = ['Pessoal','Habilitações','Disponibilidade','Família','Frequência','Evolução','Observações'];
   if (['coord_admin','subadmin'].includes(ctx.membership.role)) tabs.push('Acesso');
@@ -454,23 +461,41 @@ async function renderTab(tab) {
   }
 
   if (tab === 'Acesso') {
-    const info = document.createElement('p'); info.style.cssText = 'font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.5;';
+    const info = document.createElement('p'); info.style.cssText = 'font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.5;';
+    el.appendChild(info);
+    const msgEl = document.createElement('div'); msgEl.id = 'ac-msg'; msgEl.className = 'msg'; msgEl.style.marginTop = '12px';
+
     if (m.user_id) {
-      info.textContent = 'Este membro já tem acesso. Você pode trocar o usuário ou resetar a senha.'; el.appendChild(info);
+      info.textContent = 'Troque o usuário (login) ou redefina a senha quando precisar.';
+      // Usuário atual (carregado do servidor) — confirmação visível
+      const atual = document.createElement('div'); atual.className = 'acesso-atual'; atual.textContent = 'Usuário atual: carregando…';
+      el.appendChild(atual);
+      const setAtual = (u) => { atual.textContent = 'Usuário atual: ' + (u || '—'); };
+      acGetUsuario(m.user_id).then(setAtual);
+
       const g1 = document.createElement('div'); g1.className = 'form-group';
       const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Novo usuário';
       const i1 = document.createElement('input'); i1.className = 'form-input'; i1.placeholder = 'ex: joao.silva';
       const b1 = document.createElement('button'); b1.className = 'btn-sm gold'; b1.style.marginTop = '8px'; b1.textContent = 'Trocar usuário';
-      b1.onclick = () => acAction('username', { user_id: m.user_id, usuario: i1.value.trim() }, b1);
+      b1.onclick = async () => {
+        if (!i1.value.trim()) { msgEl.className = 'msg error'; msgEl.textContent = 'Digite o novo usuário.'; return; }
+        const d = await acAction('username', { user_id: m.user_id, usuario: i1.value.trim() }, b1);
+        if (d) { i1.value = ''; acGetUsuario(m.user_id).then(setAtual); }
+      };
       g1.append(l1, i1, b1); el.appendChild(g1);
+
       const g2 = document.createElement('div'); g2.className = 'form-group'; g2.style.marginTop = '12px';
       const l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'Nova senha';
       const i2 = document.createElement('input'); i2.className = 'form-input'; i2.type = 'text'; i2.placeholder = 'mínimo 6 caracteres';
       const b2 = document.createElement('button'); b2.className = 'btn-sm gold'; b2.style.marginTop = '8px'; b2.textContent = 'Resetar senha';
-      b2.onclick = () => acAction('password', { user_id: m.user_id, password: i2.value }, b2);
+      b2.onclick = async () => {
+        if ((i2.value || '').length < 6) { msgEl.className = 'msg error'; msgEl.textContent = 'Senha muito curta (mín. 6).'; return; }
+        const d = await acAction('password', { user_id: m.user_id, password: i2.value }, b2);
+        if (d) { msgEl.className = 'msg success'; msgEl.textContent = 'Senha atualizada! Anote: ' + i2.value; }
+      };
       g2.append(l2, i2, b2); el.appendChild(g2);
     } else {
-      info.textContent = 'Este membro ainda NÃO tem login. Crie um usuário e senha para ele acessar.'; el.appendChild(info);
+      info.textContent = 'Este membro ainda NÃO tem login. Crie um usuário e senha para ele acessar.';
       const g1 = document.createElement('div'); g1.className = 'form-group';
       const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Usuário';
       const i1 = document.createElement('input'); i1.className = 'form-input'; i1.placeholder = 'ex: joao.silva';
@@ -480,10 +505,13 @@ async function renderTab(tab) {
       const i2 = document.createElement('input'); i2.className = 'form-input'; i2.type = 'text'; i2.placeholder = 'mínimo 6 caracteres';
       g2.append(l2, i2); el.appendChild(g2);
       const b = document.createElement('button'); b.className = 'btn gold'; b.textContent = 'Criar acesso';
-      b.onclick = () => acAction('create', { membro_id: m.id, usuario: i1.value.trim(), password: i2.value, nome: m.nome }, b);
+      b.onclick = async () => {
+        const d = await acAction('create', { membro_id: m.id, usuario: i1.value.trim(), password: i2.value, nome: m.nome }, b);
+        if (d) renderTab('Acesso'); // re-renderiza no modo "já tem acesso", mostrando o usuário
+      };
       el.appendChild(b);
     }
-    const msgEl = document.createElement('div'); msgEl.id = 'ac-msg'; msgEl.className = 'msg'; msgEl.style.marginTop = '12px'; el.appendChild(msgEl);
+    el.appendChild(msgEl);
   }
 
   if (tab === 'Observações') {
@@ -502,6 +530,50 @@ function renderMesChart(el, escalas) {
   el.appendChild(card);
 }
 
+// Seletor visual de nível (grade dos 10 patches) — salva direto no membro
+function abrirSeletorNivel(membro, rankBtn) {
+  let escolha = membro.nivel || nivelFromRole(membro.role);
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '200';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className = 'modal';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Definir nível · ' + membro.nome.split(' ')[0];
+  const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-8px 0 14px;font-weight:600;';
+  sub.textContent = 'Toque no patch do nível desejado. O membro vê a comemoração ao subir.';
+  modal.append(handle, tt, sub);
+
+  const grid = document.createElement('div'); grid.className = 'nivelsel-grid';
+  const cells = {};
+  const titEl = document.createElement('div'); titEl.className = 'nivelsel-titulo';
+  NIVEIS.forEach((n, i) => {
+    const cell = document.createElement('button'); cell.type = 'button'; cell.className = 'nivelsel-cell' + (n.slug === escolha ? ' sel' : '');
+    const num = document.createElement('span'); num.className = 'nivelsel-num'; num.textContent = i + 1;
+    const emb = document.createElement('div'); emb.className = 'nivelsel-emb'; emb.innerHTML = getNivelSvg(n.slug, 46); // SVG hardcoded — seguro
+    const lbl = document.createElement('div'); lbl.className = 'nivelsel-lbl'; lbl.textContent = n.label;
+    cell.append(num, emb, lbl);
+    cell.onclick = () => { escolha = n.slug; Object.values(cells).forEach(c => c.classList.remove('sel')); cell.classList.add('sel'); titEl.textContent = '🏆 ' + n.titulo; };
+    cells[n.slug] = cell; grid.appendChild(cell);
+  });
+  modal.appendChild(grid);
+  titEl.textContent = '🏆 ' + nivelInfo(escolha).titulo; modal.appendChild(titEl);
+  const msg = document.createElement('div'); msg.className = 'msg'; modal.appendChild(msg);
+
+  const acts = document.createElement('div'); acts.className = 'modal-actions';
+  const cancel = document.createElement('button'); cancel.className = 'btn-sm gray'; cancel.textContent = 'Cancelar'; cancel.onclick = () => ov.remove();
+  const conf = document.createElement('button'); conf.className = 'btn-sm gold'; conf.textContent = 'Salvar nível';
+  conf.onclick = async () => {
+    conf.disabled = true; conf.textContent = 'Salvando...';
+    const { error } = await sbAdmin.from('acolitos_membros').update({ nivel: escolha }).eq('id', membro.id);
+    if (error) { msg.className = 'msg error'; msg.textContent = 'Erro: ' + error.message; conf.disabled = false; conf.textContent = 'Salvar nível'; return; }
+    membro.nivel = escolha;
+    const alvo = todos.find(t => t.id === membro.id); if (alvo) alvo.nivel = escolha;
+    if (rankBtn) rankBtn.textContent = '⬆  Alterar nível · ' + nivelInfo(escolha).label;
+    ov.remove(); renderGrid();
+  };
+  acts.append(cancel, conf); modal.appendChild(acts);
+  ov.appendChild(modal); document.body.appendChild(ov);
+}
+
 async function acAction(action, payload, btn) {
   const msgEl = document.getElementById('ac-msg');
   const prev = btn.textContent; btn.disabled = true; btn.textContent = 'Aguarde...';
@@ -515,13 +587,28 @@ async function acAction(action, payload, btn) {
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Erro');
     if (action === 'create' && d.user_id) membroAtual.user_id = d.user_id;
-    msgEl.className = 'msg success';
-    msgEl.textContent = action === 'create' ? 'Acesso criado!' : action === 'password' ? 'Senha atualizada!' : 'Usuário atualizado!';
+    if (msgEl) { msgEl.className = 'msg success'; msgEl.textContent = action === 'create' ? 'Acesso criado!' : action === 'password' ? 'Senha atualizada!' : 'Usuário atualizado!'; }
+    return d;
   } catch (e) {
-    msgEl.className = 'msg error'; msgEl.textContent = e.message || 'Não foi possível concluir.';
+    if (msgEl) { msgEl.className = 'msg error'; msgEl.textContent = e.message || 'Não foi possível concluir.'; }
+    return null;
   } finally {
     btn.disabled = false; btn.textContent = prev;
   }
+}
+
+// Lê o usuário (login) atual de um membro — para exibir confirmação na aba Acesso
+async function acGetUsuario(user_id) {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const r = await fetch('/api/acolito-admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ action: 'get', user_id })
+    });
+    const d = await r.json();
+    return r.ok ? d.usuario : null;
+  } catch (e) { return null; }
 }
 
 async function salvarFicha() {

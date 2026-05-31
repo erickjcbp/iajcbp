@@ -60,6 +60,15 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, user_id: newUid, email: synthEmail(usuario) });
   }
 
+  if (action === 'get') {
+    if (!user_id) return res.status(400).json({ error: 'Faltam dados.' });
+    const r = await fetch(`${URL}/auth/v1/admin/users/${user_id}`, { headers: h });
+    const d = await r.json(); if (!r.ok) return res.status(r.status).json({ error: 'Erro ao consultar.' });
+    const email = d.email || '';
+    const usuario = email.includes('@coroinhas.') ? email.split('@')[0] : email;
+    return res.status(200).json({ ok: true, email, usuario });
+  }
+
   if (action === 'password') {
     if (!user_id || !password) return res.status(400).json({ error: 'Faltam dados.' });
     if (String(password).length < 6) return res.status(400).json({ error: 'Senha muito curta.' });
