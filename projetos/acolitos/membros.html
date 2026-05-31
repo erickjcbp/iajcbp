@@ -191,10 +191,19 @@ async function abrirFicha(membro) {
   membroAtual = membro;
   habAtual = {};
 
-  // Header
+  // Header — avatar editável (equipe sobe/edita foto do membro)
   const hdr = document.getElementById('ficha-header');
   hdr.textContent = '';
-  hdr.appendChild(buildAvatarEl(membro.foto_url, membro.role, 72));
+  hdr.appendChild(buildAvatarEl(membro.foto_url, membro.role, 72, {
+    editable: true,
+    membro,
+    onUpload: (url) => {
+      membro.foto_url = url;
+      const alvo = todos.find(t => t.id === membro.id);
+      if (alvo) alvo.foto_url = url;
+      renderGrid();
+    }
+  }));
   const nomeEl = document.createElement('div'); nomeEl.className = 'ficha-nome'; nomeEl.textContent = membro.nome;
   const subEl  = document.createElement('div'); subEl.className  = 'ficha-sub';
   subEl.textContent = (ROLE_LABEL[membro.role] || membro.role) + ' · ' +
@@ -202,7 +211,7 @@ async function abrirFicha(membro) {
   hdr.append(nomeEl, subEl);
 
   // Tabs
-  const tabs = ['Pessoal','Habilitações','Disponibilidade','Família','Observações'];
+  const tabs = ['Pessoal','Habilitações','Disponibilidade','Família','Frequência','Observações'];
   const tabsEl = document.getElementById('ficha-tabs'); tabsEl.textContent = '';
   tabs.forEach((t, i) => {
     const btn = document.createElement('button'); btn.className = 'ficha-tab' + (i === 0 ? ' active' : '');
@@ -301,6 +310,55 @@ async function renderTab(tab) {
       const val = document.createElement('span'); val.className = 'stat-value'; val.textContent = value;
       row.append(lbl, val); el.appendChild(row);
     });
+  }
+
+  if (tab === 'Frequência') {
+    const loading = document.createElement('span'); loading.className = 'loading';
+    loading.textContent = 'Calculando...'; el.appendChild(loading);
+    const f = await fetchFrequencia(m.id);
+    el.textContent = '';
+
+    if (!f || !f.total_escalas) {
+      const em = document.createElement('span'); em.className = 'empty';
+      em.textContent = 'Sem escalas registradas para este membro ainda.';
+      el.appendChild(em);
+    } else {
+      // Destaque da taxa
+      const taxa = f.taxa != null ? f.taxa : '—';
+      const dest = document.createElement('div');
+      dest.style.cssText = 'text-align:center;padding:14px 0 18px;';
+      const tNum = document.createElement('div');
+      tNum.style.cssText = "font-family:'Cinzel',serif;font-size:34px;font-weight:700;color:var(--gold);line-height:1;";
+      tNum.textContent = taxa + (taxa === '—' ? '' : '%');
+      const tLbl = document.createElement('div');
+      tLbl.style.cssText = 'font-size:11px;color:var(--text-muted);font-family:Cinzel,serif;letter-spacing:1px;text-transform:uppercase;margin-top:6px;';
+      tLbl.textContent = 'Taxa de Comparecimento';
+      dest.append(tNum, tLbl); el.appendChild(dest);
+
+      // KPIs
+      const grid = document.createElement('div'); grid.className = 'kpi-grid';
+      grid.style.gridTemplateColumns = '1fr 1fr 1fr';
+      [
+        { label:'Servidas',     value:f.servidas || 0 },
+        { label:'Escaladas',    value:f.total_escalas || 0 },
+        { label:'Pendentes',    value:f.pendentes || 0 },
+        { label:'Faltas Just.', value:f.faltas_just || 0 },
+        { label:'Faltas',       value:f.faltas_nao_just || 0 },
+        { label:'Atrasos',      value:f.atrasos || 0 },
+      ].forEach(k => {
+        const c = document.createElement('div'); c.className = 'kpi-card';
+        const v = document.createElement('div'); v.className = 'kpi-value'; v.style.fontSize = '20px'; v.textContent = k.value;
+        const l = document.createElement('div'); l.className = 'kpi-label'; l.textContent = k.label;
+        c.append(v, l); grid.appendChild(c);
+      });
+      el.appendChild(grid);
+
+      const ult = document.createElement('div'); ult.className = 'stat-row'; ult.style.marginTop = '14px';
+      const ul = document.createElement('span'); ul.className = 'stat-label'; ul.textContent = 'Última participação';
+      const uv = document.createElement('span'); uv.className = 'stat-value';
+      uv.textContent = f.ultima_participacao ? formatDate(f.ultima_participacao) : '—';
+      ult.append(ul, uv); el.appendChild(ult);
+    }
   }
 
   if (tab === 'Observações') {

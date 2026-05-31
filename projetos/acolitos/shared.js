@@ -253,25 +253,33 @@ function getRoleForPatch(role) {
   return 'aspirante';
 }
 
-// Retorna HTMLElement (div container) com foto + patch sobreposto
-function buildAvatarEl(fotoUrl, role, size) {
+// Retorna HTMLElement (div container) com foto + patch sobreposto.
+// opts (opcional): { editable, membro, onUpload } — quando editable, mostra um
+// badge de câmera no canto inferior esquerdo que abre o seletor de arquivo e
+// envia a foto via uploadAvatar(). onUpload(url) é chamado após sucesso.
+function buildAvatarEl(fotoUrl, role, size, opts) {
   size = size || 56;
+  opts = opts || {};
   const container = document.createElement('div');
   container.style.cssText = `position:relative;width:${size}px;height:${size}px;display:inline-block;`;
 
-  const safeSrc = sanitizeUrl(fotoUrl);
-  if (safeSrc) {
-    const img = document.createElement('img');
-    img.src = escHtml(safeSrc);
-    img.alt = '';
-    img.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;border:2px solid var(--border-wine);display:block;`;
-    container.appendChild(img);
-  } else {
+  function renderFoto(src) {
+    const safeSrc = sanitizeUrl(src);
+    if (safeSrc) {
+      const img = document.createElement('img');
+      img.src = escHtml(safeSrc);
+      img.alt = '';
+      img.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;border:2px solid var(--border-wine);display:block;`;
+      return img;
+    }
     const placeholder = document.createElement('div');
     placeholder.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;background:var(--surface2);border:2px solid var(--border-wine);display:flex;align-items:center;justify-content:center;font-size:${Math.round(size/2.5)}px;`;
     placeholder.textContent = '👤';
-    container.appendChild(placeholder);
+    return placeholder;
   }
+
+  let fotoEl = renderFoto(fotoUrl);
+  container.appendChild(fotoEl);
 
   const patchSize = Math.round(size * 0.42);
   const patchEl = document.createElement('div');
@@ -279,5 +287,80 @@ function buildAvatarEl(fotoUrl, role, size) {
   patchEl.innerHTML = getPatchSvg(getRoleForPatch(role), patchSize); // hardcoded SVG — seguro
   container.appendChild(patchEl);
 
+  if (opts.editable && opts.membro) {
+    const camSize = Math.max(20, Math.round(size * 0.34));
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'user';
+    input.style.display = 'none';
+
+    const badge = document.createElement('button');
+    badge.type = 'button';
+    badge.title = 'Trocar foto';
+    badge.textContent = '📷';
+    badge.style.cssText = `position:absolute;bottom:-4px;left:-4px;width:${camSize}px;height:${camSize}px;border-radius:50%;border:1px solid var(--gold-dim);background:var(--surface);color:var(--gold);font-size:${Math.round(camSize*0.55)}px;line-height:0;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;z-index:2;`;
+    badge.onclick = () => input.click();
+
+    input.onchange = async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const prev = badge.textContent;
+      badge.textContent = '…'; badge.disabled = true;
+      try {
+        const url = await uploadAvatar(file, opts.membro);
+        const novo = renderFoto(url);
+        container.replaceChild(novo, fotoEl);
+        fotoEl = novo;
+        if (typeof opts.onUpload === 'function') opts.onUpload(url);
+      } catch (err) {
+        alert('Não foi possível enviar a foto. ' + (err?.message || ''));
+      } finally {
+        badge.textContent = prev; badge.disabled = false; input.value = '';
+      }
+    };
+
+    container.append(badge, input);
+  }
+
   return container;
+}
+
+// ── INDICADORES / FREQUÊNCIA ─────────────────────────────────
+// Sem membroId: retorna mapa { membro_id: row }. Com membroId: retorna a row (ou null).
+async function fetchFrequencia(membroId) {
+  let q = sb.from('acolitos_frequencia').select('*');
+  if (membroId) q = q.eq('membro_id', membroId).maybeSingle();
+  const { data } = await q;
+  if (membroId) return data || null;
+  const map = {};
+  (data || []).forEach(r => { map[r.membro_id] = r; });
+  return map;
+}
+
+// ── UPLOAD DE AVATAR (Supabase Storage) ──────────────────────
+// Dono envia para {uid}/...; equipe envia para membro/{id}/... (políticas em 004).
+async function uploadAvatar(file, membro) {
+  if (!file || !membro) throw new Error('Arquivo ou membro ausente.');
+  const { data: { session } } = await sb.auth.getSession();
+  const uid = session?.user?.id;
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const isSelf = !!(membro.user_id && membro.user_id === uid);
+  const folder = isSelf ? uid : ('membro/' + membro.id);
+  const path = `${folder}/avatar_${Date.now()}.${ext}`;
+
+  const { error: upErr } = await sb.storage.from('avatars')
+    .upload(path, file, { upsert: true, contentType: file.type || 'image/jpeg' });
+  if (upErr) throw upErr;
+
+  const { data: pub } = sb.storage.from('avatars').getPublicUrl(path);
+  const url = pub?.publicUrl;
+  if (!url) throw new Error('URL pública indisponível.');
+
+  const { error: updErr } = await sb.from('acolitos_membros')
+    .update({ foto_url: url }).eq('id', membro.id);
+  if (updErr) throw updErr;
+
+  membro.foto_url = url; // mantém cache local em sincronia
+  return url;
 }
