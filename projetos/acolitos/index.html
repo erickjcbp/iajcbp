@@ -342,7 +342,7 @@ async function renderDashboardMembro(ctx) {
     editable: !!m, membro: m || undefined,
     onUpload: (url) => { if (m) m.foto_url = url; }
   }));
-  const nomeEl = document.createElement('div'); nomeEl.className = 'greet-nome'; nomeEl.textContent = m?.nome || ctx.user.email;
+  const nomeEl = nameBlock(m?.nome || ctx.user.email, m?.apelido, 'greet-nome', 'greet-subname');
   const subEl = document.createElement('div'); subEl.className = 'greet-sub';
   subEl.textContent = nivelInfo(nivel).label + (m?.comunidade ? ' · ' + (m.comunidade==='matriz'?'Matriz':'Sto. Antônio') : '');
   greet.append(nomeEl, subEl); main.appendChild(greet);

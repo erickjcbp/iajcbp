@@ -279,7 +279,7 @@ async function loadDados() {
       escalasMap[e.celebracao_id].push(e);
     });
     const [{ data: mems }, { data: habs }, { data: disps }, freqData] = await Promise.all([
-      sb.from('acolitos_membros').select('id,nome,nivel,comunidade,data_nascimento,foto_url,observacoes,necessidades_especiais,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro').eq('status','ativo').order('nome'),
+      sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,data_nascimento,foto_url,observacoes,necessidades_especiais,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro').eq('status','ativo').order('nome'),
       sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia'),
       sb.from('acolitos_disponibilidade').select('membro_id,dia,horario,restricao'),
       fetchFrequencia(),
@@ -478,8 +478,10 @@ function renderPlanilha() {
     const tdN=document.createElement('td');tdN.className='sticky-left';
     const wrapN=document.createElement('div');wrapN.style.cssText='display:flex;align-items:center;gap:8px;';
     wrapN.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30, { nivelSlug: m.nivel || nivelFromRole(patchRoleFromHabs(habs)) }));
-    const nEl=document.createElement('span');nEl.style.cssText='font-size:12px;white-space:nowrap;';nEl.textContent=m.nome;
-    wrapN.appendChild(nEl);tdN.appendChild(wrapN);tr.appendChild(tdN);
+    const nm=document.createElement('div'); nm.style.cssText='min-width:0;line-height:1.15;';
+    if((m.apelido||'').trim()){ const a=document.createElement('div'); a.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;'; a.textContent=m.apelido; const n=document.createElement('div'); n.style.cssText='font-size:9.5px;color:var(--text-muted);white-space:nowrap;'; n.textContent=m.nome; nm.append(a,n); }
+    else { nm.style.fontSize='12px'; nm.style.whiteSpace='nowrap'; nm.textContent=m.nome; }
+    wrapN.appendChild(nm);tdN.appendChild(wrapN);tr.appendChild(tdN);
 
     // Idade
     const tdI=document.createElement('td');tdI.style.cssText='text-align:center;font-size:11px;';tdI.textContent=m.data_nascimento?calcIdade(m.data_nascimento):'—';tr.appendChild(tdI);

@@ -37,6 +37,20 @@
     .ficha-header { text-align:center; padding-bottom:16px; margin-bottom:16px; border-bottom:1px solid var(--border-wine); }
     .ficha-nome { font-family:'Sora',sans-serif; font-size:16px; font-weight:700; margin-top:10px; color:var(--text); }
     .ficha-sub  { font-size:12px; color:var(--text-muted); margin-top:4px; }
+    /* Alternar visualização cards/lista */
+    .view-switch { display:flex; flex:none; border:1px solid var(--border-wine); border-radius:6px; overflow:hidden; }
+    .view-sw { width:34px; height:34px; background:var(--surface2); border:none; color:var(--text-muted); font-size:15px; cursor:pointer; -webkit-tap-highlight-color:transparent; display:flex; align-items:center; justify-content:center; }
+    .view-sw.active { background:rgba(232,185,74,.12); color:var(--gold); }
+    .view-sw + .view-sw { border-left:1px solid var(--border-wine); }
+    /* Visualização em lista */
+    .list-view { display:flex; flex-direction:column; gap:8px; }
+    .list-row { display:flex; align-items:center; gap:12px; padding:10px 12px; background:var(--surface2); border:1px solid var(--border-wine); border-radius:8px; cursor:pointer; transition:border-color .15s; }
+    .list-row:hover { border-color:var(--gold-dim); }
+    .list-info { flex:1; min-width:0; }
+    .list-name { font-family:'Sora',sans-serif; font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .list-subname { font-family:'Sora',sans-serif; font-size:10.5px; font-weight:600; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .list-meta { display:flex; align-items:center; gap:8px; margin-top:3px; }
+    .list-com { font-size:11px; color:var(--text-muted); }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
 </head>
@@ -47,6 +61,10 @@
 <div class="main">
   <div class="toolbar">
     <input class="search-input" id="busca" placeholder="🔍 Buscar nome..." oninput="filtrar()">
+    <div class="view-switch">
+      <button class="view-sw active" id="vt-cards" onclick="setVista('cards')" title="Cards">▦</button>
+      <button class="view-sw" id="vt-lista" onclick="setVista('lista')" title="Lista">☰</button>
+    </div>
     <button class="btn-sm gold" onclick="window.location.href='novos.html'">+ Novo</button>
   </div>
 
@@ -125,12 +143,15 @@ let membroAtual = null;
 let habAtual = {};
 let roleMap = {};
 let fichaEdits = {}; // alterações da ficha (Pessoal/Família/Observações) — persiste entre abas
+let vista = localStorage.getItem('membros-vista') || 'cards'; // 'cards' | 'lista'
 
 async function init() {
   ctx = await initModulo(['coord_admin','subadmin','membro_equipe']);
   if (!ctx) return;
   renderHeader(ctx, 'membros');
   renderBottomNav(ctx.membership.role, 'membros');
+  document.getElementById('vt-cards').classList.toggle('active', vista === 'cards');
+  document.getElementById('vt-lista').classList.toggle('active', vista === 'lista');
   await loadMembros();
 }
 
@@ -150,6 +171,13 @@ async function loadMembros() {
 }
 
 function filtrar() { renderGrid(); }
+function setVista(v) {
+  vista = v; localStorage.setItem('membros-vista', v);
+  const c = document.getElementById('vt-cards'), l = document.getElementById('vt-lista');
+  if (c) c.classList.toggle('active', v === 'cards');
+  if (l) l.classList.toggle('active', v === 'lista');
+  renderGrid();
+}
 function setFiltro(btn, role) {
   filtroAtivo = role;
   document.querySelectorAll('#filtros .form-toggle').forEach(b => b.classList.remove('active'));
@@ -160,6 +188,7 @@ function setFiltro(btn, role) {
 function renderGrid() {
   const busca = document.getElementById('busca').value.toLowerCase();
   const grid = document.getElementById('grid');
+  grid.className = vista === 'lista' ? 'list-view' : 'cards-grid';
   grid.textContent = '';
   const lista = todos.filter(m =>
     m.nome.toLowerCase().includes(busca) &&
@@ -169,29 +198,36 @@ function renderGrid() {
     const em = document.createElement('span'); em.className = 'empty';
     em.textContent = 'Nenhum membro encontrado.'; grid.appendChild(em); return;
   }
+  const comLabel = (c) => c === 'matriz' ? 'Matriz' : c === 'santo_antonio' ? 'Sto. Antônio' : 'Outra';
   lista.forEach(m => {
-    const card = document.createElement('div'); card.className = 'member-card';
-    card.onclick = () => abrirFicha(m);
-
     const slug = m.nivel || nivelFromRole(m.role);
     const ninfo = nivelInfo(slug);
 
+    if (vista === 'lista') {
+      const row = document.createElement('div'); row.className = 'list-row';
+      row.onclick = () => abrirFicha(m);
+      const av = buildAvatarEl(m.foto_url, m.role, 42, { nivelSlug: slug }); av.style.flexShrink = '0';
+      const info = document.createElement('div'); info.className = 'list-info';
+      info.appendChild(nameBlock(m.nome, m.apelido, 'list-name', 'list-subname'));
+      const sub = document.createElement('div'); sub.className = 'list-meta';
+      const badge = document.createElement('span'); badge.className = 'badge ' + ninfo.base; badge.textContent = ninfo.label;
+      const com = document.createElement('span'); com.className = 'list-com'; com.textContent = comLabel(m.comunidade);
+      sub.append(badge, com); info.appendChild(sub);
+      row.append(av, info); grid.appendChild(row);
+      return;
+    }
+
+    const card = document.createElement('div'); card.className = 'member-card';
+    card.onclick = () => abrirFicha(m);
     const avatarWrap = document.createElement('div'); avatarWrap.className = 'member-card-avatar';
     avatarWrap.appendChild(buildAvatarEl(m.foto_url, m.role, 60, { nivelSlug: slug }));
-
-    const nome = document.createElement('div'); nome.className = 'member-card-name';
-    nome.textContent = m.nome;
-
+    const nome = nameBlock(m.nome, m.apelido, 'member-card-name', 'member-card-subname');
     const meta = document.createElement('div'); meta.className = 'member-card-meta';
     const badge = document.createElement('span'); badge.className = 'badge ' + ninfo.base;
     badge.textContent = ninfo.label; // nome segue o NÍVEL na jornada, não o papel
     meta.appendChild(badge);
-
     const com = document.createElement('div'); com.className = 'member-card-meta';
-    com.style.marginTop = '4px';
-    com.textContent = m.comunidade === 'matriz' ? 'Matriz'
-                    : m.comunidade === 'santo_antonio' ? 'Sto. Antônio' : 'Outra';
-
+    com.style.marginTop = '4px'; com.textContent = comLabel(m.comunidade);
     card.append(avatarWrap, nome, meta, com);
     grid.appendChild(card);
   });
@@ -216,7 +252,7 @@ async function abrirFicha(membro) {
       renderGrid();
     }
   }));
-  const nomeEl = document.createElement('div'); nomeEl.className = 'ficha-nome'; nomeEl.textContent = membro.nome;
+  const nomeEl = nameBlock(membro.nome, membro.apelido, 'ficha-nome', 'ficha-subname');
   const subEl  = document.createElement('div'); subEl.className  = 'ficha-sub';
   subEl.textContent = nivelInfo(membro.nivel || nivelFromRole(membro.role)).label + ' · ' +
     (membro.comunidade === 'matriz' ? 'Matriz' : membro.comunidade === 'santo_antonio' ? 'Sto. Antônio' : 'Outra');
@@ -292,6 +328,7 @@ async function renderTab(tab) {
   const m = membroAtual;
 
   if (tab === 'Pessoal') {
+    el.appendChild(editText('Apelido (opcional)', 'apelido', m.apelido));
     el.appendChild(editText('Nome', 'nome', m.nome));
     el.appendChild(editText('Data de nascimento', 'data_nascimento', m.data_nascimento, 'date'));
     if (m.data_nascimento) {

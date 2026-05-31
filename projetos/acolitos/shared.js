@@ -165,17 +165,6 @@ function renderHeader(ctx, activePage) {
   contaBtn.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>'; // ícone hardcoded — seguro
   contaBtn.onclick = () => openContaModal(ctx);
 
-  // Avatar editável do próprio membro no topo (também troca a foto por aqui)
-  if (ctx && ctx.membro) {
-    const av = buildAvatarEl(ctx.membro.foto_url, ctx.membership.role, 36, {
-      editable: true, membro: ctx.membro,
-      nivelSlug: ctx.membro.nivel || nivelFromRole(ctx.membership.role),
-      onUpload: (url) => { ctx.membro.foto_url = url; }
-    });
-    av.style.flexShrink = '0';
-    actions.appendChild(av);
-  }
-
   actions.append(contaBtn, sairBtn);
   el.appendChild(actions);
 }
@@ -211,7 +200,34 @@ function openContaModal(ctx) {
   sub.textContent = 'Usuário atual: ' + userAtual;
   modal.append(handle, tt, sub);
 
+  // Foto + patch (editável) — só para membros
+  if (ctx && ctx.membro) {
+    const avWrap = document.createElement('div'); avWrap.style.cssText = 'display:flex;justify-content:center;margin:2px 0 18px;';
+    avWrap.appendChild(buildAvatarEl(ctx.membro.foto_url, ctx.membership.role, 96, {
+      editable: true, membro: ctx.membro,
+      nivelSlug: ctx.membro.nivel || nivelFromRole(ctx.membership.role),
+      onUpload: (url) => { ctx.membro.foto_url = url; }
+    }));
+    modal.appendChild(avWrap);
+  }
+
   const msgEl = document.createElement('div'); msgEl.id = 'conta-msg'; msgEl.className = 'msg';
+
+  // Apelido (aparece em destaque acima do nome) — só para membros
+  if (ctx && ctx.membro) {
+    const ga = document.createElement('div'); ga.className = 'form-group';
+    const la = document.createElement('label'); la.className = 'form-label'; la.textContent = 'Apelido (aparece em destaque)';
+    const ia = document.createElement('input'); ia.className = 'form-input'; ia.value = ctx.membro.apelido || ''; ia.placeholder = 'como querem te chamar';
+    const ba = document.createElement('button'); ba.className = 'btn-sm gold'; ba.style.marginTop = '8px'; ba.textContent = 'Salvar apelido';
+    ba.onclick = async () => {
+      ba.disabled = true; ba.textContent = 'Salvando...';
+      const { error } = await sb.from('acolitos_membros').update({ apelido: ia.value.trim() || null }).eq('id', ctx.membro.id);
+      ba.disabled = false; ba.textContent = 'Salvar apelido';
+      if (error) { msgEl.className = 'msg error'; msgEl.textContent = 'Erro ao salvar apelido.'; }
+      else { ctx.membro.apelido = ia.value.trim() || null; msgEl.className = 'msg success'; msgEl.textContent = 'Apelido salvo!'; }
+    };
+    ga.append(la, ia, ba); modal.appendChild(ga);
+  }
 
   // Trocar usuário
   const g1 = document.createElement('div'); g1.className = 'form-group';
@@ -442,6 +458,22 @@ function buildRankEmblem(slug, size) {
   return wrap;
 }
 
+// Bloco de nome com apelido em destaque + nome menor embaixo.
+// Sem apelido, mostra só o nome (em destaque, na classe primária).
+function nameBlock(nome, apelido, primaryClass, secondaryClass) {
+  const wrap = document.createElement('div'); wrap.className = 'name-block';
+  const ap = (apelido || '').trim();
+  if (ap) {
+    const a = document.createElement('div'); a.className = primaryClass; a.textContent = ap;
+    const n = document.createElement('div'); n.className = secondaryClass; n.textContent = nome || '';
+    wrap.append(a, n);
+  } else {
+    const n = document.createElement('div'); n.className = primaryClass; n.textContent = nome || '';
+    wrap.append(n);
+  }
+  return wrap;
+}
+
 // Retorna HTMLElement (div container) com foto + patch sobreposto.
 // opts (opcional): { editable, membro, onUpload } — quando editable, mostra um
 // badge de câmera no canto inferior esquerdo que abre o seletor de arquivo e
@@ -478,7 +510,7 @@ function buildAvatarEl(fotoUrl, role, size, opts) {
   container.appendChild(patchEl);
 
   if (opts.editable && opts.membro) {
-    const camSize = Math.max(20, Math.round(size * 0.34));
+    const camSize = Math.max(16, Math.round(size * 0.24));
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -488,8 +520,8 @@ function buildAvatarEl(fotoUrl, role, size, opts) {
     const badge = document.createElement('button');
     badge.type = 'button';
     badge.title = 'Trocar foto';
-    badge.textContent = '📷';
-    badge.style.cssText = `position:absolute;bottom:-4px;left:-4px;width:${camSize}px;height:${camSize}px;border-radius:50%;border:1px solid var(--gold-dim);background:var(--surface);color:var(--gold);font-size:${Math.round(camSize*0.55)}px;line-height:0;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;z-index:2;`;
+    badge.textContent = '✎';
+    badge.style.cssText = `position:absolute;bottom:0;left:0;width:${camSize}px;height:${camSize}px;border-radius:50%;border:1px solid var(--border-wine);background:rgba(18,9,11,.82);color:var(--gold-dim);font-size:${Math.round(camSize*0.62)}px;line-height:0;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;z-index:2;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);`;
     badge.onclick = () => input.click();
 
     input.onchange = () => {
@@ -741,5 +773,32 @@ function buildPresencaChart(escalas) {
     if (overlay) overlay.style.background = '';
     if (dy > 110) fechar(overlay);
     modal = null; overlay = null;
+  });
+})();
+
+// ── FECHAR/VOLTAR CONSISTENTE EM TODO MODAL (✕ no canto + tecla Esc) ──
+(function () {
+  function closeOverlay(ov) { if (!ov) return; if (ov.id) ov.classList.remove('open'); else ov.remove(); }
+  function ensureClose(modal) {
+    if (!modal || modal.querySelector(':scope > .modal-close')) return;
+    const x = document.createElement('button');
+    x.type = 'button'; x.className = 'modal-close'; x.setAttribute('aria-label', 'Fechar'); x.title = 'Fechar'; x.textContent = '✕';
+    x.onclick = () => closeOverlay(modal.closest('.modal-overlay') || modal.parentElement);
+    modal.appendChild(x);
+  }
+  function scan(root) {
+    if (root.nodeType !== 1) return;
+    if (root.classList && root.classList.contains('modal')) ensureClose(root);
+    if (root.querySelectorAll) root.querySelectorAll('.modal').forEach(ensureClose);
+  }
+  new MutationObserver((muts) => {
+    muts.forEach(m => m.addedNodes.forEach(scan));
+  }).observe(document.documentElement, { childList: true, subtree: true });
+  const init = () => scan(document.body || document.documentElement);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const opens = [...document.querySelectorAll('.modal-overlay.open')];
+    if (opens.length) closeOverlay(opens[opens.length - 1]);
   });
 })();
