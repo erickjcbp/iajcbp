@@ -831,8 +831,9 @@ async function salvarFicha() {
   }
   // Avisos detalhados ao membro + sincronização do papel (RLS) quando muda a coordenação
   const editados = Object.keys(fichaEdits);
-  const engajCampos = ['desenvolvimento_habilidades', 'desenvolvimento_competencias', 'habilidades_desenvolvidas', 'competencias_desenvolvidas', 'mensagem_coordenacao'];
+  const engajCampos = ['desenvolvimento_habilidades', 'desenvolvimento_competencias', 'habilidades_desenvolvidas', 'competencias_desenvolvidas']; // aba Evolução
   const mudouEngaj = editados.some(k => engajCampos.includes(k));
+  const mudouMensagem = editados.includes('mensagem_coordenacao'); // aba Mensagem (separada)
   if (membroAtual.user_id) {
     // Sincroniza pastoral_members.role para liberar/retirar acesso de equipe (RLS)
     if (editados.includes('eh_equipe')) {
@@ -847,13 +848,17 @@ async function salvarFicha() {
     if (editados.includes('eh_equipe')) msgs.push(fichaEdits.eh_equipe ? 'Você agora faz parte da coordenação/equipe — use o botão "Coordenação" no topo.' : 'Você não faz mais parte da coordenação.');
     if (editados.includes('setores')) { const labs = (fichaEdits.setores || []).map(k => SETOR_LABEL[k] || k); if (labs.length) msgs.push('Seus setores agora: ' + labs.join(', ') + '.'); }
     if (editados.includes('serve')) msgs.push(fichaEdits.serve ? 'Você está marcado como servo do altar.' : 'Você não está mais marcado como servo do altar.');
-    const cobertos = ['permissoes', 'eh_equipe', 'setores', 'serve', 'nivel'].concat(engajCampos);
+    const cobertos = ['permissoes', 'eh_equipe', 'setores', 'serve', 'nivel', 'mensagem_coordenacao'].concat(engajCampos);
     if (editados.some(k => !cobertos.includes(k))) msgs.push('A coordenação atualizou seus dados cadastrais.');
-    if (msgs.length || mudouEngaj) {
+    if (msgs.length || mudouEngaj || mudouMensagem) {
       try {
         const novos = Array.isArray(membroAtual.avisos) ? [...membroAtual.avisos] : [];
         msgs.forEach(msg => novos.push({ msg, logout: false, seen: false, ts: Date.now() }));
         if (mudouEngaj) novos.push({ tipo: 'engajamento', logout: false, seen: false, ts: Date.now() });
+        // Aba Mensagem: aviso próprio, só com a mensagem (se não estiver vazia)
+        if (mudouMensagem && (membroAtual.mensagem_coordenacao || '').trim()) {
+          novos.push({ tipo: 'mensagem', texto: membroAtual.mensagem_coordenacao, logout: false, seen: false, ts: Date.now() });
+        }
         await sbAdmin.from('acolitos_membros').update({ avisos: novos }).eq('id', membroAtual.id);
         membroAtual.avisos = novos;
       } catch (e) { /* best-effort */ }

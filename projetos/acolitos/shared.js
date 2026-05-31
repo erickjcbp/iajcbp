@@ -119,7 +119,6 @@ function buildEngajamentoEl(membro) {
   chips('Habilidades desenvolvidas', membro.habilidades_desenvolvidas, HABILIDADE_LABEL, true);
   chips('Competências a desenvolver', membro.desenvolvimento_competencias, COMPETENCIA_LABEL);
   chips('Competências desenvolvidas', membro.competencias_desenvolvidas, COMPETENCIA_LABEL, true);
-  if (membro.mensagem_coordenacao) { sec('Mensagem da coordenação'); const p = document.createElement('div'); p.style.cssText = 'font-size:13px;color:var(--text);line-height:1.5;background:var(--surface2);border-left:3px solid var(--gold);padding:10px;border-radius:4px;'; p.textContent = membro.mensagem_coordenacao; box.appendChild(p); }
   return box;
 }
 
@@ -144,6 +143,12 @@ function avisoEl(aviso, membro) {
     const wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:14px;padding:12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--gold);';
     const t = document.createElement('div'); t.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; t.textContent = '🎯 Seu plano de evolução foi atualizado';
     wrap.append(t, buildEngajamentoEl(membro)); return wrap;
+  }
+  if (aviso && aviso.tipo === 'mensagem') {
+    const wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:14px;padding:12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--gold);';
+    const t = document.createElement('div'); t.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; t.textContent = '💬 Mensagem da coordenação';
+    const p = document.createElement('div'); p.style.cssText = 'font-size:14px;color:var(--text);line-height:1.6;'; p.textContent = aviso.texto || aviso.msg || '';
+    wrap.append(t, p); return wrap;
   }
   const p = document.createElement('div'); p.style.cssText = 'font-size:14px;line-height:1.6;color:var(--text);margin-bottom:12px;padding:12px;background:var(--surface);border-left:3px solid var(--gold);border-radius:4px;';
   p.textContent = (aviso && aviso.msg) ? aviso.msg : String(aviso);
