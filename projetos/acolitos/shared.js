@@ -428,6 +428,7 @@ function waLink(tel) {
 const MODULOS_LIBERAVEIS = [
   ['escala','Escala','escala.html'], ['membros','Membros','membros.html'],
   ['crm','Integração (CRM)','crm.html'], ['chamada','Chamada','chamada.html'],
+  ['tesouraria','Tesouraria','tesouraria.html'],
 ];
 
 // ── BOTTOM NAV ────────────────────────────────────────────────
@@ -435,12 +436,13 @@ const EQUIPE_ROLES = ['coord_admin','subadmin','membro_equipe'];
 
 // Módulos de coordenação na navegação (na ordem fixa); permissões controlam quais aparecem
 const NAV_COORD_MODULOS = {
-  membros: { label:'Membros', href:'membros.html', icon:'users' },
-  escala:  { label:'Escala',  href:'escala.html',  icon:'calendar' },
-  crm:     { label:'CRM',     href:'crm.html',     icon:'shuffle' },
-  chamada: { label:'Chamada', href:'chamada.html', icon:'message-circle' },
+  membros:    { label:'Membros',    href:'membros.html',    icon:'users' },
+  escala:     { label:'Escala',     href:'escala.html',     icon:'calendar' },
+  crm:        { label:'CRM',        href:'crm.html',        icon:'shuffle' },
+  chamada:    { label:'Chamada',    href:'chamada.html',    icon:'message-circle' },
+  tesouraria: { label:'Tesouraria', href:'tesouraria.html', icon:'dollar' },
 };
-const ORDEM_MODULOS = ['membros','escala','crm','chamada'];
+const ORDEM_MODULOS = ['membros','escala','crm','chamada','tesouraria'];
 
 // Capacidades do usuário p/ navegação
 function navCaps(ctx) {
@@ -470,6 +472,7 @@ function _svgIcon(name) {
     calendar:       'M8 2v4 M16 2v4 M3 10h18 M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z',
     'x-circle':     'M22 12A10 10 0 1 1 2 12a10 10 0 0 1 20 0z M15 9l-6 6 M9 9l6 6',
     'message-circle':'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
+    dollar:         'M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
   };
   return `<svg viewBox="0 0 24 24"><path d="${d[name] || ''}"/></svg>`;
 }

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tesouraria — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .caixa-card { background:linear-gradient(165deg, var(--surface2), var(--surface)); border:1px solid var(--gold-dim); border-radius:6px; padding:18px 16px; text-align:center; margin-bottom:14px; position:relative; overflow:hidden; }
+    .caixa-label { font-family:'Sora',sans-serif; font-size:11px; color:var(--text-muted); letter-spacing:1px; text-transform:uppercase; }
+    .caixa-valor { font-family:'Oxanium',sans-serif; font-size:34px; font-weight:800; margin-top:4px; }
+    .caixa-valor.pos { color:var(--gold-light); text-shadow:0 0 18px var(--red-glow); }
+    .caixa-valor.neg { color:var(--danger-text); }
+    .mini-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+    .mini-card { background:var(--surface); border:1px solid var(--border-wine); border-radius:4px; padding:12px; }
+    .mini-card .l { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+    .mini-card .v { font-family:'Oxanium',sans-serif; font-size:20px; font-weight:700; margin-top:3px; }
+    .mini-card .v.ent { color:var(--success-text); }
+    .mini-card .v.sai { color:var(--danger-text); }
+    .lanc-row { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--border); }
+    .lanc-ico { width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:16px; }
+    .lanc-ico.entrada { background:rgba(30,80,30,.2); border:1px solid var(--success); }
+    .lanc-ico.saida { background:rgba(100,10,10,.3); border:1px solid var(--danger); }
+    .lanc-info { flex:1; min-width:0; }
+    .lanc-desc { font-size:13px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .lanc-meta { font-size:11px; color:var(--text-muted); margin-top:2px; }
+    .lanc-val { font-family:'Oxanium',sans-serif; font-weight:700; font-size:15px; flex-shrink:0; }
+    .lanc-val.entrada { color:var(--success-text); }
+    .lanc-val.saida { color:var(--danger-text); }
+    .lanc-del { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:14px; flex-shrink:0; padding:4px; -webkit-tap-highlight-color:transparent; }
+    .tipo-toggle { display:flex; gap:8px; margin-bottom:14px; }
+    .tipo-btn { flex:1; min-height:46px; background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); border-radius:4px; cursor:pointer; font-family:'Sora',sans-serif; font-size:12px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; -webkit-tap-highlight-color:transparent; }
+    .tipo-btn.active.entrada { border-color:var(--success); color:var(--success-text); background:rgba(30,80,30,.14); }
+    .tipo-btn.active.saida { border-color:var(--danger); color:var(--danger-text); background:rgba(100,10,10,.18); }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+<div class="main" id="main-content">
+  <span class="loading">Carregando...</span>
+</div>
+
+<script src="shared.js"></script>
+<script>
+const CATEGORIAS = {
+  entrada: [['dizimo','Dízimo/Doação'],['mensalidade','Mensalidade'],['evento','Evento'],['rifa','Rifa/Venda'],['outro','Outro']],
+  saida:   [['compras','Compras'],['tunicas','Túnicas/Vestes'],['evento','Evento'],['transporte','Transporte'],['manutencao','Manutenção'],['outro','Outro']],
+};
+const CAT_LABEL = {}; [...CATEGORIAS.entrada, ...CATEGORIAS.saida].forEach(([k,l]) => CAT_LABEL[k] = l);
+const MES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const brl = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+let ctx = null, lancamentos = [];
+
+async function init() {
+  ctx = await initModulo(['coord_admin','subadmin','membro_equipe']);
+  if (!ctx) return;
+  // Só admin ou quem tem a permissão 'tesouraria'
+  const c = navCaps(ctx);
+  if (!c.isAdmin && !c.perms.includes('tesouraria')) { window.location.href = 'index.html'; return; }
+  renderHeader(ctx, 'tesouraria');
+  renderBottomNav(ctx, 'tesouraria');
+  await load();
+}
+
+async function load() {
+  const { data } = await sb.from('acolitos_financeiro').select('*').order('data', { ascending: false }).order('created_at', { ascending: false });
+  lancamentos = data || [];
+  render();
+}
+
+function render() {
+  const main = document.getElementById('main-content'); main.textContent = '';
+
+  const title = document.createElement('h1'); title.className = 'page-title'; title.textContent = 'Tesouraria'; main.appendChild(title);
+
+  // Saldo
+  const saldo = lancamentos.reduce((s, l) => s + (l.tipo === 'entrada' ? 1 : -1) * Number(l.valor), 0);
+  const hoje = new Date(); const ym = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0');
+  const doMes = lancamentos.filter(l => (l.data || '').slice(0, 7) === ym);
+  const entMes = doMes.filter(l => l.tipo === 'entrada').reduce((s, l) => s + Number(l.valor), 0);
+  const saiMes = doMes.filter(l => l.tipo === 'saida').reduce((s, l) => s + Number(l.valor), 0);
+
+  const caixa = document.createElement('div'); caixa.className = 'caixa-card';
+  const cl = document.createElement('div'); cl.className = 'caixa-label'; cl.textContent = 'Saldo em caixa';
+  const cv = document.createElement('div'); cv.className = 'caixa-valor ' + (saldo >= 0 ? 'pos' : 'neg'); cv.textContent = brl(saldo);
+  caixa.append(cl, cv); main.appendChild(caixa);
+
+  const grid = document.createElement('div'); grid.className = 'mini-grid';
+  [['Entradas do mês', entMes, 'ent'], ['Saídas do mês', saiMes, 'sai']].forEach(([l, v, cls]) => {
+    const c = document.createElement('div'); c.className = 'mini-card';
+    const le = document.createElement('div'); le.className = 'l'; le.textContent = l;
+    const ve = document.createElement('div'); ve.className = 'v ' + cls; ve.textContent = brl(v);
+    c.append(le, ve); grid.appendChild(c);
+  });
+  main.appendChild(grid);
+
+  const btnAdd = document.createElement('button'); btnAdd.className = 'btn gold'; btnAdd.style.marginBottom = '18px';
+  btnAdd.textContent = '+ Novo lançamento'; btnAdd.onclick = abrirLancamento; main.appendChild(btnAdd);
+
+  const h = document.createElement('div'); h.className = 'section-head'; h.textContent = 'Lançamentos'; main.appendChild(h);
+  if (!lancamentos.length) { const em = document.createElement('span'); em.className = 'empty'; em.textContent = 'Nenhum lançamento ainda.'; main.appendChild(em); return; }
+  lancamentos.forEach(l => {
+    const d = l.data ? new Date(l.data + 'T00:00:00') : null;
+    const row = document.createElement('div'); row.className = 'lanc-row';
+    const ico = document.createElement('div'); ico.className = 'lanc-ico ' + l.tipo; ico.textContent = l.tipo === 'entrada' ? '↑' : '↓';
+    const info = document.createElement('div'); info.className = 'lanc-info';
+    const desc = document.createElement('div'); desc.className = 'lanc-desc'; desc.textContent = l.descricao || CAT_LABEL[l.categoria] || l.categoria;
+    const meta = document.createElement('div'); meta.className = 'lanc-meta';
+    meta.textContent = (CAT_LABEL[l.categoria] || l.categoria) + (d ? ' · ' + d.getDate() + ' ' + MES[d.getMonth()] : '');
+    info.append(desc, meta);
+    const val = document.createElement('div'); val.className = 'lanc-val ' + l.tipo; val.textContent = (l.tipo === 'entrada' ? '+ ' : '− ') + brl(l.valor);
+    const del = document.createElement('button'); del.className = 'lanc-del'; del.textContent = '🗑'; del.title = 'Excluir';
+    del.onclick = async () => { if (!confirm('Excluir este lançamento?')) return; await sb.from('acolitos_financeiro').delete().eq('id', l.id); load(); };
+    row.append(ico, info, val, del); main.appendChild(row);
+  });
+}
+
+function abrirLancamento() {
+  let tipo = 'entrada';
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className = 'modal';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Novo Lançamento';
+  modal.append(handle, tt);
+
+  const tog = document.createElement('div'); tog.className = 'tipo-toggle';
+  const catSel = document.createElement('select'); catSel.className = 'form-select';
+  function popCat() { catSel.textContent = ''; CATEGORIAS[tipo].forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; catSel.appendChild(o); }); }
+  [['entrada', 'Entrada'], ['saida', 'Saída']].forEach(([t, lab]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'tipo-btn ' + t + (t === tipo ? ' active' : ''); b.textContent = lab;
+    b.onclick = () => { tipo = t; tog.querySelectorAll('.tipo-btn').forEach(x => x.classList.remove('active')); b.classList.add('active'); popCat(); };
+    tog.appendChild(b);
+  });
+  modal.appendChild(tog);
+
+  const g1 = document.createElement('div'); g1.className = 'form-group';
+  const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Categoria *'; popCat();
+  g1.append(l1, catSel); modal.appendChild(g1);
+
+  const g2 = document.createElement('div'); g2.className = 'form-group';
+  const l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'Valor (R$) *';
+  const inpVal = document.createElement('input'); inpVal.className = 'form-input'; inpVal.type = 'number'; inpVal.step = '0.01'; inpVal.min = '0'; inpVal.placeholder = '0,00';
+  g2.append(l2, inpVal); modal.appendChild(g2);
+
+  const g3 = document.createElement('div'); g3.className = 'form-group';
+  const l3 = document.createElement('label'); l3.className = 'form-label'; l3.textContent = 'Descrição';
+  const inpDesc = document.createElement('input'); inpDesc.className = 'form-input'; inpDesc.placeholder = 'Ex: compra de turíbulo';
+  g3.append(l3, inpDesc); modal.appendChild(g3);
+
+  const g4 = document.createElement('div'); g4.className = 'form-group';
+  const l4 = document.createElement('label'); l4.className = 'form-label'; l4.textContent = 'Data';
+  const inpData = document.createElement('input'); inpData.className = 'form-input'; inpData.type = 'date'; inpData.value = new Date().toISOString().slice(0, 10);
+  g4.append(l4, inpData); modal.appendChild(g4);
+
+  const msg = document.createElement('div'); msg.className = 'msg'; modal.appendChild(msg);
+  const acts = document.createElement('div'); acts.className = 'modal-actions';
+  const cancel = document.createElement('button'); cancel.className = 'btn-sm gray'; cancel.textContent = 'Cancelar'; cancel.onclick = () => ov.remove();
+  const conf = document.createElement('button'); conf.className = 'btn-sm gold'; conf.textContent = 'Salvar';
+  conf.onclick = async () => {
+    const valor = parseFloat(inpVal.value);
+    if (!(valor > 0)) { msg.className = 'msg error'; msg.textContent = 'Informe um valor válido.'; return; }
+    conf.disabled = true; conf.textContent = 'Salvando...';
+    const { error } = await sb.from('acolitos_financeiro').insert({
+      tipo, categoria: catSel.value, valor, descricao: inpDesc.value.trim() || null,
+      data: inpData.value || new Date().toISOString().slice(0, 10), created_by: ctx.user.id
+    });
+    if (error) { msg.className = 'msg error'; msg.textContent = 'Erro ao salvar. Tente novamente.'; conf.disabled = false; conf.textContent = 'Salvar'; return; }
+    ov.remove(); load();
+  };
+  acts.append(cancel, conf); modal.appendChild(acts);
+  ov.appendChild(modal); document.body.appendChild(ov);
+}
+
+init();
+</script>
+</body>
+</html>

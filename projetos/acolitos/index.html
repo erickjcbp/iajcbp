@@ -465,6 +465,10 @@ async function renderDashboardEquipe(ctx) {
   });
   main.appendChild(kpiGrid);
 
+  // Caixa (Tesouraria) — só para quem tem acesso
+  const cap = navCaps(ctx);
+  if (cap.isAdmin || cap.perms.includes('tesouraria')) await renderCaixaHome(main);
+
   // Gráfico 1 — Presença por mês
   renderGraficoPresenca(main, escSeisR.data||[]);
 
@@ -498,6 +502,31 @@ async function renderDashboardEquipe(ctx) {
 }
 
 /* ── GRÁFICO: presença por mês ───────────────────────────────── */
+async function renderCaixaHome(main) {
+  const { data } = await sb.from('acolitos_financeiro').select('tipo,valor,data');
+  const lanc = data || [];
+  const saldo = lanc.reduce((s, l) => s + (l.tipo === 'entrada' ? 1 : -1) * Number(l.valor), 0);
+  const hoje = new Date(); const ym = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0');
+  const mes = lanc.filter(l => (l.data || '').slice(0, 7) === ym);
+  const ent = mes.filter(l => l.tipo === 'entrada').reduce((s, l) => s + Number(l.valor), 0);
+  const sai = mes.filter(l => l.tipo === 'saida').reduce((s, l) => s + Number(l.valor), 0);
+  const brl = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  const card = document.createElement('a'); card.href = 'tesouraria.html'; card.className = 'chart-card'; card.style.cssText = 'display:block;text-decoration:none;';
+  const t = document.createElement('div'); t.className = 'chart-title'; t.textContent = 'Caixa — Tesouraria ▸'; card.appendChild(t);
+  const row = document.createElement('div'); row.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-end;gap:10px;';
+  const s = document.createElement('div');
+  const sl = document.createElement('div'); sl.style.cssText = 'font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;'; sl.textContent = 'Saldo em caixa';
+  const sv = document.createElement('div'); sv.style.cssText = 'font-family:Oxanium,sans-serif;font-size:26px;font-weight:800;color:' + (saldo >= 0 ? 'var(--gold-light)' : 'var(--danger-text)') + ';'; sv.textContent = brl(saldo);
+  s.append(sl, sv);
+  const m = document.createElement('div'); m.style.cssText = 'text-align:right;line-height:1.5;';
+  const me = document.createElement('div'); me.style.cssText = 'font-size:12px;color:var(--success-text);font-weight:700;'; me.textContent = '+ ' + brl(ent);
+  const ms = document.createElement('div'); ms.style.cssText = 'font-size:12px;color:var(--danger-text);font-weight:700;'; ms.textContent = '− ' + brl(sai);
+  const ml = document.createElement('div'); ml.style.cssText = 'font-size:10px;color:var(--text-muted);'; ml.textContent = 'no mês';
+  m.append(me, ms, ml); row.append(s, m); card.appendChild(row);
+  main.appendChild(card);
+}
+
 function renderGraficoPresenca(main, escalas) {
   const card = document.createElement('div'); card.className='chart-card';
   const t = document.createElement('div'); t.className='chart-title'; t.textContent='Presença — últimos 6 meses'; card.appendChild(t);
