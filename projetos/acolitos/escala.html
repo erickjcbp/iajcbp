@@ -240,7 +240,7 @@ const NIVEL_COR = { nao_treinado:'var(--border)', em_formacao:'#d4a060', apto:'v
 const NIVEL_LABEL = { nao_treinado:'Não treinado', em_formacao:'Em formação', apto:'Apto', experiente:'Experiente', referencia:'Referência' };
 
 let ctx = null, celebracoes = [], escalasMap = {}, membros = [], habMap = {}, dispMap = {};
-let freqMap = {}, restricaoMap = {};
+let freqMap = {}, restricaoMap = {}, ausMap = {};
 let pendingCelebId = null, pendingEdicao = [], abaAtual = 'cards';
 
 function openInfo(title, lines) {
@@ -278,13 +278,15 @@ async function loadDados() {
       if (!escalasMap[e.celebracao_id]) escalasMap[e.celebracao_id]=[];
       escalasMap[e.celebracao_id].push(e);
     });
-    const [{ data: mems }, { data: habs }, { data: disps }, freqData] = await Promise.all([
+    const [{ data: mems }, { data: habs }, { data: disps }, freqData, { data: auss }] = await Promise.all([
       sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,data_nascimento,foto_url,observacoes,necessidades_especiais,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro').eq('status','ativo').order('nome'),
       sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia'),
       sb.from('acolitos_disponibilidade').select('membro_id,dia,horario,restricao'),
       fetchFrequencia(),
+      sb.from('acolitos_ausencias').select('membro_id,celebracao_id').in('celebracao_id', ids),
     ]);
     membros = mems||[];
+    ausMap = {}; (auss||[]).forEach(a=>{ if(!ausMap[a.celebracao_id]) ausMap[a.celebracao_id]=new Set(); ausMap[a.celebracao_id].add(a.membro_id); });
     habMap = {}; (habs||[]).forEach(h=>{if(!habMap[h.membro_id])habMap[h.membro_id]={};habMap[h.membro_id][h.funcao]=h.proficiencia;});
     dispMap = {}; restricaoMap = {};
     (disps||[]).forEach(d=>{
@@ -374,6 +376,7 @@ function renderCards() {
 
 function abrirMontagem(celeb) {
   pendingCelebId=celeb.id;
+  const ausNesta = ausMap[celeb.id] || new Set(); // membros que declararam ausência nesta missa
   const tmpl=celeb.comunidade==='santo_antonio'?TEMPLATE_STO:TEMPLATE_MATRIZ;
   const d=new Date(celeb.data+'T00:00:00');
   document.getElementById('mt-titulo').textContent=DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})+' · '+celeb.horario;
@@ -404,7 +407,9 @@ function abrirMontagem(celeb) {
       .forEach(m=>{
         const opt=document.createElement('option');opt.value=m.id;
         const disp=!horKey||(dispMap[m.id]||[]).includes(horKey);
-        opt.textContent=(disp?'':' ⚠ ')+m.nome;
+        const ausente=ausNesta.has(m.id);
+        opt.textContent=(ausente?'🚫 ':(disp?'':'⚠ '))+(m.apelido||m.nome)+(ausente?' — ausência':'');
+        if(ausente && exist?.membro_id!==m.id) opt.disabled=true; // bloqueado: declarou ausência
         if(exist?.membro_id===m.id)opt.selected=true;
         sel.appendChild(opt);
       });
@@ -423,9 +428,10 @@ function abrirMontagem(celeb) {
       .filter(f=>['apto','experiente','referencia'].includes(habs[f]));
     if(!apt.length)return;
     const disp=!horKey||(dispMap[m.id]||[]).includes(horKey);
-    const row=document.createElement('div');row.className='mem-row';row.style.opacity=disp?'1':'.45';
-    const n=document.createElement('div');n.className='mem-nome';n.textContent=(disp?'':' ⚠ ')+m.nome;
-    const f=document.createElement('div');f.className='mem-fns';f.textContent=apt.map(x=>FUNCAO_LABEL[x]).join(', ');
+    const ausente=ausNesta.has(m.id);
+    const row=document.createElement('div');row.className='mem-row';row.style.opacity=ausente?'.3':(disp?'1':'.45');
+    const n=document.createElement('div');n.className='mem-nome';n.textContent=(ausente?'🚫 ':(disp?'':'⚠ '))+(m.apelido||m.nome);
+    const f=document.createElement('div');f.className='mem-fns';f.textContent=ausente?'Ausência declarada nesta missa':apt.map(x=>FUNCAO_LABEL[x]).join(', ');
     row.append(n,f);ml.appendChild(row);
   });
   colMems.appendChild(ml);
@@ -539,6 +545,7 @@ function renderPlanilha() {
       const td=document.createElement('td');td.style.textAlign='center';
       const e=(escalasMap[c.id]||[]).find(x=>x.membro_id===m.id);
       if(e){const cell=document.createElement('span');cell.className='escala-cell '+(e.status==='ausente_justificado'?'aj':e.status==='escalado'?'escalado':e.status);cell.textContent=FUNCAO_LABEL[e.funcao]||e.funcao;td.appendChild(cell);}
+      else if((ausMap[c.id]||new Set()).has(m.id)){td.textContent='🚫';td.title='Declarou ausência';td.style.color='var(--danger-text)';}
       else{td.textContent='—';td.style.color='var(--border)';}
       tr.appendChild(td);
     });
