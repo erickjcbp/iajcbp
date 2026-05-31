@@ -416,8 +416,8 @@ const ORDEM_MODULOS = ['membros','escala','crm','chamada'];
 function navCaps(ctx) {
   const role = ctx && ctx.membership ? ctx.membership.role : null;
   const m = ctx ? ctx.membro : null;
-  const isAdmin = EQUIPE_ROLES.includes(role);
-  const ehEquipe = isAdmin || !!(m && m.eh_equipe);
+  const isAdmin = ['coord_admin', 'subadmin'].includes(role); // só admin vê todos os módulos
+  const ehEquipe = isAdmin || EQUIPE_ROLES.includes(role) || !!(m && m.eh_equipe);
   const serve = m ? (m.serve !== false) : false;
   const nivel = (m && m.nivel) || nivelFromRole(role || 'aspirante');
   const isCerimo = nivelInfo(nivel).base === 'cerimonario';
