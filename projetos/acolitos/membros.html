@@ -19,6 +19,10 @@
     }
     .ficha-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
     .ficha-tab.destaque { color:var(--gold-light); }
+    .ficha-tabs-wrap { display:flex; align-items:stretch; margin-bottom:16px; border-bottom:1px solid var(--border-wine); }
+    .ficha-tabs-wrap .ficha-tabs { border-bottom:none; margin-bottom:0; flex:1; min-width:0; }
+    .tabs-arrow { flex:none; width:28px; background:var(--surface2); border:none; color:var(--gold); font-size:20px; line-height:1; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .tabs-arrow:active { background:rgba(232,185,74,.14); }
     .tab-content { display:none; }
     .tab-content.active { display:block; }
     .hab-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
@@ -95,7 +99,11 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="ficha-header" id="ficha-header"></div>
-    <div class="ficha-tabs" id="ficha-tabs"></div>
+    <div class="ficha-tabs-wrap">
+      <button type="button" class="tabs-arrow" onclick="scrollTabs(-1)" aria-label="Voltar abas">‹</button>
+      <div class="ficha-tabs" id="ficha-tabs"></div>
+      <button type="button" class="tabs-arrow" onclick="scrollTabs(1)" aria-label="Avançar abas">›</button>
+    </div>
     <div id="ficha-conteudo"></div>
     <div id="ficha-msg" class="msg"></div>
     <div id="ficha-dirty" style="display:none;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--warn-text);margin-top:12px;">● Há alterações não salvas — clique em Salvar</div>
@@ -184,6 +192,7 @@ async function loadMembros() {
 }
 
 function filtrar() { renderGrid(); }
+function scrollTabs(dir) { const el = document.getElementById('ficha-tabs'); if (el) el.scrollBy({ left: dir * 160, behavior: 'smooth' }); }
 function setVista(v) {
   vista = v; localStorage.setItem('membros-vista', v);
   const c = document.getElementById('vt-cards'), l = document.getElementById('vt-lista');
@@ -293,7 +302,7 @@ async function abrirFicha(membro) {
   const ehAdmin = ['coord_admin','subadmin'].includes(ctx.membership.role);
   const tabs = ['Pessoal'];
   if (ehAdmin) tabs.push('Acessos'); // logo no começo, bem visível
-  tabs.push('Habilitações','Disponibilidade','Família','Frequência','Evolução','Observações');
+  tabs.push('Habilitações','Disponibilidade','Família','Frequência','Evolução','Engajamento');
   const tabsEl = document.getElementById('ficha-tabs'); tabsEl.textContent = '';
   tabs.forEach((t, i) => {
     const btn = document.createElement('button'); btn.className = 'ficha-tab' + (i === 0 ? ' active' : '') + (t === 'Acessos' ? ' destaque' : '');
@@ -413,6 +422,7 @@ async function renderTab(tab) {
     el.appendChild(editBool('Crisma', 'crisma', m.crisma));
     el.appendChild(editBool('Túnica própria', 'tem_tunica', m.tem_tunica));
     el.appendChild(editBool('No grupo do WhatsApp', 'no_grupo_whatsapp', m.no_grupo_whatsapp));
+    el.appendChild(editArea('Necessidades especiais (TEA, TDAH, limitações...)', 'necessidades_especiais', m.necessidades_especiais));
   }
 
   if (tab === 'Habilitações') {
@@ -549,41 +559,35 @@ async function renderTab(tab) {
   }
 
   if (tab === 'Evolução') {
-    // Jornada do membro
-    const track = document.createElement('div'); track.className = 'jornada-track';
-    const roleIdx = JORNADA.findIndex(j => j.role === m.role);
-    JORNADA.forEach((j,i) => {
-      const step=document.createElement('div'); step.className='jornada-step';
-      const dot=document.createElement('div'); dot.className='jornada-dot'+(i<roleIdx?' done':i===roleIdx?' current':'');
-      dot.textContent = i<=roleIdx ? j.icon : '○';
-      const lbl=document.createElement('div'); lbl.className='jornada-label'+(i===roleIdx?' current':''); lbl.textContent=j.label;
-      step.append(dot,lbl); track.appendChild(step);
-      if (i<JORNADA.length-1){const line=document.createElement('div');line.className='jornada-line'+(i<roleIdx?' done':'');track.appendChild(line);}
-    });
-    el.appendChild(track);
+    const slug = m.nivel || nivelFromRole(m.role);
+    const idx = nivelIndex(slug);
+    // Cabeçalho: emblema + nível + título
+    const head = document.createElement('div'); head.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:10px;';
+    head.appendChild(buildRankEmblem(slug, 56));
+    const ht = document.createElement('div');
+    const hn = document.createElement('div'); hn.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:14px;color:var(--text);'; hn.textContent = nivelInfo(slug).label;
+    const htt = document.createElement('div'); htt.style.cssText = 'font-size:12px;color:var(--gold);font-style:italic;'; htt.textContent = nivelInfo(slug).titulo ? '🏆 ' + nivelInfo(slug).titulo : '';
+    ht.append(hn, htt); head.appendChild(ht); el.appendChild(head);
+    const prog = document.createElement('div'); prog.style.cssText = 'font-size:12px;color:var(--text-muted);margin-bottom:14px;';
+    prog.textContent = 'Nível ' + (idx + 1) + ' de ' + NIVEIS.length + (NIVEIS[idx + 1] ? ' · Próximo: ' + NIVEIS[idx + 1].label : ' · Nível máximo');
+    el.appendChild(prog);
 
-    // Formações concluídas (derivadas das habilitações: apto+)
+    const chips = (title, vals, labelMap, cls) => {
+      const t = document.createElement('div'); t.className = 'section-card-title'; t.style.marginTop = '12px'; t.textContent = title; el.appendChild(t);
+      if (!vals || !vals.length) { const e = document.createElement('div'); e.style.cssText = 'font-size:12px;color:var(--text-muted);font-style:italic;'; e.textContent = '—'; el.appendChild(e); return; }
+      const w = document.createElement('div'); w.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;'; vals.forEach(v => { const c = document.createElement('span'); c.className = cls || 'irmao-chip'; c.textContent = labelMap[v] || v; w.appendChild(c); }); el.appendChild(w);
+    };
+    chips('Habilidades a desenvolver', m.desenvolvimento_habilidades, HABILIDADE_LABEL);
+    chips('Competências a desenvolver', m.desenvolvimento_competencias, COMPETENCIA_LABEL);
+
     const { data: habs } = await sbAdmin.from('acolitos_habilitacoes').select('funcao,proficiencia').eq('membro_id', m.id);
-    const formado = (habs||[]).filter(h=>['apto','experiente','referencia'].includes(h.proficiencia));
-    const emForm = (habs||[]).filter(h=>h.proficiencia==='em_formacao');
-    const fLabel = id => (FUNCOES.find(f=>f.id===id)||{}).label || id;
+    const formado = (habs || []).filter(h => ['apto','experiente','referencia'].includes(h.proficiencia)).map(h => h.funcao);
+    chips('Funções já formadas (' + formado.length + ')', formado, HABILIDADE_LABEL, 'badge acolito');
 
-    const tit1=document.createElement('div'); tit1.className='section-card-title'; tit1.style.marginTop='16px'; tit1.textContent='Funções formadas ('+formado.length+')';
-    el.appendChild(tit1);
-    if(!formado.length){const em=document.createElement('div');em.style.cssText='font-size:12px;color:var(--text-muted);font-style:italic;';em.textContent='Nenhuma função concluída ainda.';el.appendChild(em);}
-    else { const wrap=document.createElement('div'); wrap.style.cssText='display:flex;flex-wrap:wrap;gap:6px;'; formado.forEach(h=>{const c=document.createElement('span');c.className='badge acolito';c.textContent=fLabel(h.funcao);wrap.appendChild(c);}); el.appendChild(wrap); }
-
-    if(emForm.length){
-      const tit2=document.createElement('div'); tit2.className='section-card-title'; tit2.style.marginTop='16px'; tit2.textContent='Em formação ('+emForm.length+')';
-      el.appendChild(tit2);
-      const wrap2=document.createElement('div'); wrap2.style.cssText='display:flex;flex-wrap:wrap;gap:6px;'; emForm.forEach(h=>{const c=document.createElement('span');c.className='badge pendente';c.textContent=fLabel(h.funcao);wrap2.appendChild(c);}); el.appendChild(wrap2);
+    if (m.mensagem_coordenacao) {
+      const tm = document.createElement('div'); tm.className = 'section-card-title'; tm.style.marginTop = '12px'; tm.textContent = 'Mensagem da coordenação'; el.appendChild(tm);
+      const pm = document.createElement('div'); pm.style.cssText = 'font-size:13px;color:var(--text);line-height:1.5;background:var(--surface);border-left:3px solid var(--gold);padding:10px;border-radius:4px;'; pm.textContent = m.mensagem_coordenacao; el.appendChild(pm);
     }
-
-    // Próxima etapa
-    const tit3=document.createElement('div'); tit3.className='section-card-title'; tit3.style.marginTop='16px'; tit3.textContent='Próxima etapa';
-    el.appendChild(tit3);
-    const pe=document.createElement('div'); pe.style.cssText='font-size:13px;color:var(--text);'; pe.textContent = m.proxima_etapa || '— (defina na aba Observações)';
-    el.appendChild(pe);
   }
 
   if (tab === 'Acessos') {
@@ -647,12 +651,19 @@ async function renderTab(tab) {
     appendEquipeFields(el, m);
   }
 
-  if (tab === 'Observações') {
+  if (tab === 'Engajamento') {
+    const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-4px 0 12px;line-height:1.5;';
+    hint.textContent = 'Comunicação da coordenação com o membro. Tudo que você definir aqui aparece para ele ao acessar e no sino de avisos.';
+    el.appendChild(hint);
+    el.appendChild(editArea('Observações', 'observacoes', m.observacoes));
+    const l1 = document.createElement('div'); l1.className = 'form-label'; l1.textContent = 'Habilidades a desenvolver p/ o próximo nível'; el.appendChild(l1);
+    el.appendChild(editMulti('', 'desenvolvimento_habilidades', m.desenvolvimento_habilidades, HABILIDADES));
+    const l2 = document.createElement('div'); l2.className = 'form-label'; l2.style.marginTop = '10px'; l2.textContent = 'Competências a desenvolver p/ o próximo nível'; el.appendChild(l2);
+    el.appendChild(editMulti('', 'desenvolvimento_competencias', m.desenvolvimento_competencias, COMPETENCIAS));
+    el.appendChild(editArea('Mensagem da coordenação', 'mensagem_coordenacao', m.mensagem_coordenacao));
+    // Por último: próxima etapa da jornada (seleção do nível)
     const nivelAtual = m.nivel || nivelFromRole(m.role);
-    el.appendChild(editSelect('Nível na Jornada (rank)', 'nivel', nivelAtual, NIVEIS.map(n => [n.slug, (n.emoji ? n.emoji + ' ' : '') + n.label])));
-    el.appendChild(editArea('Necessidades Especiais', 'necessidades_especiais', m.necessidades_especiais));
-    el.appendChild(editArea('Observações Gerais', 'observacoes', m.observacoes));
-    el.appendChild(editText('Próxima Etapa de Formação', 'proxima_etapa', m.proxima_etapa));
+    el.appendChild(editSelect('Próxima etapa da jornada (nível-alvo)', 'nivel', nivelAtual, NIVEIS.map(n => [n.slug, (n.emoji ? n.emoji + ' ' : '') + n.label])));
   }
 }
 
@@ -828,14 +839,18 @@ async function salvarFicha() {
     if (fmsg) { fmsg.className = 'msg error'; fmsg.textContent = 'Erro ao salvar: ' + (e.message || 'tente novamente.'); }
     btn.disabled = false; btn.textContent = 'Salvar'; return;
   }
-  // Aviso informativo ao membro (mudanças que não são só de nível — nível já tem comemoração)
-  const camposNaoNivel = Object.keys(fichaEdits).filter(k => k !== 'nivel');
-  if (camposNaoNivel.length && membroAtual.user_id) {
+  // Avisos ao membro: engajamento (plano de evolução) e/ou alteração geral (nível tem comemoração própria)
+  const editados = Object.keys(fichaEdits);
+  const engajCampos = ['observacoes', 'desenvolvimento_habilidades', 'desenvolvimento_competencias', 'mensagem_coordenacao'];
+  const mudouEngaj = editados.some(k => engajCampos.includes(k));
+  const mudouOutros = editados.some(k => k !== 'nivel' && !engajCampos.includes(k));
+  if ((mudouEngaj || mudouOutros) && membroAtual.user_id) {
     try {
-      const cur = Array.isArray(membroAtual.avisos) ? membroAtual.avisos : [];
-      const av = [...cur, { msg: 'A coordenação atualizou suas informações no sistema.', logout: false }];
-      await sbAdmin.from('acolitos_membros').update({ avisos: av }).eq('id', membroAtual.id);
-      membroAtual.avisos = av;
+      const novos = Array.isArray(membroAtual.avisos) ? [...membroAtual.avisos] : [];
+      if (mudouEngaj) novos.push({ tipo: 'engajamento', logout: false, seen: false, ts: Date.now() });
+      if (mudouOutros) novos.push({ msg: 'A coordenação atualizou suas informações no sistema.', logout: false, seen: false, ts: Date.now() });
+      await sbAdmin.from('acolitos_membros').update({ avisos: novos }).eq('id', membroAtual.id);
+      membroAtual.avisos = novos;
     } catch (e) { /* best-effort */ }
   }
 

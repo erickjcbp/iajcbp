@@ -97,30 +97,82 @@ async function initModulo(requiredRoles = null) {
   return { user: session.user, membership, membro };
 }
 
-// Mostra avisos da coordenação ao acessar; limpa após exibir; encerra sessão se necessário
+// Bloco visual do plano de evolução (engajamento), montado a partir do membro
+function buildEngajamentoEl(membro) {
+  const box = document.createElement('div');
+  const slug = membro.nivel || nivelFromRole(membro.role || 'aspirante');
+  const h = document.createElement('div'); h.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;';
+  h.appendChild(buildRankEmblem(slug, 48));
+  const hn = document.createElement('div'); hn.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold-light);'; hn.textContent = 'Próximo objetivo: ' + nivelInfo(slug).label;
+  h.appendChild(hn); box.appendChild(h);
+  const sec = (title) => { const t = document.createElement('div'); t.style.cssText = 'font-size:11px;font-weight:700;color:var(--text-muted);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.5px;'; t.textContent = title; box.appendChild(t); };
+  const chips = (title, vals, map) => {
+    if (!vals || !vals.length) return; sec(title);
+    const w = document.createElement('div'); w.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;';
+    vals.forEach(v => { const c = document.createElement('span'); c.style.cssText = 'font-size:11px;font-weight:700;color:var(--gold);background:rgba(232,185,74,.1);border:1px solid var(--gold-dim);border-radius:12px;padding:3px 10px;'; c.textContent = map[v] || v; w.appendChild(c); });
+    box.appendChild(w);
+  };
+  chips('Habilidades a desenvolver', membro.desenvolvimento_habilidades, HABILIDADE_LABEL);
+  chips('Competências a desenvolver', membro.desenvolvimento_competencias, COMPETENCIA_LABEL);
+  if (membro.observacoes) { sec('Observações'); const p = document.createElement('div'); p.style.cssText = 'font-size:13px;color:var(--text);line-height:1.5;'; p.textContent = membro.observacoes; box.appendChild(p); }
+  if (membro.mensagem_coordenacao) { sec('Mensagem da coordenação'); const p = document.createElement('div'); p.style.cssText = 'font-size:13px;color:var(--text);line-height:1.5;background:var(--surface2);border-left:3px solid var(--gold);padding:10px;border-radius:4px;'; p.textContent = membro.mensagem_coordenacao; box.appendChild(p); }
+  return box;
+}
+
+// Elemento de UM aviso (engajamento rico ou texto simples)
+function avisoEl(aviso, membro) {
+  if (aviso && aviso.tipo === 'engajamento') {
+    const wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:14px;padding:12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--gold);';
+    const t = document.createElement('div'); t.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; t.textContent = '🎯 Seu plano de evolução foi atualizado';
+    wrap.append(t, buildEngajamentoEl(membro)); return wrap;
+  }
+  const p = document.createElement('div'); p.style.cssText = 'font-size:14px;line-height:1.6;color:var(--text);margin-bottom:12px;padding:12px;background:var(--surface);border-left:3px solid var(--gold);border-radius:4px;';
+  p.textContent = (aviso && aviso.msg) ? aviso.msg : String(aviso);
+  return p;
+}
+
+// Pop-up ao acessar: mostra os avisos NÃO vistos; marca como vistos; encerra sessão se preciso
 async function showAvisos(membro) {
-  const avisos = membro.avisos || []; if (!avisos.length) return;
-  const precisaLogout = avisos.some(a => a && a.logout);
-  try { await sb.from('acolitos_membros').update({ avisos: [] }).eq('id', membro.id); } catch (e) {}
-  membro.avisos = [];
+  const avisos = Array.isArray(membro.avisos) ? membro.avisos : [];
+  const naoVistos = avisos.filter(a => a && !a.seen); if (!naoVistos.length) return;
+  const precisaLogout = naoVistos.some(a => a.logout);
+  const atualizados = avisos.map(a => ({ ...a, seen: true }));
+  try { await sb.from('acolitos_membros').update({ avisos: atualizados }).eq('id', membro.id); } catch (e) {}
+  membro.avisos = atualizados;
+  const b = document.getElementById('sino-badge'); if (b) b.style.display = 'none';
 
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '500';
   const modal = document.createElement('div'); modal.className = 'modal';
   const handle = document.createElement('div'); handle.className = 'modal-handle';
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Avisos da Coordenação';
   modal.append(handle, tt);
-  avisos.forEach(a => {
-    const p = document.createElement('div'); p.style.cssText = 'font-size:14px;line-height:1.6;color:var(--text);margin-bottom:12px;padding:12px;background:var(--surface);border-left:3px solid var(--gold);border-radius:4px;';
-    p.textContent = (a && a.msg) ? a.msg : String(a);
-    modal.appendChild(p);
-  });
+  naoVistos.forEach(a => modal.appendChild(avisoEl(a, membro)));
   const btn = document.createElement('button'); btn.className = 'btn gold'; btn.style.marginTop = '8px';
   btn.textContent = precisaLogout ? 'Entendi — sair e entrar de novo' : 'Entendi';
-  btn.onclick = async () => {
-    if (precisaLogout) { try { await sb.auth.signOut(); } catch (e) {} window.location.href = 'login.html'; }
-    else ov.remove();
-  };
+  btn.onclick = async () => { if (precisaLogout) { try { await sb.auth.signOut(); } catch (e) {} window.location.href = 'login.html'; } else ov.remove(); };
   modal.appendChild(btn);
+  ov.appendChild(modal); document.body.appendChild(ov);
+}
+
+// Painel do sino: histórico de todas as notificações
+async function openNotificacoes(membro) {
+  const avisos = Array.isArray(membro.avisos) ? membro.avisos : [];
+  if (avisos.some(a => a && !a.seen)) {
+    const atualizados = avisos.map(a => ({ ...a, seen: true }));
+    try { await sb.from('acolitos_membros').update({ avisos: atualizados }).eq('id', membro.id); } catch (e) {}
+    membro.avisos = atualizados;
+    const b = document.getElementById('sino-badge'); if (b) b.style.display = 'none';
+  }
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '500';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className = 'modal';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Notificações';
+  modal.append(handle, tt);
+  if (!avisos.length) { const e = document.createElement('div'); e.style.cssText = 'font-size:13px;color:var(--text-muted);font-style:italic;'; e.textContent = 'Nenhuma notificação ainda.'; modal.appendChild(e); }
+  else { avisos.slice().reverse().forEach(a => modal.appendChild(avisoEl(a, membro))); }
+  const close = document.createElement('button'); close.className = 'btn gold'; close.style.marginTop = '8px'; close.textContent = 'Fechar'; close.onclick = () => ov.remove();
+  modal.appendChild(close);
   ov.appendChild(modal); document.body.appendChild(ov);
 }
 
@@ -193,6 +245,19 @@ function renderHeader(ctx, activePage) {
   contaBtn.title = 'Minha conta';
   contaBtn.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>'; // ícone hardcoded — seguro
   contaBtn.onclick = () => openContaModal(ctx);
+
+  // Sino de notificações (membros) — pop-up ao acessar + histórico aqui
+  if (ctx && ctx.membro) {
+    const sino = document.createElement('button'); sino.className = 'btn-icon'; sino.title = 'Notificações'; sino.style.position = 'relative';
+    sino.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>'; // ícone hardcoded — seguro
+    const naoVistos = (ctx.membro.avisos || []).filter(a => a && !a.seen).length;
+    const badge = document.createElement('span'); badge.id = 'sino-badge';
+    badge.style.cssText = 'position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;border-radius:8px;background:var(--red-soft);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 3px;' + (naoVistos ? '' : 'display:none;');
+    badge.textContent = naoVistos > 9 ? '9+' : String(naoVistos);
+    sino.appendChild(badge);
+    sino.onclick = () => openNotificacoes(ctx.membro);
+    actions.appendChild(sino);
+  }
 
   actions.append(contaBtn, sairBtn);
   el.appendChild(actions);
@@ -306,6 +371,20 @@ const SETORES = [
   ['espiritualidade','Espiritualidade'], ['almoxarifado','Almoxarifado'], ['midia','Mídia'],
 ];
 const SETOR_LABEL = Object.fromEntries(SETORES);
+// Engajamento — habilidades (funções) e competências (soft skills) p/ o próximo nível
+const HABILIDADES = [
+  ['cred_altar','Cerimoniário de Altar'], ['cred_credencia','Cerimoniário de Credência'],
+  ['missal','Missal'], ['altar','Altar'], ['turibulo','Turíbulo'], ['naveta','Naveta'],
+  ['cruz','Cruz'], ['vela','Velas'], ['sineta','Sineta'], ['sinao','Sinão'], ['apoio','Apoio'],
+];
+const COMPETENCIAS = [
+  ['lideranca','Liderança'], ['postura','Postura'], ['paciencia','Paciência'],
+  ['trabalho_equipe','Trabalho em equipe'], ['pontualidade','Pontualidade'],
+  ['reverencia','Reverência'], ['comunicacao','Comunicação'], ['humildade','Humildade'],
+  ['comprometimento','Comprometimento'], ['proatividade','Proatividade'], ['espiritualidade','Espiritualidade'],
+];
+const HABILIDADE_LABEL = Object.fromEntries(HABILIDADES);
+const COMPETENCIA_LABEL = Object.fromEntries(COMPETENCIAS);
 // Módulos que o admin pode liberar por pessoa (key, label, href). Hoje só os existentes.
 const MODULOS_LIBERAVEIS = [
   ['escala','Escala','escala.html'], ['membros','Membros','membros.html'],

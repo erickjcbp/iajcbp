@@ -87,7 +87,7 @@ export default async function handler(req, res) {
     if (!(await podeMexer(user_id))) return res.status(403).json({ error: 'Sem permissão sobre este usuário.' });
     const r = await fetch(`${URL}/auth/v1/admin/users/${user_id}`, { method: 'PUT', headers: jh, body: JSON.stringify({ password }) });
     const d = await r.json(); if (!r.ok) return res.status(r.status).json({ error: d.msg || d.message || 'Erro' });
-    await addAviso(user_id, { msg: 'Sua senha foi redefinida pela coordenação para: ' + password + '.' + SESSAO_MSG, logout: true });
+    await addAviso(user_id, { msg: 'Sua senha foi redefinida pela coordenação para: ' + password + '.' + SESSAO_MSG, logout: true, seen: false, ts: Date.now() });
     return res.status(200).json({ ok: true });
   }
 
@@ -97,7 +97,7 @@ export default async function handler(req, res) {
     const novoUser = synthEmail(usuario).includes('@coroinhas.') ? synthEmail(usuario).split('@')[0] : usuario;
     const r = await fetch(`${URL}/auth/v1/admin/users/${user_id}`, { method: 'PUT', headers: jh, body: JSON.stringify({ email: synthEmail(usuario), email_confirm: true }) });
     const d = await r.json(); if (!r.ok) { const ja = /registered|already|exists/i.test(d.msg || d.message || ''); return res.status(r.status).json({ error: ja ? 'Usuário já em uso.' : (d.msg || d.message || 'Erro') }); }
-    await addAviso(user_id, { msg: 'Seu usuário (login) foi alterado para: ' + novoUser + '.' + SESSAO_MSG, logout: true });
+    await addAviso(user_id, { msg: 'Seu usuário (login) foi alterado para: ' + novoUser + '.' + SESSAO_MSG, logout: true, seen: false, ts: Date.now() });
     return res.status(200).json({ ok: true });
   }
 
