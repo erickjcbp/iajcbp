@@ -496,12 +496,12 @@ body.has-switch { padding-top: calc(var(--header-h) + 42px); }
   filter: drop-shadow(0 0 4px var(--red-glow));
 }
 .jor-cell.link-down::before {
-  content: ''; position: absolute; left: 50%; bottom: -13px; transform: translateX(-50%); width: 4px; height: 22px; z-index: 1;
-  background: repeating-linear-gradient(180deg, var(--gold) 0 5px, transparent 5px 9px);
-  filter: drop-shadow(0 0 4px var(--red-glow));
+  content: ''; position: absolute; left: 50%; bottom: -15px; transform: translateX(-50%); width: 3px; height: 13px; z-index: 1;
+  background: repeating-linear-gradient(180deg, var(--gold) 0 3px, transparent 3px 7px);
+  filter: drop-shadow(0 0 3px var(--red-glow)); border-radius: 2px;
 }
-.jor-cell.locked.link-right::after, .jor-cell.locked.link-down::before { background-image: repeating-linear-gradient(90deg, var(--border-wine) 0 5px, transparent 5px 9px); filter: none; opacity: .7; }
-.jor-cell.locked.link-down::before { background-image: repeating-linear-gradient(180deg, var(--border-wine) 0 5px, transparent 5px 9px); }
+.jor-cell.locked.link-right::after { background-image: repeating-linear-gradient(90deg, var(--border-wine) 0 5px, transparent 5px 9px); filter: none; opacity: .7; }
+.jor-cell.locked.link-down::before { background-image: repeating-linear-gradient(180deg, var(--border-wine) 0 3px, transparent 3px 7px); filter: none; opacity: .7; }
 .jor-num { font-family: 'Oxanium', sans-serif; font-size: 11px; font-weight: 800; color: var(--text-muted); line-height: 1; }
 .jor-num.done { color: var(--success-text); }
 .jor-num.atual { color: var(--gold-light); text-shadow: 0 0 8px var(--red-glow); }
