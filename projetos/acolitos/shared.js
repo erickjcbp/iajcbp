@@ -165,6 +165,17 @@ function renderHeader(ctx, activePage) {
   contaBtn.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>'; // ícone hardcoded — seguro
   contaBtn.onclick = () => openContaModal(ctx);
 
+  // Avatar editável do próprio membro no topo (também troca a foto por aqui)
+  if (ctx && ctx.membro) {
+    const av = buildAvatarEl(ctx.membro.foto_url, ctx.membership.role, 36, {
+      editable: true, membro: ctx.membro,
+      nivelSlug: ctx.membro.nivel || nivelFromRole(ctx.membership.role),
+      onUpload: (url) => { ctx.membro.foto_url = url; }
+    });
+    av.style.flexShrink = '0';
+    actions.appendChild(av);
+  }
+
   actions.append(contaBtn, sairBtn);
   el.appendChild(actions);
 }
@@ -325,31 +336,31 @@ function getRoleForPatch(role) {
 // ── JORNADA: 10 NÍVEIS (rank) ────────────────────────────────
 // base = forma do patch; int = intensidade da animação (0..9); pips = divisões.
 const NIVEIS = [
-  { slug:'aspirante', label:'Aspirante', base:'aspirante', int:0, pips:0, emoji:'🌱',
+  { slug:'aspirante', label:'Aspirante', base:'aspirante', int:0, pips:0, emoji:'🌱', titulo:'Aprendiz do Altar',
     intro:'Você acaba de ingressar na jornada. Ainda está conhecendo o caminho, aprendendo os primeiros ensinamentos e descobrindo o significado do serviço ao altar.',
     missao:'Aprender.', desafio:'Demonstrar disciplina, interesse e espírito de serviço.', proximo:'Tornar-se Coroinha.' },
-  { slug:'coroinha', label:'Coroinha', base:'coroinha', int:1, pips:0, emoji:'🕯️',
+  { slug:'coroinha', label:'Coroinha', base:'coroinha', int:1, pips:0, emoji:'🕯️', titulo:'Coroinha do Senhor',
     intro:'Você já faz parte da equipe de servidores. Agora não é apenas um observador: participa ativamente da celebração e ajuda a tornar a liturgia mais bela.',
     missao:'Servir.', desafio:'Aprender as funções básicas e crescer na responsabilidade.', proximo:'Ingressar na formação de Acólito.' },
-  { slug:'acolito_aspirante', label:'Acólito Aspirante', base:'acolito', int:2, pips:1, emoji:'⚜️',
+  { slug:'acolito_aspirante', label:'Acólito Aspirante', base:'acolito', int:2, pips:1, emoji:'⚜️', titulo:'Servo do Altar',
     intro:'Você iniciou uma nova etapa. O altar agora está mais próximo e suas responsabilidades aumentam. É o momento de aprofundar seus conhecimentos e aperfeiçoar seu serviço.',
     missao:'Crescer.', desafio:'Dominar novas funções e amadurecer liturgicamente.', proximo:'Tornar-se um Guardião do Altar.' },
-  { slug:'acolito_guardiao', label:'Acólito Guardião', base:'acolito', int:3, pips:2, emoji:'🛡️',
+  { slug:'acolito_guardiao', label:'Acólito Guardião', base:'acolito', int:3, pips:2, emoji:'🛡️', titulo:'Guardião do Altar',
     intro:'Você conquistou a confiança da pastoral. Seu compromisso já é reconhecido e seu exemplo começa a influenciar os mais novos.',
     missao:'Proteger.', desafio:'Zelar pelo altar, pela organização e pelo bom exemplo.', proximo:'Alcançar o posto de Sentinela.' },
-  { slug:'acolito_sentinela', label:'Acólito Sentinela', base:'acolito', int:4, pips:3, emoji:'👁️',
+  { slug:'acolito_sentinela', label:'Acólito Sentinela', base:'acolito', int:4, pips:3, emoji:'👁️', titulo:'Sentinela do Altar',
     intro:'Você está entre os acólitos mais experientes. Sua atenção aos detalhes, sua maturidade e sua dedicação fazem de você uma referência para os demais.',
     missao:'Vigiar.', desafio:'Perceber o que os outros não percebem e ajudar a manter a excelência do serviço.', proximo:'Ser chamado para a formação de Cerimoniário.' },
-  { slug:'aspirante_cerimoniario', label:'Aspirante a Cerimoniário', base:'acolito', int:5, pips:0, emoji:'📖',
+  { slug:'aspirante_cerimoniario', label:'Aspirante a Cerimoniário', base:'acolito', int:5, pips:0, emoji:'📖', titulo:'Aprendiz dos Ritos',
     intro:'Você recebeu um chamado especial. Agora começa a aprender não apenas a servir, mas também a conduzir e organizar.',
     missao:'Preparar-se.', desafio:'Conhecer os bastidores da liturgia e desenvolver liderança.', proximo:'Concluir a formação e tornar-se Cerimoniário.' },
-  { slug:'cerimoniario_aspirante', label:'Cerimoniário Aspirante', base:'cerimonario', int:6, pips:1, emoji:'🎖️',
+  { slug:'cerimoniario_aspirante', label:'Cerimoniário Aspirante', base:'cerimonario', int:6, pips:1, emoji:'🎖️', titulo:'Cerimoniário Iniciado',
     intro:'Você acaba de ingressar na Ordem dos Cerimoniários. Já possui formação básica e começa a colocar em prática tudo aquilo que aprendeu.',
     missao:'Aperfeiçoar-se.', desafio:'Transformar conhecimento em experiência.', proximo:'Tornar-se um Cerimoniário Guardião.' },
-  { slug:'cerimoniario_guardiao', label:'Cerimoniário Guardião', base:'cerimonario', int:7, pips:2, emoji:'⚔️',
+  { slug:'cerimoniario_guardiao', label:'Cerimoniário Guardião', base:'cerimonario', int:7, pips:2, emoji:'⚔️', titulo:'Guardião das Celebrações',
     intro:'Você domina todas as funções da pastoral. Pode assumir qualquer posição e auxiliar em qualquer necessidade litúrgica.',
     missao:'Garantir.', desafio:'Assegurar que cada celebração aconteça com ordem, reverência e beleza.', proximo:'Tornar-se uma referência para toda a pastoral.' },
-  { slug:'cerimoniario_magistral', label:'Cerimoniário Magistral', base:'cerimonario', int:8, pips:3, emoji:'⚜️',
+  { slug:'cerimoniario_magistral', label:'Cerimoniário Magistral', base:'cerimonario', int:8, pips:3, emoji:'⚜️', titulo:'Mestre dos Ritos Sagrados',
     intro:'Você não é apenas experiente — você se tornou uma referência. Seu conhecimento, postura e dedicação inspiram os demais servidores.',
     missao:'Ensinar.', desafio:'Formar novos líderes e preservar a excelência litúrgica.', proximo:'Alcançar o mais alto posto da pastoral.' },
   { slug:'cerimoniario_mor', label:'Cerimoniário Mor', base:'cerimonario', int:9, pips:4, emoji:'👑',
@@ -462,7 +473,8 @@ function buildAvatarEl(fotoUrl, role, size, opts) {
   const patchSize = Math.round(size * 0.42);
   const patchEl = document.createElement('div');
   patchEl.style.cssText = `position:absolute;bottom:-4px;right:-4px;line-height:0;`;
-  patchEl.innerHTML = getPatchSvg(getRoleForPatch(role), patchSize); // hardcoded SVG — seguro
+  // Usa o emblema do NÍVEL na jornada quando informado (opts.nivelSlug); senão, patch por papel
+  patchEl.innerHTML = opts.nivelSlug ? getNivelSvg(opts.nivelSlug, patchSize) : getPatchSvg(getRoleForPatch(role), patchSize); // hardcoded SVG — seguro
   container.appendChild(patchEl);
 
   if (opts.editable && opts.membro) {

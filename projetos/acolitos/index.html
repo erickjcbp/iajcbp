@@ -139,11 +139,71 @@ async function checkLevelUp(m, nivel) {
   if (curIdx > -1 && curIdx > seenIdx) {
     await sb.from('acolitos_membros').update({ nivel_visto: nivel }).eq('id', m.id);
     m.nivel_visto = nivel;
-    showLevelUp(nivel);
+    showLevelUp(nivel, m.nome || '');
   }
 }
 
-function showLevelUp(nivel) {
+// Renderiza o emblema (SVG) como imagem para uso em canvas
+function svgToImage(svgStr) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
+  });
+}
+
+// Gera imagem 9:16 (stories) da conquista e compartilha (ou baixa como fallback)
+async function shareLevelUp(nivel, nome, btn) {
+  const info = nivelInfo(nivel);
+  if (btn) { btn.disabled = true; btn.textContent = 'Gerando...'; }
+  const W = 1080, H = 1920;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const x = cv.getContext('2d');
+  try { await document.fonts.ready; } catch (e) {}
+  // Fundo
+  const g = x.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#1c0407'); g.addColorStop(.5, '#2c0a10'); g.addColorStop(1, '#080203');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  // Halo
+  const cx = W / 2, cy = 720;
+  const rg = x.createRadialGradient(cx, cy, 30, cx, cy, 460);
+  rg.addColorStop(0, 'rgba(224,18,40,.55)'); rg.addColorStop(.6, 'rgba(224,18,40,.12)'); rg.addColorStop(1, 'rgba(224,18,40,0)');
+  x.fillStyle = rg; x.beginPath(); x.arc(cx, cy, 460, 0, Math.PI * 2); x.fill();
+  // Emblema
+  try { const img = await svgToImage(getNivelSvg(nivel, 600)); x.drawImage(img, cx - 300, cy - 320, 600, 600); } catch (e) {}
+  x.textAlign = 'center';
+  const fit = (txt, max, size) => { let s = size; x.font = '800 ' + s + 'px Sora, sans-serif'; while (x.measureText(txt).width > max && s > 28) { s -= 4; x.font = '800 ' + s + 'px Sora, sans-serif'; } };
+  // Topo
+  x.fillStyle = 'rgba(255,255,255,.6)'; x.font = '600 30px Sora, sans-serif';
+  x.fillText('ACÓLITOS & COROINHAS · JCBP LIMEIRA', cx, 120);
+  // Tag + nome
+  x.fillStyle = '#e8b94a'; x.font = '700 40px Sora, sans-serif'; x.fillText('★ NÍVEL ALCANÇADO ★', cx, 1240);
+  if (nome) { x.fillStyle = 'rgba(255,255,255,.85)'; x.font = '600 40px Sora, sans-serif'; x.fillText(nome, cx, 1320); }
+  // Nível
+  fit(info.label.toUpperCase(), W - 120, 96); x.fillStyle = '#fff'; x.fillText(info.label.toUpperCase(), cx, 1430);
+  // Título conquistado
+  if (info.titulo) {
+    x.fillStyle = '#e8b94a'; x.font = 'italic 600 50px Sora, sans-serif';
+    let t = '“' + info.titulo + '”', ts = 50;
+    while (x.measureText(t).width > W - 120 && ts > 26) { ts -= 3; x.font = 'italic 600 ' + ts + 'px Sora, sans-serif'; }
+    x.fillText(t, cx, 1530);
+  }
+  // Rodapé
+  x.fillStyle = 'rgba(255,255,255,.45)'; x.font = '500 30px Sora, sans-serif';
+  x.fillText('Servos do Altar · coroinhas.jcbplimeira.com.br', cx, 1830);
+
+  const blob = await new Promise(res => cv.toBlob(res, 'image/png', .92));
+  const file = new File([blob], 'conquista.png', { type: 'image/png' });
+  const data = { files: [file], title: 'Minha conquista', text: 'Avancei na minha jornada como ' + info.label + '! 🙏' };
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share(data); }
+    else { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'conquista.png'; a.click(); URL.revokeObjectURL(url); }
+  } catch (e) { /* usuário cancelou */ }
+  if (btn) { btn.disabled = false; btn.textContent = '📲 Compartilhar'; }
+}
+
+function showLevelUp(nivel, nome) {
   const info = nivelInfo(nivel);
   const ov = document.createElement('div'); ov.className = 'levelup-overlay';
   const card = document.createElement('div'); card.className = 'levelup-card';
@@ -155,7 +215,10 @@ function showLevelUp(nivel) {
   const cong = document.createElement('div'); cong.className = 'levelup-congrats'; cong.textContent = 'Parabéns!';
   const txt = document.createElement('div'); txt.className = 'levelup-text'; txt.textContent = 'Você avançou na sua jornada';
   const rank = document.createElement('div'); rank.className = 'levelup-rank'; rank.textContent = info.label;
-  const btn = document.createElement('button'); btn.className = 'levelup-btn'; btn.textContent = 'Continuar';
+  const tit = document.createElement('div'); tit.className = 'levelup-titulo'; tit.textContent = info.titulo ? '🏆 ' + info.titulo : '';
+  const share = document.createElement('button'); share.className = 'levelup-btn share'; share.textContent = '📲 Compartilhar';
+  share.onclick = () => shareLevelUp(nivel, nome || '', share);
+  const btn = document.createElement('button'); btn.className = 'levelup-btn ghost'; btn.textContent = 'Continuar';
   btn.onclick = () => { ov.classList.add('closing'); setTimeout(() => ov.remove(), 300); };
   const conf = document.createElement('div'); conf.className = 'levelup-confetti';
   const cores = ['var(--red-soft)', 'var(--gold)', 'var(--gold-light)', '#fff'];
@@ -164,7 +227,7 @@ function showLevelUp(nivel) {
     c.style.cssText = `left:${Math.random()*100}%;animation-delay:${(Math.random()*0.7).toFixed(2)}s;background:${cores[i%4]};`;
     conf.appendChild(c);
   }
-  card.append(rays, burst, patch, tag, cong, txt, rank, btn);
+  card.append(rays, burst, patch, tag, cong, txt, rank, tit, share, btn);
   ov.append(conf, card);
   document.body.appendChild(ov);
 }
@@ -180,12 +243,13 @@ function renderRankProgress(main, nivel) {
   const patch = document.createElement('div'); patch.className = 'rank-patch';
   patch.appendChild(buildRankEmblem(nivel, 82));
   const name = document.createElement('div'); name.className = 'rank-name'; name.textContent = cur.label;
+  const tit = document.createElement('div'); tit.className = 'rank-titulo'; tit.textContent = cur.titulo ? '🏆 ' + cur.titulo : '';
   const nx = document.createElement('div'); nx.className = 'rank-next';
   nx.textContent = next ? 'Próximo nível: ' + next.label : 'Nível máximo · Cerimoniário Mor';
   const bar = document.createElement('div'); bar.className = 'rank-bar';
   const fill = document.createElement('div'); fill.className = 'rank-fill'; fill.style.setProperty('--pct', pct + '%');
   bar.appendChild(fill);
-  card.append(patch, name, nx, bar);
+  card.append(patch, name, tit, nx, bar);
   main.appendChild(card);
 
   // Jornada em grade 3 colunas (colapsável) — 10º nível centralizado
@@ -244,6 +308,7 @@ function showJornada(nivelAtual) {
     const det = document.createElement('div'); det.className = 'jor-det' + (status === 'atual' ? ' open' : '');
     const intro = document.createElement('p'); intro.className = 'jor-intro'; intro.textContent = n.intro;
     det.appendChild(intro);
+    if (n.titulo) { const tt2 = document.createElement('div'); tt2.className = 'jor-titulo'; tt2.textContent = '🏆 Título: ' + n.titulo; det.appendChild(tt2); }
     [['Missão', n.missao], ['Desafio', n.desafio], [i === NIVEIS.length - 1 ? 'Conquista final' : 'Próximo objetivo', n.proximo]].forEach(([k, v]) => {
       if (!v) return;
       const d = document.createElement('div'); d.className = 'jor-kv';
@@ -272,10 +337,11 @@ async function renderDashboardMembro(ctx) {
 
   // Saudação + avatar editável (membro sobe a própria foto)
   const greet = document.createElement('div'); greet.className = 'greet-section';
-  greet.appendChild(buildAvatarEl(m?.foto_url, role, 84, m ? {
-    editable: true, membro: m,
-    onUpload: (url) => { m.foto_url = url; }
-  } : undefined));
+  greet.appendChild(buildAvatarEl(m?.foto_url, role, 84, {
+    nivelSlug: nivel,
+    editable: !!m, membro: m || undefined,
+    onUpload: (url) => { if (m) m.foto_url = url; }
+  }));
   const nomeEl = document.createElement('div'); nomeEl.className = 'greet-nome'; nomeEl.textContent = m?.nome || ctx.user.email;
   const subEl = document.createElement('div'); subEl.className = 'greet-sub';
   subEl.textContent = (ROLE_LABEL[role]||role) + (m?.comunidade ? ' · ' + (m.comunidade==='matriz'?'Matriz':'Sto. Antônio') : '');
@@ -354,7 +420,7 @@ async function renderDashboardEquipe(ctx) {
     fetchFrequencia(),
     sb.from('acolitos_celebracoes').select('*',{count:'exact',head:true}).gte('data',iniMes).lte('data',fimMes),
     sb.from('acolitos_escalas').select('status, acolitos_celebracoes!inner(data)').gte('acolitos_celebracoes.data', seisStr),
-    sb.from('acolitos_membros').select('id,user_id').eq('status','ativo'),
+    sb.from('acolitos_membros').select('id,user_id,nivel').eq('status','ativo'),
     moduloId ? sb.from('pastoral_members').select('user_id,role').eq('module_id',moduloId) : Promise.resolve({data:[]}),
     sb.from('acolitos_celebracoes').select('id,data,horario,comunidade,tipo, acolitos_escalas(id)').gte('data',hoje).lte('data', new Date(Date.now()+28*86400000).toISOString().slice(0,10)).order('data').order('horario'),
   ]);
@@ -421,22 +487,24 @@ function renderGraficoPresenca(main, escalas) {
 /* ── GRÁFICO: membros por nível ──────────────────────────────── */
 function renderGraficoNiveis(main, membros, pm) {
   const roleMap = {}; pm.forEach(r => roleMap[r.user_id]=r.role);
-  const cont = { cerimonario:0, acolito:0, coroinha:0, aspirante:0 };
-  membros.forEach(m => { const r = (m.user_id && roleMap[m.user_id]) || 'aspirante'; if (cont[r]!=null) cont[r]++; else cont.aspirante++; });
-  const max = Math.max(1, ...Object.values(cont));
-  const cores = { cerimonario:'#9b59d4', acolito:'var(--gold)', coroinha:'#4a90c4', aspirante:'#8a8a8a' };
+  const cont = {}; NIVEIS.forEach(n => cont[n.slug] = 0);
+  membros.forEach(m => {
+    const role = (m.user_id && roleMap[m.user_id]) || 'aspirante';
+    const slug = (m.nivel && cont[m.nivel] != null) ? m.nivel : nivelFromRole(role);
+    cont[slug] = (cont[slug] || 0) + 1;
+  });
 
   const card=document.createElement('div'); card.className='chart-card';
   const t=document.createElement('div'); t.className='chart-title'; t.textContent='Membros por nível'; card.appendChild(t);
-  [['cerimonario','Cerimoniários'],['acolito','Acólitos'],['coroinha','Coroinhas'],['aspirante','Aspirantes']].forEach(([k,label])=>{
-    const row=document.createElement('div'); row.className='lvl-row';
-    const n=document.createElement('div'); n.className='lvl-name'; n.textContent=label;
-    const tr=document.createElement('div'); tr.className='lvl-track';
-    const fi=document.createElement('div'); fi.className='lvl-fill'; fi.style.width=(cont[k]/max*100)+'%'; fi.style.background=cores[k];
-    tr.appendChild(fi);
-    const num=document.createElement('div'); num.className='lvl-num'; num.textContent=cont[k];
-    row.append(n,tr,num); card.appendChild(row);
+  const grid=document.createElement('div'); grid.className='niveis-grid';
+  NIVEIS.forEach(n => {
+    const cell=document.createElement('div'); cell.className='nivel-cell' + (cont[n.slug] ? '' : ' vazio');
+    const emb=document.createElement('div'); emb.className='nivel-emb'; emb.innerHTML=getNivelSvg(n.slug, 42); // SVG hardcoded — seguro
+    const cnt=document.createElement('div'); cnt.className='nivel-cnt'; cnt.textContent=cont[n.slug];
+    const lbl=document.createElement('div'); lbl.className='nivel-lbl'; lbl.textContent=n.label;
+    cell.append(emb, cnt, lbl); grid.appendChild(cell);
   });
+  card.appendChild(grid);
   main.appendChild(card);
 }
 

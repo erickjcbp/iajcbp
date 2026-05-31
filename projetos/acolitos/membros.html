@@ -174,7 +174,7 @@ function renderGrid() {
     card.onclick = () => abrirFicha(m);
 
     const avatarWrap = document.createElement('div'); avatarWrap.className = 'member-card-avatar';
-    avatarWrap.appendChild(buildAvatarEl(m.foto_url, m.role, 60));
+    avatarWrap.appendChild(buildAvatarEl(m.foto_url, m.role, 60, { nivelSlug: m.nivel || nivelFromRole(m.role) }));
 
     const nome = document.createElement('div'); nome.className = 'member-card-name';
     nome.textContent = m.nome;
@@ -205,6 +205,7 @@ async function abrirFicha(membro) {
   hdr.appendChild(buildAvatarEl(membro.foto_url, membro.role, 72, {
     editable: true,
     membro,
+    nivelSlug: membro.nivel || nivelFromRole(membro.role),
     onUpload: (url) => {
       membro.foto_url = url;
       const alvo = todos.find(t => t.id === membro.id);

@@ -279,7 +279,7 @@ async function loadDados() {
       escalasMap[e.celebracao_id].push(e);
     });
     const [{ data: mems }, { data: habs }, { data: disps }, freqData] = await Promise.all([
-      sb.from('acolitos_membros').select('id,nome,comunidade,data_nascimento,foto_url,observacoes,necessidades_especiais,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro').eq('status','ativo').order('nome'),
+      sb.from('acolitos_membros').select('id,nome,nivel,comunidade,data_nascimento,foto_url,observacoes,necessidades_especiais,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro').eq('status','ativo').order('nome'),
       sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia'),
       sb.from('acolitos_disponibilidade').select('membro_id,dia,horario,restricao'),
       fetchFrequencia(),
@@ -477,7 +477,7 @@ function renderPlanilha() {
     // Membro (sticky): avatar + patch + nome
     const tdN=document.createElement('td');tdN.className='sticky-left';
     const wrapN=document.createElement('div');wrapN.style.cssText='display:flex;align-items:center;gap:8px;';
-    wrapN.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30));
+    wrapN.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30, { nivelSlug: m.nivel || nivelFromRole(patchRoleFromHabs(habs)) }));
     const nEl=document.createElement('span');nEl.style.cssText='font-size:12px;white-space:nowrap;';nEl.textContent=m.nome;
     wrapN.appendChild(nEl);tdN.appendChild(wrapN);tr.appendChild(tdN);
 

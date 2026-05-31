@@ -611,6 +611,20 @@ body {
   box-shadow: 0 4px 22px var(--red-glow); animation: luUp .5s ease .8s both;
 }
 .levelup-btn:hover { filter: brightness(1.12); }
+.levelup-btn.share { background: linear-gradient(180deg, var(--gold), var(--gold-dark, #9a7a1e)); border-color: var(--gold); color: #2a1a00; box-shadow: 0 4px 22px rgba(232,185,74,.4); margin-top: 18px; animation: luUp .5s ease .7s both; }
+.levelup-btn.ghost { background: transparent; border-color: var(--border-wine); color: var(--text-muted); box-shadow: none; margin-top: 12px; }
+.levelup-titulo { position: relative; z-index: 1; font-family: 'Sora', sans-serif; font-style: italic; font-weight: 600; font-size: 16px; color: var(--gold); margin-top: 8px; text-shadow: 0 0 12px var(--red-glow); animation: luUp .5s ease .7s both; }
+.rank-titulo { position: relative; z-index: 1; font-family: 'Sora', sans-serif; font-style: italic; font-weight: 600; font-size: 13px; color: var(--gold); margin-top: 5px; }
+.jor-titulo { font-size: 12px; font-weight: 700; color: var(--gold); margin: 2px 0 9px; }
+/* Card "Membros por nível" (10 patches + contagem) */
+.niveis-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px 4px; margin-top: 8px; }
+.nivel-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
+.nivel-emb { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; }
+.nivel-emb svg { width: 100%; height: 100%; }
+.nivel-cell.vazio .nivel-emb { filter: grayscale(1) brightness(.5) opacity(.4); }
+.nivel-cnt { font-family: 'Oxanium', sans-serif; font-weight: 800; font-size: 15px; color: var(--gold-light); line-height: 1.1; }
+.nivel-cell.vazio .nivel-cnt { color: var(--text-muted); }
+.nivel-lbl { font-size: 7.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .2px; font-family: 'Sora', sans-serif; font-weight: 700; line-height: 1.15; }
 .levelup-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1; }
 .levelup-confetti i { position: absolute; top: -16px; width: 9px; height: 9px; border-radius: 2px; animation: luConfetti 2.6s linear forwards; }
 @keyframes luConfetti { to { transform: translateY(112vh) rotate(600deg); opacity: .15; } }
