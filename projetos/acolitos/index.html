@@ -288,7 +288,7 @@ function showJornada(nivelAtual) {
   const idxAtual = nivelIndex(nivelAtual);
   const ov = document.createElement('div'); ov.className = 'modal-overlay open';
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.maxHeight = '92vh';
+  const modal = document.createElement('div'); modal.className = 'modal';
   const handle = document.createElement('div'); handle.className = 'modal-handle';
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Sua Jornada';
   const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-8px 0 14px;font-weight:600;';

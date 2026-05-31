@@ -706,3 +706,40 @@ function buildPresencaChart(escalas) {
   box.appendChild(leg);
   return box;
 }
+
+// ── ARRASTAR-PARA-FECHAR (bottom-sheet no mobile) ──────────────
+// Delegado no document: funciona p/ qualquer .modal-handle, inclusive modais
+// criados dinamicamente. Modais com id (ex.: modal-ficha) só fecham (remove
+// 'open'); modais dinâmicos são removidos do DOM.
+(function () {
+  let modal = null, overlay = null, startY = 0, curY = 0, dragging = false;
+  function fechar(ov) {
+    if (!ov) return;
+    if (ov.id) ov.classList.remove('open'); else ov.remove();
+  }
+  document.addEventListener('touchstart', (e) => {
+    const h = e.target.closest && e.target.closest('.modal-handle');
+    if (!h) return;
+    modal = h.closest('.modal'); overlay = h.closest('.modal-overlay');
+    if (!modal) return;
+    dragging = true; startY = curY = e.touches[0].clientY;
+    modal.style.transition = 'none';
+  }, { passive: true });
+  document.addEventListener('touchmove', (e) => {
+    if (!dragging || !modal) return;
+    curY = e.touches[0].clientY;
+    const dy = Math.max(0, curY - startY);
+    modal.style.transform = 'translateY(' + dy + 'px)';
+    if (overlay) overlay.style.background = 'rgba(0,0,0,' + Math.max(0.4, 0.88 - dy / 600) + ')';
+  }, { passive: true });
+  document.addEventListener('touchend', () => {
+    if (!dragging || !modal) return;
+    dragging = false;
+    const dy = curY - startY;
+    modal.style.transition = 'transform .25s ease';
+    modal.style.transform = '';
+    if (overlay) overlay.style.background = '';
+    if (dy > 110) fechar(overlay);
+    modal = null; overlay = null;
+  });
+})();
