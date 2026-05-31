@@ -18,6 +18,7 @@
       transition:all .2s; -webkit-tap-highlight-color:transparent; flex-shrink:0;
     }
     .ficha-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
+    .ficha-tab.destaque { color:var(--gold-light); }
     .tab-content { display:none; }
     .tab-content.active { display:block; }
     .hab-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
@@ -289,12 +290,14 @@ async function abrirFicha(membro) {
   hdr.appendChild(rankBtn);
 
   // Tabs
-  const tabs = ['Pessoal','Habilitações','Disponibilidade','Família','Frequência','Evolução','Observações'];
-  if (['coord_admin','subadmin'].includes(ctx.membership.role)) tabs.push('Acessos');
+  const ehAdmin = ['coord_admin','subadmin'].includes(ctx.membership.role);
+  const tabs = ['Pessoal'];
+  if (ehAdmin) tabs.push('Acessos'); // logo no começo, bem visível
+  tabs.push('Habilitações','Disponibilidade','Família','Frequência','Evolução','Observações');
   const tabsEl = document.getElementById('ficha-tabs'); tabsEl.textContent = '';
   tabs.forEach((t, i) => {
-    const btn = document.createElement('button'); btn.className = 'ficha-tab' + (i === 0 ? ' active' : '');
-    btn.textContent = t;
+    const btn = document.createElement('button'); btn.className = 'ficha-tab' + (i === 0 ? ' active' : '') + (t === 'Acessos' ? ' destaque' : '');
+    btn.textContent = t === 'Acessos' ? '🔑 Acessos' : t;
     btn.onclick = () => {
       document.querySelectorAll('.ficha-tab').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
