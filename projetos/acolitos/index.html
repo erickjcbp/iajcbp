@@ -14,9 +14,10 @@
     .status-title { font-family:'Sora',sans-serif; font-size:16px; color:var(--gold-light); letter-spacing:1px; margin-bottom:6px; }
     .status-sub { font-size:13px; color:var(--text-muted); font-style:italic; line-height:1.5; }
     /* Greet */
-    .greet-section { text-align:center; margin-bottom:22px; }
-    .greet-nome { font-family:'Sora',sans-serif; font-size:18px; font-weight:700; margin-top:12px; color:var(--text); }
-    .greet-sub { font-size:12px; color:var(--text-muted); margin-top:6px; font-style:italic; }
+    .greet-section { display:flex; align-items:center; gap:14px; margin-bottom:22px; }
+    .greet-info { flex:1; min-width:0; text-align:left; }
+    .greet-nome { font-family:'Sora',sans-serif; font-size:18px; font-weight:700; color:var(--text); line-height:1.15; }
+    .greet-sub { font-size:12px; color:var(--text-muted); margin-top:5px; font-style:italic; line-height:1.4; }
     /* Próxima escala / agenda item */
     .ev-item { background:var(--surface); border:1px solid var(--border-wine); border-radius:4px; padding:13px 14px; margin-bottom:10px; display:flex; align-items:center; gap:12px; }
     .ev-date { text-align:center; flex-shrink:0; width:46px; }
@@ -349,17 +350,23 @@ async function renderDashboardMembro(ctx) {
   // Level-up: celebra se o nível subiu desde a última visita
   if (m) await checkLevelUp(m, nivel);
 
-  // Saudação + avatar editável (membro sobe a própria foto)
+  // Saudação: foto à esquerda, informações à direita
   const greet = document.createElement('div'); greet.className = 'greet-section';
-  greet.appendChild(buildAvatarEl(m?.foto_url, role, 84, {
+  greet.appendChild(buildAvatarEl(m?.foto_url, role, 76, {
     nivelSlug: nivel,
     editable: !!m, membro: m || undefined,
     onUpload: (url) => { if (m) m.foto_url = url; }
   }));
-  const nomeEl = nameBlock(m?.nome || ctx.user.email, m?.apelido, 'greet-nome', 'greet-subname');
+  const info = document.createElement('div'); info.className = 'greet-info';
+  info.appendChild(nameBlock(m?.nome || ctx.user.email, m?.apelido, 'greet-nome', 'greet-subname'));
   const subEl = document.createElement('div'); subEl.className = 'greet-sub';
-  subEl.textContent = nivelInfo(nivel).label + (m?.comunidade ? ' · ' + (m.comunidade==='matriz'?'Matriz':'Sto. Antônio') : '');
-  greet.append(nomeEl, subEl); main.appendChild(greet);
+  let subTxt = nivelInfo(nivel).label;
+  if (m?.comunidade) subTxt += ' · ' + (m.comunidade === 'matriz' ? 'Matriz' : m.comunidade === 'santo_antonio' ? 'Sto. Antônio' : 'Outra');
+  if (m?.eh_equipe && (m.setores || []).length) subTxt += ' · ' + m.setores.map(s => SETOR_LABEL[s] || s).join(', ');
+  subEl.textContent = subTxt;
+  info.appendChild(subEl);
+  greet.appendChild(info);
+  main.appendChild(greet);
 
   // Destaque do nível atual (animado) + jornada
   renderRankProgress(main, nivel, m);
