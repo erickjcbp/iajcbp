@@ -65,9 +65,10 @@
 <script src="shared.js"></script>
 <script>
 const EQUIPE_ROLES = ['coord_admin','subadmin','membro_equipe'];
-const CRM_ETAPAS = ['integracao','whatsapp','tunica','disponivel_escala','integrado'];
-const CRM_LABEL = { integracao:'Integração', whatsapp:'WhatsApp', tunica:'Túnica', disponivel_escala:'Disponível para Escala', integrado:'Integrado ✓' };
+const CRM_ETAPAS = ['aprovacao_cadastro','integracao','whatsapp','tunica','disponivel_escala','integrado'];
+const CRM_LABEL = { aprovacao_cadastro:'Aprovação', integracao:'Integração', whatsapp:'WhatsApp', tunica:'Túnica', disponivel_escala:'Disponível para Escala', integrado:'Integrado ✓' };
 const CRM_DESC = {
+  aprovacao_cadastro:'Seu cadastro foi recebido e está aguardando aprovação da coordenação.',
   integracao:'Em breve entraremos em contato para agendar sua reunião de integração.',
   whatsapp:'Aguardando sua confirmação de entrada nos grupos de WhatsApp.',
   tunica:'Em processo de recebimento da túnica.',
@@ -108,7 +109,7 @@ async function init() {
 /* ── STATUS CRM ──────────────────────────────────────────────── */
 async function renderStatusCrm(ctx) {
   const main = document.getElementById('main'); main.textContent = '';
-  let etapa = 'integracao';
+  let etapa = 'aprovacao_cadastro';
   if (ctx.membro) {
     const { data: crm } = await sb.from('acolitos_crm').select('etapa').eq('membro_id', ctx.membro.id).maybeSingle();
     if (crm) etapa = crm.etapa;

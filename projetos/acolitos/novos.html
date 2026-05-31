@@ -317,8 +317,8 @@ async function enviarCadastro() {
       }, { onConflict: 'user_id,module_id' });
     }
 
-    // Abre CRM
-    await sbAdmin.from('acolitos_crm').insert({ membro_id: membro.id, etapa: 'integracao' });
+    // Abre CRM na etapa inicial — aguardando aprovação da coordenação
+    await sbAdmin.from('acolitos_crm').insert({ membro_id: membro.id, etapa: 'aprovacao_cadastro' });
   }
 
   // Vários filhos no mesmo cadastro = irmãos na pastoral → vincula via função

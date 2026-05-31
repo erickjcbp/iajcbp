@@ -95,12 +95,13 @@
 
 <script src="shared.js"></script>
 <script>
-const ETAPAS = ['integracao','whatsapp','tunica','disponivel_escala','integrado'];
+const ETAPAS = ['aprovacao_cadastro','integracao','whatsapp','tunica','disponivel_escala','integrado'];
 const ETAPA_LABEL = {
-  integracao:'Integração', whatsapp:'WhatsApp', tunica:'Túnica',
+  aprovacao_cadastro:'Aprovação', integracao:'Integração', whatsapp:'WhatsApp', tunica:'Túnica',
   disponivel_escala:'Disp. Escala', integrado:'Integrado'
 };
 const ETAPA_ACAO = {
+  aprovacao_cadastro:'Aprovar o cadastro. O membro segue para a etapa de integração.',
   integracao:      'Reunião de integração realizada com o membro.',
   whatsapp:        'Entrada nos grupos de WhatsApp confirmada.',
   tunica:          'Recebimento da túnica confirmado.',
@@ -136,14 +137,14 @@ function renderKpis() {
   const el = document.getElementById('crm-kpis');
   el.textContent = '';
   const total    = crmData.length;
+  const aprovar  = crmData.filter(c => c.etapa === 'aprovacao_cadastro').length;
   const travados = crmData.filter(c => diasNaEtapa(c.etapa_iniciada_em) > 30).length;
-  const naInteg  = crmData.filter(c => c.etapa === 'integracao').length;
   const quaseLa  = crmData.filter(c => c.etapa === 'disponivel_escala').length;
   [
-    { label:'Em Onboarding',  value: total,    sub: 'aguardando' },
-    { label:'Travados +30d',  value: travados, sub: 'precisam atenção' },
-    { label:'Na Integração',  value: naInteg,  sub: '1ª etapa' },
-    { label:'Quase lá',       value: quaseLa,  sub: 'disp. escala' },
+    { label:'Aguard. Aprovação', value: aprovar,  sub: 'novos cadastros' },
+    { label:'Em Onboarding',     value: total,    sub: 'no total' },
+    { label:'Travados +30d',     value: travados, sub: 'precisam atenção' },
+    { label:'Quase lá',          value: quaseLa,  sub: 'disp. escala' },
   ].forEach(k => {
     const card = document.createElement('div'); card.className = 'kpi-card';
     const lbl = document.createElement('div'); lbl.className = 'kpi-label'; lbl.textContent = k.label;
