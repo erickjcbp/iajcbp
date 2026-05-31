@@ -51,6 +51,11 @@
     .list-subname { font-family:'Sora',sans-serif; font-size:10.5px; font-weight:600; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .list-meta { display:flex; align-items:center; gap:8px; margin-top:3px; }
     .list-com { font-size:11px; color:var(--text-muted); }
+    /* Vínculo de irmãos */
+    .irmaos-lista { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 4px; }
+    .irmao-chip { font-size:11px; font-weight:700; color:var(--gold); background:rgba(232,185,74,.1); border:1px solid var(--gold-dim); border-radius:12px; padding:3px 10px; }
+    .irmao-row { display:flex; align-items:center; gap:10px; padding:7px 8px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; cursor:pointer; }
+    .irmao-row input[type=checkbox] { width:18px; height:18px; flex:none; accent-color:var(--gold); }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
 </head>
@@ -310,13 +315,13 @@ function editSelect(label, col, val, opts) {
   s.onchange = () => { fichaEdits[col] = s.value; };
   g.appendChild(s); return g;
 }
-function editBool(label, col, val) {
+function editBool(label, col, val, onChange) {
   const g = fGroup(label);
   const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;gap:8px;';
   let cur = !!val;
   [['Sim', true], ['Não', false]].forEach(([t, v]) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'form-toggle' + (cur === v ? ' active' : ''); b.textContent = t;
-    b.onclick = () => { cur = v; fichaEdits[col] = v; wrap.querySelectorAll('.form-toggle').forEach(x => x.classList.remove('active')); b.classList.add('active'); };
+    b.onclick = () => { cur = v; fichaEdits[col] = v; wrap.querySelectorAll('.form-toggle').forEach(x => x.classList.remove('active')); b.classList.add('active'); if (onChange) onChange(v); };
     wrap.appendChild(b);
   });
   g.appendChild(wrap); return g;
@@ -402,7 +407,25 @@ async function renderTab(tab) {
     el.appendChild(editText('Nome da mãe ministra', 'nome_mae_ministro', m.nome_mae_ministro));
     el.appendChild(editText('Comunidade dos ministros', 'comunidade_ministro', m.comunidade_ministro));
     el.appendChild(editBool('Escalar junto com os pais?', 'escalar_com_pais', m.escalar_com_pais));
-    el.appendChild(editBool('Tem irmão na pastoral?', 'tem_irmao_pastoral', m.tem_irmao_pastoral));
+
+    // Irmão(s) na pastoral — habilitar libera o vínculo (janela com busca + multi-seleção)
+    const reveal = document.createElement('div');
+    reveal.style.cssText = 'display:' + (m.tem_irmao_pastoral ? 'block' : 'none') + ';margin:2px 0 6px;padding:12px;background:var(--surface);border:1px solid var(--border-wine);border-radius:8px;';
+    el.appendChild(editBool('Tem irmão(s) na pastoral?', 'tem_irmao_pastoral', m.tem_irmao_pastoral, (on) => { reveal.style.display = on ? 'block' : 'none'; }));
+    const lblIr = document.createElement('div'); lblIr.className = 'form-label'; lblIr.textContent = 'Irmãos vinculados';
+    const irmaosLista = document.createElement('div'); irmaosLista.className = 'irmaos-lista';
+    function renderIrmaos() {
+      irmaosLista.textContent = '';
+      const irmaos = m.grupo_irmaos ? todos.filter(t => t.grupo_irmaos === m.grupo_irmaos && t.id !== m.id) : [];
+      if (!irmaos.length) { const e = document.createElement('span'); e.style.cssText = 'font-size:12px;color:var(--text-muted);font-style:italic;'; e.textContent = 'Nenhum irmão vinculado.'; irmaosLista.appendChild(e); return; }
+      irmaos.forEach(ir => { const chip = document.createElement('span'); chip.className = 'irmao-chip'; chip.textContent = ir.apelido || ir.nome.split(' ')[0]; irmaosLista.appendChild(chip); });
+    }
+    renderIrmaos();
+    const vincBtn = document.createElement('button'); vincBtn.className = 'btn-sm gold'; vincBtn.style.marginTop = '4px'; vincBtn.textContent = '🔗 Vincular irmãos';
+    vincBtn.onclick = () => abrirSeletorIrmaos(m, renderIrmaos);
+    reveal.append(lblIr, irmaosLista, vincBtn);
+    el.appendChild(reveal);
+
     el.appendChild(editBool('Escalar junto com o irmão?', 'escalar_com_irmao', m.escalar_com_irmao));
   }
 
@@ -609,6 +632,71 @@ function abrirSeletorNivel(membro, rankBtn) {
     const alvo = todos.find(t => t.id === membro.id); if (alvo) alvo.nivel = escolha;
     if (rankBtn) rankBtn.textContent = '⬆  Alterar nível · ' + nivelInfo(escolha).label;
     ov.remove(); renderGrid();
+  };
+  acts.append(cancel, conf); modal.appendChild(acts);
+  ov.appendChild(modal); document.body.appendChild(ov);
+}
+
+// Janela de vínculo de irmãos — busca + marcar uma ou mais opções (grupo compartilhado)
+function abrirSeletorIrmaos(membro, onDone) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '210';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className = 'modal';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Vincular irmãos';
+  const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-8px 0 12px;font-weight:600;';
+  sub.textContent = 'Marque um ou mais irmãos de ' + membro.nome.split(' ')[0] + '.';
+  modal.append(handle, tt, sub);
+
+  const search = document.createElement('input'); search.className = 'form-input'; search.placeholder = '🔍 Buscar nome ou apelido...'; search.style.marginBottom = '10px';
+  modal.appendChild(search);
+  const listEl = document.createElement('div'); listEl.style.cssText = 'max-height:46vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;';
+  modal.appendChild(listEl);
+
+  const sel = new Set(membro.grupo_irmaos ? todos.filter(t => t.grupo_irmaos === membro.grupo_irmaos && t.id !== membro.id).map(t => t.id) : []);
+  function render() {
+    const q = search.value.toLowerCase();
+    listEl.textContent = '';
+    todos.filter(t => t.id !== membro.id && (t.nome.toLowerCase().includes(q) || (t.apelido || '').toLowerCase().includes(q))).forEach(t => {
+      const row = document.createElement('label'); row.className = 'irmao-row';
+      const chk = document.createElement('input'); chk.type = 'checkbox'; chk.checked = sel.has(t.id);
+      chk.onchange = () => { if (chk.checked) sel.add(t.id); else sel.delete(t.id); };
+      const av = buildAvatarEl(t.foto_url, t.role, 30, { nivelSlug: t.nivel || nivelFromRole(t.role) }); av.style.flexShrink = '0';
+      const nm = document.createElement('span'); nm.style.cssText = 'flex:1;font-size:13px;min-width:0;'; nm.textContent = (t.apelido ? t.apelido + ' · ' : '') + t.nome;
+      row.append(chk, av, nm); listEl.appendChild(row);
+    });
+  }
+  search.oninput = render; render();
+
+  const msg = document.createElement('div'); msg.className = 'msg'; modal.appendChild(msg);
+  const acts = document.createElement('div'); acts.className = 'modal-actions';
+  const cancel = document.createElement('button'); cancel.className = 'btn-sm gray'; cancel.textContent = 'Cancelar'; cancel.onclick = () => ov.remove();
+  const conf = document.createElement('button'); conf.className = 'btn-sm gold'; conf.textContent = 'Salvar vínculo';
+  conf.onclick = async () => {
+    conf.disabled = true; conf.textContent = 'Salvando...';
+    const selecionados = [...sel];
+    const newGid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(16).slice(2));
+    const gid = membro.grupo_irmaos || newGid;
+    try {
+      if (selecionados.length) {
+        const ids = [membro.id, ...selecionados];
+        const { error } = await sbAdmin.from('acolitos_membros').update({ grupo_irmaos: gid, tem_irmao_pastoral: true }).in('id', ids);
+        if (error) throw error;
+        if (membro.grupo_irmaos) {
+          const removidos = todos.filter(t => t.grupo_irmaos === membro.grupo_irmaos && t.id !== membro.id && !sel.has(t.id)).map(t => t.id);
+          if (removidos.length) await sbAdmin.from('acolitos_membros').update({ grupo_irmaos: null }).in('id', removidos);
+          removidos.forEach(id => { const t = todos.find(x => x.id === id); if (t) t.grupo_irmaos = null; });
+        }
+        ids.forEach(id => { const t = todos.find(x => x.id === id); if (t) { t.grupo_irmaos = gid; t.tem_irmao_pastoral = true; } });
+        membro.grupo_irmaos = gid; membro.tem_irmao_pastoral = true; fichaEdits.tem_irmao_pastoral = true;
+      } else if (membro.grupo_irmaos) {
+        const doGrupo = todos.filter(t => t.grupo_irmaos === membro.grupo_irmaos).map(t => t.id);
+        await sbAdmin.from('acolitos_membros').update({ grupo_irmaos: null }).in('id', doGrupo);
+        doGrupo.forEach(id => { const t = todos.find(x => x.id === id); if (t) t.grupo_irmaos = null; });
+        membro.grupo_irmaos = null;
+      }
+    } catch (e) { msg.className = 'msg error'; msg.textContent = 'Erro ao salvar: ' + (e.message || ''); conf.disabled = false; conf.textContent = 'Salvar vínculo'; return; }
+    ov.remove(); if (onDone) onDone();
   };
   acts.append(cancel, conf); modal.appendChild(acts);
   ov.appendChild(modal); document.body.appendChild(ov);
