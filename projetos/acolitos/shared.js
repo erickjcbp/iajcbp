@@ -307,22 +307,25 @@ function buildAvatarEl(fotoUrl, role, size, opts) {
     badge.style.cssText = `position:absolute;bottom:-4px;left:-4px;width:${camSize}px;height:${camSize}px;border-radius:50%;border:1px solid var(--gold-dim);background:var(--surface);color:var(--gold);font-size:${Math.round(camSize*0.55)}px;line-height:0;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;z-index:2;`;
     badge.onclick = () => input.click();
 
-    input.onchange = async () => {
+    input.onchange = () => {
       const file = input.files && input.files[0];
+      input.value = '';
       if (!file) return;
-      const prev = badge.textContent;
-      badge.textContent = '…'; badge.disabled = true;
-      try {
-        const url = await uploadAvatar(file, opts.membro);
-        const novo = renderFoto(url);
-        container.replaceChild(novo, fotoEl);
-        fotoEl = novo;
-        if (typeof opts.onUpload === 'function') opts.onUpload(url);
-      } catch (err) {
-        alert('Não foi possível enviar a foto. ' + (err?.message || ''));
-      } finally {
-        badge.textContent = prev; badge.disabled = false; input.value = '';
-      }
+      openCropper(file, async (croppedFile) => {
+        const prev = badge.textContent;
+        badge.textContent = '…'; badge.disabled = true;
+        try {
+          const url = await uploadAvatar(croppedFile, opts.membro);
+          const novo = renderFoto(url);
+          container.replaceChild(novo, fotoEl);
+          fotoEl = novo;
+          if (typeof opts.onUpload === 'function') opts.onUpload(url);
+        } catch (err) {
+          alert('Não foi possível enviar a foto. ' + (err?.message || ''));
+        } finally {
+          badge.textContent = prev; badge.disabled = false;
+        }
+      });
     };
 
     container.append(badge, input);
@@ -368,6 +371,80 @@ async function uploadAvatar(file, membro) {
 
   membro.foto_url = url; // mantém cache local em sincronia
   return url;
+}
+
+// ── CROPPER DE FOTO (recorte circular antes do upload) ───────
+function openCropper(file, onConfirm) {
+  const objUrl = URL.createObjectURL(file);
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;';
+  const title = document.createElement('div');
+  title.style.cssText = "font-family:'Sora',sans-serif;font-weight:700;color:var(--gold-light,#ffd97a);letter-spacing:1.5px;text-transform:uppercase;font-size:13px;";
+  title.textContent = 'Ajuste a foto';
+  const hint = document.createElement('div');
+  hint.style.cssText = 'font-size:12px;color:#b88a8f;font-weight:600;margin-top:-10px;';
+  hint.textContent = 'Arraste para posicionar · use o zoom';
+
+  const F = Math.min(300, window.innerWidth - 56, window.innerHeight - 240);
+  const frame = document.createElement('div');
+  frame.style.cssText = `position:relative;width:${F}px;height:${F}px;overflow:hidden;border-radius:50%;border:2px solid var(--gold,#e8b94a);box-shadow:0 0 30px rgba(255,38,54,.5);touch-action:none;background:#000;cursor:grab;`;
+  const img = document.createElement('img');
+  img.style.cssText = 'position:absolute;will-change:left,top;pointer-events:none;-webkit-user-drag:none;';
+  img.src = objUrl; frame.appendChild(img);
+
+  const zoomWrap = document.createElement('div'); zoomWrap.style.cssText = `display:flex;align-items:center;gap:10px;width:${F}px;`;
+  const zi = document.createElement('span'); zi.textContent = '🔍'; zi.style.fontSize = '14px';
+  const zoom = document.createElement('input'); zoom.type = 'range'; zoom.min = '1'; zoom.max = '3'; zoom.step = '0.01'; zoom.value = '1';
+  zoom.style.cssText = 'flex:1;accent-color:var(--red-soft,#ff4654);';
+  zoomWrap.append(zi, zoom);
+
+  const btns = document.createElement('div'); btns.style.cssText = 'display:flex;gap:10px;';
+  const cancel = document.createElement('button'); cancel.className = 'btn-sm gray'; cancel.textContent = 'Cancelar';
+  const ok = document.createElement('button'); ok.className = 'btn-sm gold'; ok.textContent = 'Cortar e enviar';
+  btns.append(cancel, ok);
+  ov.append(title, hint, frame, zoomWrap, btns); document.body.appendChild(ov);
+
+  let nw = 0, nh = 0, base = 1, scale = 1, tx = 0, ty = 0, dragging = false, sx = 0, sy = 0, stx = 0, sty = 0;
+  const dims = () => ({ dw: nw * scale, dh: nh * scale });
+  function clamp() { const { dw, dh } = dims(); tx = Math.min(0, Math.max(F - dw, tx)); ty = Math.min(0, Math.max(F - dh, ty)); }
+  function apply() { const { dw, dh } = dims(); img.style.width = dw + 'px'; img.style.height = dh + 'px'; img.style.left = tx + 'px'; img.style.top = ty + 'px'; }
+
+  img.onload = () => {
+    nw = img.naturalWidth; nh = img.naturalHeight;
+    base = Math.max(F / nw, F / nh); scale = base;
+    zoom.min = String(base); zoom.max = String(base * 3); zoom.step = String((base * 2) / 100); zoom.value = String(base);
+    const { dw, dh } = dims(); tx = (F - dw) / 2; ty = (F - dh) / 2; apply();
+  };
+  zoom.oninput = () => {
+    const ns = parseFloat(zoom.value), cx = F / 2, cy = F / 2;
+    tx = cx - (cx - tx) * (ns / scale); ty = cy - (cy - ty) * (ns / scale);
+    scale = ns; clamp(); apply();
+  };
+  const onStart = (x, y) => { dragging = true; sx = x; sy = y; stx = tx; sty = ty; frame.style.cursor = 'grabbing'; };
+  const onMove = (x, y) => { if (!dragging) return; tx = stx + (x - sx); ty = sty + (y - sy); clamp(); apply(); };
+  const onEnd = () => { dragging = false; frame.style.cursor = 'grab'; };
+  function mm(e) { if (e.touches) { const t = e.touches[0]; if (t) onMove(t.clientX, t.clientY); } else onMove(e.clientX, e.clientY); }
+  frame.addEventListener('mousedown', e => onStart(e.clientX, e.clientY));
+  frame.addEventListener('touchstart', e => { const t = e.touches[0]; if (t) onStart(t.clientX, t.clientY); }, { passive: true });
+  window.addEventListener('mousemove', mm); window.addEventListener('mouseup', onEnd);
+  window.addEventListener('touchmove', mm, { passive: true }); window.addEventListener('touchend', onEnd);
+
+  function cleanup() {
+    URL.revokeObjectURL(objUrl); ov.remove();
+    window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', onEnd);
+    window.removeEventListener('touchmove', mm); window.removeEventListener('touchend', onEnd);
+  }
+  cancel.onclick = cleanup;
+  ok.onclick = () => {
+    const target = 400, canvas = document.createElement('canvas');
+    canvas.width = target; canvas.height = target;
+    const c = canvas.getContext('2d');
+    c.drawImage(img, -tx / scale, -ty / scale, F / scale, F / scale, 0, 0, target, target);
+    canvas.toBlob(blob => {
+      cleanup();
+      if (blob) onConfirm(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
+    }, 'image/jpeg', 0.9);
+  };
 }
 
 // ── PATCH POR HABILITAÇÃO ────────────────────────────────────
