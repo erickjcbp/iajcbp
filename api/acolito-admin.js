@@ -56,7 +56,7 @@ export default async function handler(req, res) {
   }
   const SESSAO_MSG = ' Guarde esses dados, pois sua sessão será encerrada e você voltará à tela de login para usar os dados corretos. Após acessar novamente você pode alterar qualquer informação.';
 
-  const { action, user_id, usuario, password, nome, membro_id } = req.body || {};
+  const { action, user_id, usuario, password, nome, membro_id, role } = req.body || {};
   const jh = { ...h, 'Content-Type': 'application/json' };
 
   if (action === 'create') {
@@ -79,6 +79,14 @@ export default async function handler(req, res) {
     const email = d.email || '';
     const usuario = email.includes('@coroinhas.') ? email.split('@')[0] : email;
     return res.status(200).json({ ok: true, email, usuario });
+  }
+
+  if (action === 'sync_role') {
+    const ALLOWED = ['membro_equipe', 'cerimonario', 'acolito', 'coroinha', 'aspirante'];
+    if (!user_id || !ALLOWED.includes(role)) return res.status(400).json({ error: 'Dados inválidos.' });
+    if (!(await podeMexer(user_id))) return res.status(403).json({ error: 'Sem permissão sobre este usuário.' });
+    await fetch(`${URL}/rest/v1/pastoral_members?user_id=eq.${user_id}&module_id=eq.${mod.id}`, { method: 'PATCH', headers: { ...jh, Prefer: 'return=minimal' }, body: JSON.stringify({ role }) });
+    return res.status(200).json({ ok: true });
   }
 
   if (action === 'password') {

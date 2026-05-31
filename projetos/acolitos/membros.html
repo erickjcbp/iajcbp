@@ -170,7 +170,7 @@ async function init() {
   ctx = await initModulo(['coord_admin','subadmin','membro_equipe']);
   if (!ctx) return;
   renderHeader(ctx, 'membros');
-  renderBottomNav(ctx.membership.role, 'membros', ctx.membro?.nivel);
+  renderBottomNav(ctx, 'membros');
   document.getElementById('vt-cards').classList.toggle('active', vista === 'cards');
   document.getElementById('vt-lista').classList.toggle('active', vista === 'lista');
   await loadMembros();
@@ -839,19 +839,35 @@ async function salvarFicha() {
     if (fmsg) { fmsg.className = 'msg error'; fmsg.textContent = 'Erro ao salvar: ' + (e.message || 'tente novamente.'); }
     btn.disabled = false; btn.textContent = 'Salvar'; return;
   }
-  // Avisos ao membro: engajamento (plano de evolução) e/ou alteração geral (nível tem comemoração própria)
+  // Avisos detalhados ao membro + sincronização do papel (RLS) quando muda a coordenação
   const editados = Object.keys(fichaEdits);
   const engajCampos = ['observacoes', 'desenvolvimento_habilidades', 'desenvolvimento_competencias', 'mensagem_coordenacao'];
   const mudouEngaj = editados.some(k => engajCampos.includes(k));
-  const mudouOutros = editados.some(k => k !== 'nivel' && !engajCampos.includes(k));
-  if ((mudouEngaj || mudouOutros) && membroAtual.user_id) {
-    try {
-      const novos = Array.isArray(membroAtual.avisos) ? [...membroAtual.avisos] : [];
-      if (mudouEngaj) novos.push({ tipo: 'engajamento', logout: false, seen: false, ts: Date.now() });
-      if (mudouOutros) novos.push({ msg: 'A coordenação atualizou suas informações no sistema.', logout: false, seen: false, ts: Date.now() });
-      await sbAdmin.from('acolitos_membros').update({ avisos: novos }).eq('id', membroAtual.id);
-      membroAtual.avisos = novos;
-    } catch (e) { /* best-effort */ }
+  if (membroAtual.user_id) {
+    // Sincroniza pastoral_members.role para liberar/retirar acesso de equipe (RLS)
+    if (editados.includes('eh_equipe')) {
+      const novoRole = fichaEdits.eh_equipe ? 'membro_equipe' : nivelInfo(membroAtual.nivel || nivelFromRole(membroAtual.role)).base;
+      try { await apiPost('/api/acolito-admin', { action: 'sync_role', user_id: membroAtual.user_id, role: novoRole }); } catch (e) {}
+    }
+    const msgs = [];
+    if (editados.includes('permissoes')) {
+      const labs = (fichaEdits.permissoes || []).map(k => (MODULOS_LIBERAVEIS.find(x => x[0] === k) || [])[1] || k);
+      msgs.push(labs.length ? ('Agora você tem acesso a: ' + labs.join(', ') + '.') : 'Seu acesso a módulos foi removido.');
+    }
+    if (editados.includes('eh_equipe')) msgs.push(fichaEdits.eh_equipe ? 'Você agora faz parte da coordenação/equipe — use o botão "Coordenação" no topo.' : 'Você não faz mais parte da coordenação.');
+    if (editados.includes('setores')) { const labs = (fichaEdits.setores || []).map(k => SETOR_LABEL[k] || k); if (labs.length) msgs.push('Seus setores agora: ' + labs.join(', ') + '.'); }
+    if (editados.includes('serve')) msgs.push(fichaEdits.serve ? 'Você está marcado como servo do altar.' : 'Você não está mais marcado como servo do altar.');
+    const cobertos = ['permissoes', 'eh_equipe', 'setores', 'serve', 'nivel'].concat(engajCampos);
+    if (editados.some(k => !cobertos.includes(k))) msgs.push('A coordenação atualizou seus dados cadastrais.');
+    if (msgs.length || mudouEngaj) {
+      try {
+        const novos = Array.isArray(membroAtual.avisos) ? [...membroAtual.avisos] : [];
+        msgs.forEach(msg => novos.push({ msg, logout: false, seen: false, ts: Date.now() }));
+        if (mudouEngaj) novos.push({ tipo: 'engajamento', logout: false, seen: false, ts: Date.now() });
+        await sbAdmin.from('acolitos_membros').update({ avisos: novos }).eq('id', membroAtual.id);
+        membroAtual.avisos = novos;
+      } catch (e) { /* best-effort */ }
+    }
   }
 
   // Sucesso — NÃO fecha; zera o "não salvo" e mostra confirmação

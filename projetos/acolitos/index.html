@@ -93,12 +93,13 @@ async function init() {
   if (!ctx) return;
   renderHeader(ctx, 'home');
   const role = ctx.membership?.role;
-  renderBottomNav(role || 'novo', 'home', ctx.membro?.nivel);
+  renderBottomNav(ctx, 'home');
   const { data: mod } = await sb.from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
   moduloId = mod?.id || null;
 
+  const mode = navMode(ctx);
   if (!ctx.membership || role === 'novo') await renderStatusCrm(ctx);
-  else if (EQUIPE_ROLES.includes(role)) await renderDashboardEquipe(ctx);
+  else if (mode === 'coordenacao') await renderDashboardEquipe(ctx);
   else await renderDashboardMembro(ctx);
 }
 

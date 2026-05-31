@@ -254,7 +254,7 @@ async function init() {
   ctx = await initModulo(['coord_admin','subadmin','membro_equipe']);
   if (!ctx) return;
   renderHeader(ctx, 'escala');
-  renderBottomNav(ctx.membership.role, 'escala', ctx.membro?.nivel);
+  renderBottomNav(ctx, 'escala');
   await loadDados();
 }
 

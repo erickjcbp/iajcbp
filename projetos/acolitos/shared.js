@@ -171,8 +171,15 @@ async function openNotificacoes(membro) {
   modal.append(handle, tt);
   if (!avisos.length) { const e = document.createElement('div'); e.style.cssText = 'font-size:13px;color:var(--text-muted);font-style:italic;'; e.textContent = 'Nenhuma notificação ainda.'; modal.appendChild(e); }
   else { avisos.slice().reverse().forEach(a => modal.appendChild(avisoEl(a, membro))); }
-  const close = document.createElement('button'); close.className = 'btn gold'; close.style.marginTop = '8px'; close.textContent = 'Fechar'; close.onclick = () => ov.remove();
-  modal.appendChild(close);
+  const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:10px;margin-top:10px;';
+  if (avisos.length) {
+    const limpar = document.createElement('button'); limpar.className = 'btn-sm gray'; limpar.style.flex = '1'; limpar.textContent = 'Limpar tudo';
+    limpar.onclick = async () => { try { await sb.from('acolitos_membros').update({ avisos: [] }).eq('id', membro.id); } catch (e) {} membro.avisos = []; ov.remove(); };
+    acts.appendChild(limpar);
+  }
+  const close = document.createElement('button'); close.className = 'btn gold'; close.style.flex = '1'; close.textContent = 'Fechar'; close.onclick = () => ov.remove();
+  acts.appendChild(close);
+  modal.appendChild(acts);
   ov.appendChild(modal); document.body.appendChild(ov);
 }
 
@@ -261,6 +268,8 @@ function renderHeader(ctx, activePage) {
 
   actions.append(contaBtn, sairBtn);
   el.appendChild(actions);
+
+  renderModeSwitch(ctx); // barra de alternância Jornada/Coordenação (se aplicável)
 }
 
 // ── MINHA CONTA (autosserviço: trocar próprio usuário/senha/nome) ──
@@ -394,17 +403,34 @@ const MODULOS_LIBERAVEIS = [
 // ── BOTTOM NAV ────────────────────────────────────────────────
 const EQUIPE_ROLES = ['coord_admin','subadmin','membro_equipe'];
 
-const NAV_EQUIPE = [
-  { id:'home',    href:'index.html',   label:'Início',  icon:'home' },
-  { id:'membros', href:'membros.html', label:'Membros', icon:'users' },
-  { id:'escala',  href:'escala.html',  label:'Escala',  icon:'calendar' },
-  { id:'crm',     href:'crm.html',     label:'CRM',     icon:'shuffle' },
-];
-const NAV_MEMBRO = [
-  { id:'home',      href:'index.html',     label:'Início',   icon:'home' },
-  { id:'ausencias', href:'ausencias.html', label:'Ausência', icon:'x-circle' },
-  { id:'chamada',   href:'chamada.html',   label:'Chamada',  icon:'message-circle' },
-];
+// Módulos de coordenação na navegação (na ordem fixa); permissões controlam quais aparecem
+const NAV_COORD_MODULOS = {
+  membros: { label:'Membros', href:'membros.html', icon:'users' },
+  escala:  { label:'Escala',  href:'escala.html',  icon:'calendar' },
+  crm:     { label:'CRM',     href:'crm.html',     icon:'shuffle' },
+  chamada: { label:'Chamada', href:'chamada.html', icon:'message-circle' },
+};
+const ORDEM_MODULOS = ['membros','escala','crm','chamada'];
+
+// Capacidades do usuário p/ navegação
+function navCaps(ctx) {
+  const role = ctx && ctx.membership ? ctx.membership.role : null;
+  const m = ctx ? ctx.membro : null;
+  const isAdmin = EQUIPE_ROLES.includes(role);
+  const ehEquipe = isAdmin || !!(m && m.eh_equipe);
+  const serve = m ? (m.serve !== false) : false;
+  const nivel = (m && m.nivel) || nivelFromRole(role || 'aspirante');
+  const isCerimo = nivelInfo(nivel).base === 'cerimonario';
+  const perms = isAdmin ? ORDEM_MODULOS.slice() : ((m && Array.isArray(m.permissoes)) ? m.permissoes : []);
+  return { isAdmin, ehEquipe, serve, isCerimo, perms, nivel };
+}
+// Modo atual: 'jornada' | 'coordenacao'
+function navMode(ctx) {
+  const c = navCaps(ctx);
+  if (c.serve && c.ehEquipe) return localStorage.getItem('nav-mode') || 'jornada';
+  if (c.ehEquipe && !c.serve) return 'coordenacao';
+  return 'jornada';
+}
 
 function _svgIcon(name) {
   const d = {
@@ -418,18 +444,20 @@ function _svgIcon(name) {
   return `<svg viewBox="0 0 24 24"><path d="${d[name] || ''}"/></svg>`;
 }
 
-function renderBottomNav(role, activePage, nivel) {
+function renderBottomNav(ctx, activePage) {
   const el = document.getElementById('app-nav');
   if (!el) return;
   el.className = 'app-nav';
   el.textContent = '';
-  // Chamada aparece para quem está em NÍVEL de cerimoniário (decoupled do role);
-  // equipe usa NAV_EQUIPE; aspirante/coroinha/acólito não veem chamada.
-  const isCerimo = nivelInfo(nivel || nivelFromRole(role)).base === 'cerimonario';
+  const c = navCaps(ctx); const mode = navMode(ctx);
   let items;
-  if (EQUIPE_ROLES.includes(role)) items = NAV_EQUIPE;
-  else if (isCerimo || role === 'cerimonario') items = NAV_MEMBRO;
-  else items = NAV_MEMBRO.filter(i => i.id !== 'chamada');
+  if (mode === 'coordenacao') {
+    items = [{ id:'home', href:'index.html', label:'Início', icon:'home' }];
+    ORDEM_MODULOS.forEach(k => { if (c.perms.includes(k)) { const mod = NAV_COORD_MODULOS[k]; items.push({ id:k, href:mod.href, label:mod.label, icon:mod.icon }); } });
+  } else {
+    items = [{ id:'home', href:'index.html', label:'Início', icon:'home' }, { id:'ausencias', href:'ausencias.html', label:'Ausência', icon:'x-circle' }];
+    if (c.isCerimo) items.push({ id:'chamada', href:'chamada.html', label:'Chamada', icon:'message-circle' });
+  }
   items.forEach(item => {
     const a = document.createElement('a');
     a.className = 'nav-item' + (item.id === activePage ? ' active' : '');
@@ -444,6 +472,27 @@ function renderBottomNav(role, activePage, nivel) {
     labelSpan.textContent = item.label;
     a.append(iconDiv, labelSpan);
     el.appendChild(a);
+  });
+}
+
+// Switch "Minha Jornada ⇄ Coordenação" — barra fixa abaixo do header (só quem tem os dois)
+function renderModeSwitch(ctx) {
+  let bar = document.getElementById('mode-switch');
+  const c = navCaps(ctx);
+  if (!(c.serve && c.ehEquipe)) { if (bar) bar.remove(); document.body.classList.remove('has-switch'); return; }
+  const mode = navMode(ctx);
+  if (!bar) {
+    bar = document.createElement('div'); bar.id = 'mode-switch'; bar.className = 'mode-switch';
+    const header = document.getElementById('app-header');
+    if (header && header.parentNode) header.parentNode.insertBefore(bar, header.nextSibling);
+    else document.body.appendChild(bar);
+  }
+  document.body.classList.add('has-switch');
+  bar.textContent = '';
+  [['jornada','✦ Minha Jornada'], ['coordenacao','⚙ Coordenação']].forEach(([mk, label]) => {
+    const b = document.createElement('button'); b.className = 'mode-btn' + (mode === mk ? ' active' : ''); b.textContent = label;
+    b.onclick = () => { if (mode !== mk) { localStorage.setItem('nav-mode', mk); window.location.href = 'index.html'; } };
+    bar.appendChild(b);
   });
 }
 

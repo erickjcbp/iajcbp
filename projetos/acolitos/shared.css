@@ -90,6 +90,10 @@ body {
   background: linear-gradient(90deg, transparent, var(--red-soft), var(--gold), var(--red-soft), transparent);
   opacity: .7;
 }
+.mode-switch { position: fixed; top: var(--header-h); left: 0; right: 0; z-index: 49; height: 42px; display: flex; gap: 6px; align-items: center; justify-content: center; padding: 0 12px; background: linear-gradient(180deg, var(--surface2), var(--surface)); border-bottom: 1px solid var(--border-wine); }
+.mode-btn { flex: 1; max-width: 200px; height: 30px; border: 1px solid var(--border-wine); background: var(--surface); color: var(--text-muted); border-radius: 16px; font-family: 'Sora', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mode-btn.active { background: rgba(232,185,74,.14); border-color: var(--gold); color: var(--gold); box-shadow: 0 0 12px var(--red-glow); }
+body.has-switch { padding-top: calc(var(--header-h) + 42px); }
 .header-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .header-back { font-size: 22px; line-height: 1; font-weight: 800; flex: none; }
 .header-logo {
