@@ -163,7 +163,7 @@ function renderGrid() {
   grid.textContent = '';
   const lista = todos.filter(m =>
     m.nome.toLowerCase().includes(busca) &&
-    (!filtroAtivo || m.role === filtroAtivo)
+    (!filtroAtivo || nivelInfo(m.nivel || nivelFromRole(m.role)).base === filtroAtivo)
   );
   if (!lista.length) {
     const em = document.createElement('span'); em.className = 'empty';
@@ -173,15 +173,18 @@ function renderGrid() {
     const card = document.createElement('div'); card.className = 'member-card';
     card.onclick = () => abrirFicha(m);
 
+    const slug = m.nivel || nivelFromRole(m.role);
+    const ninfo = nivelInfo(slug);
+
     const avatarWrap = document.createElement('div'); avatarWrap.className = 'member-card-avatar';
-    avatarWrap.appendChild(buildAvatarEl(m.foto_url, m.role, 60, { nivelSlug: m.nivel || nivelFromRole(m.role) }));
+    avatarWrap.appendChild(buildAvatarEl(m.foto_url, m.role, 60, { nivelSlug: slug }));
 
     const nome = document.createElement('div'); nome.className = 'member-card-name';
     nome.textContent = m.nome;
 
     const meta = document.createElement('div'); meta.className = 'member-card-meta';
-    const badge = document.createElement('span'); badge.className = 'badge ' + m.role;
-    badge.textContent = ROLE_LABEL[m.role] || m.role;
+    const badge = document.createElement('span'); badge.className = 'badge ' + ninfo.base;
+    badge.textContent = ninfo.label; // nome segue o NÍVEL na jornada, não o papel
     meta.appendChild(badge);
 
     const com = document.createElement('div'); com.className = 'member-card-meta';
@@ -215,7 +218,7 @@ async function abrirFicha(membro) {
   }));
   const nomeEl = document.createElement('div'); nomeEl.className = 'ficha-nome'; nomeEl.textContent = membro.nome;
   const subEl  = document.createElement('div'); subEl.className  = 'ficha-sub';
-  subEl.textContent = (ROLE_LABEL[membro.role] || membro.role) + ' · ' +
+  subEl.textContent = nivelInfo(membro.nivel || nivelFromRole(membro.role)).label + ' · ' +
     (membro.comunidade === 'matriz' ? 'Matriz' : membro.comunidade === 'santo_antonio' ? 'Sto. Antônio' : 'Outra');
   hdr.append(nomeEl, subEl);
 

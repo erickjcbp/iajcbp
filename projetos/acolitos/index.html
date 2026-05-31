@@ -344,7 +344,7 @@ async function renderDashboardMembro(ctx) {
   }));
   const nomeEl = document.createElement('div'); nomeEl.className = 'greet-nome'; nomeEl.textContent = m?.nome || ctx.user.email;
   const subEl = document.createElement('div'); subEl.className = 'greet-sub';
-  subEl.textContent = (ROLE_LABEL[role]||role) + (m?.comunidade ? ' · ' + (m.comunidade==='matriz'?'Matriz':'Sto. Antônio') : '');
+  subEl.textContent = nivelInfo(nivel).label + (m?.comunidade ? ' · ' + (m.comunidade==='matriz'?'Matriz':'Sto. Antônio') : '');
   greet.append(nomeEl, subEl); main.appendChild(greet);
 
   // Destaque do nível atual (animado) + jornada
