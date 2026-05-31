@@ -252,6 +252,20 @@ function openContaModal(ctx) {
   ov.appendChild(modal); document.body.appendChild(ov);
 }
 
+// ── EQUIPE / COORDENAÇÃO ──────────────────────────────────────
+const SETORES = [
+  ['coordenacao','Coordenação'], ['vice_coordenacao','Vice-Coordenação'], ['secretaria','Secretaria'],
+  ['tesouraria_compras','Tesouraria e Compras'], ['ordem_disciplina','Ordem e Disciplina'],
+  ['eventos_viagens','Eventos e Viagens'], ['escala','Escala'], ['formacao','Formação'],
+  ['espiritualidade','Espiritualidade'], ['almoxarifado','Almoxarifado'], ['midia','Mídia'],
+];
+const SETOR_LABEL = Object.fromEntries(SETORES);
+// Módulos que o admin pode liberar por pessoa (key, label, href). Hoje só os existentes.
+const MODULOS_LIBERAVEIS = [
+  ['escala','Escala','escala.html'], ['membros','Membros','membros.html'],
+  ['crm','Integração (CRM)','crm.html'], ['chamada','Chamada','chamada.html'],
+];
+
 // ── BOTTOM NAV ────────────────────────────────────────────────
 const EQUIPE_ROLES = ['coord_admin','subadmin','membro_equipe'];
 

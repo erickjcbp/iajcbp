@@ -56,6 +56,7 @@
     .irmao-chip { font-size:11px; font-weight:700; color:var(--gold); background:rgba(232,185,74,.1); border:1px solid var(--gold-dim); border-radius:12px; padding:3px 10px; }
     .irmao-row { display:flex; align-items:center; gap:10px; padding:7px 8px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; cursor:pointer; }
     .irmao-row input[type=checkbox] { width:18px; height:18px; flex:none; accent-color:var(--gold); }
+    .member-card-setor { font-size:9px; color:var(--gold); font-weight:700; margin-top:3px; line-height:1.2; }
     #btn-salvar.pulse { animation:salvarPulse 1.3s ease-in-out infinite; }
     @keyframes salvarPulse { 0%,100%{ box-shadow:0 0 0 0 var(--red-glow); } 50%{ box-shadow:0 0 14px 2px var(--red-glow); } }
   </style>
@@ -223,7 +224,9 @@ function renderGrid() {
       const sub = document.createElement('div'); sub.className = 'list-meta';
       const badge = document.createElement('span'); badge.className = 'badge ' + ninfo.base; badge.textContent = ninfo.label;
       const com = document.createElement('span'); com.className = 'list-com'; com.textContent = comLabel(m.comunidade);
-      sub.append(badge, com); info.appendChild(sub);
+      sub.append(badge, com);
+      if (m.eh_equipe && (m.setores || []).length) { const st = document.createElement('span'); st.className = 'list-com'; st.style.color = 'var(--gold)'; st.textContent = '· ' + m.setores.map(s => SETOR_LABEL[s] || s).join(' · '); sub.appendChild(st); }
+      info.appendChild(sub);
       row.append(av, info); grid.appendChild(row);
       return;
     }
@@ -237,6 +240,11 @@ function renderGrid() {
     const badge = document.createElement('span'); badge.className = 'badge ' + ninfo.base;
     badge.textContent = ninfo.label; // nome segue o NÍVEL na jornada, não o papel
     meta.appendChild(badge);
+    if (m.eh_equipe && (m.setores || []).length) {
+      const setorEl = document.createElement('div'); setorEl.className = 'member-card-setor';
+      setorEl.textContent = m.setores.map(s => SETOR_LABEL[s] || s).join(' · ');
+      meta.appendChild(setorEl);
+    }
     const com = document.createElement('div'); com.className = 'member-card-meta';
     com.style.marginTop = '4px'; com.textContent = comLabel(m.comunidade);
     card.append(avatarWrap, nome, meta, com);
@@ -267,8 +275,10 @@ async function abrirFicha(membro) {
   }));
   const nomeEl = nameBlock(membro.nome, membro.apelido, 'ficha-nome', 'ficha-subname');
   const subEl  = document.createElement('div'); subEl.className  = 'ficha-sub';
-  subEl.textContent = nivelInfo(membro.nivel || nivelFromRole(membro.role)).label + ' · ' +
+  let subTxt = nivelInfo(membro.nivel || nivelFromRole(membro.role)).label + ' · ' +
     (membro.comunidade === 'matriz' ? 'Matriz' : membro.comunidade === 'santo_antonio' ? 'Sto. Antônio' : 'Outra');
+  if (membro.eh_equipe && (membro.setores || []).length) subTxt += ' · ' + membro.setores.map(s => SETOR_LABEL[s] || s).join(', ');
+  subEl.textContent = subTxt;
   hdr.append(nomeEl, subEl);
 
   // Botão visual para alterar o nível (rank) na jornada
@@ -280,7 +290,7 @@ async function abrirFicha(membro) {
 
   // Tabs
   const tabs = ['Pessoal','Habilitações','Disponibilidade','Família','Frequência','Evolução','Observações'];
-  if (['coord_admin','subadmin'].includes(ctx.membership.role)) tabs.push('Acesso');
+  if (['coord_admin','subadmin'].includes(ctx.membership.role)) { tabs.push('Equipe'); tabs.push('Acesso'); }
   const tabsEl = document.getElementById('ficha-tabs'); tabsEl.textContent = '';
   tabs.forEach((t, i) => {
     const btn = document.createElement('button'); btn.className = 'ficha-tab' + (i === 0 ? ' active' : '');
@@ -344,10 +354,38 @@ function editBool(label, col, val, onChange) {
   g.appendChild(wrap); return g;
 }
 
+function editMulti(label, col, current, options) {
+  const g = fGroup(label);
+  const cur = new Set(((col in fichaEdits) ? fichaEdits[col] : current) || []);
+  const box = document.createElement('div'); box.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+  options.forEach(([val, lab]) => {
+    const row = document.createElement('label'); row.className = 'irmao-row';
+    const chk = document.createElement('input'); chk.type = 'checkbox'; chk.checked = cur.has(val);
+    chk.onchange = () => { if (chk.checked) cur.add(val); else cur.delete(val); fichaEdits[col] = [...cur]; setDirty(); };
+    const sp = document.createElement('span'); sp.style.cssText = 'font-size:13px;'; sp.textContent = lab;
+    row.append(chk, sp); box.appendChild(row);
+  });
+  g.appendChild(box); return g;
+}
+
 async function renderTab(tab) {
   const el = document.getElementById('ficha-conteudo');
   el.textContent = '';
   const m = membroAtual;
+
+  if (tab === 'Equipe') {
+    el.appendChild(editBool('Serve no altar? (tem jornada/ausências)', 'serve', m.serve !== false));
+    const reveal = document.createElement('div');
+    reveal.style.cssText = 'display:' + (m.eh_equipe ? 'block' : 'none') + ';margin:2px 0 6px;padding:12px;background:var(--surface);border:1px solid var(--border-wine);border-radius:8px;';
+    el.appendChild(editBool('É da coordenação / equipe?', 'eh_equipe', m.eh_equipe, (on) => { reveal.style.display = on ? 'block' : 'none'; }));
+    const lblS = document.createElement('div'); lblS.className = 'form-label'; lblS.textContent = 'Setores (um ou mais)';
+    reveal.appendChild(lblS);
+    reveal.appendChild(editMulti('', 'setores', m.setores, SETORES));
+    const lblP = document.createElement('div'); lblP.className = 'form-label'; lblP.style.marginTop = '10px'; lblP.textContent = 'Módulos liberados para esta pessoa';
+    reveal.appendChild(lblP);
+    reveal.appendChild(editMulti('', 'permissoes', m.permissoes, MODULOS_LIBERAVEIS.map(x => [x[0], x[1]])));
+    el.appendChild(reveal);
+  }
 
   if (tab === 'Pessoal') {
     el.appendChild(editText('Apelido (opcional)', 'apelido', m.apelido));
