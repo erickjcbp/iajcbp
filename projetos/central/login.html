@@ -128,6 +128,22 @@
       font-family:'Cinzel',serif;letter-spacing:1px;text-decoration:none;transition:color .2s;
     }
     .link-action:hover{color:var(--wine-light);}
+    /* PASTORAL CTA */
+    .cta-sep{
+      display:flex;align-items:center;gap:12px;margin:22px 0 16px;
+      color:var(--text-muted);font-size:10px;font-family:'Cinzel',serif;
+      letter-spacing:2px;text-transform:uppercase;
+    }
+    .cta-sep::before,.cta-sep::after{
+      content:'';flex:1;height:1px;
+      background:linear-gradient(90deg,transparent,var(--border-wine),transparent);
+    }
+    .btn-outline{
+      width:100%;padding:12px;background:transparent;color:var(--text);
+      border:1px solid var(--border-wine);border-radius:2px;font-size:12px;font-weight:600;
+      cursor:pointer;font-family:'Cinzel',serif;letter-spacing:1px;text-transform:uppercase;transition:all .25s;
+    }
+    .btn-outline:hover{border-color:var(--wine-light);background:rgba(139,32,32,.08);color:var(--wine-bright);}
     /* MESSAGES */
     .msg{margin-top:14px;padding:10px 14px;border-radius:2px;font-size:13px;display:none;font-style:italic;}
     .msg.error{background:rgba(90,10,10,.35);color:#e8a0a0;border:1px solid rgba(120,20,20,.5);display:block;}
@@ -175,6 +191,10 @@
     <button class="btn" id="btn-login" onclick="fazerLogin()">Entrar</button>
     <a class="link-action" onclick="showTab('esqueci')">Esqueci minha senha</a>
     <div class="msg" id="msg-login"></div>
+    <div class="cta-sep">ou</div>
+    <button class="btn-outline" onclick="window.location.href='pastorais.html'">
+      ⛪ Sou / quero ser membro de uma pastoral
+    </button>
   </div>
 
   <!-- SOLICITAR ACESSO -->

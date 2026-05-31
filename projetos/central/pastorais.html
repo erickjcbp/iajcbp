@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pastorais — Central JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+  <style>
+    :root{
+      --bg:#0c0404;--surface:#180a0a;--surface2:#220d0d;
+      --border:#3d1515;--border-wine:#6b2020;
+      --wine:#8b2020;--wine-light:#c04040;--wine-dim:#4a1515;
+      --text:#f5e8e8;--text-muted:#a07070;--wine-bright:#d45050;
+      --gold:#C9A84C;--gold-dim:#7a6428;--focus-bg:#2a0e0e;
+      --shadow-card:0 0 0 1px var(--border),0 24px 80px rgba(0,0,0,.72),inset 0 1px 0 rgba(139,32,32,.12);
+    }
+    [data-theme="light"]{
+      --bg:#f2e8e8;--surface:#fdf6f6;--surface2:#f5e2e2;
+      --border:#d4a8a8;--border-wine:#a04040;
+      --wine:#7a1515;--wine-light:#5a0e0e;--wine-dim:#c08080;
+      --text:#1a0505;--text-muted:#6a3030;--wine-bright:#8a1a1a;
+      --gold:#9c7d2e;--gold-dim:#c0a868;--focus-bg:#ffe8e8;
+      --shadow-card:0 0 0 1px var(--border),0 8px 32px rgba(139,32,32,.12),inset 0 1px 0 rgba(139,32,32,.06);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{
+      min-height:100vh;display:flex;flex-direction:column;align-items:center;
+      overflow-y:auto;background:var(--bg);font-family:'Lora',serif;color:var(--text);
+      transition:background .3s,color .3s;
+      background-image:
+        radial-gradient(ellipse at 20% 50%,rgba(139,32,32,.06) 0%,transparent 60%),
+        radial-gradient(ellipse at 80% 20%,rgba(139,32,32,.04) 0%,transparent 50%);
+    }
+    .theme-toggle{
+      position:absolute;top:14px;right:14px;background:transparent;
+      border:1px solid var(--border-wine);color:var(--text-muted);
+      width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:15px;
+      transition:all .2s;display:flex;align-items:center;justify-content:center;
+    }
+    .theme-toggle:hover{border-color:var(--wine-light);color:var(--wine-light);}
+    .card{
+      position:relative;z-index:1;background:var(--surface);
+      border:1px solid var(--border-wine);border-radius:4px;
+      padding:40px 32px;width:100%;max-width:480px;
+      box-shadow:var(--shadow-card);margin:auto 0;
+    }
+    .logo{text-align:center;margin-bottom:24px;}
+    .logo-img{height:72px;width:auto;margin:0 auto 14px;display:block;
+      filter:drop-shadow(0 0 16px rgba(139,32,32,.3));}
+    .logo h1{font-family:'Cinzel',serif;font-size:17px;font-weight:700;
+      color:var(--text);letter-spacing:2px;text-transform:uppercase;}
+    .logo p{font-size:11px;color:var(--text-muted);margin-top:6px;font-style:italic;letter-spacing:1px;}
+    .ornament{text-align:center;color:var(--wine-dim);font-size:13px;letter-spacing:6px;margin-bottom:22px;opacity:.6;}
+    .step-title{font-family:'Cinzel',serif;font-size:13px;color:var(--gold);
+      letter-spacing:1.5px;text-transform:uppercase;text-align:center;margin-bottom:18px;}
+    /* PASTORAL CARDS */
+    .pastoral-card{
+      display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+      background:var(--surface2);border:1px solid var(--border-wine);border-radius:4px;
+      padding:16px;margin-bottom:12px;cursor:pointer;transition:all .2s;color:var(--text);
+    }
+    .pastoral-card:hover:not(:disabled){border-color:var(--gold);background:rgba(201,168,76,.06);}
+    .pastoral-card:disabled{opacity:.5;cursor:not-allowed;}
+    .pc-icon{font-size:30px;flex-shrink:0;}
+    .pc-body{flex:1;}
+    .pc-nome{font-family:'Cinzel',serif;font-size:14px;color:var(--text);margin-bottom:3px;letter-spacing:.5px;}
+    .pc-desc{font-size:12px;color:var(--text-muted);line-height:1.4;}
+    .pc-soon{font-size:10px;color:var(--gold);font-family:'Cinzel',serif;letter-spacing:1px;}
+    .pc-arrow{color:var(--text-muted);font-size:20px;flex-shrink:0;}
+    /* FORM */
+    label{display:block;font-size:11px;color:var(--text-muted);margin-bottom:6px;
+      font-family:'Cinzel',serif;letter-spacing:1.5px;text-transform:uppercase;}
+    input{
+      width:100%;padding:10px 14px;background:var(--surface2);
+      border:1px solid var(--border);border-bottom:1px solid var(--border-wine);
+      border-radius:2px;color:var(--text);font-size:14px;font-family:'Lora',serif;
+      outline:none;transition:all .2s;margin-bottom:16px;
+    }
+    input:focus{border-color:var(--border-wine);
+      box-shadow:0 2px 0 var(--wine-dim),inset 0 1px 4px rgba(0,0,0,.2);background:var(--focus-bg);}
+    .btn{
+      width:100%;padding:12px;background:linear-gradient(180deg,#902525,#6b1818);
+      color:var(--text);border:1px solid var(--wine-dim);border-radius:2px;
+      font-size:13px;font-weight:600;cursor:pointer;font-family:'Cinzel',serif;
+      letter-spacing:2px;text-transform:uppercase;transition:all .25s;
+      box-shadow:0 2px 12px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .btn:hover{background:linear-gradient(180deg,#b03030,#852020);}
+    .btn:disabled{background:var(--surface2);color:var(--wine-dim);border-color:var(--border);cursor:not-allowed;box-shadow:none;}
+    .link-action{display:block;text-align:center;margin-top:14px;font-size:12px;
+      color:var(--text-muted);cursor:pointer;font-family:'Cinzel',serif;letter-spacing:1px;
+      text-decoration:none;transition:color .2s;}
+    .link-action:hover{color:var(--wine-light);}
+    .msg{margin-top:14px;padding:10px 14px;border-radius:2px;font-size:13px;display:none;font-style:italic;}
+    .msg.error{background:rgba(90,10,10,.35);color:#e8a0a0;border:1px solid rgba(120,20,20,.5);display:block;}
+    .msg.success{background:rgba(20,60,20,.25);color:#a0d4a0;border:1px solid rgba(30,90,30,.4);display:block;}
+    .step{display:none;}.step.active{display:block;}
+    .selected-banner{
+      background:rgba(201,168,76,.08);border:1px solid var(--gold-dim);border-radius:3px;
+      padding:10px 14px;margin-bottom:18px;font-size:12px;color:var(--text-muted);text-align:center;
+    }
+    .selected-banner b{color:var(--gold);font-family:'Cinzel',serif;}
+    @media(max-width:480px){.card{padding:30px 22px;}}
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Alternar tema">☀</button>
+  <div class="card">
+    <div class="logo">
+      <img class="logo-img" id="logo-igreja"
+        src="../../midia/logos/Logo%20Igreja%20branco.png"
+        data-dark="../../midia/logos/Logo%20Igreja%20branco.png"
+        data-light="../../midia/logos/Logo%20Igreja%20colorido.png" alt="JCBP">
+      <h1>Pastorais JCBP</h1>
+      <p>Paróquia Jesus Cristo Bom Pastor — Limeira/SP</p>
+    </div>
+    <div class="ornament">✦ ✦ ✦</div>
+
+    <!-- STEP 1: escolher pastoral -->
+    <div id="step-pastoral" class="step active">
+      <div class="step-title">Escolha sua pastoral</div>
+      <div id="pastoral-list"></div>
+      <a class="link-action" href="login.html">← Voltar ao login</a>
+    </div>
+
+    <!-- STEP 2: criar conta / entrar -->
+    <div id="step-conta" class="step">
+      <div class="selected-banner" id="sel-banner"></div>
+      <div class="step-title" id="conta-title">Crie seu acesso</div>
+
+      <div id="campo-nome">
+        <label>Nome completo</label>
+        <input type="text" id="c-nome" placeholder="Seu nome completo">
+      </div>
+      <label>E-mail</label>
+      <input type="email" id="c-email" placeholder="seu@email.com">
+      <label>Senha</label>
+      <input type="password" id="c-senha" placeholder="mínimo 6 caracteres"
+             onkeydown="if(event.key==='Enter')submeter()">
+
+      <button class="btn" id="btn-conta" onclick="submeter()">Criar conta e continuar</button>
+      <a class="link-action" id="toggle-modo" onclick="toggleModo()">Já tenho conta? Entrar</a>
+      <a class="link-action" onclick="voltarStep1()">← Escolher outra pastoral</a>
+      <div class="msg" id="msg-conta"></div>
+    </div>
+  </div>
+
+<script>
+  // ── THEME ──
+  function applyTheme(theme,save){
+    document.documentElement.setAttribute('data-theme',theme);
+    if(save)localStorage.setItem('jcbp-theme',theme);
+    const btn=document.getElementById('theme-toggle');
+    if(btn)btn.textContent=theme==='dark'?'☀':'☾';
+    const img=document.getElementById('logo-igreja');
+    if(img&&img.dataset[theme])img.src=img.dataset[theme];
+  }
+  function toggleTheme(){
+    applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark',true);
+  }
+  applyTheme(localStorage.getItem('jcbp-theme')||'dark',false);
+
+  // ── SUPABASE ──
+  const SUPABASE_URL='https://fttjgsotuosjfrasttds.supabase.co';
+  const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGpnc290dW9zamZyYXN0dGRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MzU3NjUsImV4cCI6MjA5NTExMTc2NX0.BvofcR2cIXP7Bc3r2V0VOgc-JXPefX7JGGwtzv0d_eA';
+  const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+  // Pastorais disponíveis (hardcoded — pastoral_modules só é legível p/ autenticados).
+  const PASTORAIS=[
+    { slug:'acolitos', nome:'Acólitos e Coroinhas', icone:'⛪',
+      desc:'Coroinhas, acólitos e cerimoniários — servidores do altar.',
+      url:'../acolitos/novos.html', ativo:true },
+  ];
+
+  let selecionada=null;
+  let modo='criar'; // 'criar' | 'entrar'
+
+  function renderPastorais(){
+    const list=document.getElementById('pastoral-list');
+    list.textContent='';
+    PASTORAIS.forEach(p=>{
+      const btn=document.createElement('button');
+      btn.className='pastoral-card';btn.type='button';btn.disabled=!p.ativo;
+      const ic=document.createElement('span');ic.className='pc-icon';ic.textContent=p.icone;
+      const body=document.createElement('div');body.className='pc-body';
+      const nome=document.createElement('div');nome.className='pc-nome';nome.textContent=p.nome;
+      const desc=document.createElement('div');desc.className='pc-desc';desc.textContent=p.desc;
+      body.append(nome,desc);
+      if(!p.ativo){const soon=document.createElement('div');soon.className='pc-soon';soon.textContent='Em breve';body.appendChild(soon);}
+      const arr=document.createElement('span');arr.className='pc-arrow';arr.textContent='›';
+      btn.append(ic,body,arr);
+      if(p.ativo)btn.onclick=()=>escolher(p);
+      list.appendChild(btn);
+    });
+  }
+
+  async function escolher(p){
+    selecionada=p;
+    // Já autenticado? vai direto ao cadastro da pastoral.
+    const { data:{ session } }=await sb.auth.getSession();
+    if(session){ window.location.href=p.url; return; }
+    // Senão, mostra criação de conta.
+    const banner=document.getElementById('sel-banner');
+    banner.textContent='Pastoral selecionada: ';
+    const b=document.createElement('b');b.textContent=p.nome;banner.appendChild(b);
+    modo='criar';aplicarModo();
+    showStep('conta');
+  }
+
+  function aplicarModo(){
+    const ehCriar=modo==='criar';
+    document.getElementById('campo-nome').style.display=ehCriar?'':'none';
+    document.getElementById('conta-title').textContent=ehCriar?'Crie seu acesso':'Entrar';
+    document.getElementById('btn-conta').textContent=ehCriar?'Criar conta e continuar':'Entrar e continuar';
+    document.getElementById('toggle-modo').textContent=ehCriar?'Já tenho conta? Entrar':'Não tenho conta? Criar';
+    limpaMsg();
+  }
+  function toggleModo(){ modo=modo==='criar'?'entrar':'criar'; aplicarModo(); }
+
+  function showStep(name){
+    document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));
+    document.getElementById('step-'+name).classList.add('active');
+  }
+  function voltarStep1(){ showStep('pastoral'); }
+
+  function msg(text,tipo){
+    const el=document.getElementById('msg-conta');
+    el.className='msg '+tipo;el.textContent=text;
+  }
+  function limpaMsg(){ const el=document.getElementById('msg-conta'); el.className='msg'; el.textContent=''; }
+
+  async function submeter(){
+    const email=document.getElementById('c-email').value.trim();
+    const senha=document.getElementById('c-senha').value;
+    const btn=document.getElementById('btn-conta');
+    limpaMsg();
+    if(!email||!senha){ msg('Preencha e-mail e senha.','error'); return; }
+
+    if(modo==='entrar'){
+      btn.disabled=true;btn.textContent='Entrando...';
+      const { error }=await sb.auth.signInWithPassword({ email, password:senha });
+      if(error){ msg('E-mail ou senha incorretos.','error'); btn.disabled=false; btn.textContent='Entrar e continuar'; return; }
+      window.location.href=selecionada.url;
+      return;
+    }
+
+    // modo criar
+    const nome=document.getElementById('c-nome').value.trim();
+    if(!nome){ msg('Informe seu nome completo.','error'); return; }
+    if(senha.length<6){ msg('A senha deve ter ao menos 6 caracteres.','error'); return; }
+    btn.disabled=true;btn.textContent='Criando...';
+
+    const { data, error }=await sb.auth.signUp({
+      email, password:senha, options:{ data:{ nome } }
+    });
+    if(error){
+      const já=/registered|already/i.test(error.message);
+      msg(já?'Este e-mail já tem conta. Use "Já tenho conta? Entrar".':'Não foi possível criar a conta. Tente novamente.','error');
+      btn.disabled=false;btn.textContent='Criar conta e continuar';return;
+    }
+    if(data.session){
+      // Auto-confirmação ativa → já tem sessão → segue para o cadastro.
+      window.location.href=selecionada.url;
+    }else{
+      // Confirmação por e-mail exigida.
+      msg('Conta criada! Confirme pelo link enviado ao seu e-mail e depois volte aqui para entrar.','success');
+      btn.disabled=false;btn.textContent='Criar conta e continuar';
+      modo='entrar';aplicarModo();
+    }
+  }
+
+  renderPastorais();
+</script>
+</body>
+</html>
