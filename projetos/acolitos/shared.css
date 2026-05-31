@@ -551,7 +551,7 @@ body {
 .jor-row.done { opacity: .9; }
 .jor-row.futuro { opacity: .62; }
 .jor-head { display: flex; align-items: center; gap: 10px; padding: 11px 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.jor-emoji { font-size: 21px; flex-shrink: 0; }
+.jor-emoji { flex-shrink: 0; width: 54px; display: flex; align-items: center; justify-content: center; padding: 4px 0; }
 .jor-nome { flex: 1; font-family: 'Sora', sans-serif; font-weight: 700; font-size: 13px; color: var(--text); }
 .jor-status { font-size: 9px; font-weight: 700; letter-spacing: .5px; flex-shrink: 0; }
 .jor-status.done { color: var(--success-text); font-size: 15px; }

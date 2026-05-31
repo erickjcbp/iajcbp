@@ -235,7 +235,8 @@ function showJornada(nivelAtual) {
     const status = i < idxAtual ? 'done' : i === idxAtual ? 'atual' : 'futuro';
     const row = document.createElement('div'); row.className = 'jor-row ' + status;
     const head = document.createElement('div'); head.className = 'jor-head';
-    const em = document.createElement('span'); em.className = 'jor-emoji'; em.textContent = n.emoji || '•';
+    const em = document.createElement('span'); em.className = 'jor-emoji';
+    em.appendChild(buildRankEmblem(n.slug, 46)); // patch reluzente do nível
     const nm = document.createElement('div'); nm.className = 'jor-nome'; nm.textContent = n.label;
     const st = document.createElement('span'); st.className = 'jor-status ' + status;
     st.textContent = status === 'done' ? '✓' : status === 'atual' ? 'VOCÊ ESTÁ AQUI' : '🔒';
