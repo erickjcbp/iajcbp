@@ -368,10 +368,22 @@ function renderCards() {
       const btnM=document.createElement('button');btnM.className='btn-sm '+(cob.preenchido>0?'gold':'wine');
       btnM.textContent=cob.preenchido>0?'Editar Escala':'Montar Escala';
       btnM.onclick=()=>abrirMontagem(c);acts.appendChild(btnM);
+      const btnDel=document.createElement('button');btnDel.className='mini-del';btnDel.textContent='🗑';btnDel.title='Excluir celebração';btnDel.style.marginLeft='auto';
+      btnDel.onclick=()=>excluirCelebracao(c);acts.appendChild(btnDel);
       card.appendChild(acts);grid.appendChild(card);
     });
     grp.append(tit,grid);el.appendChild(grp);
   });
+}
+
+async function excluirCelebracao(c) {
+  const d=new Date(c.data+'T00:00:00');
+  if(!confirm('Excluir a celebração de '+DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' · '+c.horario+'?\nA escala e as ausências desta missa também serão removidas.'))return;
+  await sb.from('acolitos_escalas').delete().eq('celebracao_id',c.id);
+  await sb.from('acolitos_ausencias').delete().eq('celebracao_id',c.id);
+  const{error}=await sb.from('acolitos_celebracoes').delete().eq('id',c.id);
+  if(error){alert('Não foi possível excluir. Tente novamente.');return;}
+  await loadDados();
 }
 
 function abrirMontagem(celeb) {

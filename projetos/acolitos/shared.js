@@ -51,6 +51,8 @@ async function initModulo(requiredRoles = null) {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return null; }
 
+  await loadListasCustom();
+
   const { data: modulo } = await sbAdmin
     .from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
 
@@ -418,6 +420,19 @@ const COMPETENCIAS = [
 ];
 const HABILIDADE_LABEL = Object.fromEntries(HABILIDADES);
 const COMPETENCIA_LABEL = Object.fromEntries(COMPETENCIAS);
+// Mescla habilidades/competências customizadas (tabela acolitos_listas) nas listas e nos rótulos
+let _listasCarregadas = false;
+async function loadListasCustom(force = false) {
+  if (_listasCarregadas && !force) return;
+  try {
+    const { data } = await sb.from('acolitos_listas').select('*').in('tipo', ['habilidade', 'competencia']).order('label');
+    (data || []).forEach(r => {
+      if (r.tipo === 'habilidade') { if (!(r.valor in HABILIDADE_LABEL)) { HABILIDADES.push([r.valor, r.label]); } HABILIDADE_LABEL[r.valor] = r.label; }
+      else { if (!(r.valor in COMPETENCIA_LABEL)) { COMPETENCIAS.push([r.valor, r.label]); } COMPETENCIA_LABEL[r.valor] = r.label; }
+    });
+    _listasCarregadas = true;
+  } catch (e) { /* listas custom indisponíveis — segue com as padrão */ }
+}
 // Link wa.me a partir de um telefone BR (adiciona 55 se faltar)
 function waLink(tel) {
   const d = String(tel || '').replace(/\D/g, '');

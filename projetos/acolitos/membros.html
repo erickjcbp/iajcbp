@@ -164,6 +164,7 @@ let roleMap = {};
 let fichaEdits = {}; // alterações da ficha (Pessoal/Família/Observações) — persiste entre abas
 let fichaDirty = false; // há alterações não salvas?
 let fichaDisp = null;   // estado da disponibilidade (Set 'dia_horario') enquanto a ficha está aberta
+let listasCustom = { habilidade: [], competencia: [] }; // habilidades/competências criadas pela equipe (p/ botão remover)
 let vista = localStorage.getItem('membros-vista') || 'cards'; // 'cards' | 'lista'
 
 async function init() {
@@ -188,6 +189,9 @@ async function loadMembros() {
     (pm || []).forEach(r => { roleMap[r.user_id] = r.role; });
   }
   todos = (membros || []).map(m => ({ ...m, role: (m.user_id && roleMap[m.user_id]) || 'aspirante' }));
+  const { data: listas } = await sbAdmin.from('acolitos_listas').select('*').in('tipo', ['habilidade', 'competencia']);
+  listasCustom = { habilidade: [], competencia: [] };
+  (listas || []).forEach(r => listasCustom[r.tipo].push({ valor: r.valor, label: r.label }));
   renderGrid();
 }
 
@@ -409,7 +413,7 @@ function editBool(label, col, val, onChange) {
   g.appendChild(wrap); return g;
 }
 
-function editMulti(label, col, current, options) {
+function editMulti(label, col, current, options, manage) {
   const g = fGroup(label);
   const cur = new Set(((col in fichaEdits) ? fichaEdits[col] : current) || []);
   const box = document.createElement('div'); box.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
@@ -417,10 +421,41 @@ function editMulti(label, col, current, options) {
     const row = document.createElement('label'); row.className = 'irmao-row';
     const chk = document.createElement('input'); chk.type = 'checkbox'; chk.checked = cur.has(val);
     chk.onchange = () => { if (chk.checked) cur.add(val); else cur.delete(val); fichaEdits[col] = [...cur]; setDirty(); };
-    const sp = document.createElement('span'); sp.style.cssText = 'font-size:13px;'; sp.textContent = lab;
-    row.append(chk, sp); box.appendChild(row);
+    const sp = document.createElement('span'); sp.style.cssText = 'font-size:13px;flex:1;'; sp.textContent = lab;
+    row.append(chk, sp);
+    if (manage && manage.removable && manage.removable.has(val)) {
+      const del = document.createElement('button'); del.type = 'button'; del.className = 'mini-del'; del.textContent = '−'; del.title = 'Remover esta opção';
+      del.style.cssText = 'width:26px;height:26px;font-size:14px;';
+      del.onclick = (e) => { e.preventDefault(); e.stopPropagation(); manage.onRemove(val); };
+      row.appendChild(del);
+    }
+    box.appendChild(row);
   });
   g.appendChild(box); return g;
+}
+
+// Adiciona/remove habilidade ou competência customizada (tabela acolitos_listas)
+async function addCustomLista(tipo) {
+  const nome = (prompt('Nova ' + (tipo === 'habilidade' ? 'habilidade' : 'competência') + ':') || '').trim();
+  if (!nome) return;
+  const valor = (tipo === 'habilidade' ? 'h_' : 'k_') + nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24) + '_' + Math.random().toString(36).slice(2, 6);
+  const { error } = await sbAdmin.from('acolitos_listas').insert({ tipo, valor, label: nome });
+  if (error) { alert('Não foi possível adicionar.'); return; }
+  const arr = tipo === 'habilidade' ? HABILIDADES : COMPETENCIAS;
+  const lbl = tipo === 'habilidade' ? HABILIDADE_LABEL : COMPETENCIA_LABEL;
+  arr.push([valor, nome]); lbl[valor] = nome;
+  listasCustom[tipo].push({ valor, label: nome });
+  renderTab('Evolução');
+}
+async function removeCustomLista(tipo, valor) {
+  const lbl = tipo === 'habilidade' ? HABILIDADE_LABEL : COMPETENCIA_LABEL;
+  if (!confirm('Remover "' + (lbl[valor] || valor) + '" da lista?')) return;
+  await sbAdmin.from('acolitos_listas').delete().eq('tipo', tipo).eq('valor', valor);
+  const arr = tipo === 'habilidade' ? HABILIDADES : COMPETENCIAS;
+  const i = arr.findIndex(x => x[0] === valor); if (i >= 0) arr.splice(i, 1);
+  delete lbl[valor];
+  listasCustom[tipo] = listasCustom[tipo].filter(x => x.valor !== valor);
+  renderTab('Evolução');
 }
 
 // Campos de equipe/coordenação (serve, coordenação, setores, permissões)
@@ -606,10 +641,19 @@ async function renderTab(tab) {
     ht.append(hl, hn, htt); head.appendChild(ht); el.appendChild(head);
 
     const sec = (txt) => { const t = document.createElement('div'); t.className = 'section-card-title'; t.style.marginTop = '16px'; t.textContent = txt; el.appendChild(t); };
-    sec('Habilidades a desenvolver'); el.appendChild(editMulti('', 'desenvolvimento_habilidades', m.desenvolvimento_habilidades, HABILIDADES));
-    sec('Habilidades desenvolvidas'); el.appendChild(editMulti('', 'habilidades_desenvolvidas', m.habilidades_desenvolvidas, HABILIDADES));
-    sec('Competências a desenvolver'); el.appendChild(editMulti('', 'desenvolvimento_competencias', m.desenvolvimento_competencias, COMPETENCIAS));
-    sec('Competências desenvolvidas'); el.appendChild(editMulti('', 'competencias_desenvolvidas', m.competencias_desenvolvidas, COMPETENCIAS));
+    const secAdd = (txt, tipo) => {
+      const w = document.createElement('div'); w.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:16px;';
+      const t = document.createElement('div'); t.className = 'section-card-title'; t.style.margin = '0'; t.textContent = txt;
+      const add = document.createElement('button'); add.type = 'button'; add.className = 'mini-add'; add.textContent = '+ ' + (tipo === 'habilidade' ? 'habilidade' : 'competência');
+      add.onclick = () => addCustomLista(tipo);
+      w.append(t, add); el.appendChild(w);
+    };
+    const habRem = { removable: new Set(listasCustom.habilidade.map(x => x.valor)), onRemove: (v) => removeCustomLista('habilidade', v) };
+    const compRem = { removable: new Set(listasCustom.competencia.map(x => x.valor)), onRemove: (v) => removeCustomLista('competencia', v) };
+    secAdd('Habilidades a desenvolver', 'habilidade'); el.appendChild(editMulti('', 'desenvolvimento_habilidades', m.desenvolvimento_habilidades, HABILIDADES, habRem));
+    sec('Habilidades desenvolvidas'); el.appendChild(editMulti('', 'habilidades_desenvolvidas', m.habilidades_desenvolvidas, HABILIDADES, habRem));
+    secAdd('Competências a desenvolver', 'competencia'); el.appendChild(editMulti('', 'desenvolvimento_competencias', m.desenvolvimento_competencias, COMPETENCIAS, compRem));
+    sec('Competências desenvolvidas'); el.appendChild(editMulti('', 'competencias_desenvolvidas', m.competencias_desenvolvidas, COMPETENCIAS, compRem));
 
     sec('Habilitações (proficiência por função)');
     await appendHabilitacoes(el, m);

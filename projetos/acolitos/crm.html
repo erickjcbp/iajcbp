@@ -91,9 +91,11 @@
       <input class="form-input" id="modal-obs" placeholder="Anotação desta etapa...">
     </div>
 
-    <div class="modal-actions">
+    <div class="modal-actions" style="flex-wrap:wrap;gap:8px;">
+      <button class="btn-sm wine" id="btn-excluir" onclick="excluirEntry()" style="margin-right:auto;">🗑 Excluir</button>
+      <button class="btn-sm gray" id="btn-voltar" onclick="voltarEtapa()" style="display:none;">◀ Voltar etapa</button>
       <button class="btn-sm gray" onclick="fecharModal()">Cancelar</button>
-      <button class="btn-sm gold" id="btn-confirmar" onclick="confirmarAvancar()">Confirmar</button>
+      <button class="btn-sm gold" id="btn-confirmar" onclick="confirmarAvancar()">Avançar ▶</button>
     </div>
   </div>
 </div>
@@ -278,7 +280,29 @@ function abrirModal(entry) {
   // Seletor de role só aparece para coord_admin/subadmin ao integrar
   document.getElementById('bloco-role').style.display =
     (prox === 'integrado' && podeAtribuirRole) ? '' : 'none';
+  document.getElementById('btn-voltar').style.display = idx > 0 ? '' : 'none';
   document.getElementById('modal-avancar').classList.add('open');
+}
+
+async function voltarEtapa() {
+  if (!pendingEntry) return;
+  const idx = ETAPAS.indexOf(pendingEntry.etapa);
+  if (idx <= 0) return;
+  const anterior = ETAPAS[idx - 1];
+  if (!confirm('Voltar ' + (pendingEntry.acolitos_membros?.nome || 'este membro') + ' para a etapa "' + ETAPA_LABEL[anterior] + '"?')) return;
+  await sbAdmin.from('acolitos_crm').update({ etapa: anterior, etapa_iniciada_em: new Date().toISOString() }).eq('membro_id', pendingEntry.membro_id);
+  await sbAdmin.from('acolitos_crm_historico').insert({ membro_id: pendingEntry.membro_id, etapa_de: pendingEntry.etapa, etapa_para: anterior, changed_by: ctx.user.id });
+  fecharModal(); pendingEntry = null; await loadCrm();
+}
+
+async function excluirEntry() {
+  if (!pendingEntry) return;
+  const nome = pendingEntry.acolitos_membros?.nome || 'este membro';
+  if (!confirm('Remover ' + nome + ' do funil de integração?\n(O cadastro do membro não é apagado — só sai do CRM.)')) return;
+  await sbAdmin.from('acolitos_crm_historico').delete().eq('membro_id', pendingEntry.membro_id);
+  const { error } = await sbAdmin.from('acolitos_crm').delete().eq('membro_id', pendingEntry.membro_id);
+  if (error) { alert('Não foi possível remover. Tente novamente.'); return; }
+  fecharModal(); pendingEntry = null; await loadCrm();
 }
 
 async function confirmarAvancar() {
