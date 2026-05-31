@@ -411,6 +411,7 @@ async function renderTab(tab) {
       row.append(lbl, val); el.appendChild(row);
     }
     el.appendChild(editText('Telefone', 'telefone', m.telefone));
+    el.appendChild(editBool('Telefone é WhatsApp?', 'telefone_whatsapp', m.telefone_whatsapp));
     el.appendChild(editText('Responsável', 'responsavel', m.responsavel));
     el.appendChild(editSelect('Comunidade', 'comunidade', m.comunidade || 'matriz', [['matriz','Matriz'],['santo_antonio','Sto. Antônio'],['outra','Outra']]));
     el.appendChild(editBool('Pode servir em outras comunidades?', 'pode_outras_comunidades', m.pode_outras_comunidades));

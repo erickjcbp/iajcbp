@@ -34,6 +34,9 @@
       font-size: 10px; font-family: 'Sora', sans-serif; letter-spacing: .5px;
       background: rgba(201,168,76,.1); color: var(--gold); border: 1px solid var(--gold-dim);
     }
+    .crm-wa { display:inline-block; margin-top:8px; padding:5px 10px; background:rgba(37,211,102,.14); border:1px solid #25d366; color:#25d366; border-radius:14px; font-size:11px; font-weight:700; text-decoration:none; -webkit-tap-highlight-color:transparent; }
+    .crm-wa:active { background:rgba(37,211,102,.25); }
+    .crm-wa.sm { margin-top:0; padding:4px 8px; font-size:14px; line-height:1; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
 </head>
@@ -127,7 +130,7 @@ async function init() {
 async function loadCrm() {
   const { data } = await sbAdmin
     .from('acolitos_crm')
-    .select('*, acolitos_membros(id,nome,data_nascimento,foto_url)')
+    .select('*, acolitos_membros(id,nome,data_nascimento,foto_url,telefone,telefone_whatsapp)')
     .neq('etapa','integrado')
     .order('etapa_iniciada_em', { ascending: true });
   crmData = data || [];
@@ -197,6 +200,12 @@ function renderPipeline() {
       daysEl.textContent = dias + ' dias nesta etapa';
 
       card.append(name, meta, daysEl);
+      const wlink = m && m.telefone_whatsapp ? waLink(m.telefone) : null;
+      if (wlink) {
+        const wa = document.createElement('a'); wa.className = 'crm-wa'; wa.href = wlink; wa.target = '_blank'; wa.rel = 'noopener';
+        wa.textContent = '💬 WhatsApp'; wa.onclick = (e) => e.stopPropagation(); // não abre o modal da etapa
+        card.appendChild(wa);
+      }
       body.appendChild(card);
     });
 
@@ -235,6 +244,9 @@ function renderLista() {
     const tdData = document.createElement('td'); tdData.textContent = formatDate(c.etapa_iniciada_em);
 
     const tdAcao = document.createElement('td');
+    tdAcao.style.cssText = 'display:flex;gap:6px;align-items:center;';
+    const wlink = m && m.telefone_whatsapp ? waLink(m.telefone) : null;
+    if (wlink) { const wa = document.createElement('a'); wa.className = 'crm-wa sm'; wa.href = wlink; wa.target = '_blank'; wa.rel = 'noopener'; wa.title = 'WhatsApp'; wa.textContent = '💬'; tdAcao.appendChild(wa); }
     const btn = document.createElement('button'); btn.className = 'btn-sm gold';
     btn.textContent = 'Avançar'; btn.onclick = () => abrirModal(c);
     tdAcao.appendChild(btn);

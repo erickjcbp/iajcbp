@@ -394,6 +394,12 @@ const COMPETENCIAS = [
 ];
 const HABILIDADE_LABEL = Object.fromEntries(HABILIDADES);
 const COMPETENCIA_LABEL = Object.fromEntries(COMPETENCIAS);
+// Link wa.me a partir de um telefone BR (adiciona 55 se faltar)
+function waLink(tel) {
+  const d = String(tel || '').replace(/\D/g, '');
+  if (d.length < 10) return null;
+  return 'https://wa.me/' + (d.startsWith('55') ? d : '55' + d);
+}
 // Módulos que o admin pode liberar por pessoa (key, label, href). Hoje só os existentes.
 const MODULOS_LIBERAVEIS = [
   ['escala','Escala','escala.html'], ['membros','Membros','membros.html'],
