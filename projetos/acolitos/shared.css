@@ -270,6 +270,14 @@ body.has-switch { padding-top: calc(var(--header-h) + 42px); }
 .mini-del:hover { color:var(--red); border-color:var(--red); background:rgba(255,38,54,.08); }
 .mini-del.lg { width:34px; height:34px; }
 
+/* Conta de família — chip de troca de irmão no topo */
+.family-chip { display:inline-flex; align-items:center; gap:6px; max-width:140px; background:var(--surface2); border:1px solid var(--gold-dim); border-radius:16px; padding:3px 8px 3px 3px; cursor:pointer; color:var(--text); }
+.family-chip:hover { border-color:var(--gold); }
+.family-chip .fc-nome { font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fam-row { display:flex; align-items:center; gap:12px; width:100%; padding:8px; margin-bottom:6px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; cursor:pointer; }
+.fam-row:hover { border-color:var(--gold-dim); }
+.fam-row.ativo { border-color:var(--gold); background:rgba(232,185,74,.08); }
+
 /* ── FORMS ───────────────────────────────────────────────────── */
 .form-group { margin-bottom: 16px; }
 .form-label {

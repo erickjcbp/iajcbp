@@ -90,13 +90,26 @@ async function initModulo(requiredRoles = null) {
     window.location.href = 'index.html'; return null;
   }
 
-  // Busca ficha do membro
-  const { data: membro } = await sb
+  // Busca ficha do membro (a conta logada)
+  const { data: conta } = await sb
     .from('acolitos_membros').select('*').eq('user_id', session.user.id).maybeSingle();
+
+  // Conta de família: se a conta tem irmãos, carrega o grupo e escolhe o perfil ativo
+  let membro = conta;
+  let grupoIrmaos = [];
+  if (conta && conta.grupo_irmaos) {
+    const { data: irmaos } = await sb
+      .from('acolitos_membros').select('*').eq('grupo_irmaos', conta.grupo_irmaos);
+    grupoIrmaos = (irmaos && irmaos.length) ? irmaos : [conta];
+    grupoIrmaos.sort((a, b) => (a.data_nascimento || '9999').localeCompare(b.data_nascimento || '9999'));
+    const savedId = localStorage.getItem('acolitos-perfil-' + conta.id);
+    const ativo = savedId && grupoIrmaos.find(g => g.id === savedId);
+    membro = ativo || conta;
+  }
 
   if (membro && Array.isArray(membro.avisos) && membro.avisos.length) showAvisos(membro);
 
-  return { user: session.user, membership, membro };
+  return { user: session.user, membership, membro, conta, grupoIrmaos };
 }
 
 // Bloco visual do plano de evolução (engajamento), montado a partir do membro
@@ -264,6 +277,10 @@ function renderHeader(ctx, activePage) {
   const actions = document.createElement('div');
   actions.className = 'header-actions';
 
+  // Seletor de irmãos (conta de família)
+  const fc = familyChip(ctx);
+  if (fc) actions.appendChild(fc);
+
   const sairBtn = document.createElement('button');
   sairBtn.className = 'btn-icon';
   sairBtn.title = 'Sair';
@@ -296,6 +313,49 @@ function renderHeader(ctx, activePage) {
   el.appendChild(actions);
 
   renderModeSwitch(ctx); // barra de alternância Jornada/Coordenação (se aplicável)
+}
+
+// ── CONTA DE FAMÍLIA (irmãos no mesmo login) ──────────────────────
+function setPerfilAtivo(contaId, perfilId) {
+  localStorage.setItem('acolitos-perfil-' + contaId, perfilId);
+  window.location.reload();
+}
+function familyChip(ctx) {
+  if (!ctx || !ctx.conta || !ctx.grupoIrmaos || ctx.grupoIrmaos.length < 2) return null;
+  const a = ctx.membro || ctx.conta;
+  const roleBase = nivelInfo(a.nivel || 'aspirante').base;
+  const chip = document.createElement('button'); chip.className = 'family-chip'; chip.title = 'Trocar de irmão';
+  const av = buildAvatarEl(a.foto_url, roleBase, 22, { nivelSlug: a.nivel || 'aspirante' }); av.style.flex = 'none';
+  const nm = document.createElement('span'); nm.className = 'fc-nome'; nm.textContent = a.apelido || (a.nome || '').split(' ')[0];
+  const car = document.createElement('span'); car.textContent = '▾'; car.style.opacity = '.7';
+  chip.append(av, nm, car);
+  chip.onclick = () => openFamilyPicker(ctx);
+  return chip;
+}
+function openFamilyPicker(ctx) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.maxWidth = '360px';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Quem você vai administrar?';
+  const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 14px;';
+  sub.textContent = 'Tudo (jornada, faltas, avisos) passa a refletir o irmão escolhido.';
+  modal.append(handle, tt, sub);
+  ctx.grupoIrmaos.forEach(m => {
+    const ativo = m.id === (ctx.membro ? ctx.membro.id : ctx.conta.id);
+    const row = document.createElement('button'); row.className = 'fam-row' + (ativo ? ' ativo' : '');
+    const av = buildAvatarEl(m.foto_url, nivelInfo(m.nivel || 'aspirante').base, 38, { nivelSlug: m.nivel || 'aspirante' }); av.style.flex = 'none';
+    const info = document.createElement('div'); info.style.cssText = 'flex:1;text-align:left;min-width:0;';
+    const n = document.createElement('div'); n.style.cssText = 'font-weight:700;font-size:14px;color:var(--text);'; n.textContent = m.apelido || m.nome;
+    const s = document.createElement('div'); s.style.cssText = 'font-size:11px;color:var(--text-muted);'; s.textContent = nivelInfo(m.nivel || 'aspirante').label + (m.id === ctx.conta.id ? ' · sua conta' : '');
+    info.append(n, s); row.append(av, info);
+    if (ativo) { const c = document.createElement('span'); c.textContent = '✓'; c.style.cssText = 'color:var(--gold);font-weight:800;'; row.appendChild(c); }
+    row.onclick = () => setPerfilAtivo(ctx.conta.id, m.id);
+    modal.appendChild(row);
+  });
+  const close = document.createElement('button'); close.className = 'btn-sm gray'; close.style.marginTop = '12px'; close.textContent = 'Fechar'; close.onclick = () => ov.remove();
+  modal.appendChild(close);
+  ov.appendChild(modal); document.body.appendChild(ov);
 }
 
 // ── MINHA CONTA (autosserviço: trocar próprio usuário/senha/nome) ──
@@ -346,31 +406,31 @@ function openContaModal(ctx) {
   sub.textContent = 'Usuário atual: ' + userAtual;
   modal.append(handle, tt, sub);
 
-  // Foto + patch (editável) — só para membros
-  if (ctx && ctx.membro) {
+  // Foto + patch (editável) — só para membros (sempre a conta logada)
+  if (ctx && ctx.conta) {
     const avWrap = document.createElement('div'); avWrap.style.cssText = 'display:flex;justify-content:center;margin:2px 0 18px;';
-    avWrap.appendChild(buildAvatarEl(ctx.membro.foto_url, ctx.membership.role, 96, {
-      editable: true, membro: ctx.membro,
-      nivelSlug: ctx.membro.nivel || nivelFromRole(ctx.membership.role),
-      onUpload: (url) => { ctx.membro.foto_url = url; }
+    avWrap.appendChild(buildAvatarEl(ctx.conta.foto_url, ctx.membership.role, 96, {
+      editable: true, membro: ctx.conta,
+      nivelSlug: ctx.conta.nivel || nivelFromRole(ctx.membership.role),
+      onUpload: (url) => { ctx.conta.foto_url = url; }
     }));
     modal.appendChild(avWrap);
   }
 
   const msgEl = document.createElement('div'); msgEl.id = 'conta-msg'; msgEl.className = 'msg';
 
-  // Apelido (aparece em destaque acima do nome) — só para membros
-  if (ctx && ctx.membro) {
+  // Apelido (aparece em destaque acima do nome) — sempre a conta logada
+  if (ctx && ctx.conta) {
     const ga = document.createElement('div'); ga.className = 'form-group';
     const la = document.createElement('label'); la.className = 'form-label'; la.textContent = 'Apelido (aparece em destaque)';
-    const ia = document.createElement('input'); ia.className = 'form-input'; ia.value = ctx.membro.apelido || ''; ia.placeholder = 'como querem te chamar';
+    const ia = document.createElement('input'); ia.className = 'form-input'; ia.value = ctx.conta.apelido || ''; ia.placeholder = 'como querem te chamar';
     const ba = document.createElement('button'); ba.className = 'btn-sm gold'; ba.style.marginTop = '8px'; ba.textContent = 'Salvar apelido';
     ba.onclick = async () => {
       ba.disabled = true; ba.textContent = 'Salvando...';
-      const { error } = await sb.from('acolitos_membros').update({ apelido: ia.value.trim() || null }).eq('id', ctx.membro.id);
+      const { error } = await sb.from('acolitos_membros').update({ apelido: ia.value.trim() || null }).eq('id', ctx.conta.id);
       ba.disabled = false; ba.textContent = 'Salvar apelido';
       if (error) { msgEl.className = 'msg error'; msgEl.textContent = 'Erro ao salvar apelido.'; }
-      else { ctx.membro.apelido = ia.value.trim() || null; msgEl.className = 'msg success'; msgEl.textContent = 'Apelido salvo!'; }
+      else { ctx.conta.apelido = ia.value.trim() || null; msgEl.className = 'msg success'; msgEl.textContent = 'Apelido salvo!'; }
     };
     ga.append(la, ia, ba); modal.appendChild(ga);
   }
@@ -462,7 +522,7 @@ const ORDEM_MODULOS = ['membros','escala','crm','chamada','tesouraria'];
 // Capacidades do usuário p/ navegação
 function navCaps(ctx) {
   const role = ctx && ctx.membership ? ctx.membership.role : null;
-  const m = ctx ? ctx.membro : null;
+  const m = ctx ? (ctx.conta || ctx.membro) : null; // permissões/menu seguem a conta logada, não o perfil ativo
   const isAdmin = ['coord_admin', 'subadmin'].includes(role); // só admin vê todos os módulos
   const ehEquipe = isAdmin || EQUIPE_ROLES.includes(role) || !!(m && m.eh_equipe);
   const serve = m ? (m.serve !== false) : false;
