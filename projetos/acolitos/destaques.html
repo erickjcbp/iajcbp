@@ -77,6 +77,7 @@ function renderAba(a) {
     if (tot !== ultimoTotal) { distintos++; ultimoTotal = tot; }
     const posicao = distintos;
     const row = document.createElement('div'); row.className = 'rank-row' + (m.id === euId ? ' eu' : '');
+    row.style.cursor = 'pointer'; row.onclick = () => abrirCard(m.id);
     const pos = document.createElement('div'); pos.className = 'rank-pos'; pos.textContent = posicao <= 3 ? medalhas[posicao-1] : posicao;
     const av = buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 38, { nivelSlug: m.nivel||'aspirante' }); av.style.flex = 'none';
     const info = document.createElement('div'); info.className = 'rank-info';
@@ -87,6 +88,54 @@ function renderAba(a) {
     val.innerHTML = tot + '<small>' + (tot===1?a.sing:a.unidade) + '</small>';
     row.append(pos, av, info, val); corpo.appendChild(row);
   });
+}
+
+const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const FUNCAO_LABEL = { cred_altar:'Cerimonial de Altar', cred_credencia:'Cerimonial de Credência', missal:'Missal', turibulo:'Turíbulo', naveta:'Naveta', altar:'Altar', cruz:'Cruz', vela:'Vela', sineta:'Sineta', sinao:'Sinão', apoio:'Apoio', mitra:'Mitra', baculo:'Báculo' };
+function dataCurta(d){ const x=new Date(d+'T00:00:00'); return DIAS[x.getDay()]+' '+x.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}); }
+
+async function abrirCard(id) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.maxWidth = '380px';
+  modal.innerHTML = '<div class="modal-handle"></div><div style="text-align:center;color:var(--text-muted);padding:20px;">Carregando...</div>';
+  ov.appendChild(modal); document.body.appendChild(ov);
+
+  const { data: m, error } = await sb.rpc('acolitos_membro_card', { p_id: id });
+  if (error || !m) { modal.innerHTML = '<div class="modal-handle"></div><div style="color:var(--text-muted);padding:16px;text-align:center;">Não foi possível carregar.</div>'; return; }
+  modal.innerHTML = ''; modal.appendChild(Object.assign(document.createElement('div'), { className:'modal-handle' }));
+
+  // cabeçalho: foto + nome + nível
+  const head = document.createElement('div'); head.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:14px;';
+  head.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 84, { nivelSlug: m.nivel||'aspirante' }));
+  const nm = document.createElement('div'); nm.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:17px;color:var(--text);text-align:center;'; nm.textContent = m.nome_completo || m.nome;
+  const nv = document.createElement('div'); nv.style.cssText = 'font-size:12px;color:var(--gold);font-style:italic;'; nv.textContent = nivelInfo(m.nivel||'aspirante').label + (nivelInfo(m.nivel||'aspirante').titulo ? ' · 🏆 ' + nivelInfo(m.nivel||'aspirante').titulo : '');
+  head.append(nm, nv); modal.appendChild(head);
+
+  // mini indicadores
+  const grid = document.createElement('div'); grid.style.cssText = 'display:flex;gap:8px;margin-bottom:14px;';
+  [['Serviu', m.total_servido, 'vezes'], ['Funções', m.funcoes, 'que domina'], ['Comunidade', m.comunidade==='matriz'?'Matriz':'Sto. Antônio', '']].forEach(([l,v,s]) => {
+    const c = document.createElement('div'); c.style.cssText = 'flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 6px;text-align:center;';
+    const vv = document.createElement('div'); vv.style.cssText = 'font-family:Sora,sans-serif;font-weight:800;font-size:15px;color:var(--gold);'; vv.textContent = v;
+    const ll = document.createElement('div'); ll.style.cssText = 'font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;'; ll.textContent = l + (s?' · '+s:'');
+    c.append(vv, ll); grid.appendChild(c);
+  });
+  modal.appendChild(grid);
+
+  // últimas missas
+  const h2 = document.createElement('div'); h2.style.cssText = 'font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;'; h2.textContent = 'Últimas missas';
+  modal.appendChild(h2);
+  const ult = m.ultimas || [];
+  if (!ult.length) { const e = document.createElement('div'); e.style.cssText = 'font-size:13px;color:var(--text-muted);font-style:italic;'; e.textContent = 'Ainda não foi escalado em nenhuma missa.'; modal.appendChild(e); }
+  else ult.forEach(u => {
+    const row = document.createElement('div'); row.style.cssText = 'display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:6px 2px;border-bottom:1px solid var(--border);';
+    const dt = document.createElement('span'); dt.style.color = 'var(--text)'; dt.textContent = dataCurta(u.data) + ' ' + u.horario;
+    const fn = document.createElement('span'); fn.style.cssText = 'color:var(--gold);font-weight:700;text-align:right;'; fn.textContent = FUNCAO_LABEL[u.funcao] || u.funcao;
+    row.append(dt, fn); modal.appendChild(row);
+  });
+
+  const close = document.createElement('button'); close.className = 'btn-sm gray'; close.style.cssText = 'margin-top:16px;width:100%;'; close.textContent = 'Fechar'; close.onclick = () => ov.remove();
+  modal.appendChild(close);
 }
 
 init();
