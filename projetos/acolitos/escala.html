@@ -113,6 +113,7 @@
       <option value="santo_antonio">Santo Antônio</option>
     </select>
     <button class="btn-sm gold" style="flex-shrink:0;" onclick="abrirNovaCeleb()">+ Celebração</button>
+    <button class="btn-sm gray" style="flex-shrink:0;" onclick="abrirModelos()" title="Modelos de celebração">⚙️ Modelos</button>
   </div>
   <div class="aba-toggle">
     <button class="aba-btn active" id="btn-cards"    onclick="setAba('cards')">Operacional</button>
@@ -199,37 +200,113 @@
   </div>
 </div>
 
+<!-- Modal modelos de celebração -->
+<div class="modal-overlay" id="modal-modelos">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Modelos de Celebração</div>
+    <p style="color:var(--text-muted);font-size:12px;margin-bottom:12px;line-height:1.45;">Quantas vagas de cada função em cada tipo de missa. O montador e o gerador automático usam isto.</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <select id="md-tipo" class="form-select" style="flex:1;" onchange="renderModeloEditor()"></select>
+      <select id="md-com" class="form-select" style="flex:1;" onchange="renderModeloEditor()">
+        <option value="matriz">Matriz</option>
+        <option value="santo_antonio">Santo Antônio</option>
+      </select>
+    </div>
+    <div id="md-body"></div>
+    <div id="md-msg" class="msg"></div>
+    <div class="modal-actions">
+      <button class="btn-sm gray" onclick="fecharModal('modal-modelos')">Fechar</button>
+      <button class="btn-sm gold" onclick="salvarModelo()">Salvar modelo</button>
+    </div>
+  </div>
+</div>
+
 <script src="shared.js"></script>
 <script>
-const TEMPLATE_MATRIZ = [
-  {funcao:'cred_altar',    label:'Cerimonial de Altar',    cat:'Cerimoniais'},
-  {funcao:'cred_credencia',label:'Cerimonial de Credência',cat:'Cerimoniais'},
-  {funcao:'missal',        label:'Missal',                 cat:'Cerimoniais'},
-  {funcao:'altar',         label:'Altar 1',                cat:'Altares'},
-  {funcao:'altar',         label:'Altar 2',                cat:'Altares'},
-  {funcao:'altar',         label:'Altar 3',                cat:'Altares'},
-  {funcao:'cruz',          label:'Cruz',                   cat:'Litúrgicos'},
-  {funcao:'vela',          label:'Vela 1',                 cat:'Litúrgicos'},
-  {funcao:'vela',          label:'Vela 2',                 cat:'Litúrgicos'},
-  {funcao:'sineta',        label:'Sineta',                 cat:'Litúrgicos'},
-  {funcao:'sinao',         label:'Sinão',                  cat:'Litúrgicos'},
-  {funcao:'apoio',         label:'Apoio 1',                cat:'Apoios'},
-  {funcao:'apoio',         label:'Apoio 2',                cat:'Apoios'},
-  {funcao:'apoio',         label:'Apoio 3',                cat:'Apoios'},
-  {funcao:'apoio',         label:'Apoio 4',                cat:'Apoios'},
-  {funcao:'apoio',         label:'Apoio 5',                cat:'Apoios'},
-  {funcao:'apoio',         label:'Apoio 6',                cat:'Apoios'},
-];
-const TEMPLATE_STO = [
-  {funcao:'cred_altar',    label:'Cerimonial',  cat:'Cerimoniais'},
-  {funcao:'missal',        label:'Missal',      cat:'Cerimoniais'},
-  {funcao:'altar',         label:'Altar 1',     cat:'Altares'},
-  {funcao:'altar',         label:'Altar 2',     cat:'Altares'},
-  {funcao:'altar',         label:'Altar 3',     cat:'Altares'},
-  {funcao:'cruz',          label:'Cruz',        cat:'Litúrgicos'},
-  {funcao:'vela',          label:'Vela 1',      cat:'Litúrgicos'},
-  {funcao:'vela',          label:'Vela 2',      cat:'Litúrgicos'},
-];
+// Metadados de cada função (rótulo, categoria, ordem) — os modelos por tipo+comunidade vêm da tabela acolitos_modelos
+const FUNCAO_META = {
+  cred_altar:    {label:'Cerimonial de Altar',     cat:'Cerimoniais', ordem:10},
+  cred_credencia:{label:'Cerimonial de Credência', cat:'Cerimoniais', ordem:11},
+  missal:        {label:'Missal',                  cat:'Cerimoniais', ordem:12},
+  turibulo:      {label:'Turíbulo',                cat:'Incenso',     ordem:15},
+  naveta:        {label:'Naveta',                  cat:'Incenso',     ordem:16},
+  altar:         {label:'Altar',                   cat:'Altares',     ordem:20},
+  cruz:          {label:'Cruz',                     cat:'Litúrgicos',  ordem:30},
+  vela:          {label:'Vela',                     cat:'Litúrgicos',  ordem:31},
+  sineta:        {label:'Sineta',                   cat:'Litúrgicos',  ordem:32},
+  sinao:         {label:'Sinão',                    cat:'Litúrgicos',  ordem:33},
+  apoio:         {label:'Apoio',                    cat:'Apoios',      ordem:40},
+  mitra:         {label:'Mitra',                    cat:'Episcopal',   ordem:50},
+  baculo:        {label:'Báculo',                   cat:'Episcopal',   ordem:51},
+};
+let modelos = {}; // chave 'tipo|comunidade' -> [{funcao, quantidade, ordem}]
+async function loadModelos() {
+  const [{ data: md }, { data: lf }] = await Promise.all([
+    sb.from('acolitos_modelos').select('*'),
+    sb.from('acolitos_listas').select('valor,label').eq('tipo','funcao'),
+  ]);
+  modelos = {};
+  (md || []).forEach(r => { const k = r.tipo + '|' + r.comunidade; (modelos[k] = modelos[k] || []).push(r); });
+  (lf || []).forEach(f => { if (!FUNCAO_META[f.valor]) FUNCAO_META[f.valor] = { label: f.label, cat: 'Personalizadas', ordem: 60 }; });
+}
+// Expande o modelo (tipo+comunidade) numa lista ordenada de vagas {funcao,label,cat} (igual aos templates antigos)
+function modeloFor(tipo, comunidade) {
+  let rows = modelos[tipo + '|' + comunidade];
+  if (!rows || !rows.length) rows = modelos['missa_comum|' + comunidade] || modelos['missa_comum|matriz'] || [];
+  const slots = [];
+  rows.filter(r => r.quantidade > 0)
+      .sort((a, b) => (a.ordem - b.ordem) || a.funcao.localeCompare(b.funcao))
+      .forEach(r => {
+        const meta = FUNCAO_META[r.funcao] || { label: r.funcao, cat: 'Outros' };
+        for (let i = 1; i <= r.quantidade; i++) slots.push({ funcao: r.funcao, cat: meta.cat, label: r.quantidade > 1 ? meta.label + ' ' + i : meta.label });
+      });
+  return slots;
+}
+
+// ---- Editor de modelos ----
+let mdQty = {};
+function abrirModelos() {
+  const selT = document.getElementById('md-tipo'); selT.textContent = '';
+  const tipos = Array.from(new Set(['missa_comum', 'solene'].concat(Object.keys(modelos).map(k => k.split('|')[0]))));
+  tipos.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = TIPO_LABEL[t] || t; selT.appendChild(o); });
+  document.getElementById('md-com').value = 'matriz';
+  document.getElementById('md-msg').textContent = ''; document.getElementById('md-msg').className = 'msg';
+  renderModeloEditor();
+  document.getElementById('modal-modelos').classList.add('open');
+}
+function renderModeloEditor() {
+  const tipo = document.getElementById('md-tipo').value;
+  const com = document.getElementById('md-com').value;
+  mdQty = {};
+  (modelos[tipo + '|' + com] || []).forEach(r => { mdQty[r.funcao] = r.quantidade; });
+  const body = document.getElementById('md-body'); body.textContent = '';
+  const funcs = Object.keys(FUNCAO_META).sort((a, b) => FUNCAO_META[a].ordem - FUNCAO_META[b].ordem);
+  let catAtual = '';
+  funcs.forEach(f => {
+    const meta = FUNCAO_META[f];
+    if (meta.cat !== catAtual) { catAtual = meta.cat; const c = document.createElement('div'); c.className = 'cat-titulo'; c.textContent = catAtual; body.appendChild(c); }
+    const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:5px 2px;';
+    const lbl = document.createElement('span'); lbl.style.cssText = 'flex:1;font-size:13px;color:var(--text);'; lbl.textContent = meta.label;
+    const minus = document.createElement('button'); minus.type = 'button'; minus.className = 'mini-del'; minus.textContent = '−';
+    const num = document.createElement('span'); num.style.cssText = 'min-width:24px;text-align:center;font-weight:800;color:var(--gold);'; num.textContent = mdQty[f] || 0;
+    const plus = document.createElement('button'); plus.type = 'button'; plus.className = 'mini-del'; plus.textContent = '+';
+    minus.onclick = () => { mdQty[f] = Math.max(0, (mdQty[f] || 0) - 1); num.textContent = mdQty[f]; };
+    plus.onclick = () => { mdQty[f] = (mdQty[f] || 0) + 1; num.textContent = mdQty[f]; };
+    row.append(lbl, minus, num, plus); body.appendChild(row);
+  });
+}
+async function salvarModelo() {
+  const tipo = document.getElementById('md-tipo').value;
+  const com = document.getElementById('md-com').value;
+  const msg = document.getElementById('md-msg');
+  const payload = Object.keys(FUNCAO_META).map(f => ({ tipo, comunidade: com, funcao: f, quantidade: mdQty[f] || 0, ordem: FUNCAO_META[f].ordem }));
+  const { error } = await sb.from('acolitos_modelos').upsert(payload, { onConflict: 'tipo,comunidade,funcao' });
+  if (error) { msg.className = 'msg error'; msg.textContent = 'Erro ao salvar.'; return; }
+  msg.className = 'msg success'; msg.textContent = '✓ Modelo salvo.';
+  await loadModelos();
+  abaAtual === 'cards' ? renderCards() : renderPlanilha();
+}
 const FUNCAO_LABEL = {
   apoio:'Apoio', cruz:'Cruz', vela:'Vela', sineta:'Sineta', sinao:'Sinão',
   altar:'Altar', turibulo:'Turíbulo', naveta:'Naveta', missal:'Missal',
@@ -261,6 +338,7 @@ async function init() {
   if (!ctx) return;
   renderHeader(ctx, 'escala');
   renderBottomNav(ctx, 'escala');
+  await loadModelos();
   await loadDados();
 }
 
@@ -315,8 +393,8 @@ function setAba(a) {
   a==='cards' ? renderCards() : renderPlanilha();
 }
 
-function getCobertura(celebId, comunidade) {
-  const tmpl = comunidade==='santo_antonio' ? TEMPLATE_STO : TEMPLATE_MATRIZ;
+function getCobertura(celebId, comunidade, tipo) {
+  const tmpl = modeloFor(tipo, comunidade);
   const esc = escalasMap[celebId]||[];
   const cats={};
   tmpl.forEach(p=>{if(!cats[p.cat])cats[p.cat]={min:0,atual:0};cats[p.cat].min++;});
@@ -346,7 +424,7 @@ function renderCards() {
     const tit=document.createElement('div');tit.className='semana-titulo';tit.textContent=sem.label;
     const grid=document.createElement('div');grid.className='celebracoes-grid';
     sem.items.forEach(c=>{
-      const cob=getCobertura(c.id,c.comunidade);
+      const cob=getCobertura(c.id,c.comunidade,c.tipo);
       const d=new Date(c.data+'T00:00:00');
       const card=document.createElement('div');card.className='celeb-card status-'+cob.status;
       const hdr=document.createElement('div');hdr.className='celeb-header';
@@ -397,7 +475,7 @@ async function excluirCelebracao(c) {
 function abrirMontagem(celeb) {
   pendingCelebId=celeb.id;
   const ausNesta = ausMap[celeb.id] || new Set(); // membros que declararam ausência nesta missa
-  const tmpl=celeb.comunidade==='santo_antonio'?TEMPLATE_STO:TEMPLATE_MATRIZ;
+  const tmpl=modeloFor(celeb.tipo, celeb.comunidade);
   const d=new Date(celeb.data+'T00:00:00');
   document.getElementById('mt-titulo').textContent=DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})+' · '+celeb.horario;
   document.getElementById('mt-sub').textContent=(celeb.comunidade==='matriz'?'Matriz':'Sto. Antônio')+' · '+(TIPO_LABEL[celeb.tipo]||celeb.tipo);
