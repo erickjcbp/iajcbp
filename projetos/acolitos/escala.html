@@ -566,7 +566,8 @@ function abrirMontagem(celeb) {
   document.getElementById('modal-montagem').classList.add('open');
 }
 
-// Preenche automaticamente as vagas vazias: apto + disponível + não-ausente + menos escalado, sem repetir, irmãos juntos
+// Preenche as vagas vazias: apto + disponível + não-ausente + menos escalado, sem repetir.
+// IRMÃOS QUE SERVEM JUNTO = bloco tudo-ou-nada: ou todos entram na mesma missa, ou nenhum.
 function gerarEscalaAuto() {
   if (!celAtual || !pendingEdicao.length) return;
   const dow = new Date(celAtual.data+'T00:00:00').getDay();
@@ -575,31 +576,54 @@ function gerarEscalaAuto() {
   const ausNesta = ausMap[celAtual.id] || new Set();
   const apta = (id,f) => { const h=(habMap[id]||{})[f]; return h && ['apto','experiente','referencia'].includes(h); };
   const disp = id => !horKey || (dispMap[id]||[]).includes(horKey);
+  const freq = id => freqMap[id]||0;
+
   const usados = new Set();
   pendingEdicao.forEach(pe => { if (pe.sel.value) usados.add(pe.sel.value); });
+  const bloqueados = new Set(); // irmãos cujo grupo não coube junto → não escalar avulso
+  const openSlots = () => pendingEdicao.filter(pe => !pe.sel.value);
+  const assign = (pe, id) => { pe.sel.value = id; pe.sel.classList.add('filled'); usados.add(id); };
 
-  pendingEdicao.forEach(pe => {
-    if (pe.sel.value) return; // mantém o que já está preenchido
-    const cand = membros.filter(m => apta(m.id, pe.funcao) && !usados.has(m.id) && !ausNesta.has(m.id));
-    cand.sort((a,b) => {
-      const da = disp(a.id)?0:1, db = disp(b.id)?0:1; if (da!==db) return da-db; // disponíveis primeiro
-      return (freqMap[a.id]||0) - (freqMap[b.id]||0);                              // menos escalado primeiro
-    });
-    if (cand.length) { pe.sel.value = cand[0].id; pe.sel.classList.add('filled'); usados.add(cand[0].id); }
+  // tenta encaixar uma unidade (lista de ids) em vagas distintas; tudo-ou-nada
+  function placeUnit(ids) {
+    const slots = openSlots();
+    const order = ids.slice().sort((a,b) => slots.filter(s=>apta(a,s.funcao)).length - slots.filter(s=>apta(b,s.funcao)).length);
+    const slotUsed = new Set(); const plan = [];
+    for (const id of order) {
+      const idx = slots.findIndex((s,i) => !slotUsed.has(i) && apta(id, s.funcao));
+      if (idx < 0) return false; // não cabem todos juntos
+      slotUsed.add(idx); plan.push([idx, id]);
+    }
+    plan.forEach(([i,id]) => assign(slots[i], id));
+    return true;
+  }
+
+  // 1) Irmãos que servem juntos: bloco tudo-ou-nada (só os disponíveis/aptos/não-ausentes formam o bloco)
+  const visited = new Set(); const sibUnits = [];
+  membros.forEach(m => {
+    if (visited.has(m.id)) return;
+    if (m.escalar_com_irmao && m.grupo_irmaos) {
+      const grp = membros.filter(x => x.grupo_irmaos===m.grupo_irmaos && x.escalar_com_irmao);
+      grp.forEach(x => visited.add(x.id));
+      const unit = grp.filter(x => !usados.has(x.id) && !ausNesta.has(x.id) && disp(x.id) && openSlots().some(s=>apta(x.id,s.funcao)));
+      if (unit.length >= 2) sibUnits.push(unit.map(x=>x.id));
+    } else visited.add(m.id);
   });
+  sibUnits.sort((A,B) => { const fa=Math.min(...A.map(freq)), fb=Math.min(...B.map(freq)); return (fa-fb) || (B.length-A.length); });
+  sibUnits.forEach(u => { if (!placeUnit(u)) u.forEach(id => bloqueados.add(id)); });
 
-  // best-effort: irmãos que servem junto entram na mesma missa
-  pendingEdicao.slice().forEach(pe => {
-    if (!pe.sel.value) return;
-    const m = membros.find(x => x.id === pe.sel.value);
-    if (!m || !m.escalar_com_irmao || !m.grupo_irmaos) return;
-    membros.filter(x => x.grupo_irmaos===m.grupo_irmaos && x.escalar_com_irmao && x.id!==m.id && !usados.has(x.id)).forEach(irm => {
-      const slot = pendingEdicao.find(s => !s.sel.value && apta(irm.id, s.funcao) && !ausNesta.has(irm.id) && disp(irm.id));
-      if (slot) { slot.sel.value = irm.id; slot.sel.classList.add('filled'); usados.add(irm.id); }
+  // 2) Demais vagas com membros individuais (nunca os bloqueados) — vagas mais escassas primeiro
+  openSlots()
+    .map(pe => ({ pe, n: membros.filter(m => apta(m.id,pe.funcao) && !usados.has(m.id) && !ausNesta.has(m.id) && !bloqueados.has(m.id)).length }))
+    .sort((a,b) => a.n - b.n)
+    .forEach(({ pe }) => {
+      if (pe.sel.value) return;
+      const cand = membros.filter(m => apta(m.id,pe.funcao) && !usados.has(m.id) && !ausNesta.has(m.id) && !bloqueados.has(m.id));
+      cand.sort((a,b) => { const da=disp(a.id)?0:1, db=disp(b.id)?0:1; return (da-db) || (freq(a.id)-freq(b.id)); });
+      if (cand.length) assign(pe, cand[0].id);
     });
-  });
 
-  const vazias = pendingEdicao.filter(pe => !pe.sel.value).length;
+  const vazias = openSlots().length;
   const btn = document.getElementById('btn-gerar-auto');
   if (btn) { btn.textContent = vazias ? '✨ Gerado (' + vazias + ' sem apto)' : '✨ Gerado!'; setTimeout(() => { btn.textContent = '✨ Gerar automático'; }, 2500); }
 }
