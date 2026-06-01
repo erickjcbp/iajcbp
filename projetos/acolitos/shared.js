@@ -600,11 +600,13 @@ function renderModeSwitch(ctx) {
   }
   document.body.classList.add('has-switch');
   bar.textContent = '';
+  const seg = document.createElement('div'); seg.className = 'mode-seg';
   [['jornada','✦ Minha Jornada'], ['coordenacao','⚙ Coordenação']].forEach(([mk, label]) => {
     const b = document.createElement('button'); b.className = 'mode-btn' + (mode === mk ? ' active' : ''); b.textContent = label;
     b.onclick = () => { if (mode !== mk) { localStorage.setItem('nav-mode', mk); window.location.href = 'index.html'; } };
-    bar.appendChild(b);
+    seg.appendChild(b);
   });
+  bar.appendChild(seg);
 }
 
 // ── PATCHES DE RANK (SVG) ────────────────────────────────────
