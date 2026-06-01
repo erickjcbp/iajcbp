@@ -18,7 +18,19 @@ const sbAdmin = sb; // alias — todas as operações elevadas são via RLS com 
     addMeta('theme-color', '#150a0d'); addMeta('mobile-web-app-capable', 'yes'); addMeta('apple-mobile-web-app-capable', 'yes');
     addMeta('apple-mobile-web-app-status-bar-style', 'black-translucent'); addMeta('apple-mobile-web-app-title', 'Acólitos JCBP');
     if (!document.querySelector('link[rel="apple-touch-icon"]')) { const a = document.createElement('link'); a.rel = 'apple-touch-icon'; a.href = 'icon-192.png'; head.appendChild(a); }
-    if ('serviceWorker' in navigator) window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+    if ('serviceWorker' in navigator) {
+      // Auto-atualização: ao detectar nova versão (SW), recarrega sozinho. Guard evita reload no 1º registro.
+      const hadController = !!navigator.serviceWorker.controller;
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => { if (refreshing || !hadController) return; refreshing = true; window.location.reload(); });
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then((reg) => {
+          reg.update().catch(() => {});
+          // checa por nova versão sempre que o app volta ao foco (momento seguro p/ atualizar)
+          document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+        }).catch(() => {});
+      });
+    }
 
     // banner "Instalar app"
     const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
