@@ -589,16 +589,21 @@ function horKeyDe(celeb) {
   return diaKey ? diaKey+'_'+celeb.horario : null;
 }
 
+// Funções MAIORES (especializadas) — reservadas p/ cerimoniários; o resto é menor (altar/cruz/vela/apoio...)
+const FUNCOES_MAIORES = new Set(['cred_altar','cred_credencia','missal','turibulo','naveta','mitra','baculo']);
 // Núcleo do gerador. vagas = array de funções (uma por vaga aberta). Retorna array alinhado de membro_id|null.
-// Regras: apto + (disponível preferencial) + não-ausente + sem repetir; IRMÃOS que servem junto = bloco tudo-ou-nada.
-// Ordem de preenchimento: vagas mais escassas primeiro (cerimoniais/episcopais antes de apoio). carga = balanceamento (mutado).
-function planejarVagas(vagas, horKey, ausNesta, usados, carga) {
+// Regras: apto + não-ausente + sem repetir na missa; IRMÃOS juntos = bloco tudo-ou-nada;
+//   cerimoniários priorizados nas MAIORES (só em último caso vão p/ menores); não repetir no fim de semana (usadoFds); rodízio (carga).
+function planejarVagas(vagas, horKey, ausNesta, usados, carga, usadoFds) {
+  usadoFds = usadoFds || new Set();
   const res = new Array(vagas.length).fill(null);
+  const nint = {}; membros.forEach(m => { nint[m.id] = nivelInfo(m.nivel||'aspirante').int; });
   const apta = (id,f) => { const h=(habMap[id]||{})[f]; return h && ['apto','experiente','referencia'].includes(h); };
   const disp = id => !horKey || (dispMap[id]||[]).includes(horKey);
   const livres = () => res.map((r,i)=>r?-1:i).filter(i=>i>=0);
-  const assign = (i,id) => { res[i]=id; usados.add(id); carga[id]=(carga[id]||0)+1; };
+  const assign = (i,id) => { res[i]=id; usados.add(id); usadoFds.add(id); carga[id]=(carga[id]||0)+1; };
   const bloqueados = new Set();
+  const cands = (i) => membros.filter(m => apta(m.id,vagas[i]) && !usados.has(m.id) && !ausNesta.has(m.id) && !bloqueados.has(m.id));
 
   function placeUnit(ids) {
     const slots = livres();
@@ -633,17 +638,27 @@ function planejarVagas(vagas, horKey, ausNesta, usados, carga) {
       if (unit.length >= 2) sibUnits.push(unit.map(x=>x.id));
     } else visited.add(m.id);
   });
-  sibUnits.sort((A,B) => { const fa=Math.min(...A.map(id=>carga[id]||0)), fb=Math.min(...B.map(id=>carga[id]||0)); return (fa-fb) || (B.length-A.length); });
+  sibUnits.sort((A,B) => {
+    const ua=A.some(id=>usadoFds.has(id))?1:0, ub=B.some(id=>usadoFds.has(id))?1:0; if(ua!==ub) return ua-ub;
+    const fa=Math.min(...A.map(id=>carga[id]||0)), fb=Math.min(...B.map(id=>carga[id]||0)); return (fa-fb) || (B.length-A.length);
+  });
   sibUnits.forEach(u => { if (!placeUnit(u)) u.forEach(id => bloqueados.add(id)); });
 
-  // 2) vagas individuais — mais escassas primeiro, disponível e menos escalado primeiro
+  // 2) vagas individuais — funções MAIORES primeiro (cerimoniários nelas), depois mais escassas
   livres()
-    .map(i => ({ i, n: membros.filter(m => apta(m.id,vagas[i]) && !usados.has(m.id) && !ausNesta.has(m.id) && !bloqueados.has(m.id)).length }))
-    .sort((a,b) => a.n - b.n)
+    .map(i => ({ i, maior: FUNCOES_MAIORES.has(vagas[i]), n: cands(i).length }))
+    .sort((a,b) => (b.maior?1:0)-(a.maior?1:0) || a.n - b.n)
     .forEach(({ i }) => {
       if (res[i]) return;
-      const cand = membros.filter(m => apta(m.id,vagas[i]) && !usados.has(m.id) && !ausNesta.has(m.id) && !bloqueados.has(m.id));
-      cand.sort((a,b) => { const da=disp(a.id)?0:1, db=disp(b.id)?0:1; return (da-db) || ((carga[a.id]||0)-(carga[b.id]||0)); });
+      const menor = !FUNCOES_MAIORES.has(vagas[i]);
+      const cand = cands(i);
+      cand.sort((a,b) => {
+        const ua=usadoFds.has(a.id)?1:0, ub=usadoFds.has(b.id)?1:0; if(ua!==ub) return ua-ub;   // não repetir no fim de semana
+        if (menor) { if (nint[a.id]!==nint[b.id]) return nint[a.id]-nint[b.id]; }                 // função menor: graduado (cerimoniário) por último
+        else       { if (nint[a.id]!==nint[b.id]) return nint[b.id]-nint[a.id]; }                 // função maior: mais graduado primeiro
+        const da=disp(a.id)?0:1, db=disp(b.id)?0:1; if(da!==db) return da-db;                      // disponível primeiro
+        return (carga[a.id]||0)-(carga[b.id]||0);                                                  // rodízio (menos escalado)
+      });
       if (cand.length) assign(i, cand[0].id);
     });
   return res;
@@ -654,7 +669,7 @@ function gerarEscalaAuto() {
   if (!celAtual || !pendingEdicao.length) return;
   const open = pendingEdicao.filter(pe => !pe.sel.value);
   const usados = new Set(); pendingEdicao.forEach(pe => { if (pe.sel.value) usados.add(pe.sel.value); });
-  const res = planejarVagas(open.map(pe=>pe.funcao), horKeyDe(celAtual), ausMap[celAtual.id]||new Set(), usados, Object.assign({}, freqMap));
+  const res = planejarVagas(open.map(pe=>pe.funcao), horKeyDe(celAtual), ausMap[celAtual.id]||new Set(), usados, Object.assign({}, freqMap), new Set(usados));
   res.forEach((id,i) => { if (id) { open[i].sel.value = id; open[i].sel.classList.add('filled'); } });
   const vazias = res.filter(r => !r).length;
   const btn = document.getElementById('btn-gerar-auto');
@@ -667,9 +682,11 @@ async function gerarEscalaSemana(celebs, btnEl) {
   if (!confirm('Gerar a escala de ' + celebs.length + ' missa(s) deste fim de semana?\n(Preenche as vagas ainda vazias, mantendo o que já estiver montado.)')) return;
   const txt0 = btnEl ? btnEl.textContent : '';
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Gerando...'; }
-  const carga = Object.assign({}, freqMap); // balanceia ao longo do fim de semana
+  const carga = Object.assign({}, freqMap); // rodízio histórico
+  const usadoFds = new Set();                // ninguém repete no fim de semana (só em último caso)
   const novas = [];
   const ordc = celebs.slice().sort((a,b) => (a.data+a.horario).localeCompare(b.data+b.horario));
+  ordc.forEach(c => (escalasMap[c.id]||[]).forEach(e => usadoFds.add(e.membro_id))); // já escalados contam
   for (const c of ordc) {
     const modelo = modeloFor(c.tipo, c.comunidade);            // vagas do tipo+comunidade (já em ordem cerimoniais→...)
     const existing = escalasMap[c.id] || [];
@@ -678,7 +695,7 @@ async function gerarEscalaSemana(celebs, btnEl) {
     modelo.forEach(slot => { cnt[slot.funcao] = (cnt[slot.funcao]||0)+1; if (cnt[slot.funcao] > (existPorFunc[slot.funcao]||0)) vagas.push(slot.funcao); });
     if (!vagas.length) continue;
     const usados = new Set(existing.map(e => e.membro_id));
-    const res = planejarVagas(vagas, horKeyDe(c), ausMap[c.id]||new Set(), usados, carga);
+    const res = planejarVagas(vagas, horKeyDe(c), ausMap[c.id]||new Set(), usados, carga, usadoFds);
     res.forEach((id,i) => { if (id) novas.push({ celebracao_id: c.id, membro_id: id, funcao: vagas[i], created_by: ctx.user.id }); });
   }
   if (novas.length) {
