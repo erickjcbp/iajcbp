@@ -609,7 +609,9 @@ function planejarVagas(vagas, horKey, ausNesta, usados, carga, usadoFds) {
   const livres = () => res.map((r,i)=>r?-1:i).filter(i=>i>=0);
   const assign = (i,id) => { res[i]=id; usados.add(id); usadoFds.add(id); carga[id]=(carga[id]||0)+1; };
   const bloqueados = new Set();
-  const cands = (i) => membros.filter(m => apta(m.id,vagas[i]) && !usados.has(m.id) && !ausNesta.has(m.id) && !bloqueados.has(m.id));
+  const ehCerimo = m => nint[m.id] >= 6; // cerimoniário = nível 6+
+  // POOL DURO: apto + DISPONÍVEL no horário + não-ausente + sem repetir na missa + não bloqueado
+  const cands = (i) => membros.filter(m => apta(m.id,vagas[i]) && disp(m.id) && !usados.has(m.id) && !ausNesta.has(m.id) && !bloqueados.has(m.id));
 
   function placeUnit(ids) {
     const slots = livres();
@@ -657,15 +659,22 @@ function planejarVagas(vagas, horKey, ausNesta, usados, carga, usadoFds) {
     .forEach(({ i }) => {
       if (res[i]) return;
       const menor = !FUNCOES_MAIORES.has(vagas[i]);
-      const cand = cands(i);
-      cand.sort((a,b) => {
-        const ua=usadoFds.has(a.id)?1:0, ub=usadoFds.has(b.id)?1:0; if(ua!==ub) return ua-ub;   // não repetir no fim de semana
-        if (menor) { if (nint[a.id]!==nint[b.id]) return nint[a.id]-nint[b.id]; }                 // função menor: graduado (cerimoniário) por último
-        else       { if (nint[a.id]!==nint[b.id]) return nint[b.id]-nint[a.id]; }                 // função maior: mais graduado primeiro
-        const da=disp(a.id)?0:1, db=disp(b.id)?0:1; if(da!==db) return da-db;                      // disponível primeiro
-        return (carga[a.id]||0)-(carga[b.id]||0);                                                  // rodízio (menos escalado)
+      const pool = cands(i); // já filtrado por disponibilidade (duro)
+      if (!pool.length) return; // ninguém apto E disponível → vaga fica VAZIA (não força)
+      // camadas de preferência — cada uma só é usada se a anterior estiver vazia:
+      const tiers = menor
+        ? [ pool.filter(m => !ehCerimo(m) && !usadoFds.has(m.id)),  // 1) não-cerimoniário e ainda não usado no fds
+            pool.filter(m => !ehCerimo(m)),                         // 2) não-cerimoniário (mesmo repetindo)
+            pool.filter(m => !usadoFds.has(m.id)),                  // 3) novo no fds (aceita cerimoniário)
+            pool ]                                                  // 4) qualquer (último caso)
+        : [ pool.filter(m => !usadoFds.has(m.id)),                  // maior: 1) ainda não usado no fds
+            pool ];                                                 // 2) qualquer
+      const grupo = tiers.find(t => t.length).slice().sort((a,b) => {
+        if (menor && nint[a.id]!==nint[b.id]) return nint[a.id]-nint[b.id]; // menor: menos graduado primeiro
+        if (!menor && nint[a.id]!==nint[b.id]) return nint[b.id]-nint[a.id]; // maior: mais graduado primeiro
+        return (carga[a.id]||0)-(carga[b.id]||0);                            // rodízio
       });
-      if (cand.length) assign(i, cand[0].id);
+      assign(i, grupo[0].id);
     });
   return res;
 }
