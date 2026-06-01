@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Destaques — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .dest-tabs { display:flex; gap:6px; margin-bottom:14px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .dest-tab { flex:1; min-width:max-content; padding:9px 12px; background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); border-radius:18px; font-family:'Sora',sans-serif; font-size:11px; font-weight:700; white-space:nowrap; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .dest-tab.active { border-color:var(--gold); color:var(--gold); background:rgba(232,185,74,.1); }
+    .dest-head { font-family:'Sora',sans-serif; font-size:13px; color:var(--gold-light); margin-bottom:4px; }
+    .dest-desc { font-size:12px; color:var(--text-muted); margin-bottom:14px; }
+    .rank-row { display:flex; align-items:center; gap:12px; padding:9px 8px; border-radius:10px; margin-bottom:6px; background:var(--surface); border:1px solid var(--border); }
+    .rank-row.eu { border-color:var(--gold); background:rgba(232,185,74,.07); }
+    .rank-pos { width:30px; text-align:center; font-family:'Sora',sans-serif; font-weight:800; font-size:15px; color:var(--text-muted); flex:none; }
+    .rank-info { flex:1; min-width:0; }
+    .rank-nome { font-weight:700; font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rank-nivel { font-size:11px; color:var(--text-muted); }
+    .rank-val { font-family:'Sora',sans-serif; font-weight:800; font-size:15px; color:var(--gold); flex:none; text-align:right; }
+    .rank-val small { display:block; font-size:9px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+<div class="main" id="main-content">
+  <span class="loading">Carregando...</span>
+</div>
+
+<script src="shared.js"></script>
+<script>
+let ctx = null, dados = null, euId = null;
+const ABAS = [
+  { key:'servos',    tab:'🕯️ Servos do Altar', head:'Servos do Altar',     desc:'Quem mais serviu nas celebrações.',        unidade:'vezes',    sing:'vez' },
+  { key:'versateis', tab:'🎓 Versáteis',        head:'Os mais versáteis',   desc:'Quem domina mais funções no altar.',       unidade:'funções',  sing:'função' },
+  { key:'prontos',   tab:'🙋 Sempre prontos',   head:'Sempre prontos',      desc:'Quem se disponibilizou para mais missas.', unidade:'horários', sing:'horário' },
+];
+
+async function init() {
+  ctx = await initModulo();
+  if (!ctx) return;
+  renderHeader(ctx, 'destaques');
+  renderBottomNav(ctx, 'destaques');
+  euId = ctx.membro ? ctx.membro.id : null;
+  const { data, error } = await sb.rpc('acolitos_destaques');
+  const main = document.getElementById('main-content'); main.textContent = '';
+  const title = document.createElement('h1'); title.className = 'page-title'; title.textContent = 'Destaques'; main.appendChild(title);
+  const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;line-height:1.5;'; hint.textContent = 'Um reconhecimento à dedicação de cada um. 🙏'; main.appendChild(hint);
+  if (error) { const e=document.createElement('span'); e.className='empty'; e.textContent='Não foi possível carregar.'; main.appendChild(e); return; }
+  dados = data || {};
+
+  const tabs = document.createElement('div'); tabs.className = 'dest-tabs'; main.appendChild(tabs);
+  const corpo = document.createElement('div'); corpo.id = 'dest-corpo'; main.appendChild(corpo);
+  ABAS.forEach((a, i) => {
+    const b = document.createElement('button'); b.className = 'dest-tab' + (i===0?' active':''); b.textContent = a.tab;
+    b.onclick = () => { tabs.querySelectorAll('.dest-tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); renderAba(a); };
+    tabs.appendChild(b);
+  });
+  renderAba(ABAS[0]);
+}
+
+function renderAba(a) {
+  const corpo = document.getElementById('dest-corpo'); corpo.textContent = '';
+  const h = document.createElement('div'); h.className = 'dest-head'; h.textContent = a.head;
+  const d = document.createElement('div'); d.className = 'dest-desc'; d.textContent = a.desc;
+  corpo.append(h, d);
+  const lista = (dados[a.key] || []).filter(x => Number(x.total) > 0);
+  if (!lista.length) { const em = document.createElement('span'); em.className = 'empty'; em.textContent = 'Ainda sem dados por aqui.'; corpo.appendChild(em); return; }
+  const medalhas = ['🥇','🥈','🥉'];
+  lista.forEach((m, i) => {
+    const row = document.createElement('div'); row.className = 'rank-row' + (m.id === euId ? ' eu' : '');
+    const pos = document.createElement('div'); pos.className = 'rank-pos'; pos.textContent = i < 3 ? medalhas[i] : (i+1);
+    const av = buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 38, { nivelSlug: m.nivel||'aspirante' }); av.style.flex = 'none';
+    const info = document.createElement('div'); info.className = 'rank-info';
+    const nm = document.createElement('div'); nm.className = 'rank-nome'; nm.textContent = (m.id===euId?'★ ':'') + m.nome;
+    const nv = document.createElement('div'); nv.className = 'rank-nivel'; nv.textContent = nivelInfo(m.nivel||'aspirante').label;
+    info.append(nm, nv);
+    const val = document.createElement('div'); val.className = 'rank-val';
+    const tot = Number(m.total);
+    val.innerHTML = tot + '<small>' + (tot===1?a.sing:a.unidade) + '</small>';
+    row.append(pos, av, info, val); corpo.appendChild(row);
+  });
+}
+
+init();
+</script>
+</body>
+</html>

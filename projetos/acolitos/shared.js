@@ -560,6 +560,7 @@ function _svgIcon(name) {
     'x-circle':     'M22 12A10 10 0 1 1 2 12a10 10 0 0 1 20 0z M15 9l-6 6 M9 9l6 6',
     'message-circle':'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
     dollar:         'M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
+    star:           'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01z',
   };
   return `<svg viewBox="0 0 24 24"><path d="${d[name] || ''}"/></svg>`;
 }
@@ -575,7 +576,10 @@ function renderBottomNav(ctx, activePage) {
     items = [{ id:'home', href:'index.html', label:'Início', icon:'home' }];
     ORDEM_MODULOS.forEach(k => { if (c.perms.includes(k)) { const mod = NAV_COORD_MODULOS[k]; items.push({ id:k, href:mod.href, label:mod.label, icon:mod.icon }); } });
   } else {
-    items = [{ id:'home', href:'index.html', label:'Início', icon:'home' }, { id:'ausencias', href:'ausencias.html', label:'Ausência', icon:'x-circle' }];
+    items = [{ id:'home', href:'index.html', label:'Início', icon:'home' },
+      { id:'escalas-membro', href:'escalas-membro.html', label:'Escalas', icon:'calendar' },
+      { id:'destaques', href:'destaques.html', label:'Destaques', icon:'star' },
+      { id:'ausencias', href:'ausencias.html', label:'Ausência', icon:'x-circle' }];
     if (c.isCerimo) items.push({ id:'chamada', href:'chamada.html', label:'Chamada', icon:'message-circle' });
   }
   items.forEach(item => {

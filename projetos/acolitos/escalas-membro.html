@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Escalas — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .semana-titulo { font-family:'Sora',sans-serif; font-size:11px; color:var(--text-muted); letter-spacing:1.5px; text-transform:uppercase; margin:18px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+    .esc-grid { display:grid; grid-template-columns:1fr; gap:10px; }
+    @media(min-width:600px){ .esc-grid{ grid-template-columns:repeat(2,1fr); } }
+    @media(min-width:900px){ .esc-grid{ grid-template-columns:repeat(3,1fr); } }
+    .esc-card { background:var(--surface); border:1px solid var(--border-wine); border-radius:10px; padding:14px; cursor:pointer; transition:border-color .15s, transform .1s; }
+    .esc-card:hover { border-color:var(--gold-dim); }
+    .esc-card:active { transform:scale(.99); }
+    .esc-data { font-family:'Sora',sans-serif; font-weight:700; font-size:14px; color:var(--text); }
+    .esc-sub { font-size:12px; color:var(--gold); margin-top:2px; }
+    .esc-count { font-size:12px; color:var(--text-muted); margin-top:8px; display:flex; align-items:center; gap:6px; }
+    .esc-count b { color:var(--text); }
+    .esc-line { display:flex; justify-content:space-between; gap:10px; padding:7px 2px; border-bottom:1px solid var(--border); font-size:13px; }
+    .esc-line .fn { color:var(--gold); font-weight:700; }
+    .esc-line .nm { color:var(--text); text-align:right; }
+    .esc-cat { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin:12px 0 2px; font-weight:700; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+<div class="main" id="main-content">
+  <span class="loading">Carregando...</span>
+</div>
+
+<script src="shared.js"></script>
+<script>
+const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const TIPO_LABEL = { missa_comum:'Missa', solene:'Missa Solene', pontifical:'Pontifical (Bispo)', festa:'Festa Litúrgica', vigilia:'Vigília', crisma:'Crisma', casamento:'Casamento', batizado:'Batizado', ordenacao:'Ordenação', funeral:'Exéquias' };
+const FUNCAO_LABEL = { cred_altar:'Cerimonial de Altar', cred_credencia:'Cerimonial de Credência', missal:'Missal', turibulo:'Turíbulo', naveta:'Naveta', altar:'Altar', cruz:'Cruz', vela:'Vela', sineta:'Sineta', sinao:'Sinão', apoio:'Apoio', mitra:'Mitra', baculo:'Báculo' };
+const FUNCAO_CAT = { cred_altar:'Cerimoniais', cred_credencia:'Cerimoniais', missal:'Cerimoniais', altar:'Altares', cruz:'Litúrgicos', vela:'Litúrgicos', sineta:'Litúrgicos', sinao:'Litúrgicos', turibulo:'Litúrgicos', naveta:'Litúrgicos', apoio:'Apoios', mitra:'Episcopal', baculo:'Episcopal' };
+const FUNCAO_ORDEM = { cred_altar:10, cred_credencia:11, missal:12, altar:20, cruz:30, vela:31, sineta:32, sinao:33, turibulo:34, naveta:35, apoio:40, mitra:50, baculo:51 };
+
+function dataLabel(d) { const x = new Date(d+'T00:00:00'); return DIAS[x.getDay()] + ' ' + x.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}); }
+function comLabel(c) { return c==='matriz'?'Matriz':'Sto. Antônio'; }
+
+async function init() {
+  const ctx = await initModulo();
+  if (!ctx) return;
+  renderHeader(ctx, 'escalas-membro');
+  renderBottomNav(ctx, 'escalas-membro');
+  const main = document.getElementById('main-content'); main.textContent = '';
+  const title = document.createElement('h1'); title.className = 'page-title'; title.textContent = 'Escalas'; main.appendChild(title);
+  const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 10px;'; hint.textContent = 'Toque numa missa para ver quem está escalado.'; main.appendChild(hint);
+
+  const { data, error } = await sb.rpc('acolitos_escalas_futuras');
+  if (error) { const e=document.createElement('span'); e.className='empty'; e.textContent='Não foi possível carregar as escalas.'; main.appendChild(e); return; }
+  const cels = data || [];
+  if (!cels.length) { const e=document.createElement('span'); e.className='empty'; e.textContent='Nenhuma missa futura cadastrada.'; main.appendChild(e); return; }
+
+  // agrupa por semana (segunda-feira)
+  const semanas = {};
+  cels.forEach(c => {
+    const d = new Date(c.data+'T00:00:00');
+    const mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay()+6)%7));
+    const key = mon.toISOString().slice(0,10);
+    if (!semanas[key]) semanas[key] = { label: 'Semana de ' + mon.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}), items: [] };
+    semanas[key].items.push(c);
+  });
+  Object.values(semanas).forEach(sem => {
+    const t = document.createElement('div'); t.className = 'semana-titulo'; t.textContent = sem.label; main.appendChild(t);
+    const grid = document.createElement('div'); grid.className = 'esc-grid';
+    sem.items.forEach(c => {
+      const card = document.createElement('div'); card.className = 'esc-card';
+      const dt = document.createElement('div'); dt.className = 'esc-data'; dt.textContent = dataLabel(c.data) + ' · ' + c.horario;
+      const sb2 = document.createElement('div'); sb2.className = 'esc-sub'; sb2.textContent = comLabel(c.comunidade) + ' · ' + (TIPO_LABEL[c.tipo]||c.tipo);
+      const cnt = document.createElement('div'); cnt.className = 'esc-count';
+      const n = (c.escalados||[]).length;
+      cnt.innerHTML = n ? '<b>'+n+'</b> escalado'+(n>1?'s':'')+' — toque para ver' : 'Escala ainda não montada';
+      card.append(dt, sb2, cnt);
+      card.onclick = () => abrirEscala(c);
+      grid.appendChild(card);
+    });
+    main.appendChild(grid);
+  });
+}
+
+function abrirEscala(c) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className = 'modal';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = dataLabel(c.data) + ' · ' + c.horario;
+  const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--gold);margin:-8px 0 12px;'; sub.textContent = comLabel(c.comunidade) + ' · ' + (TIPO_LABEL[c.tipo]||c.tipo);
+  modal.append(handle, tt, sub);
+
+  const lista = (c.escalados||[]).slice().sort((a,b) => (FUNCAO_ORDEM[a.funcao]||99) - (FUNCAO_ORDEM[b.funcao]||99));
+  if (!lista.length) {
+    const em = document.createElement('div'); em.style.cssText = 'color:var(--text-muted);font-style:italic;padding:8px 0;'; em.textContent = 'Escala ainda não montada para esta missa.'; modal.appendChild(em);
+  } else {
+    let catAtual = '';
+    lista.forEach(e => {
+      const cat = FUNCAO_CAT[e.funcao] || 'Outros';
+      if (cat !== catAtual) { catAtual = cat; const ch = document.createElement('div'); ch.className = 'esc-cat'; ch.textContent = cat; modal.appendChild(ch); }
+      const row = document.createElement('div'); row.className = 'esc-line';
+      const fn = document.createElement('span'); fn.className = 'fn'; fn.textContent = FUNCAO_LABEL[e.funcao] || e.funcao;
+      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = e.nome;
+      row.append(fn, nm); modal.appendChild(row);
+    });
+  }
+  const close = document.createElement('button'); close.className = 'btn-sm gray'; close.style.marginTop = '14px'; close.textContent = 'Fechar'; close.onclick = () => ov.remove();
+  modal.appendChild(close);
+  ov.appendChild(modal); document.body.appendChild(ov);
+}
+
+init();
+</script>
+</body>
+</html>
