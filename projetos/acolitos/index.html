@@ -441,7 +441,7 @@ async function renderDashboardEquipe(ctx) {
     fetchFrequencia(),
     sb.from('acolitos_celebracoes').select('*',{count:'exact',head:true}).gte('data',iniMes).lte('data',fimMes),
     sb.from('acolitos_escalas').select('status, acolitos_celebracoes!inner(data)').gte('acolitos_celebracoes.data', seisStr),
-    sb.from('acolitos_membros').select('id,user_id,nivel').eq('status','ativo'),
+    sb.from('acolitos_membros').select('id,user_id,nivel,nome,apelido,foto_url,comunidade').eq('status','ativo'),
     moduloId ? sb.from('pastoral_members').select('user_id,role').eq('module_id',moduloId) : Promise.resolve({data:[]}),
     sb.from('acolitos_celebracoes').select('id,data,horario,comunidade,tipo, acolitos_escalas(id)').gte('data',hoje).lte('data', new Date(Date.now()+28*86400000).toISOString().slice(0,10)).order('data').order('horario'),
   ]);
@@ -537,11 +537,12 @@ function renderGraficoPresenca(main, escalas) {
 /* ── GRÁFICO: membros por nível ──────────────────────────────── */
 function renderGraficoNiveis(main, membros, pm) {
   const roleMap = {}; pm.forEach(r => roleMap[r.user_id]=r.role);
-  const cont = {}; NIVEIS.forEach(n => cont[n.slug] = 0);
+  const cont = {}, porNivel = {}; NIVEIS.forEach(n => { cont[n.slug] = 0; porNivel[n.slug] = []; });
   membros.forEach(m => {
     const role = (m.user_id && roleMap[m.user_id]) || 'aspirante';
     const slug = (m.nivel && cont[m.nivel] != null) ? m.nivel : nivelFromRole(role);
     cont[slug] = (cont[slug] || 0) + 1;
+    (porNivel[slug] = porNivel[slug] || []).push(m);
   });
 
   const card=document.createElement('div'); card.className='chart-card';
@@ -552,10 +553,40 @@ function renderGraficoNiveis(main, membros, pm) {
     const emb=document.createElement('div'); emb.className='nivel-emb'; emb.innerHTML=getNivelSvg(n.slug, 42); // SVG hardcoded — seguro
     const cnt=document.createElement('div'); cnt.className='nivel-cnt'; cnt.textContent=cont[n.slug];
     const lbl=document.createElement('div'); lbl.className='nivel-lbl'; lbl.textContent=n.label;
-    cell.append(emb, cnt, lbl); grid.appendChild(cell);
+    cell.append(emb, cnt, lbl);
+    if (cont[n.slug]) { cell.style.cursor='pointer'; cell.title='Ver membros'; cell.onclick=()=>abrirNivelMembros(n, porNivel[n.slug]); }
+    grid.appendChild(cell);
   });
   card.appendChild(grid);
   main.appendChild(card);
+}
+
+function abrirNivelMembros(n, lista) {
+  const ov = document.createElement('div'); ov.className='modal-overlay open';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className='modal'; modal.style.maxWidth='400px';
+  const handle = document.createElement('div'); handle.className='modal-handle'; modal.appendChild(handle);
+  const head = document.createElement('div'); head.style.cssText='display:flex;align-items:center;gap:12px;margin-bottom:12px;';
+  head.appendChild(buildRankEmblem(n.slug, 50));
+  const ht = document.createElement('div');
+  const hn = document.createElement('div'); hn.style.cssText='font-family:Sora,sans-serif;font-weight:700;font-size:16px;color:var(--text);'; hn.textContent=n.label;
+  const hc = document.createElement('div'); hc.style.cssText='font-size:12px;color:var(--text-muted);'; hc.textContent=lista.length+' membro'+(lista.length>1?'s':'')+(n.titulo?' · 🏆 '+n.titulo:'');
+  ht.append(hn, hc); head.appendChild(ht); modal.appendChild(head);
+
+  const box = document.createElement('div'); box.style.cssText='max-height:60vh;overflow-y:auto;';
+  lista.slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).forEach(m => {
+    const row = document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid var(--border);';
+    row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(n.slug).base, 34, { nivelSlug: n.slug }));
+    const info = document.createElement('div'); info.style.cssText='flex:1;min-width:0;';
+    const nm = document.createElement('div'); nm.style.cssText='font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; nm.textContent = m.apelido || m.nome;
+    const cm = document.createElement('div'); cm.style.cssText='font-size:11px;color:var(--text-muted);'; cm.textContent = m.comunidade==='matriz'?'Matriz':(m.comunidade==='santo_antonio'?'Sto. Antônio':'Outra');
+    info.append(nm, cm); row.appendChild(info);
+    box.appendChild(row);
+  });
+  modal.appendChild(box);
+  const close = document.createElement('button'); close.className='btn-sm gray'; close.style.cssText='margin-top:14px;width:100%;'; close.textContent='Fechar'; close.onclick=()=>ov.remove();
+  modal.appendChild(close);
+  ov.appendChild(modal); document.body.appendChild(ov);
 }
 
 /* ── GRÁFICO: cobertura (donut) ──────────────────────────────── */
