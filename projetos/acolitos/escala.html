@@ -562,10 +562,13 @@ function abrirMontagem(celeb) {
         sel.appendChild(opt);
       });
     sel.onchange=()=>sel.classList.toggle('filled',!!sel.value);
-    pendingEdicao.push({sel,funcao:pos.funcao});
+    const pe={sel,funcao:pos.funcao};
+    pendingEdicao.push(pe);
+    const trc=document.createElement('button');trc.type='button';trc.className='mini-del';trc.textContent='🔄';trc.title='Trocar por outra opção';trc.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';
+    trc.onclick=()=>trocarPosicao(pe);
     const clr=document.createElement('button');clr.type='button';clr.className='mini-del';clr.textContent='✕';clr.title='Limpar esta função';clr.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';
     clr.onclick=()=>{sel.value='';sel.classList.remove('filled');};
-    row.append(lbl,sel,clr);colPos.appendChild(row);
+    row.append(lbl,sel,trc,clr);colPos.appendChild(row);
   });
 
   // Coluna membros
@@ -696,6 +699,27 @@ function limparMontagem() {
   if (!pendingEdicao.length) return;
   pendingEdicao.forEach(({sel}) => { sel.value=''; sel.classList.remove('filled'); });
   toast('Posições limpas — clique em "Salvar Escala" para gravar.');
+}
+
+// Troca a pessoa de uma posição por OUTRA opção válida (apta, disponível, não-ausente, sem duplicar na missa)
+function trocarPosicao(pe) {
+  if (!celAtual) return;
+  const horKey = horKeyDe(celAtual);
+  const ausNesta = ausMap[celAtual.id] || new Set();
+  const atual = pe.sel.value;
+  const usadosOutros = new Set();
+  pendingEdicao.forEach(p => { if (p !== pe && p.sel.value) usadosOutros.add(p.sel.value); });
+  const apta = (id,f) => { const h=(habMap[id]||{})[f]; return h && ['apto','experiente','referencia'].includes(h); };
+  const disp = id => !horKey || (dispMap[id]||[]).includes(horKey);
+  const nivel = id => { const m=membros.find(x=>x.id===id); return m?nivelInfo(m.nivel||'aspirante').int:0; };
+  const menor = !FUNCOES_MAIORES.has(pe.funcao);
+  const pool = membros.filter(m => apta(m.id,pe.funcao) && disp(m.id) && !ausNesta.has(m.id) && !usadosOutros.has(m.id) && m.id!==atual);
+  if (!pool.length) { toast('Sem outra opção disponível e apta pra essa função.','error'); return; }
+  const tiers = menor ? [pool.filter(m => nivel(m.id) < 6), pool] : [pool]; // menor: evita cerimoniário
+  const grupo = tiers.find(t => t.length);
+  const escolhido = grupo[Math.floor(Math.random()*grupo.length)];
+  pe.sel.value = escolhido.id; pe.sel.classList.add('filled');
+  toast('🔄 ' + (escolhido.apelido || (escolhido.nome||'').split(' ')[0]));
 }
 
 // Gera e SALVA a escala de todas as missas de um fim de semana (preenche só as vagas ainda vazias)
