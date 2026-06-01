@@ -8,15 +8,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Lora:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <style>
+    /* ── sem casa ── */
     .teaser { background:linear-gradient(160deg, var(--surface2), var(--surface)); border:1px solid var(--gold-dim); border-radius:14px; padding:20px 18px; margin-bottom:20px; position:relative; overflow:hidden; }
-    .teaser::after { content:''; position:absolute; inset:0; background:radial-gradient(120px 120px at 90% -10%, rgba(232,185,74,.12), transparent); pointer-events:none; }
     .teaser h2 { font-family:'Sora',sans-serif; font-size:16px; color:var(--gold-light); margin-bottom:8px; }
     .teaser p { font-family:'Lora',serif; font-size:14px; color:var(--text); line-height:1.6; }
     .teaser .soon { display:inline-block; margin-top:12px; font-size:10px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:var(--gold); border:1px solid var(--gold-dim); border-radius:20px; padding:4px 12px; }
     .casas-wrap { display:grid; grid-template-columns:1fr; gap:16px; }
     @media(min-width:680px){ .casas-wrap{ grid-template-columns:repeat(2,1fr); } }
     .casa-card { background:linear-gradient(165deg, color-mix(in srgb, var(--c) 22%, var(--surface)), var(--surface)); border:1px solid var(--c); border-radius:14px; padding:18px; position:relative; overflow:hidden; }
-    .casa-card::before { content:''; position:absolute; top:-40px; right:-40px; width:140px; height:140px; background:radial-gradient(circle, color-mix(in srgb, var(--c) 35%, transparent), transparent 70%); pointer-events:none; }
     .casa-top { display:flex; align-items:center; gap:14px; margin-bottom:12px; }
     .casa-nome { font-family:'Sora',sans-serif; font-weight:800; font-size:21px; letter-spacing:2px; color:#fff; text-transform:uppercase; }
     .casa-tag { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--c); filter:brightness(1.5); }
@@ -25,7 +24,28 @@
     .casa-carac { display:flex; flex-wrap:wrap; gap:7px; }
     .carac { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--text); background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.1); border-radius:14px; padding:4px 11px; }
     .carac i { width:6px; height:6px; border-radius:50%; background:var(--c); filter:brightness(1.6); flex:none; }
-    .minha-casa-banner { display:flex; align-items:center; gap:14px; background:linear-gradient(160deg, color-mix(in srgb, var(--c) 30%, var(--surface)), var(--surface)); border:1px solid var(--c); border-radius:14px; padding:16px; margin-bottom:18px; }
+    /* ── com casa (imersivo) ── */
+    .hero { background:linear-gradient(165deg, color-mix(in srgb, var(--c) 34%, var(--surface)), var(--surface) 80%); border:1px solid var(--c); border-radius:16px; padding:24px 18px; text-align:center; position:relative; overflow:hidden; margin-bottom:18px; }
+    .hero::before { content:''; position:absolute; top:-60px; left:50%; transform:translateX(-50%); width:240px; height:240px; background:radial-gradient(circle, color-mix(in srgb, var(--c) 40%, transparent), transparent 65%); pointer-events:none; }
+    .hero .badge { position:relative; display:inline-block; font-size:10px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:var(--gold); border:1px solid var(--gold-dim); border-radius:20px; padding:4px 12px; margin-bottom:14px; }
+    .hero .bras { position:relative; line-height:0; filter:drop-shadow(0 4px 10px rgba(0,0,0,.55)); }
+    .hero .nm { position:relative; font-family:'Sora',sans-serif; font-weight:800; font-size:30px; letter-spacing:4px; color:#fff; text-transform:uppercase; margin-top:10px; }
+    .hero .tag { position:relative; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--c); filter:brightness(1.6); margin-top:2px; }
+    .hero .lema { position:relative; font-family:'Lora',serif; font-style:italic; font-size:17px; color:var(--gold-light); margin-top:12px; }
+    .hero .lema-pt { position:relative; font-size:12px; color:var(--text-muted); }
+    .hero .carac2 { position:relative; display:flex; flex-wrap:wrap; gap:7px; justify-content:center; margin-top:14px; }
+    .welcome { background:var(--surface); border:1px solid var(--border-wine); border-left:3px solid var(--c); border-radius:10px; padding:14px 16px; font-family:'Lora',serif; font-size:14px; color:var(--text); line-height:1.65; margin-bottom:18px; }
+    .sec-tit { font-family:'Sora',sans-serif; font-size:13px; color:var(--gold-light); margin:6px 0 10px; display:flex; align-items:center; gap:8px; }
+    .colegas { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; margin-bottom:22px; }
+    .colega { display:flex; align-items:center; gap:9px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:7px 9px; }
+    .colega.eu { border-color:var(--c); }
+    .colega .ci { min-width:0; }
+    .colega .cn { font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .colega .cl { font-size:10px; color:var(--text-muted); }
+    .outras { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+    .outra { display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:9px 10px; }
+    .outra .on { font-family:'Sora',sans-serif; font-weight:700; font-size:13px; letter-spacing:1px; color:var(--text); text-transform:uppercase; }
+    .outra .ot { font-size:10px; color:var(--text-muted); }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
 </head>
@@ -36,7 +56,8 @@
 
 <script src="shared.js"></script>
 <script>
-function brasaoEl(slug, size) { const d = document.createElement('div'); d.style.cssText='flex:none;line-height:0;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5));'; d.innerHTML = getCasaBrasao(slug, size); return d; } // SVG hardcoded — seguro
+function brasaoEl(slug, size, cls) { const d = document.createElement('div'); if (cls) d.className = cls; else d.style.cssText = 'flex:none;line-height:0;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5));'; d.innerHTML = getCasaBrasao(slug, size); return d; } // SVG controlado — seguro
+function caracChips(arr, cls) { const w = document.createElement('div'); w.className = cls; (arr||[]).forEach(x => { const c = document.createElement('span'); c.className = 'carac'; const i = document.createElement('i'); c.append(i, document.createTextNode(x)); w.appendChild(c); }); return w; }
 
 async function init() {
   const ctx = await initModulo();
@@ -48,24 +69,70 @@ async function init() {
 
   const { data: casas } = await sb.from('acolitos_casas').select('*').order('ordem');
   const lista = casas || [];
-  const minhaCasaId = ctx.membro ? ctx.membro.casa_id : null;
-  const minha = minhaCasaId && lista.find(c => c.id === minhaCasaId);
+  const minhaId = ctx.membro ? ctx.membro.casa_id : null;
+  const minha = minhaId && lista.find(c => c.id === minhaId);
 
-  if (minha) {
-    const b = document.createElement('div'); b.className = 'minha-casa-banner'; b.style.setProperty('--c', minha.cor || '#8a6a24');
-    b.appendChild(brasaoEl(minha.slug, 64));
+  if (minha) await renderComCasa(main, minha, lista, ctx);
+  else renderSemCasa(main, lista);
+}
+
+async function renderComCasa(main, minha, lista, ctx) {
+  const cor = minha.cor || '#8a6a24';
+  // HERO
+  const hero = document.createElement('div'); hero.className = 'hero'; hero.style.setProperty('--c', cor);
+  const badge = document.createElement('div'); badge.className = 'badge'; badge.textContent = 'Sua casa';
+  hero.appendChild(badge);
+  hero.appendChild(brasaoEl(minha.slug, 110, 'bras'));
+  const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = (minha.nome||'').toUpperCase(); hero.appendChild(nm);
+  const tg = document.createElement('div'); tg.className = 'tag'; tg.textContent = minha.tagline || ''; hero.appendChild(tg);
+  const lema = document.createElement('div'); lema.className = 'lema'; lema.textContent = '"' + (minha.lema||'') + '"'; hero.appendChild(lema);
+  const lpt = document.createElement('div'); lpt.className = 'lema-pt'; lpt.textContent = minha.lema_pt || ''; hero.appendChild(lpt);
+  hero.appendChild(caracChips(minha.caracteristicas, 'carac2'));
+  main.appendChild(hero);
+
+  // BOAS-VINDAS
+  const wc = document.createElement('div'); wc.className = 'welcome'; wc.style.setProperty('--c', cor);
+  const cars = (minha.caracteristicas||[]).map(s=>s.toLowerCase());
+  const carsTxt = cars.length ? cars.slice(0,-1).join(', ') + (cars.length>1?' e ':'') + cars[cars.length-1] : 'virtudes do altar';
+  wc.textContent = 'Seja bem-vindo à Casa ' + minha.nome + '! A partir de agora você caminha ao lado de irmãos guiados por ' + carsTxt + '. Sirvam juntos, com fé e dedicação, honrando o lema "' + (minha.lema||'') + '" — ' + (minha.lema_pt||'') + '.';
+  main.appendChild(wc);
+
+  // COLEGAS
+  const st = document.createElement('div'); st.className = 'sec-tit'; st.textContent = 'Irmãos da sua casa'; main.appendChild(st);
+  const grid = document.createElement('div'); grid.className = 'colegas'; main.appendChild(grid);
+  const { data: colegas } = await sb.rpc('acolitos_colegas_casa', { p_casa: minha.id });
+  const euId = ctx.membro ? ctx.membro.id : null;
+  const cl = colegas || [];
+  if (!cl.length) { const e = document.createElement('div'); e.style.cssText = 'color:var(--text-muted);font-size:13px;font-style:italic;'; e.textContent = 'Você é o primeiro desta casa. Em breve chegam mais irmãos!'; grid.appendChild(e); }
+  else cl.forEach(m => {
+    const row = document.createElement('div'); row.className = 'colega' + (m.id===euId?' eu':''); row.style.setProperty('--c', cor);
+    row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 32, { nivelSlug: m.nivel||'aspirante' }));
+    const ci = document.createElement('div'); ci.className = 'ci';
+    const cn = document.createElement('div'); cn.className = 'cn'; cn.textContent = (m.id===euId?'★ ':'') + m.nome;
+    const cll = document.createElement('div'); cll.className = 'cl'; cll.textContent = nivelInfo(m.nivel||'aspirante').label;
+    ci.append(cn, cll); row.appendChild(ci); grid.appendChild(row);
+  });
+
+  // OUTRAS CASAS (recolhidas)
+  const st2 = document.createElement('div'); st2.className = 'sec-tit'; st2.textContent = 'As outras casas'; main.appendChild(st2);
+  const out = document.createElement('div'); out.className = 'outras';
+  lista.filter(c => c.id !== minha.id).forEach(c => {
+    const row = document.createElement('div'); row.className = 'outra';
+    row.appendChild(brasaoEl(c.slug, 38));
     const info = document.createElement('div');
-    const l = document.createElement('div'); l.style.cssText = 'font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;'; l.textContent = 'Você pertence à casa';
-    const n = document.createElement('div'); n.style.cssText = 'font-family:Sora,sans-serif;font-weight:800;font-size:20px;letter-spacing:2px;color:#fff;'; n.textContent = (minha.nome||'').toUpperCase();
-    const le = document.createElement('div'); le.style.cssText = 'font-family:Lora,serif;font-style:italic;color:var(--gold-light);font-size:13px;'; le.textContent = '"' + (minha.lema||'') + '"';
-    info.append(l, n, le); b.appendChild(info); main.appendChild(b);
-  } else {
-    const t = document.createElement('div'); t.className = 'teaser';
-    const h = document.createElement('h2'); h.textContent = 'Olá, meu querido servo do altar';
-    const p = document.createElement('p'); p.textContent = 'Em breve você será acolhido em uma destas casas, para uma jornada ainda mais especial — onde irmãos caminham juntos, cada um com a sua força. Conheça as casas e comece a sentir de qual delas o seu coração se aproxima.';
-    const soon = document.createElement('span'); soon.className = 'soon'; soon.textContent = 'Em breve · seleção das casas';
-    t.append(h, p, soon); main.appendChild(t);
-  }
+    const on = document.createElement('div'); on.className = 'on'; on.textContent = c.nome;
+    const ot = document.createElement('div'); ot.className = 'ot'; ot.textContent = c.tagline || '';
+    info.append(on, ot); row.appendChild(info); out.appendChild(row);
+  });
+  main.appendChild(out);
+}
+
+function renderSemCasa(main, lista) {
+  const t = document.createElement('div'); t.className = 'teaser';
+  const h = document.createElement('h2'); h.textContent = 'Olá, meu querido servo do altar';
+  const p = document.createElement('p'); p.textContent = 'Em breve você será acolhido em uma destas casas, para uma jornada ainda mais especial — onde irmãos caminham juntos, cada um com a sua força. Conheça as casas e comece a sentir de qual delas o seu coração se aproxima.';
+  const soon = document.createElement('span'); soon.className = 'soon'; soon.textContent = 'Em breve · seleção das casas';
+  t.append(h, p, soon); main.appendChild(t);
 
   const wrap = document.createElement('div'); wrap.className = 'casas-wrap';
   lista.forEach(c => {
@@ -78,16 +145,14 @@ async function init() {
     tt.append(nm, tg); top.appendChild(tt); card.appendChild(top);
     const lema = document.createElement('div'); lema.className = 'casa-lema'; lema.textContent = '"' + (c.lema||'') + '"'; card.appendChild(lema);
     const lpt = document.createElement('div'); lpt.className = 'casa-lema-pt'; lpt.textContent = c.lema_pt || ''; card.appendChild(lpt);
-    const car = document.createElement('div'); car.className = 'casa-carac';
-    (c.caracteristicas || []).forEach(x => { const chip = document.createElement('span'); chip.className = 'carac'; const dot = document.createElement('i'); chip.append(dot, document.createTextNode(x)); car.appendChild(chip); });
-    card.appendChild(car);
+    card.appendChild(caracChips(c.caracteristicas, 'casa-carac'));
     wrap.appendChild(card);
   });
   main.appendChild(wrap);
-
   const nota = document.createElement('p'); nota.style.cssText = 'font-size:12px;color:var(--text-muted);font-style:italic;text-align:center;margin-top:18px;line-height:1.5;'; nota.textContent = 'Nenhuma casa é “melhor” que a outra — cada uma tem uma força própria. É esse equilíbrio que faz tudo funcionar.';
   main.appendChild(nota);
 }
+
 init();
 </script>
 </body>
