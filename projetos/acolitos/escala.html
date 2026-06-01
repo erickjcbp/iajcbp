@@ -140,7 +140,7 @@
 <div class="modal-overlay" id="modal-nova-celeb">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Nova Celebração</div>
+    <div class="modal-title" id="nc-title">Nova Celebração</div>
     <div class="form-group">
       <label class="form-label">Data *</label>
       <input class="form-input" id="nc-data" type="date">
@@ -164,11 +164,16 @@
       <label class="form-label">Tipo</label>
       <select class="form-select" id="nc-tipo">
         <option value="missa_comum">Missa Comum</option>
+        <option value="solene">Missa Solene</option>
         <option value="solenidade">Solenidade</option>
+        <option value="pontifical">Pontifical (com Bispo)</option>
+        <option value="festa">Festa Litúrgica</option>
+        <option value="vigilia">Vigília</option>
+        <option value="crisma">Crisma</option>
         <option value="casamento">Casamento</option>
         <option value="batizado">Batizado</option>
-        <option value="crisma">Crisma</option>
         <option value="ordenacao">Ordenação</option>
+        <option value="funeral">Exéquias</option>
       </select>
     </div>
     <div class="form-group">
@@ -231,8 +236,9 @@ const FUNCAO_LABEL = {
   cred_altar:'Cerim. Altar', cred_credencia:'Cerim. Cred.', mitra:'Mitra', baculo:'Báculo'
 };
 const TIPO_LABEL = {
-  missa_comum:'Missa', solenidade:'Solenidade', casamento:'Casamento',
-  batizado:'Batizado', crisma:'Crisma', ordenacao:'Ordenação'
+  missa_comum:'Missa', solene:'Missa Solene', solenidade:'Solenidade', pontifical:'Pontifical (Bispo)',
+  festa:'Festa Litúrgica', vigilia:'Vigília', crisma:'Crisma', casamento:'Casamento',
+  batizado:'Batizado', ordenacao:'Ordenação', funeral:'Exéquias'
 };
 const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const FUNCOES_ORDER = ['apoio','cruz','vela','sineta','sinao','altar','turibulo','naveta','missal','cred_altar','cred_credencia','mitra','baculo'];
@@ -241,7 +247,7 @@ const NIVEL_LABEL = { nao_treinado:'Não treinado', em_formacao:'Em formação',
 
 let ctx = null, celebracoes = [], escalasMap = {}, membros = [], habMap = {}, dispMap = {};
 let freqMap = {}, restricaoMap = {}, ausMap = {};
-let pendingCelebId = null, pendingEdicao = [], abaAtual = 'cards';
+let pendingCelebId = null, pendingEdicao = [], abaAtual = 'cards', editCelebId = null;
 
 function openInfo(title, lines) {
   document.getElementById('info-title').textContent = title;
@@ -368,7 +374,9 @@ function renderCards() {
       const btnM=document.createElement('button');btnM.className='btn-sm '+(cob.preenchido>0?'gold':'wine');
       btnM.textContent=cob.preenchido>0?'Editar Escala':'Montar Escala';
       btnM.onclick=()=>abrirMontagem(c);acts.appendChild(btnM);
-      const btnDel=document.createElement('button');btnDel.className='mini-del';btnDel.textContent='🗑';btnDel.title='Excluir celebração';btnDel.style.marginLeft='auto';
+      const btnEd=document.createElement('button');btnEd.className='mini-del';btnEd.textContent='✏️';btnEd.title='Editar celebração';btnEd.style.marginLeft='auto';
+      btnEd.onclick=()=>abrirEditarCeleb(c);acts.appendChild(btnEd);
+      const btnDel=document.createElement('button');btnDel.className='mini-del';btnDel.textContent='🗑';btnDel.title='Excluir celebração';
       btnDel.onclick=()=>excluirCelebracao(c);acts.appendChild(btnDel);
       card.appendChild(acts);grid.appendChild(card);
     });
@@ -566,7 +574,26 @@ function renderPlanilha() {
   table.appendChild(tbody);wrap.appendChild(table);el.appendChild(wrap);
 }
 
-function abrirNovaCeleb(){document.getElementById('nc-data').value=new Date().toISOString().slice(0,10);document.getElementById('modal-nova-celeb').classList.add('open');}
+function abrirNovaCeleb(){
+  editCelebId=null;
+  document.getElementById('nc-title').textContent='Nova Celebração';
+  document.getElementById('nc-data').value=new Date().toISOString().slice(0,10);
+  document.getElementById('nc-horario').value='17h';
+  document.getElementById('nc-com').value='matriz';
+  document.getElementById('nc-tipo').value='missa_comum';
+  document.getElementById('nc-obs').value='';
+  document.getElementById('modal-nova-celeb').classList.add('open');
+}
+function abrirEditarCeleb(c){
+  editCelebId=c.id;
+  document.getElementById('nc-title').textContent='Editar Celebração';
+  document.getElementById('nc-data').value=c.data||'';
+  document.getElementById('nc-horario').value=c.horario||'17h';
+  document.getElementById('nc-com').value=c.comunidade||'matriz';
+  document.getElementById('nc-tipo').value=c.tipo||'missa_comum';
+  document.getElementById('nc-obs').value=c.observacoes||'';
+  document.getElementById('modal-nova-celeb').classList.add('open');
+}
 async function salvarNovaCeleb(){
   const data=document.getElementById('nc-data').value;
   const horario=document.getElementById('nc-horario').value;
@@ -574,8 +601,12 @@ async function salvarNovaCeleb(){
   const tipo=document.getElementById('nc-tipo').value;
   const obs=document.getElementById('nc-obs').value.trim();
   if(!data||!horario){alert('Data e horário obrigatórios.');return;}
-  const{error}=await sb.from('acolitos_celebracoes').insert({data,horario,comunidade,tipo,observacoes:obs||null,created_by:ctx.user.id});
+  const payload={data,horario,comunidade,tipo,observacoes:obs||null};
+  const{error}= editCelebId
+    ? await sb.from('acolitos_celebracoes').update(payload).eq('id',editCelebId)
+    : await sb.from('acolitos_celebracoes').insert({...payload,created_by:ctx.user.id});
   if(error){alert('Erro: '+error.message);return;}
+  editCelebId=null;
   fecharModal('modal-nova-celeb');await loadDados();
 }
 function fecharModal(id){document.getElementById(id)?.classList.remove('open');}

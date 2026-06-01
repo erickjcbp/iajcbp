@@ -79,6 +79,7 @@
       <button class="view-sw" id="vt-lista" onclick="setVista('lista')" title="Lista">☰</button>
     </div>
     <button class="btn-sm gold" onclick="abrirNovoMembro()">+ Novo</button>
+    <button class="btn-sm gray" id="btn-arq" onclick="toggleArquivados()" title="Ver arquivados">🗄</button>
   </div>
 
   <div class="filtros-wrap" id="filtros">
@@ -158,13 +159,14 @@ const JORNADA = [
 let ctx = null;
 let todos = [];
 let filtroAtivo = '';
+let verArquivados = false;
 let membroAtual = null;
 let habAtual = {};
 let roleMap = {};
 let fichaEdits = {}; // alterações da ficha (Pessoal/Família/Observações) — persiste entre abas
 let fichaDirty = false; // há alterações não salvas?
 let fichaDisp = null;   // estado da disponibilidade (Set 'dia_horario') enquanto a ficha está aberta
-let listasCustom = { habilidade: [], competencia: [] }; // habilidades/competências criadas pela equipe (p/ botão remover)
+let listasCustom = { habilidade: [], competencia: [], funcao: [] }; // listas criadas pela equipe (p/ botão remover)
 let vista = localStorage.getItem('membros-vista') || 'cards'; // 'cards' | 'lista'
 
 async function init() {
@@ -179,7 +181,7 @@ async function init() {
 
 async function loadMembros() {
   const { data: membros } = await sbAdmin
-    .from('acolitos_membros').select('*').eq('status','ativo').order('nome');
+    .from('acolitos_membros').select('*').eq('status', verArquivados ? 'inativo' : 'ativo').order('nome');
   const { data: modulo } = await sbAdmin
     .from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
   if (modulo) {
@@ -189,9 +191,9 @@ async function loadMembros() {
     (pm || []).forEach(r => { roleMap[r.user_id] = r.role; });
   }
   todos = (membros || []).map(m => ({ ...m, role: (m.user_id && roleMap[m.user_id]) || 'aspirante' }));
-  const { data: listas } = await sbAdmin.from('acolitos_listas').select('*').in('tipo', ['habilidade', 'competencia']);
-  listasCustom = { habilidade: [], competencia: [] };
-  (listas || []).forEach(r => listasCustom[r.tipo].push({ valor: r.valor, label: r.label }));
+  const { data: listas } = await sbAdmin.from('acolitos_listas').select('*').in('tipo', ['habilidade', 'competencia', 'funcao']);
+  listasCustom = { habilidade: [], competencia: [], funcao: [] };
+  (listas || []).forEach(r => { if (listasCustom[r.tipo]) listasCustom[r.tipo].push({ valor: r.valor, label: r.label }); });
   renderGrid();
 }
 
@@ -211,11 +213,22 @@ function setFiltro(btn, role) {
   renderGrid();
 }
 
+function toggleArquivados() {
+  verArquivados = !verArquivados;
+  const b = document.getElementById('btn-arq');
+  if (b) { b.classList.toggle('gold', verArquivados); b.classList.toggle('gray', !verArquivados); b.title = verArquivados ? 'Ver ativos' : 'Ver arquivados'; }
+  loadMembros();
+}
+
 function renderGrid() {
   const busca = document.getElementById('busca').value.toLowerCase();
   const grid = document.getElementById('grid');
   grid.className = vista === 'lista' ? 'list-view' : 'cards-grid';
   grid.textContent = '';
+  if (verArquivados) {
+    const banner = document.createElement('div'); banner.style.cssText = 'grid-column:1/-1;font-size:12px;font-weight:700;color:var(--gold);background:rgba(232,185,74,.1);border:1px solid var(--gold-dim);border-radius:8px;padding:8px 12px;margin-bottom:4px;';
+    banner.textContent = '🗄 Vendo membros arquivados — abra um e use "Restaurar" para reativar.'; grid.appendChild(banner);
+  }
   const lista = todos.filter(m =>
     m.nome.toLowerCase().includes(busca) &&
     (!filtroAtivo || nivelInfo(m.nivel || nivelFromRole(m.role)).base === filtroAtivo)
@@ -307,6 +320,18 @@ function abrirNovoMembro() {
   };
   acts.append(cancel, conf); modal.appendChild(acts);
   ov.appendChild(modal); document.body.appendChild(ov);
+}
+
+async function arquivarMembro(m) {
+  if (!confirm('Arquivar ' + (m.apelido || m.nome) + '?\nSai das listas e da escala, mas o cadastro e o histórico são mantidos. Você pode restaurar depois.')) return;
+  const { error } = await sbAdmin.from('acolitos_membros').update({ status: 'inativo' }).eq('id', m.id);
+  if (error) { alert('Não foi possível arquivar.'); return; }
+  fecharFicha(); await loadMembros();
+}
+async function restaurarMembro(m) {
+  const { error } = await sbAdmin.from('acolitos_membros').update({ status: 'ativo' }).eq('id', m.id);
+  if (error) { alert('Não foi possível restaurar.'); return; }
+  fecharFicha(); await loadMembros();
 }
 
 async function abrirFicha(membro) {
@@ -473,13 +498,39 @@ function appendEquipeFields(el, m) {
   el.appendChild(reveal);
 }
 
+// Adiciona/remove função personalizada (tabela acolitos_listas, tipo 'funcao')
+async function addCustomFuncao() {
+  const nome = (prompt('Nova função (ex: Naveta 2, Boldriê, Báculo...):') || '').trim();
+  if (!nome) return;
+  const valor = 'f_' + nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24) + '_' + Math.random().toString(36).slice(2, 6);
+  const { error } = await sbAdmin.from('acolitos_listas').insert({ tipo: 'funcao', valor, label: nome });
+  if (error) { alert('Não foi possível adicionar.'); return; }
+  listasCustom.funcao.push({ valor, label: nome });
+  renderTab('Evolução');
+}
+async function removeCustomFuncao(valor) {
+  if (!confirm('Remover esta função personalizada?\n(As proficiências dela serão apagadas.)')) return;
+  await sbAdmin.from('acolitos_listas').delete().eq('tipo', 'funcao').eq('valor', valor);
+  await sbAdmin.from('acolitos_habilitacoes').delete().eq('funcao', valor);
+  listasCustom.funcao = listasCustom.funcao.filter(x => x.valor !== valor);
+  if (valor in habAtual) delete habAtual[valor];
+  renderTab('Evolução');
+}
+
 // Grade de habilitações (proficiência por função) — usada na aba Evolução
 async function appendHabilitacoes(el, m) {
   const { data: habs } = await sbAdmin.from('acolitos_habilitacoes').select('*').eq('membro_id', m.id);
   habAtual = {};
   (habs || []).forEach(h => { habAtual[h.funcao] = h.proficiencia; });
+
+  const hdr = document.createElement('div'); hdr.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:6px;';
+  const add = document.createElement('button'); add.type = 'button'; add.className = 'mini-add'; add.textContent = '+ função';
+  add.onclick = () => addCustomFuncao();
+  hdr.appendChild(add); el.appendChild(hdr);
+
+  const funcoesAll = FUNCOES.concat(listasCustom.funcao.map(f => ({ id: f.valor, label: f.label, cat: 'Personalizadas', custom: true })));
   const grid = document.createElement('div'); grid.className = 'hab-grid';
-  FUNCOES.forEach(fn => {
+  funcoesAll.forEach(fn => {
     const nivel = habAtual[fn.id] || 'nao_treinado';
     const card = document.createElement('div'); card.className = 'hab-card ' + nivel; card.id = 'hc-' + fn.id;
     const nome = document.createElement('div'); nome.className = 'hab-nome'; nome.textContent = fn.label;
@@ -488,7 +539,14 @@ async function appendHabilitacoes(el, m) {
     const sel = document.createElement('select'); sel.className = 'hab-sel';
     PROF_NIVEIS.forEach(n => { const opt = document.createElement('option'); opt.value = n; opt.textContent = NIVEL_LABEL[n]; if (n === nivel) opt.selected = true; sel.appendChild(opt); });
     sel.onchange = () => { const v = sel.value; habAtual[fn.id] = v; card.className = 'hab-card ' + v; document.getElementById('hn-' + fn.id).textContent = NIVEL_LABEL[v]; setDirty(); };
-    card.append(nome, nivelEl, sel); grid.appendChild(card);
+    card.append(nome, nivelEl, sel);
+    if (fn.custom) {
+      const del = document.createElement('button'); del.type = 'button'; del.className = 'mini-del'; del.textContent = '−'; del.title = 'Remover função';
+      del.style.cssText = 'position:absolute;top:4px;right:4px;width:22px;height:22px;font-size:13px;';
+      del.onclick = (e) => { e.stopPropagation(); removeCustomFuncao(fn.id); };
+      card.style.position = 'relative'; card.appendChild(del);
+    }
+    grid.appendChild(card);
   });
   el.appendChild(grid);
 }
@@ -522,6 +580,17 @@ async function renderTab(tab) {
     el.appendChild(editBool('Túnica própria', 'tem_tunica', m.tem_tunica));
     el.appendChild(editBool('No grupo do WhatsApp', 'no_grupo_whatsapp', m.no_grupo_whatsapp));
     el.appendChild(editArea('Necessidades especiais (TEA, TDAH, limitações...)', 'necessidades_especiais', m.necessidades_especiais));
+
+    // Arquivar / restaurar
+    const dz = document.createElement('div'); dz.style.cssText = 'margin-top:22px;padding-top:14px;border-top:1px solid var(--border);';
+    if (m.status === 'inativo') {
+      const b = document.createElement('button'); b.className = 'btn-sm green'; b.textContent = '♻️ Restaurar membro'; b.onclick = () => restaurarMembro(m); dz.appendChild(b);
+      const note = document.createElement('div'); note.style.cssText = 'font-size:11px;color:var(--text-muted);margin-top:6px;'; note.textContent = 'Membro arquivado — não aparece nas listas ativas nem na escala.'; dz.appendChild(note);
+    } else {
+      const b = document.createElement('button'); b.className = 'btn-sm wine'; b.textContent = '🗄 Arquivar membro'; b.onclick = () => arquivarMembro(m); dz.appendChild(b);
+      const note = document.createElement('div'); note.style.cssText = 'font-size:11px;color:var(--text-muted);margin-top:6px;'; note.textContent = 'Tira o membro das listas e da escala sem apagar cadastro/histórico. Reversível.'; dz.appendChild(note);
+    }
+    el.appendChild(dz);
   }
 
 

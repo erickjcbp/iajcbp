@@ -117,7 +117,7 @@ function render() {
   main.appendChild(grid);
 
   const btnAdd = document.createElement('button'); btnAdd.className = 'btn gold'; btnAdd.style.marginBottom = '18px';
-  btnAdd.textContent = '+ Novo lançamento'; btnAdd.onclick = abrirLancamento; main.appendChild(btnAdd);
+  btnAdd.textContent = '+ Novo lançamento'; btnAdd.onclick = () => abrirLancamento(); main.appendChild(btnAdd);
 
   const h = document.createElement('div'); h.className = 'section-head'; h.textContent = 'Lançamentos'; main.appendChild(h);
   if (!lancamentos.length) { const em = document.createElement('span'); em.className = 'empty'; em.textContent = 'Nenhum lançamento ainda.'; main.appendChild(em); return; }
@@ -132,18 +132,20 @@ function render() {
     info.append(desc, meta);
     const val = document.createElement('div'); val.className = 'lanc-val ' + l.tipo; val.textContent = (l.tipo === 'entrada' ? '+ ' : '− ') + brl(l.valor);
     const del = document.createElement('button'); del.className = 'lanc-del'; del.textContent = '🗑'; del.title = 'Excluir';
-    del.onclick = async () => { if (!confirm('Excluir este lançamento?')) return; await sb.from('acolitos_financeiro').delete().eq('id', l.id); load(); };
+    del.onclick = async (e) => { e.stopPropagation(); if (!confirm('Excluir este lançamento?')) return; await sb.from('acolitos_financeiro').delete().eq('id', l.id); load(); };
+    row.style.cursor = 'pointer'; row.title = 'Editar lançamento';
+    row.onclick = () => abrirLancamento(l);
     row.append(ico, info, val, del); main.appendChild(row);
   });
 }
 
-function abrirLancamento() {
-  let tipo = 'entrada';
+function abrirLancamento(editar) {
+  let tipo = (editar && editar.tipo) || 'entrada';
   const ov = document.createElement('div'); ov.className = 'modal-overlay open';
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   const modal = document.createElement('div'); modal.className = 'modal';
   const handle = document.createElement('div'); handle.className = 'modal-handle';
-  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Novo Lançamento';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = editar ? 'Editar Lançamento' : 'Novo Lançamento';
   modal.append(handle, tt);
 
   const tog = document.createElement('div'); tog.className = 'tipo-toggle';
@@ -203,6 +205,14 @@ function abrirLancamento() {
   const inpData = document.createElement('input'); inpData.className = 'form-input'; inpData.type = 'date'; inpData.value = new Date().toISOString().slice(0, 10);
   g4.append(l4, inpData); modal.appendChild(g4);
 
+  // Preenche para edição
+  if (editar) {
+    popCat(); if (catsFor(tipo).some(c => c[0] === editar.categoria)) catSel.value = editar.categoria; syncDelCat();
+    inpVal.value = editar.valor;
+    inpDesc.value = editar.descricao || '';
+    if (editar.data) inpData.value = editar.data;
+  }
+
   const msg = document.createElement('div'); msg.className = 'msg'; modal.appendChild(msg);
   const acts = document.createElement('div'); acts.className = 'modal-actions';
   const cancel = document.createElement('button'); cancel.className = 'btn-sm gray'; cancel.textContent = 'Cancelar'; cancel.onclick = () => ov.remove();
@@ -211,10 +221,10 @@ function abrirLancamento() {
     const valor = parseFloat(inpVal.value);
     if (!(valor > 0)) { msg.className = 'msg error'; msg.textContent = 'Informe um valor válido.'; return; }
     conf.disabled = true; conf.textContent = 'Salvando...';
-    const { error } = await sb.from('acolitos_financeiro').insert({
-      tipo, categoria: catSel.value, valor, descricao: inpDesc.value.trim() || null,
-      data: inpData.value || new Date().toISOString().slice(0, 10), created_by: ctx.user.id
-    });
+    const payload = { tipo, categoria: catSel.value, valor, descricao: inpDesc.value.trim() || null, data: inpData.value || new Date().toISOString().slice(0, 10) };
+    const { error } = editar
+      ? await sb.from('acolitos_financeiro').update(payload).eq('id', editar.id)
+      : await sb.from('acolitos_financeiro').insert({ ...payload, created_by: ctx.user.id });
     if (error) { msg.className = 'msg error'; msg.textContent = 'Erro ao salvar. Tente novamente.'; conf.disabled = false; conf.textContent = 'Salvar'; return; }
     ov.remove(); load();
   };

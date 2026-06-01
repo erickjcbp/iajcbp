@@ -92,7 +92,8 @@
     </div>
 
     <div class="modal-actions" style="flex-wrap:wrap;gap:8px;">
-      <button class="btn-sm wine" id="btn-excluir" onclick="excluirEntry()" style="margin-right:auto;">🗑 Excluir</button>
+      <button class="btn-sm red" id="btn-recusar" onclick="recusarCadastro()" style="display:none;">⛔ Recusar</button>
+      <button class="btn-sm wine" id="btn-excluir" onclick="excluirEntry()" style="margin-right:auto;">🗑 Tirar do funil</button>
       <button class="btn-sm gray" id="btn-voltar" onclick="voltarEtapa()" style="display:none;">◀ Voltar etapa</button>
       <button class="btn-sm gray" onclick="fecharModal()">Cancelar</button>
       <button class="btn-sm gold" id="btn-confirmar" onclick="confirmarAvancar()">Avançar ▶</button>
@@ -281,7 +282,22 @@ function abrirModal(entry) {
   document.getElementById('bloco-role').style.display =
     (prox === 'integrado' && podeAtribuirRole) ? '' : 'none';
   document.getElementById('btn-voltar').style.display = idx > 0 ? '' : 'none';
+  document.getElementById('btn-recusar').style.display = entry.etapa === 'aprovacao_cadastro' ? '' : 'none';
   document.getElementById('modal-avancar').classList.add('open');
+}
+
+async function recusarCadastro() {
+  if (!pendingEntry) return;
+  const nome = pendingEntry.acolitos_membros?.nome || 'este cadastro';
+  if (!confirm('RECUSAR e APAGAR o cadastro de ' + nome + '?\n\nRemove o membro, o funil e todo o histórico — não dá pra desfazer.\n(Para só tirar do funil sem apagar, use "Tirar do funil".)')) return;
+  const { data: mrow } = await sbAdmin.from('acolitos_membros').select('user_id').eq('id', pendingEntry.membro_id).maybeSingle();
+  if (mrow && mrow.user_id) {
+    const { data: modulo } = await sbAdmin.from('pastoral_modules').select('id').eq('slug', 'acolitos').maybeSingle();
+    if (modulo) await sbAdmin.from('pastoral_members').delete().eq('user_id', mrow.user_id).eq('module_id', modulo.id);
+  }
+  const { error } = await sbAdmin.from('acolitos_membros').delete().eq('id', pendingEntry.membro_id); // cascata remove crm/histórico/etc.
+  if (error) { alert('Não foi possível apagar (o membro pode estar vinculado em escalas). Use "Tirar do funil" ou arquive em Membros.'); return; }
+  fecharModal(); pendingEntry = null; await loadCrm();
 }
 
 async function voltarEtapa() {
