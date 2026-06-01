@@ -229,11 +229,25 @@ async function enviarAusencia() {
     if (error) { msg.className='msg error'; msg.textContent='Erro ao salvar a data avulsa.'; btn.disabled=false; btn.textContent='Confirmar Ausência'; return; }
   }
 
+  // Substituição automática: se já estava escalado nessas missas, troca por alguém disponível
+  let celebsAfetadas = ids.slice();
+  if (datas.length) {
+    const { data: cc } = await sb.from('acolitos_celebracoes').select('id').in('data', datas);
+    celebsAfetadas = celebsAfetadas.concat((cc||[]).map(c => c.id));
+  }
+  celebsAfetadas = [...new Set(celebsAfetadas)];
+  let nSub = 0;
+  if (celebsAfetadas.length) {
+    const { data: r } = await sb.rpc('acolitos_substituir_ausente', { p_membros: membrosAll, p_celebracoes: celebsAfetadas });
+    nSub = r || 0;
+  }
+
   const total = ids.length + datas.length;
   const extra = irmaosJuntos.length ? ' (e ' + irmaosJuntos.map(i => i.apelido || (i.nome||'').split(' ')[0]).join(', ') + ', que serve' + (irmaosJuntos.length>1?'m':'') + ' junto)' : '';
-  msg.className='msg success'; msg.textContent = total + (total>1 ? ' ausências registradas!' : ' ausência registrada!') + extra;
+  const subTxt = nSub ? ' Já substituí ' + nSub + ' posição(ões) na escala.' : '';
+  msg.className='msg success'; msg.textContent = total + (total>1 ? ' ausências registradas!' : ' ausência registrada!') + extra + subTxt;
   btn.disabled=true; btn.textContent='Registrado ✓';
-  setTimeout(()=>renderViewMembro(), 1300);
+  setTimeout(()=>renderViewMembro(), 1600);
 }
 
 // ── VIEW EQUIPE ───────────────────────────────────────────────
@@ -379,8 +393,13 @@ async function abrirRegistroAusencia() {
     });
     const { error } = await sb.from('acolitos_ausencias').upsert(rows, { onConflict: 'membro_id,celebracao_id' });
     if (error) { msg.className = 'msg error'; msg.textContent = 'Erro ao registrar. Tente novamente.'; conf.disabled = false; conf.textContent = 'Registrar'; return; }
-    if (irmaos.length) { msg.className = 'msg success'; msg.textContent = 'Registrado (incluindo ' + irmaos.map(i => i.apelido || (i.nome||'').split(' ')[0]).join(', ') + ', que serve junto).'; setTimeout(() => { ov.remove(); renderViewEquipe(); }, 1200); return; }
-    ov.remove(); renderViewEquipe();
+    // substituição automática na escala já montada
+    const membrosAll = [selM.value, ...irmaos.map(i => i.id)];
+    const { data: nSub } = await sb.rpc('acolitos_substituir_ausente', { p_membros: membrosAll, p_celebracoes: ids });
+    const irmaoTxt = irmaos.length ? ' (incluindo ' + irmaos.map(i => i.apelido || (i.nome||'').split(' ')[0]).join(', ') + ', que serve junto)' : '';
+    const subTxt = nSub ? ' Substituí ' + nSub + ' posição(ões) na escala.' : '';
+    msg.className = 'msg success'; msg.textContent = 'Registrado' + irmaoTxt + '.' + subTxt;
+    setTimeout(() => { ov.remove(); renderViewEquipe(); }, 1500);
   };
   acts.append(cancel, conf); modal.appendChild(acts);
 }

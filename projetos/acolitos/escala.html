@@ -114,6 +114,7 @@
     </select>
     <button class="btn-sm gold" style="flex-shrink:0;" onclick="abrirNovaCeleb()">+ Celebração</button>
     <button class="btn-sm gray" style="flex-shrink:0;" onclick="abrirModelos()" title="Modelos de celebração">⚙️ Modelos</button>
+    <button class="btn-sm gray" style="flex-shrink:0;" onclick="abrirAusencias()" title="Últimas ausências">🚫 Ausências</button>
   </div>
   <div class="aba-toggle">
     <button class="aba-btn active" id="btn-cards"    onclick="setAba('cards')">Operacional</button>
@@ -217,8 +218,21 @@
   </div>
 </div>
 
+<!-- Modal últimas ausências -->
+<div class="modal-overlay" id="modal-ausencias">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Últimas ausências</div>
+    <div id="aus-body"><span class="loading">Carregando...</span></div>
+    <div class="modal-actions">
+      <button class="btn-sm gray" onclick="fecharModal('modal-ausencias')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <script src="shared.js"></script>
 <script>
+const MOTIVO_LABEL = { doenca:'🤒 Doença', viagem:'✈️ Viagem', familia:'👨‍👩‍👧 Família', outro:'📌 Outro' };
 // Metadados de cada função (rótulo, categoria, ordem) — os modelos por tipo+comunidade vêm da tabela acolitos_modelos
 const FUNCAO_META = {
   cred_altar:    {label:'Cerimonial de Altar',     cat:'Cerimoniais', ordem:10},
@@ -701,7 +715,29 @@ async function salvarNovaCeleb(){
   editCelebId=null;
   fecharModal('modal-nova-celeb');await loadDados();
 }
-function fecharModal(id){document.getElementById(id)?.classList.remove('open');}
+function dataCurta(d){ const x=new Date(d+'T00:00:00'); return DIAS[x.getDay()]+' '+x.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}); }
+async function abrirAusencias(){
+  document.getElementById('modal-ausencias').classList.add('open');
+  const body=document.getElementById('aus-body'); body.textContent=''; const ld=document.createElement('span'); ld.className='loading'; ld.textContent='Carregando...'; body.appendChild(ld);
+  const { data }=await sb.from('acolitos_ausencias')
+    .select('*, acolitos_membros(nome,apelido), acolitos_celebracoes(data,horario,comunidade)')
+    .order('created_at',{ascending:false}).limit(80);
+  body.textContent='';
+  if(!data||!data.length){ const em=document.createElement('span'); em.className='empty'; em.textContent='Nenhuma ausência registrada.'; body.appendChild(em); return; }
+  data.forEach(a=>{
+    const m=a.acolitos_membros, c=a.acolitos_celebracoes;
+    const row=document.createElement('div'); row.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);';
+    const left=document.createElement('div'); left.style.cssText='min-width:0;flex:1;';
+    const nm=document.createElement('div'); nm.style.cssText='font-weight:700;font-size:14px;color:var(--text);'; nm.textContent=m?(m.apelido||m.nome):'—';
+    const wh=document.createElement('div'); wh.style.cssText='font-size:12px;color:var(--gold);';
+    wh.textContent = c ? (dataCurta(c.data)+' '+c.horario+' · '+(c.comunidade==='matriz'?'Matriz':'Sto. Antônio')) : (a.data ? dataCurta(a.data)+' · dia todo' : '—');
+    const mo=document.createElement('div'); mo.style.cssText='font-size:11px;color:var(--text-muted);'; mo.textContent=(MOTIVO_LABEL[a.motivo]||a.motivo)+(a.observacao?' · '+a.observacao:'');
+    left.append(nm,wh,mo);
+    const del=document.createElement('button'); del.className='mini-del'; del.textContent='🗑'; del.title='Remover ausência';
+    del.onclick=async()=>{ if(!confirm('Remover esta ausência?'))return; await sb.from('acolitos_ausencias').delete().eq('id',a.id); abrirAusencias(); loadDados(); };
+    row.append(left,del); body.appendChild(row);
+  });
+}
 init();
 </script>
 </body>
