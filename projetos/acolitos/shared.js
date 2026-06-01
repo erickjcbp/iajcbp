@@ -574,10 +574,11 @@ function getCasaBrasao(slug, size) {
   const cor = CASA_COR[slug] || '#8a6a24';
   const uid = 'cb' + Math.random().toString(36).slice(2, 8);
   const simbolos = {
-    sanctaris: '<g fill="none" stroke="#ffe9b0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">'
-      + '<path d="M20 22 L42 48"/><path d="M44 22 L22 48"/>'
-      + '<path d="M17 21 l5 1 -1 5"/><path d="M47 21 l-5 1 1 5"/>'
-      + '<path d="M22 50 l-4 2"/><path d="M42 50 l4 2"/></g>',
+    sanctaris: '<path d="M32 19 C38 19 42 22 43 26 C47 25 50 27 49 31 C52 33 52 37 49 39 C51 43 48 47 44 46 C43 50 38 53 32 53 C26 53 21 50 20 46 C16 47 13 43 15 39 C12 37 12 33 15 31 C14 27 17 25 21 26 C22 22 26 19 32 19 Z" fill="#ffe9b0"/>'
+      + '<circle cx="32" cy="36" r="10.5" fill="' + cor + '"/>'
+      + '<circle cx="28" cy="34.5" r="1.7" fill="#ffe9b0"/><circle cx="36" cy="34.5" r="1.7" fill="#ffe9b0"/>'
+      + '<path d="M32 37.5 l-2.4 3 h4.8 z" fill="#ffe9b0"/>'
+      + '<path d="M32 40.5 q-3 3.2 -6 1 M32 40.5 q3 3.2 6 1" stroke="#ffe9b0" stroke-width="1.5" fill="none" stroke-linecap="round"/>',
     seraphim: '<path d="M32 18 C26 28 21 32 21 40 a11 11 0 0 0 22 0 C43 32 38 28 32 18 Z" fill="#ffe9b0"/>'
       + '<path d="M32 29 C29 34 26 36 26 41 a6 6 0 0 0 12 0 C38 36 35 34 32 29 Z" fill="' + cor + '"/>',
     veritatis: '<g fill="none" stroke="#ffe9b0" stroke-width="2.4" stroke-linejoin="round">'
