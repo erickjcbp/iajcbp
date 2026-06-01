@@ -829,13 +829,17 @@ async function salvarNovaCeleb(){
   const{error}= editando
     ? await sb.from('acolitos_celebracoes').update(payload).eq('id',editCelebId)
     : await sb.from('acolitos_celebracoes').insert({...payload,created_by:ctx.user.id});
-  salvandoCeleb=false;
-  if(sv){sv.disabled=false;sv.textContent='Salvar';}
-  if(error){toast('Erro: '+error.message,'error');return;}
+  if(error){ salvandoCeleb=false; if(sv){sv.disabled=false;sv.textContent='Salvar';} toast('Erro: '+error.message,'error'); return; }
+  // sucesso: botão fica VERDE com "Salvo com sucesso!" antes de fechar
   editCelebId=null;
-  fecharModal('modal-nova-celeb');
-  await loadDados();
+  if(sv){ sv.className='btn-sm green'; sv.textContent='✓ Salvo com sucesso!'; }
   toast(editando?'✓ Celebração atualizada!':'✓ Celebração criada!');
+  setTimeout(async ()=>{
+    fecharModal('modal-nova-celeb');
+    if(sv){ sv.className='btn-sm gold'; sv.textContent='Salvar'; sv.disabled=false; }
+    salvandoCeleb=false;
+    await loadDados();
+  }, 1100);
 }
 function dataCurta(d){ const x=new Date(d+'T00:00:00'); return DIAS[x.getDay()]+' '+x.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}); }
 async function abrirAusencias(){
