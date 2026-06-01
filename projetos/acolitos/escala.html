@@ -268,7 +268,8 @@ function modeloFor(tipo, comunidade) {
 let mdQty = {};
 function abrirModelos() {
   const selT = document.getElementById('md-tipo'); selT.textContent = '';
-  const tipos = Array.from(new Set(['missa_comum', 'solene'].concat(Object.keys(modelos).map(k => k.split('|')[0]))));
+  // todos os tipos de missa do seletor de celebração + quaisquer já existentes nos modelos
+  const tipos = Array.from(new Set(Object.keys(TIPO_LABEL).concat(Object.keys(modelos).map(k => k.split('|')[0]))));
   tipos.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = TIPO_LABEL[t] || t; selT.appendChild(o); });
   document.getElementById('md-com').value = 'matriz';
   document.getElementById('md-msg').textContent = ''; document.getElementById('md-msg').className = 'msg';
