@@ -698,12 +698,18 @@ async function salvarEscala() {
   pendingEdicao.forEach(({sel,funcao})=>{ if(sel.value) novas.push({celebracao_id:pendingCelebId,membro_id:sel.value,funcao,created_by:ctx.user.id}); });
   const del=await sb.from('acolitos_escalas').delete().eq('celebracao_id',pendingCelebId);
   if(del.error){ salvandoEscala=false; btn.disabled=false; btn.textContent='Salvar Escala'; toast('Erro ao salvar: '+del.error.message,'error'); return; }
+  let gravadas=0;
   if(novas.length){
-    const{error}=await sb.from('acolitos_escalas').insert(novas);
-    if(error){ salvandoEscala=false; btn.disabled=false; btn.textContent='Salvar Escala'; toast('Erro ao salvar: '+error.message,'error'); return; }
+    const ins=await sb.from('acolitos_escalas').insert(novas).select();
+    if(ins.error){ salvandoEscala=false; btn.disabled=false; btn.textContent='Salvar Escala'; toast('Erro ao salvar: '+ins.error.message,'error'); return; }
+    gravadas = ins.data ? ins.data.length : 0;
+  }
+  if(novas.length && gravadas===0){
+    salvandoEscala=false; btn.disabled=false; btn.textContent='Salvar Escala';
+    toast('⚠ Nada foi gravado (0 de '+novas.length+') — sem permissão de escrita na escala.','error'); return;
   }
   btn.className='btn-sm green'; btn.textContent='✓ Escala salva!';
-  toast('✓ Escala salva!'+(novas.length?' ('+novas.length+' posições)':' (vazia)'));
+  toast('✓ Escala salva! ('+gravadas+' de '+novas.length+' posições)');
   setTimeout(async ()=>{
     fecharModal('modal-montagem');
     btn.className='btn-sm gold'; btn.textContent='Salvar Escala'; btn.disabled=false;
