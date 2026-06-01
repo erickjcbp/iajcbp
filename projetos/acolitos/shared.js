@@ -9,6 +9,22 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const sbAdmin = sb; // alias — todas as operações elevadas são via RLS com o JWT do usuário
 
+// ── PWA (instalável na tela inicial) ──────────────────────────
+(function setupPWA() {
+  try {
+    const head = document.head; if (!head) return;
+    const addMeta = (name, content) => { if (document.querySelector('meta[name="' + name + '"]')) return; const m = document.createElement('meta'); m.name = name; m.content = content; head.appendChild(m); };
+    if (!document.querySelector('link[rel="manifest"]')) { const l = document.createElement('link'); l.rel = 'manifest'; l.href = 'manifest.json'; head.appendChild(l); }
+    addMeta('theme-color', '#150a0d');
+    addMeta('mobile-web-app-capable', 'yes');
+    addMeta('apple-mobile-web-app-capable', 'yes');
+    addMeta('apple-mobile-web-app-status-bar-style', 'black-translucent');
+    addMeta('apple-mobile-web-app-title', 'Acólitos JCBP');
+    if (!document.querySelector('link[rel="apple-touch-icon"]')) { const a = document.createElement('link'); a.rel = 'apple-touch-icon'; a.href = 'icon-192.png'; head.appendChild(a); }
+    if ('serviceWorker' in navigator) window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+  } catch (e) { /* PWA é progressivo — falha não quebra o app */ }
+})();
+
 // ── UTILS ─────────────────────────────────────────────────────
 function escHtml(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
