@@ -56,6 +56,9 @@ const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
 let ctx = null;
 let motivoSelecionado = 'doenca';
+let datasAvulsasSel = []; // datas (YYYY-MM-DD) informadas sem celebração cadastrada
+
+function fmtDataBR(d) { const x = new Date(d + 'T00:00:00'); return DIAS[x.getDay()] + ' ' + x.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }); }
 
 async function init() {
   ctx = await initModulo();
@@ -102,15 +105,13 @@ async function renderViewMembro() {
   const declaredIds = new Set((aus||[]).map(a => a.celebracao_id));
   const disponiveis = futuras.filter(c => !declaredIds.has(c.id));
 
-  if (!disponiveis.length) {
-    const info = document.createElement('div'); info.className = 'section-card';
-    info.style.cssText = 'color:var(--text-muted);font-style:italic;';
-    info.textContent = futuras.length ? 'Você já informou ausência em todas as próximas missas.' : 'Não há missas futuras cadastradas.';
-    main.appendChild(info);
-  } else {
-    const card = document.createElement('div'); card.className = 'section-card';
+  datasAvulsasSel = [];
+  const card = document.createElement('div'); card.className = 'section-card';
+
+  // (1) Missas já cadastradas
+  if (disponiveis.length) {
     const g1 = document.createElement('div'); g1.className = 'form-group';
-    const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Missas em que estarei ausente * (marque uma ou mais)';
+    const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Missas em que estarei ausente (marque uma ou mais)';
     g1.appendChild(l1);
     const selAll = document.createElement('label'); selAll.className = 'aus-cel-row sel-all';
     const chkAll = document.createElement('input'); chkAll.type = 'checkbox';
@@ -125,29 +126,57 @@ async function renderViewMembro() {
     });
     chkAll.onchange = () => { box.querySelectorAll('.aus-cel').forEach(c => { c.checked = chkAll.checked; }); };
     g1.appendChild(box); card.appendChild(g1);
-
-    const lMot = document.createElement('label'); lMot.className = 'form-label'; lMot.textContent = 'Motivo *';
-    const mGrid = document.createElement('div'); mGrid.className = 'motivo-grid';
-    motivoSelecionado = 'doenca';
-    Object.entries(MOTIVOS).forEach(([val,label]) => {
-      const btn = document.createElement('button'); btn.type = 'button';
-      btn.className = 'motivo-btn'+(val==='doenca'?' active':''); btn.textContent = label;
-      btn.onclick = () => { motivoSelecionado = val; mGrid.querySelectorAll('.motivo-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); };
-      mGrid.appendChild(btn);
-    });
-    card.append(lMot, mGrid);
-
-    const g2 = document.createElement('div'); g2.className = 'form-group';
-    const l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'Observação (opcional)';
-    const inp = document.createElement('input'); inp.className = 'form-input'; inp.id = 'obs-aus'; inp.placeholder = 'Detalhes...';
-    g2.append(l2, inp); card.appendChild(g2);
-
-    const btnEnv = document.createElement('button'); btnEnv.className = 'btn gold'; btnEnv.id = 'btn-env'; btnEnv.textContent = 'Confirmar Ausência';
-    btnEnv.onclick = () => enviarAusencia();
-    card.appendChild(btnEnv);
-    const msg = document.createElement('div'); msg.id = 'msg-aus'; msg.className = 'msg'; card.appendChild(msg);
-    main.appendChild(card);
+  } else {
+    const note = document.createElement('p'); note.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0 0 6px;';
+    note.textContent = 'Não há missas futuras cadastradas — mas você já pode informar uma data avulsa abaixo.';
+    card.appendChild(note);
   }
+
+  // (2) Datas avulsas (mesmo sem missa cadastrada)
+  const gAv = document.createElement('div'); gAv.className = 'form-group';
+  const lAv = document.createElement('label'); lAv.className = 'form-label'; lAv.textContent = 'Outra data (mesmo sem missa cadastrada)';
+  const avRow = document.createElement('div'); avRow.style.cssText = 'display:flex;gap:8px;align-items:center;';
+  const avInp = document.createElement('input'); avInp.type = 'date'; avInp.className = 'form-input'; avInp.min = hoje; avInp.style.flex = '1';
+  const avAdd = document.createElement('button'); avAdd.type = 'button'; avAdd.className = 'mini-add'; avAdd.textContent = '+ adicionar';
+  avRow.append(avInp, avAdd);
+  const avList = document.createElement('div'); avList.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;';
+  function renderAv() {
+    avList.textContent = '';
+    datasAvulsasSel.forEach((d, i) => {
+      const chip = document.createElement('span'); chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--gold);background:rgba(232,185,74,.1);border:1px solid var(--gold-dim);border-radius:12px;padding:3px 6px 3px 10px;';
+      chip.appendChild(document.createTextNode(fmtDataBR(d) + ' · dia todo'));
+      const x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.style.cssText = 'background:none;border:none;color:var(--gold);cursor:pointer;font-weight:800;font-size:14px;line-height:1;';
+      x.onclick = () => { datasAvulsasSel.splice(i, 1); renderAv(); };
+      chip.appendChild(x); avList.appendChild(chip);
+    });
+  }
+  avAdd.onclick = () => { const d = avInp.value; if (d && !datasAvulsasSel.includes(d)) { datasAvulsasSel.push(d); datasAvulsasSel.sort(); renderAv(); } avInp.value = ''; };
+  gAv.append(lAv, avRow, avList); card.appendChild(gAv);
+
+  // (3) Motivo
+  const lMot = document.createElement('label'); lMot.className = 'form-label'; lMot.textContent = 'Motivo *';
+  const mGrid = document.createElement('div'); mGrid.className = 'motivo-grid';
+  motivoSelecionado = 'doenca';
+  Object.entries(MOTIVOS).forEach(([val,label]) => {
+    const btn = document.createElement('button'); btn.type = 'button';
+    btn.className = 'motivo-btn'+(val==='doenca'?' active':''); btn.textContent = label;
+    btn.onclick = () => { motivoSelecionado = val; mGrid.querySelectorAll('.motivo-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); };
+    mGrid.appendChild(btn);
+  });
+  card.append(lMot, mGrid);
+
+  // (4) Observação
+  const g2 = document.createElement('div'); g2.className = 'form-group';
+  const l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'Observação (opcional)';
+  const inp = document.createElement('input'); inp.className = 'form-input'; inp.id = 'obs-aus'; inp.placeholder = 'Detalhes...';
+  g2.append(l2, inp); card.appendChild(g2);
+
+  // (5) Confirmar
+  const btnEnv = document.createElement('button'); btnEnv.className = 'btn gold'; btnEnv.id = 'btn-env'; btnEnv.textContent = 'Confirmar Ausência';
+  btnEnv.onclick = () => enviarAusencia();
+  card.appendChild(btnEnv);
+  const msg = document.createElement('div'); msg.id = 'msg-aus'; msg.className = 'msg'; card.appendChild(msg);
+  main.appendChild(card);
 
   // Ausências já declaradas (com opção de cancelar)
   const hTitle = document.createElement('div'); hTitle.className = 'page-title';
@@ -161,7 +190,7 @@ async function renderViewMembro() {
     aus.forEach(a => {
       const c = a.acolitos_celebracoes;
       const item = document.createElement('div'); item.className = 'ausencia-item';
-      const dt = document.createElement('div'); dt.className = 'ausencia-data'; dt.textContent = c ? celLabel(c) : '—';
+      const dt = document.createElement('div'); dt.className = 'ausencia-data'; dt.textContent = c ? celLabel(c) : (a.data ? fmtDataBR(a.data) + ' · dia todo' : '—');
       const mt = document.createElement('div'); mt.className = 'ausencia-meta';
       mt.textContent = (MOTIVOS[a.motivo]||a.motivo)+(a.observacao?' · '+a.observacao:'');
       const cancel = document.createElement('button'); cancel.className = 'btn-sm gray'; cancel.style.marginTop = '8px'; cancel.textContent = 'Cancelar';
@@ -173,25 +202,36 @@ async function renderViewMembro() {
 
 async function enviarAusencia() {
   const ids = [...document.querySelectorAll('.aus-cel:checked')].map(c => c.value);
+  const datas = datasAvulsasSel.slice();
   const obs = document.getElementById('obs-aus').value.trim();
   const msg = document.getElementById('msg-aus');
   const btn = document.getElementById('btn-env');
-  if (!ids.length) { msg.className='msg error'; msg.textContent='Selecione ao menos uma missa.'; return; }
+  if (!ids.length && !datas.length) { msg.className='msg error'; msg.textContent='Selecione ao menos uma missa ou data.'; return; }
   btn.disabled=true; btn.textContent='Enviando...';
 
   // Irmãos escalados juntos entram na mesma ausência automaticamente
   const irmaosJuntos = (ctx.grupoIrmaos || []).filter(m => m.escalar_com_irmao && m.id !== ctx.membro.id);
-  const rows = [];
-  ids.forEach(id => {
-    rows.push({ membro_id: ctx.membro.id, celebracao_id: id, motivo: motivoSelecionado, observacao: obs||null });
-    irmaosJuntos.forEach(irm => rows.push({ membro_id: irm.id, celebracao_id: id, motivo: motivoSelecionado, observacao: obs||null }));
-  });
-  const { error } = await sb.from('acolitos_ausencias').upsert(rows, { onConflict:'membro_id,celebracao_id' });
+  const membrosAll = [ctx.membro.id, ...irmaosJuntos.map(i => i.id)];
 
-  if (error) { msg.className='msg error'; msg.textContent='Erro. Tente novamente.'; btn.disabled=false; btn.textContent='Confirmar Ausência'; return; }
+  // (a) por celebração já cadastrada
+  if (ids.length) {
+    const rows = [];
+    ids.forEach(id => membrosAll.forEach(mid => rows.push({ membro_id: mid, celebracao_id: id, motivo: motivoSelecionado, observacao: obs||null })));
+    const { error } = await sb.from('acolitos_ausencias').upsert(rows, { onConflict:'membro_id,celebracao_id' });
+    if (error) { msg.className='msg error'; msg.textContent='Erro. Tente novamente.'; btn.disabled=false; btn.textContent='Confirmar Ausência'; return; }
+  }
+  // (b) por data avulsa (sem celebração) — vale para todas as missas daquele dia
+  if (datas.length) {
+    await sb.from('acolitos_ausencias').delete().in('membro_id', membrosAll).in('data', datas).is('celebracao_id', null);
+    const rows = [];
+    datas.forEach(d => membrosAll.forEach(mid => rows.push({ membro_id: mid, data: d, celebracao_id: null, motivo: motivoSelecionado, observacao: obs||null })));
+    const { error } = await sb.from('acolitos_ausencias').insert(rows);
+    if (error) { msg.className='msg error'; msg.textContent='Erro ao salvar a data avulsa.'; btn.disabled=false; btn.textContent='Confirmar Ausência'; return; }
+  }
 
+  const total = ids.length + datas.length;
   const extra = irmaosJuntos.length ? ' (e ' + irmaosJuntos.map(i => i.apelido || (i.nome||'').split(' ')[0]).join(', ') + ', que serve' + (irmaosJuntos.length>1?'m':'') + ' junto)' : '';
-  msg.className='msg success'; msg.textContent = ids.length + (ids.length>1 ? ' ausências registradas!' : ' ausência registrada!') + extra;
+  msg.className='msg success'; msg.textContent = total + (total>1 ? ' ausências registradas!' : ' ausência registrada!') + extra;
   btn.disabled=true; btn.textContent='Registrado ✓';
   setTimeout(()=>renderViewMembro(), 1300);
 }

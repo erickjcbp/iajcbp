@@ -148,11 +148,7 @@
     </div>
     <div class="form-group">
       <label class="form-label">Horário *</label>
-      <select class="form-select" id="nc-horario">
-        <option value="17h">17h</option><option value="18h30">18h30</option>
-        <option value="7h">7h</option><option value="9h">9h</option>
-        <option value="19h">19h</option><option value="outro">Outro</option>
-      </select>
+      <select class="form-select" id="nc-horario"></select>
     </div>
     <div class="form-group">
       <label class="form-label">Comunidade *</label>
@@ -339,7 +335,19 @@ async function init() {
   renderHeader(ctx, 'escala');
   renderBottomNav(ctx, 'escala');
   await loadModelos();
+  popHorarios();
   await loadDados();
+}
+
+// Gera horários do dia todo, de hora em hora e meia-hora (ex.: 8h, 8h30)
+function popHorarios() {
+  const sel = document.getElementById('nc-horario'); if (!sel) return; sel.textContent = '';
+  for (let h = 0; h < 24; h++) {
+    for (const m of [0, 30]) {
+      const val = m === 0 ? h + 'h' : h + 'h30';
+      const o = document.createElement('option'); o.value = val; o.textContent = val; sel.appendChild(o);
+    }
+  }
 }
 
 async function loadDados() {
@@ -371,6 +379,12 @@ async function loadDados() {
     ]);
     membros = mems||[];
     ausMap = {}; (auss||[]).forEach(a=>{ if(!ausMap[a.celebracao_id]) ausMap[a.celebracao_id]=new Set(); ausMap[a.celebracao_id].add(a.membro_id); });
+    // ausências avulsas por DATA (sem celebração): valem para todas as missas daquele dia
+    const celDatas=[...new Set(celebracoes.map(c=>c.data))];
+    if(celDatas.length){
+      const{data:ausData}=await sb.from('acolitos_ausencias').select('membro_id,data').is('celebracao_id',null).in('data',celDatas);
+      (ausData||[]).forEach(a=>celebracoes.filter(c=>c.data===a.data).forEach(c=>{ if(!ausMap[c.id])ausMap[c.id]=new Set(); ausMap[c.id].add(a.membro_id); }));
+    }
     habMap = {}; (habs||[]).forEach(h=>{if(!habMap[h.membro_id])habMap[h.membro_id]={};habMap[h.membro_id][h.funcao]=h.proficiencia;});
     dispMap = {}; restricaoMap = {};
     (disps||[]).forEach(d=>{
