@@ -71,16 +71,19 @@ function renderAba(a) {
   const lista = (dados[a.key] || []).filter(x => Number(x.total) > 0);
   if (!lista.length) { const em = document.createElement('span'); em.className = 'empty'; em.textContent = 'Ainda sem dados por aqui.'; corpo.appendChild(em); return; }
   const medalhas = ['🥇','🥈','🥉'];
-  lista.forEach((m, i) => {
+  let distintos = 0, ultimoTotal = null; // posição por VALOR: mesmo total = mesma posição (empate)
+  lista.forEach((m) => {
+    const tot = Number(m.total);
+    if (tot !== ultimoTotal) { distintos++; ultimoTotal = tot; }
+    const posicao = distintos;
     const row = document.createElement('div'); row.className = 'rank-row' + (m.id === euId ? ' eu' : '');
-    const pos = document.createElement('div'); pos.className = 'rank-pos'; pos.textContent = i < 3 ? medalhas[i] : (i+1);
+    const pos = document.createElement('div'); pos.className = 'rank-pos'; pos.textContent = posicao <= 3 ? medalhas[posicao-1] : posicao;
     const av = buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 38, { nivelSlug: m.nivel||'aspirante' }); av.style.flex = 'none';
     const info = document.createElement('div'); info.className = 'rank-info';
     const nm = document.createElement('div'); nm.className = 'rank-nome'; nm.textContent = (m.id===euId?'★ ':'') + m.nome;
     const nv = document.createElement('div'); nv.className = 'rank-nivel'; nv.textContent = nivelInfo(m.nivel||'aspirante').label;
     info.append(nm, nv);
     const val = document.createElement('div'); val.className = 'rank-val';
-    const tot = Number(m.total);
     val.innerHTML = tot + '<small>' + (tot===1?a.sing:a.unidade) + '</small>';
     row.append(pos, av, info, val); corpo.appendChild(row);
   });

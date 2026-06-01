@@ -991,9 +991,12 @@ async function salvarFicha() {
   const mudouEngaj = editados.some(k => engajCampos.includes(k));
   const mudouMensagem = editados.includes('mensagem_coordenacao'); // aba Mensagem (separada)
   if (membroAtual.user_id) {
-    // Sincroniza pastoral_members.role para liberar/retirar acesso de equipe (RLS)
-    if (editados.includes('eh_equipe')) {
-      const novoRole = fichaEdits.eh_equipe ? 'membro_equipe' : nivelInfo(membroAtual.nivel || nivelFromRole(membroAtual.role)).base;
+    // Sincroniza pastoral_members.role com eh_equipe (a RLS libera acesso por role). Auto-corrige a cada save
+    // p/ garantir a invariante: eh_equipe=true => role 'membro_equipe' (sem mexer em coord_admin/subadmin).
+    const ehAdminAlvo = ['coord_admin', 'subadmin'].includes(membroAtual.role);
+    const effEquipe = ('eh_equipe' in fichaEdits) ? !!fichaEdits.eh_equipe : !!membroAtual.eh_equipe;
+    if (membroAtual.user_id && !ehAdminAlvo && (editados.includes('eh_equipe') || effEquipe)) {
+      const novoRole = effEquipe ? 'membro_equipe' : nivelInfo(membroAtual.nivel || nivelFromRole(membroAtual.role)).base;
       try { await apiPost('/api/acolito-admin', { action: 'sync_role', user_id: membroAtual.user_id, role: novoRole }); } catch (e) {}
     }
     const msgs = [];
