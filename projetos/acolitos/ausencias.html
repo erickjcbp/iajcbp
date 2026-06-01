@@ -179,12 +179,19 @@ async function enviarAusencia() {
   if (!ids.length) { msg.className='msg error'; msg.textContent='Selecione ao menos uma missa.'; return; }
   btn.disabled=true; btn.textContent='Enviando...';
 
-  const rows = ids.map(id => ({ membro_id: ctx.membro.id, celebracao_id: id, motivo: motivoSelecionado, observacao: obs||null }));
+  // Irmãos escalados juntos entram na mesma ausência automaticamente
+  const irmaosJuntos = (ctx.grupoIrmaos || []).filter(m => m.escalar_com_irmao && m.id !== ctx.membro.id);
+  const rows = [];
+  ids.forEach(id => {
+    rows.push({ membro_id: ctx.membro.id, celebracao_id: id, motivo: motivoSelecionado, observacao: obs||null });
+    irmaosJuntos.forEach(irm => rows.push({ membro_id: irm.id, celebracao_id: id, motivo: motivoSelecionado, observacao: obs||null }));
+  });
   const { error } = await sb.from('acolitos_ausencias').upsert(rows, { onConflict:'membro_id,celebracao_id' });
 
   if (error) { msg.className='msg error'; msg.textContent='Erro. Tente novamente.'; btn.disabled=false; btn.textContent='Confirmar Ausência'; return; }
 
-  msg.className='msg success'; msg.textContent = ids.length + (ids.length>1 ? ' ausências registradas!' : ' ausência registrada!');
+  const extra = irmaosJuntos.length ? ' (e ' + irmaosJuntos.map(i => i.apelido || (i.nome||'').split(' ')[0]).join(', ') + ', que serve' + (irmaosJuntos.length>1?'m':'') + ' junto)' : '';
+  msg.className='msg success'; msg.textContent = ids.length + (ids.length>1 ? ' ausências registradas!' : ' ausência registrada!') + extra;
   btn.disabled=true; btn.textContent='Registrado ✓';
   setTimeout(()=>renderViewMembro(), 1300);
 }
@@ -244,7 +251,7 @@ async function renderViewEquipe() {
 async function abrirRegistroAusencia() {
   const hoje = new Date().toISOString().slice(0,10);
   const { data: membros } = await sb.from('acolitos_membros')
-    .select('id,nome,comunidade,pode_outras_comunidades').eq('status','ativo').order('nome');
+    .select('id,nome,apelido,comunidade,pode_outras_comunidades,grupo_irmaos,escalar_com_irmao').eq('status','ativo').order('nome');
   const { data: cels } = await sb.from('acolitos_celebracoes')
     .select('id,data,horario,comunidade').gte('data', hoje).order('data').order('horario');
   const futuras = cels || [];
@@ -321,9 +328,18 @@ async function abrirRegistroAusencia() {
     const ids = [...boxC.querySelectorAll('.aus-cel:checked')].map(c => c.value);
     if (!ids.length) { msg.className='msg error'; msg.textContent='Selecione ao menos uma missa.'; return; }
     conf.disabled = true; conf.textContent = 'Salvando...';
-    const rows = ids.map(id => ({ membro_id: selM.value, celebracao_id: id, motivo: motivoSel, observacao: inpObs.value.trim() || null }));
+    const sel = membros.find(x => x.id === selM.value);
+    const irmaos = (sel && sel.grupo_irmaos && sel.escalar_com_irmao)
+      ? membros.filter(m => m.grupo_irmaos === sel.grupo_irmaos && m.escalar_com_irmao && m.id !== sel.id) : [];
+    const obsVal = inpObs.value.trim() || null;
+    const rows = [];
+    ids.forEach(id => {
+      rows.push({ membro_id: selM.value, celebracao_id: id, motivo: motivoSel, observacao: obsVal });
+      irmaos.forEach(irm => rows.push({ membro_id: irm.id, celebracao_id: id, motivo: motivoSel, observacao: obsVal }));
+    });
     const { error } = await sb.from('acolitos_ausencias').upsert(rows, { onConflict: 'membro_id,celebracao_id' });
     if (error) { msg.className = 'msg error'; msg.textContent = 'Erro ao registrar. Tente novamente.'; conf.disabled = false; conf.textContent = 'Registrar'; return; }
+    if (irmaos.length) { msg.className = 'msg success'; msg.textContent = 'Registrado (incluindo ' + irmaos.map(i => i.apelido || (i.nome||'').split(' ')[0]).join(', ') + ', que serve junto).'; setTimeout(() => { ov.remove(); renderViewEquipe(); }, 1200); return; }
     ov.remove(); renderViewEquipe();
   };
   acts.append(cancel, conf); modal.appendChild(acts);

@@ -94,17 +94,20 @@ async function initModulo(requiredRoles = null) {
   const { data: conta } = await sb
     .from('acolitos_membros').select('*').eq('user_id', session.user.id).maybeSingle();
 
-  // Conta de família: se a conta tem irmãos, carrega o grupo e escolhe o perfil ativo
+  // Conta de família: só vale para irmãos que são escalados JUNTOS (escalar_com_irmao)
   let membro = conta;
   let grupoIrmaos = [];
-  if (conta && conta.grupo_irmaos) {
+  if (conta && conta.grupo_irmaos && conta.escalar_com_irmao) {
     const { data: irmaos } = await sb
       .from('acolitos_membros').select('*').eq('grupo_irmaos', conta.grupo_irmaos);
-    grupoIrmaos = (irmaos && irmaos.length) ? irmaos : [conta];
-    grupoIrmaos.sort((a, b) => (a.data_nascimento || '9999').localeCompare(b.data_nascimento || '9999'));
-    const savedId = localStorage.getItem('acolitos-perfil-' + conta.id);
-    const ativo = savedId && grupoIrmaos.find(g => g.id === savedId);
-    membro = ativo || conta;
+    const juntos = (irmaos || []).filter(m => m.escalar_com_irmao);
+    if (juntos.length >= 2) {
+      juntos.sort((a, b) => (a.data_nascimento || '9999').localeCompare(b.data_nascimento || '9999'));
+      grupoIrmaos = juntos;
+      const savedId = localStorage.getItem('acolitos-perfil-' + conta.id);
+      const ativo = savedId && grupoIrmaos.find(g => g.id === savedId);
+      membro = ativo || conta;
+    }
   }
 
   if (membro && Array.isArray(membro.avisos) && membro.avisos.length) showAvisos(membro);
