@@ -72,7 +72,7 @@ async function init() {
   const title = document.createElement('h1'); title.className = 'page-title'; title.textContent = 'Minha Casa'; main.appendChild(title);
 
   const { data: casas } = await sb.from('acolitos_casas').select('*').order('ordem');
-  const lista = casas || [];
+  const lista = (casas || []).filter(c => c.tipo !== 'equipe'); // CONSILIUM (equipe) não entra na vitrine do membro
   const minhaId = ctx.membro ? ctx.membro.casa_id : null;
   const minha = minhaId && lista.find(c => c.id === minhaId);
 

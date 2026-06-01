@@ -545,10 +545,11 @@ let _listasCarregadas = false;
 async function loadListasCustom(force = false) {
   if (_listasCarregadas && !force) return;
   try {
-    const { data } = await sb.from('acolitos_listas').select('*').in('tipo', ['habilidade', 'competencia']).order('label');
+    const { data } = await sb.from('acolitos_listas').select('*').in('tipo', ['habilidade', 'competencia', 'setor']).order('label');
     (data || []).forEach(r => {
       if (r.tipo === 'habilidade') { if (!(r.valor in HABILIDADE_LABEL)) { HABILIDADES.push([r.valor, r.label]); } HABILIDADE_LABEL[r.valor] = r.label; }
-      else { if (!(r.valor in COMPETENCIA_LABEL)) { COMPETENCIAS.push([r.valor, r.label]); } COMPETENCIA_LABEL[r.valor] = r.label; }
+      else if (r.tipo === 'competencia') { if (!(r.valor in COMPETENCIA_LABEL)) { COMPETENCIAS.push([r.valor, r.label]); } COMPETENCIA_LABEL[r.valor] = r.label; }
+      else if (r.tipo === 'setor') { if (!(r.valor in SETOR_LABEL)) { SETORES.push([r.valor, r.label]); } SETOR_LABEL[r.valor] = r.label; }
     });
     _listasCarregadas = true;
   } catch (e) { /* listas custom indisponíveis — segue com as padrão */ }
@@ -616,7 +617,7 @@ function _svgIcon(name) {
 }
 
 // ── BRASÕES DAS CASAS (SVG próprio, sem emoji) ────────────────
-const CASA_COR = { sanctaris:'#c0392b', seraphim:'#e67e22', veritatis:'#2980b9', templaris:'#27ae60' };
+const CASA_COR = { sanctaris:'#c0392b', seraphim:'#e67e22', veritatis:'#2980b9', templaris:'#27ae60', consilium:'#7d3c98' };
 function getCasaBrasao(slug, size) {
   size = size || 80;
   const cor = CASA_COR[slug] || '#8a6a24';
@@ -635,6 +636,12 @@ function getCasaBrasao(slug, size) {
       + '<path d="M32 27 L32 48"/></g>'
       + '<circle cx="32" cy="19" r="2.8" fill="#ffe9b0"/>',
     templaris: '<g fill="#ffe9b0"><rect x="28.5" y="20" width="7" height="32" rx="2"/><rect x="19" y="30" width="26" height="7" rx="2"/></g>',
+    consilium: '<g fill="#ffe9b0">'
+      + '<path d="M32 15 C29.5 21 29 27 32 33 C35 27 34.5 21 32 15 Z"/>'
+      + '<path d="M31 31 C24 27 18 30 19 36 C20 41 26 42 30 39 C27 36 28 33 31 31 Z"/>'
+      + '<path d="M33 31 C40 27 46 30 45 36 C44 41 38 42 34 39 C37 36 36 33 33 31 Z"/>'
+      + '<path d="M23 40 H41 V43.5 H23 Z"/>'
+      + '<path d="M30 43.5 H34 L33 53 H31 Z"/></g>',
   };
   const s = String(size);
   return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 64 72" xmlns="http://www.w3.org/2000/svg">'

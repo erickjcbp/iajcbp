@@ -23,6 +23,13 @@
     .pick-list { max-height:50vh; overflow-y:auto; }
     .pick-row { display:flex; align-items:center; gap:10px; padding:8px 4px; border-bottom:1px solid var(--border); cursor:pointer; }
     .pick-row:hover { background:var(--surface2); }
+    .consilium-hd { display:flex; align-items:center; gap:14px; background:linear-gradient(165deg, color-mix(in srgb, var(--c) 28%, var(--surface)), var(--surface)); border:1px solid var(--c); border-radius:14px; padding:16px; margin-bottom:8px; }
+    .org-wrap { display:flex; flex-direction:column; align-items:center; }
+    .org-top { background:var(--c); color:#fff; font-family:'Sora',sans-serif; font-weight:800; font-size:12px; letter-spacing:1px; text-transform:uppercase; padding:8px 18px; border-radius:8px; }
+    .org-conn { width:2px; height:16px; background:var(--gold-dim); }
+    .org-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; width:100%; }
+    .org-card { background:var(--surface); border:1px solid var(--border); border-top:3px solid var(--c); border-radius:10px; padding:10px; }
+    .org-st { font-family:'Sora',sans-serif; font-weight:700; font-size:12px; color:var(--gold-light); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
 </head>
@@ -33,7 +40,7 @@
 
 <script src="shared.js"></script>
 <script>
-let ctx = null, casas = [], membros = [];
+let ctx = null, casas = [], membros = [], roleMap = {};
 function brasaoEl(slug, size) { const d = document.createElement('div'); d.style.cssText = 'flex:none;line-height:0;'; d.innerHTML = getCasaBrasao(slug, size); return d; } // SVG controlado — seguro
 
 async function init() {
@@ -49,9 +56,12 @@ async function init() {
 async function load() {
   const [cs, ms] = await Promise.all([
     sb.from('acolitos_casas').select('*').order('ordem'),
-    sb.from('acolitos_membros').select('id,nome,apelido,foto_url,nivel,casa_id').eq('status','ativo').order('nome'),
+    sb.from('acolitos_membros').select('id,nome,apelido,foto_url,nivel,casa_id,eh_equipe,setores,user_id').eq('status','ativo').order('nome'),
   ]);
   casas = cs.data || []; membros = ms.data || [];
+  const { data: mod } = await sb.from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
+  const { data: pm } = mod ? await sb.from('pastoral_members').select('user_id,role').eq('module_id', mod.id) : { data: [] };
+  roleMap = {}; (pm || []).forEach(r => { roleMap[r.user_id] = r.role; });
   render();
 }
 
@@ -60,7 +70,12 @@ function render() {
   const title = document.createElement('h1'); title.className = 'page-title'; title.textContent = 'Casas'; main.appendChild(title);
   const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 14px;'; hint.textContent = 'Edite as casas e distribua os membros. (Os membros já veem as casas na aba "Minha Casa".)'; main.appendChild(hint);
 
-  casas.forEach(casa => {
+  const consilium = casas.find(c => c.tipo === 'equipe');
+  if (consilium) renderConsilium(main, consilium);
+
+  const subt = document.createElement('div'); subt.style.cssText = 'font-family:Sora,sans-serif;font-size:12px;color:var(--gold-light);letter-spacing:1px;text-transform:uppercase;margin:22px 0 10px;'; subt.textContent = 'Casas dos membros'; main.appendChild(subt);
+
+  casas.filter(c => c.tipo !== 'equipe').forEach(casa => {
     const doCasa = membros.filter(m => m.casa_id === casa.id);
     const box = document.createElement('div'); box.className = 'casa-box'; box.style.setProperty('--c', casa.cor || '#8a6a24');
     const hd = document.createElement('div'); hd.className = 'casa-hd';
@@ -89,6 +104,97 @@ function render() {
 
   const semCasa = membros.filter(m => !m.casa_id).length;
   const nota = document.createElement('p'); nota.style.cssText = 'font-size:12px;color:var(--text-muted);text-align:center;margin-top:6px;'; nota.textContent = semCasa + ' membro(s) ainda sem casa.'; main.appendChild(nota);
+}
+
+// ── CONSILIUM (casa da equipe) + organograma de setores ──
+function renderConsilium(main, casa) {
+  const cor = casa.cor || '#7d3c98';
+  const hd = document.createElement('div'); hd.className = 'consilium-hd'; hd.style.setProperty('--c', cor);
+  hd.appendChild(brasaoEl(casa.slug, 64));
+  const info = document.createElement('div'); info.style.flex = '1'; info.style.minWidth = '0';
+  const nm = document.createElement('div'); nm.style.cssText = 'font-family:Sora,sans-serif;font-weight:800;font-size:20px;letter-spacing:2px;color:#fff;text-transform:uppercase;'; nm.textContent = casa.nome;
+  const lema = document.createElement('div'); lema.style.cssText = 'font-family:Lora,serif;font-style:italic;color:var(--gold-light);font-size:13px;'; lema.textContent = '"' + (casa.lema||'') + '" — ' + (casa.lema_pt||'');
+  const mis = document.createElement('div'); mis.style.cssText = 'font-size:12px;color:var(--text-muted);margin-top:3px;'; mis.textContent = 'Missão: ' + (casa.tagline||'');
+  info.append(nm, lema, mis);
+  const bEd = document.createElement('button'); bEd.className = 'btn-sm gray'; bEd.textContent = '✎'; bEd.title = 'Editar casa'; bEd.style.flex = 'none'; bEd.onclick = () => abrirEditarCasa(casa);
+  hd.append(info, bEd); main.appendChild(hd);
+
+  const orgWrap = document.createElement('div'); orgWrap.className = 'org-wrap';
+  const top = document.createElement('div'); top.className = 'org-top'; top.style.setProperty('--c', cor); top.textContent = 'Coordenação Geral'; orgWrap.appendChild(top);
+  const conn = document.createElement('div'); conn.className = 'org-conn'; orgWrap.appendChild(conn);
+  const grid = document.createElement('div'); grid.className = 'org-grid';
+  SETORES.forEach(([slug, label]) => {
+    const card = document.createElement('div'); card.className = 'org-card'; card.style.setProperty('--c', cor);
+    const t = document.createElement('div'); t.className = 'org-st'; t.textContent = label; card.appendChild(t);
+    const ms = membros.filter(m => m.eh_equipe && (m.setores||[]).includes(slug));
+    if (!ms.length) { const e = document.createElement('div'); e.style.cssText = 'font-size:11px;color:var(--text-muted);font-style:italic;padding:2px 0;'; e.textContent = '— vazio —'; card.appendChild(e); }
+    ms.forEach(m => {
+      const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:7px;padding:4px 2px;';
+      row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 26, { nivelSlug: m.nivel||'aspirante' }));
+      const n = document.createElement('div'); n.style.cssText = 'flex:1;min-width:0;font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; n.textContent = m.apelido || m.nome;
+      const x = document.createElement('button'); x.className = 'mini-del'; x.textContent = '−'; x.title = 'Remover do setor'; x.style.cssText = 'width:24px;height:24px;font-size:12px;'; x.onclick = () => removerSetor(m, slug);
+      row.append(n, x); card.appendChild(row);
+    });
+    const add = document.createElement('button'); add.className = 'mini-add'; add.textContent = '+ membro'; add.style.marginTop = '6px'; add.onclick = () => abrirAddSetor(slug, label); card.appendChild(add);
+    grid.appendChild(card);
+  });
+  orgWrap.appendChild(grid);
+  const addSet = document.createElement('button'); addSet.className = 'btn-sm gray'; addSet.textContent = '+ Adicionar setor'; addSet.style.marginTop = '12px'; addSet.onclick = adicionarSetor;
+  orgWrap.appendChild(addSet);
+  main.appendChild(orgWrap);
+}
+
+async function removerSetor(m, slug) {
+  const novos = (m.setores || []).filter(s => s !== slug);
+  const { error } = await sbAdmin.from('acolitos_membros').update({ setores: novos }).eq('id', m.id);
+  if (error) { toast('Erro.', 'error'); return; }
+  m.setores = novos; toast('✓ Removido do setor.'); render();
+}
+
+async function addMembroSetor(m, slug) {
+  const novos = Array.from(new Set([...(m.setores || []), slug]));
+  const { error } = await sbAdmin.from('acolitos_membros').update({ setores: novos, eh_equipe: true }).eq('id', m.id);
+  if (error) { toast('Erro.', 'error'); return; }
+  m.setores = novos; m.eh_equipe = true;
+  // promove a equipe (acesso) se ainda não for equipe/admin — sem rebaixar ninguém
+  if (m.user_id && !['coord_admin', 'subadmin', 'membro_equipe'].includes(roleMap[m.user_id])) {
+    try { await apiPost('/api/acolito-admin', { action: 'sync_role', user_id: m.user_id, role: 'membro_equipe' }); roleMap[m.user_id] = 'membro_equipe'; } catch (e) {}
+  }
+  toast('✓ Adicionado ao setor.'); render();
+}
+
+function abrirAddSetor(slug, label) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.maxWidth = '400px';
+  modal.innerHTML = '<div class="modal-handle"></div>';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Adicionar a ' + label; modal.appendChild(tt);
+  const busca = document.createElement('input'); busca.className = 'form-input'; busca.placeholder = 'Buscar nome...'; busca.style.marginBottom = '10px'; modal.appendChild(busca);
+  const list = document.createElement('div'); list.className = 'pick-list'; modal.appendChild(list);
+  function pop() {
+    const q = busca.value.toLowerCase(); list.textContent = '';
+    membros.filter(m => !(m.setores || []).includes(slug) && (m.nome || '').toLowerCase().includes(q)).slice(0, 60).forEach(m => {
+      const row = document.createElement('div'); row.className = 'pick-row';
+      row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 30, { nivelSlug: m.nivel||'aspirante' }));
+      const info = document.createElement('div'); info.style.flex = '1';
+      const n = document.createElement('div'); n.style.cssText = 'font-size:14px;color:var(--text);'; n.textContent = m.apelido || m.nome;
+      const s = document.createElement('div'); s.style.cssText = 'font-size:11px;color:var(--text-muted);'; s.textContent = (m.setores || []).length ? 'já em outros setores' : nivelInfo(m.nivel||'aspirante').label;
+      info.append(n, s); row.appendChild(info);
+      row.onclick = async () => { await addMembroSetor(m, slug); ov.remove(); };
+      list.appendChild(row);
+    });
+  }
+  busca.oninput = pop; pop();
+  const close = document.createElement('button'); close.className = 'btn-sm gray'; close.style.cssText = 'margin-top:12px;width:100%;'; close.textContent = 'Fechar'; close.onclick = () => ov.remove();
+  modal.appendChild(close); ov.appendChild(modal); document.body.appendChild(ov);
+}
+
+async function adicionarSetor() {
+  const nome = (prompt('Nome do novo setor:') || '').trim(); if (!nome) return;
+  const valor = 's_' + nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24) + '_' + Math.random().toString(36).slice(2, 6);
+  const { error } = await sbAdmin.from('acolitos_listas').insert({ tipo: 'setor', valor, label: nome });
+  if (error) { toast('Não foi possível adicionar.', 'error'); return; }
+  SETORES.push([valor, nome]); SETOR_LABEL[valor] = nome;
+  toast('✓ Setor adicionado.'); render();
 }
 
 async function moverMembro(m, casaId) {
