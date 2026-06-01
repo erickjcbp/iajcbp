@@ -166,7 +166,6 @@
       <select class="form-select" id="nc-tipo">
         <option value="missa_comum">Missa Comum</option>
         <option value="solene">Missa Solene</option>
-        <option value="solenidade">Solenidade</option>
         <option value="pontifical">Pontifical (com Bispo)</option>
         <option value="festa">Festa Litúrgica</option>
         <option value="vigilia">Vigília</option>
@@ -229,13 +228,13 @@ const FUNCAO_META = {
   cred_altar:    {label:'Cerimonial de Altar',     cat:'Cerimoniais', ordem:10},
   cred_credencia:{label:'Cerimonial de Credência', cat:'Cerimoniais', ordem:11},
   missal:        {label:'Missal',                  cat:'Cerimoniais', ordem:12},
-  turibulo:      {label:'Turíbulo',                cat:'Incenso',     ordem:15},
-  naveta:        {label:'Naveta',                  cat:'Incenso',     ordem:16},
   altar:         {label:'Altar',                   cat:'Altares',     ordem:20},
   cruz:          {label:'Cruz',                     cat:'Litúrgicos',  ordem:30},
   vela:          {label:'Vela',                     cat:'Litúrgicos',  ordem:31},
   sineta:        {label:'Sineta',                   cat:'Litúrgicos',  ordem:32},
   sinao:         {label:'Sinão',                    cat:'Litúrgicos',  ordem:33},
+  turibulo:      {label:'Turíbulo',                 cat:'Litúrgicos',  ordem:34},
+  naveta:        {label:'Naveta',                   cat:'Litúrgicos',  ordem:35},
   apoio:         {label:'Apoio',                    cat:'Apoios',      ordem:40},
   mitra:         {label:'Mitra',                    cat:'Episcopal',   ordem:50},
   baculo:        {label:'Báculo',                   cat:'Episcopal',   ordem:51},
@@ -314,7 +313,7 @@ const FUNCAO_LABEL = {
   cred_altar:'Cerim. Altar', cred_credencia:'Cerim. Cred.', mitra:'Mitra', baculo:'Báculo'
 };
 const TIPO_LABEL = {
-  missa_comum:'Missa', solene:'Missa Solene', solenidade:'Solenidade', pontifical:'Pontifical (Bispo)',
+  missa_comum:'Missa', solene:'Missa Solene', pontifical:'Pontifical (Bispo)',
   festa:'Festa Litúrgica', vigilia:'Vigília', crisma:'Crisma', casamento:'Casamento',
   batizado:'Batizado', ordenacao:'Ordenação', funeral:'Exéquias'
 };
