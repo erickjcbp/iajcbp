@@ -390,8 +390,9 @@ async function loadDados() {
 
   if (celebracoes.length) {
     const ids = celebracoes.map(c=>c.id);
-    const { data: esc } = await sb.from('acolitos_escalas')
-      .select('*, acolitos_membros(id,nome)').in('celebracao_id', ids);
+    const { data: esc, error: escErr } = await sb.from('acolitos_escalas')
+      .select('*, acolitos_membros!membro_id(id,nome)').in('celebracao_id', ids);
+    if (escErr) console.error('Erro lendo escalas:', escErr);
     escalasMap = {};
     (esc||[]).forEach(e => {
       if (!escalasMap[e.celebracao_id]) escalasMap[e.celebracao_id]=[];

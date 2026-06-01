@@ -141,7 +141,7 @@ async function abrirChamada(celeb) {
   // Busca escala
   const { data: esc } = await sb
     .from('acolitos_escalas')
-    .select('id, funcao, status, membro_id, acolitos_membros(nome,foto_url)')
+    .select('id, funcao, status, membro_id, acolitos_membros!membro_id(nome,foto_url)')
     .eq('celebracao_id', celeb.id).order('funcao');
   escalasAtuais = esc||[];
 
