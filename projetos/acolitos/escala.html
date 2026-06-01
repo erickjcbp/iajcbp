@@ -598,6 +598,20 @@ function horKeyDe(celeb) {
   return diaKey ? diaKey+'_'+celeb.horario : null;
 }
 
+// Recarrega ausências FRESCAS (por celebração + por data avulsa) — evita escalar quem lançou ausência agora
+async function carregarAusenciasFresh(celebs) {
+  const ids = celebs.map(c => c.id);
+  const datas = [...new Set(celebs.map(c => c.data))];
+  const map = {};
+  const [porCel, porData] = await Promise.all([
+    sb.from('acolitos_ausencias').select('membro_id,celebracao_id').in('celebracao_id', ids),
+    sb.from('acolitos_ausencias').select('membro_id,data').is('celebracao_id', null).in('data', datas),
+  ]);
+  (porCel.data || []).forEach(a => { (map[a.celebracao_id] = map[a.celebracao_id] || new Set()).add(a.membro_id); });
+  (porData.data || []).forEach(a => celebs.filter(c => c.data === a.data).forEach(c => { (map[c.id] = map[c.id] || new Set()).add(a.membro_id); }));
+  return map;
+}
+
 // Funções MAIORES (especializadas) — reservadas p/ cerimoniários; o resto é menor (altar/cruz/vela/apoio...)
 const FUNCOES_MAIORES = new Set(['cred_altar','cred_credencia','missal','turibulo','naveta','mitra','baculo']);
 // Núcleo do gerador. vagas = array de funções (uma por vaga aberta). Retorna array alinhado de membro_id|null.
@@ -645,7 +659,7 @@ function planejarVagas(vagas, horKey, ausNesta, usados, carga, usadoFds) {
     if (m.escalar_com_irmao && m.grupo_irmaos) {
       const grp = membros.filter(x => x.grupo_irmaos===m.grupo_irmaos && x.escalar_com_irmao);
       grp.forEach(x => visited.add(x.id));
-      const unit = grp.filter(x => !usados.has(x.id) && !ausNesta.has(x.id) && disp(x.id) && livres().some(i=>apta(x.id,vagas[i])));
+      const unit = grp.filter(x => !usados.has(x.id) && !usadoFds.has(x.id) && !ausNesta.has(x.id) && disp(x.id) && livres().some(i=>apta(x.id,vagas[i])));
       if (unit.length >= 2) sibUnits.push(unit.map(x=>x.id));
     } else visited.add(m.id);
   });
@@ -683,11 +697,14 @@ function planejarVagas(vagas, horKey, ausNesta, usados, carga, usadoFds) {
 }
 
 // Botão "Gerar automático" do modal — preenche as vagas vazias da missa aberta
-function gerarEscalaAuto() {
+async function gerarEscalaAuto() {
   if (!celAtual || !pendingEdicao.length) return;
+  const aus = await carregarAusenciasFresh([celAtual]);
+  const ausNesta = aus[celAtual.id] || new Set();
+  ausMap[celAtual.id] = ausNesta;
   const open = pendingEdicao.filter(pe => !pe.sel.value);
   const usados = new Set(); pendingEdicao.forEach(pe => { if (pe.sel.value) usados.add(pe.sel.value); });
-  const res = planejarVagas(open.map(pe=>pe.funcao), horKeyDe(celAtual), ausMap[celAtual.id]||new Set(), usados, Object.assign({}, freqMap), new Set(usados));
+  const res = planejarVagas(open.map(pe=>pe.funcao), horKeyDe(celAtual), ausNesta, usados, Object.assign({}, freqMap), new Set(usados));
   res.forEach((id,i) => { if (id) { open[i].sel.value = id; open[i].sel.classList.add('filled'); } });
   const vazias = res.filter(r => !r).length;
   const btn = document.getElementById('btn-gerar-auto');
@@ -733,6 +750,7 @@ async function gerarEscalaSemana(celebs, btnEl) {
   const novas = [];
   const ordc = celebs.slice().sort((a,b) => (a.data+a.horario).localeCompare(b.data+b.horario));
   ordc.forEach(c => (escalasMap[c.id]||[]).forEach(e => usadoFds.add(e.membro_id))); // já escalados contam
+  const ausFresh = await carregarAusenciasFresh(ordc); // ausências atualizadas (não escalar quem faltou)
   for (const c of ordc) {
     const modelo = modeloFor(c.tipo, c.comunidade);            // vagas do tipo+comunidade (já em ordem cerimoniais→...)
     const existing = escalasMap[c.id] || [];
@@ -741,7 +759,7 @@ async function gerarEscalaSemana(celebs, btnEl) {
     modelo.forEach(slot => { cnt[slot.funcao] = (cnt[slot.funcao]||0)+1; if (cnt[slot.funcao] > (existPorFunc[slot.funcao]||0)) vagas.push(slot.funcao); });
     if (!vagas.length) continue;
     const usados = new Set(existing.map(e => e.membro_id));
-    const res = planejarVagas(vagas, horKeyDe(c), ausMap[c.id]||new Set(), usados, carga, usadoFds);
+    const res = planejarVagas(vagas, horKeyDe(c), ausFresh[c.id]||new Set(), usados, carga, usadoFds);
     res.forEach((id,i) => { if (id) novas.push({ celebracao_id: c.id, membro_id: id, funcao: vagas[i], created_by: ctx.user.id }); });
   }
   if (novas.length) {
