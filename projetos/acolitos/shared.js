@@ -47,6 +47,15 @@ function diasNaEtapa(etapaIniciada) {
 // ── AUTH GUARD ────────────────────────────────────────────────
 // requiredRoles: null (qualquer membro integrado) ou array de roles permitidos
 // Retorna { user, membership, membro } ou null (e redireciona)
+// Toast de feedback rápido (sucesso/erro)
+function toast(msg, tipo) {
+  let t = document.getElementById('app-toast');
+  if (!t) { t = document.createElement('div'); t.id = 'app-toast'; document.body.appendChild(t); }
+  t.className = 'app-toast show' + (tipo === 'error' ? ' error' : '');
+  t.textContent = msg;
+  clearTimeout(t._tm); t._tm = setTimeout(() => { t.classList.remove('show'); }, 2600);
+}
+
 async function initModulo(requiredRoles = null) {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return null; }

@@ -192,7 +192,7 @@
     </div>
     <div class="modal-actions">
       <button class="btn-sm gray" onclick="fecharModal('modal-nova-celeb')">Cancelar</button>
-      <button class="btn-sm gold" onclick="salvarNovaCeleb()">Salvar</button>
+      <button class="btn-sm gold" id="nc-save" onclick="salvarNovaCeleb()">Salvar</button>
     </div>
   </div>
 </div>
@@ -509,11 +509,12 @@ function renderCards() {
 async function excluirCelebracao(c) {
   const d=new Date(c.data+'T00:00:00');
   if(!confirm('Excluir a celebração de '+DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' · '+c.horario+'?\nA escala e as ausências desta missa também serão removidas.'))return;
-  await sb.from('acolitos_escalas').delete().eq('celebracao_id',c.id);
-  await sb.from('acolitos_ausencias').delete().eq('celebracao_id',c.id);
-  const{error}=await sb.from('acolitos_celebracoes').delete().eq('id',c.id);
-  if(error){alert('Não foi possível excluir. Tente novamente.');return;}
+  // FK em cascata já remove escalas/ausências; .select() confirma que a linha foi mesmo apagada
+  const{data,error}=await sb.from('acolitos_celebracoes').delete().eq('id',c.id).select();
+  if(error){toast('Erro ao excluir: '+error.message,'error');return;}
+  if(!data||!data.length){toast('Não foi possível excluir (sem permissão?).','error');return;}
   await loadDados();
+  toast('✓ Celebração excluída.');
 }
 
 function abrirMontagem(celeb) {
@@ -812,20 +813,29 @@ function abrirEditarCeleb(c){
   document.getElementById('nc-obs').value=c.observacoes||'';
   document.getElementById('modal-nova-celeb').classList.add('open');
 }
+let salvandoCeleb=false;
 async function salvarNovaCeleb(){
+  if(salvandoCeleb)return; // evita cliques duplos criando celebrações repetidas
   const data=document.getElementById('nc-data').value;
   const horario=document.getElementById('nc-horario').value;
   const comunidade=document.getElementById('nc-com').value;
   const tipo=document.getElementById('nc-tipo').value;
   const obs=document.getElementById('nc-obs').value.trim();
-  if(!data||!horario){alert('Data e horário obrigatórios.');return;}
+  if(!data||!horario){toast('Data e horário são obrigatórios.','error');return;}
+  salvandoCeleb=true;
+  const sv=document.getElementById('nc-save'); if(sv){sv.disabled=true;sv.textContent='Salvando...';}
+  const editando=!!editCelebId;
   const payload={data,horario,comunidade,tipo,observacoes:obs||null};
-  const{error}= editCelebId
+  const{error}= editando
     ? await sb.from('acolitos_celebracoes').update(payload).eq('id',editCelebId)
     : await sb.from('acolitos_celebracoes').insert({...payload,created_by:ctx.user.id});
-  if(error){alert('Erro: '+error.message);return;}
+  salvandoCeleb=false;
+  if(sv){sv.disabled=false;sv.textContent='Salvar';}
+  if(error){toast('Erro: '+error.message,'error');return;}
   editCelebId=null;
-  fecharModal('modal-nova-celeb');await loadDados();
+  fecharModal('modal-nova-celeb');
+  await loadDados();
+  toast(editando?'✓ Celebração atualizada!':'✓ Celebração criada!');
 }
 function dataCurta(d){ const x=new Date(d+'T00:00:00'); return DIAS[x.getDay()]+' '+x.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}); }
 async function abrirAusencias(){
