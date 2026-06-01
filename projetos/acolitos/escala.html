@@ -131,8 +131,9 @@
     <div class="modal-title" id="mt-titulo">Montar Escala</div>
     <p id="mt-sub" style="color:var(--text-muted);font-size:11px;margin-bottom:14px;"></p>
     <div class="montagem-cols" id="mt-body"></div>
-    <div class="modal-actions">
+    <div class="modal-actions" style="flex-wrap:wrap;gap:8px;">
       <button class="btn-sm gray" onclick="fecharModal('modal-montagem')">Fechar</button>
+      <button class="btn-sm wine" id="btn-gerar-auto" onclick="gerarEscalaAuto()" style="margin-left:auto;">✨ Gerar automático</button>
       <button class="btn-sm gold" id="btn-sv-escala" onclick="salvarEscala()">Salvar Escala</button>
     </div>
   </div>
@@ -334,7 +335,7 @@ const NIVEL_LABEL = { nao_treinado:'Não treinado', em_formacao:'Em formação',
 
 let ctx = null, celebracoes = [], escalasMap = {}, membros = [], habMap = {}, dispMap = {};
 let freqMap = {}, restricaoMap = {}, ausMap = {};
-let pendingCelebId = null, pendingEdicao = [], abaAtual = 'cards', editCelebId = null;
+let pendingCelebId = null, pendingEdicao = [], abaAtual = 'cards', editCelebId = null, celAtual = null;
 
 function openInfo(title, lines) {
   document.getElementById('info-title').textContent = title;
@@ -385,7 +386,7 @@ async function loadDados() {
       escalasMap[e.celebracao_id].push(e);
     });
     const [{ data: mems }, { data: habs }, { data: disps }, freqData, { data: auss }] = await Promise.all([
-      sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,data_nascimento,foto_url,observacoes,necessidades_especiais,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro').eq('status','ativo').order('nome'),
+      sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,data_nascimento,foto_url,observacoes,necessidades_especiais,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro,grupo_irmaos,escalar_com_irmao').eq('status','ativo').order('nome'),
       sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia'),
       sb.from('acolitos_disponibilidade').select('membro_id,dia,horario,restricao'),
       fetchFrequencia(),
@@ -501,7 +502,7 @@ async function excluirCelebracao(c) {
 }
 
 function abrirMontagem(celeb) {
-  pendingCelebId=celeb.id;
+  pendingCelebId=celeb.id; celAtual=celeb;
   const ausNesta = ausMap[celeb.id] || new Set(); // membros que declararam ausência nesta missa
   const tmpl=modeloFor(celeb.tipo, celeb.comunidade);
   const d=new Date(celeb.data+'T00:00:00');
@@ -563,6 +564,44 @@ function abrirMontagem(celeb) {
   colMems.appendChild(ml);
   body.append(colPos,colMems);
   document.getElementById('modal-montagem').classList.add('open');
+}
+
+// Preenche automaticamente as vagas vazias: apto + disponível + não-ausente + menos escalado, sem repetir, irmãos juntos
+function gerarEscalaAuto() {
+  if (!celAtual || !pendingEdicao.length) return;
+  const dow = new Date(celAtual.data+'T00:00:00').getDay();
+  const diaKey = dow===0?'domingo':dow===6?'sabado':null;
+  const horKey = diaKey ? diaKey+'_'+celAtual.horario : null;
+  const ausNesta = ausMap[celAtual.id] || new Set();
+  const apta = (id,f) => { const h=(habMap[id]||{})[f]; return h && ['apto','experiente','referencia'].includes(h); };
+  const disp = id => !horKey || (dispMap[id]||[]).includes(horKey);
+  const usados = new Set();
+  pendingEdicao.forEach(pe => { if (pe.sel.value) usados.add(pe.sel.value); });
+
+  pendingEdicao.forEach(pe => {
+    if (pe.sel.value) return; // mantém o que já está preenchido
+    const cand = membros.filter(m => apta(m.id, pe.funcao) && !usados.has(m.id) && !ausNesta.has(m.id));
+    cand.sort((a,b) => {
+      const da = disp(a.id)?0:1, db = disp(b.id)?0:1; if (da!==db) return da-db; // disponíveis primeiro
+      return (freqMap[a.id]||0) - (freqMap[b.id]||0);                              // menos escalado primeiro
+    });
+    if (cand.length) { pe.sel.value = cand[0].id; pe.sel.classList.add('filled'); usados.add(cand[0].id); }
+  });
+
+  // best-effort: irmãos que servem junto entram na mesma missa
+  pendingEdicao.slice().forEach(pe => {
+    if (!pe.sel.value) return;
+    const m = membros.find(x => x.id === pe.sel.value);
+    if (!m || !m.escalar_com_irmao || !m.grupo_irmaos) return;
+    membros.filter(x => x.grupo_irmaos===m.grupo_irmaos && x.escalar_com_irmao && x.id!==m.id && !usados.has(x.id)).forEach(irm => {
+      const slot = pendingEdicao.find(s => !s.sel.value && apta(irm.id, s.funcao) && !ausNesta.has(irm.id) && disp(irm.id));
+      if (slot) { slot.sel.value = irm.id; slot.sel.classList.add('filled'); usados.add(irm.id); }
+    });
+  });
+
+  const vazias = pendingEdicao.filter(pe => !pe.sel.value).length;
+  const btn = document.getElementById('btn-gerar-auto');
+  if (btn) { btn.textContent = vazias ? '✨ Gerado (' + vazias + ' sem apto)' : '✨ Gerado!'; setTimeout(() => { btn.textContent = '✨ Gerar automático'; }, 2500); }
 }
 
 async function salvarEscala() {
