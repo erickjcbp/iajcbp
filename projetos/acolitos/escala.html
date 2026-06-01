@@ -145,6 +145,7 @@
     <div class="montagem-cols" id="mt-body"></div>
     <div class="modal-actions" style="flex-wrap:wrap;gap:8px;">
       <button class="btn-sm gray" onclick="fecharModal('modal-montagem')">Fechar</button>
+      <button class="btn-sm gray" onclick="limparMontagem()" title="Limpar todas as posições">🧹 Limpar</button>
       <button class="btn-sm wine" id="btn-gerar-auto" onclick="gerarEscalaAuto()" style="margin-left:auto;">✨ Gerar automático</button>
       <button class="btn-sm gold" id="btn-sv-escala" onclick="salvarEscala()">Salvar Escala</button>
     </div>
@@ -465,8 +466,11 @@ function renderCards() {
     const grp=document.createElement('div');grp.className='semana-grupo';
     const head=document.createElement('div');head.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap;';
     const tit=document.createElement('div');tit.className='semana-titulo';tit.style.margin='0';tit.textContent=sem.label;
+    const acoesSem=document.createElement('div');acoesSem.style.cssText='display:flex;gap:6px;flex-wrap:wrap;';
     const bGer=document.createElement('button');bGer.className='btn-sm wine';bGer.style.flexShrink='0';bGer.textContent='⚡ Gerar escala da semana';bGer.onclick=()=>gerarEscalaSemana(sem.items,bGer);
-    head.append(tit,bGer);
+    const bLimp=document.createElement('button');bLimp.className='btn-sm gray';bLimp.style.flexShrink='0';bLimp.textContent='🧹 Limpar semana';bLimp.onclick=()=>limparEscalaSemana(sem.items,bLimp);
+    acoesSem.append(bGer,bLimp);
+    head.append(tit,acoesSem);
     const grid=document.createElement('div');grid.className='celebracoes-grid';
     sem.items.forEach(c=>{
       const cob=getCobertura(c.id,c.comunidade,c.tipo);
@@ -559,7 +563,9 @@ function abrirMontagem(celeb) {
       });
     sel.onchange=()=>sel.classList.toggle('filled',!!sel.value);
     pendingEdicao.push({sel,funcao:pos.funcao});
-    row.append(lbl,sel);colPos.appendChild(row);
+    const clr=document.createElement('button');clr.type='button';clr.className='mini-del';clr.textContent='✕';clr.title='Limpar esta função';clr.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';
+    clr.onclick=()=>{sel.value='';sel.classList.remove('filled');};
+    row.append(lbl,sel,clr);colPos.appendChild(row);
   });
 
   // Coluna membros
@@ -676,6 +682,13 @@ function gerarEscalaAuto() {
   if (btn) { btn.textContent = vazias ? '✨ Gerado (' + vazias + ' sem apto)' : '✨ Gerado!'; setTimeout(() => { btn.textContent = '✨ Gerar automático'; }, 2500); }
 }
 
+// Limpa todas as posições do card aberto (precisa Salvar p/ gravar)
+function limparMontagem() {
+  if (!pendingEdicao.length) return;
+  pendingEdicao.forEach(({sel}) => { sel.value=''; sel.classList.remove('filled'); });
+  toast('Posições limpas — clique em "Salvar Escala" para gravar.');
+}
+
 // Gera e SALVA a escala de todas as missas de um fim de semana (preenche só as vagas ainda vazias)
 async function gerarEscalaSemana(celebs, btnEl) {
   if (!celebs || !celebs.length) return;
@@ -702,6 +715,19 @@ async function gerarEscalaSemana(celebs, btnEl) {
     const { error } = await sb.from('acolitos_escalas').insert(novas);
     if (error) { alert('Erro ao salvar: ' + error.message); if (btnEl) { btnEl.disabled = false; btnEl.textContent = txt0; } return; }
   }
+  await loadDados();
+}
+
+// Apaga TODAS as escalas das missas do fim de semana (direto no banco)
+async function limparEscalaSemana(celebs, btnEl) {
+  if (!celebs || !celebs.length) return;
+  if (!confirm('Limpar TODAS as escalas das ' + celebs.length + ' missa(s) deste fim de semana?\n(Apaga as posições já montadas — não pode desfazer.)')) return;
+  const txt0 = btnEl ? btnEl.textContent : '';
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Limpando...'; }
+  const { error } = await sb.from('acolitos_escalas').delete().in('celebracao_id', celebs.map(c => c.id));
+  if (btnEl) { btnEl.disabled = false; btnEl.textContent = txt0; }
+  if (error) { toast('Erro ao limpar: ' + error.message, 'error'); return; }
+  toast('✓ Escalas do fim de semana limpas.');
   await loadDados();
 }
 
