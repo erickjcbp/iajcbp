@@ -23,7 +23,6 @@ const sbAdmin = sb; // alias — todas as operações elevadas são via RLS com 
     // banner "Instalar app"
     const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
     if (standalone || localStorage.getItem('pwa-dismiss') === '1') return;
-    let deferred = null;
     function banner(texto, btnLabel, onBtn) {
       if (document.getElementById('pwa-banner') || !document.body) return;
       const b = document.createElement('div'); b.id = 'pwa-banner';
@@ -35,9 +34,14 @@ const sbAdmin = sb; // alias — todas as operações elevadas são via RLS com 
       const cl = document.createElement('button'); cl.textContent = '×'; cl.title = 'Dispensar'; cl.style.cssText = 'flex:none;background:none;border:none;color:#b88a8f;font-size:20px;line-height:1;cursor:pointer;'; cl.onclick = () => { localStorage.setItem('pwa-dismiss', '1'); b.remove(); }; b.appendChild(cl);
       document.body.appendChild(b);
     }
-    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; banner('Instale o app na sua tela inicial.', 'Instalar', () => { deferred.prompt(); deferred.userChoice.finally(() => { const el = document.getElementById('pwa-banner'); if (el) el.remove(); }); }); });
+    function showInstall() { const ev = window.__bip; if (!ev) return; const old = document.getElementById('pwa-banner'); if (old) old.remove(); banner('Instale o app na sua tela inicial.', 'Instalar', () => { ev.prompt(); ev.userChoice.finally(() => { window.__bip = null; const el = document.getElementById('pwa-banner'); if (el) el.remove(); }); }); }
     const ua = navigator.userAgent || '';
-    if (/iphone|ipad|ipod/i.test(ua) && /safari/i.test(ua) && !/crios|fxios|chrome|android/i.test(ua)) setTimeout(() => banner('Para instalar: toque em Compartilhar e depois “Adicionar à Tela de Início”.', null, null), 1500);
+    const isIOS = /iphone|ipad|ipod/i.test(ua), isSafari = /safari/i.test(ua) && !/crios|fxios|chrome|android/i.test(ua), isAndroidChrome = /android/i.test(ua) && /chrome/i.test(ua);
+    if (window.__bip) showInstall(); // evento já capturado no <head>
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); window.__bip = e; showInstall(); });
+    window.addEventListener('appinstalled', () => { const el = document.getElementById('pwa-banner'); if (el) el.remove(); });
+    if (isIOS && isSafari) setTimeout(() => banner('Para instalar: toque em Compartilhar e depois “Adicionar à Tela de Início”.', null, null), 1500);
+    else if (isAndroidChrome) setTimeout(() => { if (!document.getElementById('pwa-banner')) banner('Para instalar: abra o menu (⋮) do Chrome e toque em “Instalar app”.', null, null); }, 3000);
   } catch (e) { /* PWA é progressivo — falha não quebra o app */ }
 })();
 

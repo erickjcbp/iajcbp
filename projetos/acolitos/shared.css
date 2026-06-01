@@ -140,10 +140,12 @@ body.has-switch { padding-top: calc(var(--header-h) + 46px); }
   background: linear-gradient(0deg, var(--surface2), var(--surface));
   border-top: 1px solid var(--border-wine);
   display: flex; align-items: stretch;
+  overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none;
   box-shadow: 0 -2px 0 rgba(232,185,74,.1), 0 -6px 24px rgba(0,0,0,.6);
 }
+.app-nav::-webkit-scrollbar { display: none; }
 .nav-item {
-  flex: 1; min-width: 0; display: flex; flex-direction: column;
+  flex: 1 0 auto; min-width: 74px; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 4px;
   background: transparent; border: none; cursor: pointer;
   color: var(--text-muted); font-size: 9px; font-weight: 600;
