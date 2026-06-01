@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minha Casa — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Lora:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .teaser { background:linear-gradient(160deg, var(--surface2), var(--surface)); border:1px solid var(--gold-dim); border-radius:14px; padding:20px 18px; margin-bottom:20px; position:relative; overflow:hidden; }
+    .teaser::after { content:''; position:absolute; inset:0; background:radial-gradient(120px 120px at 90% -10%, rgba(232,185,74,.12), transparent); pointer-events:none; }
+    .teaser h2 { font-family:'Sora',sans-serif; font-size:16px; color:var(--gold-light); margin-bottom:8px; }
+    .teaser p { font-family:'Lora',serif; font-size:14px; color:var(--text); line-height:1.6; }
+    .teaser .soon { display:inline-block; margin-top:12px; font-size:10px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:var(--gold); border:1px solid var(--gold-dim); border-radius:20px; padding:4px 12px; }
+    .casas-wrap { display:grid; grid-template-columns:1fr; gap:16px; }
+    @media(min-width:680px){ .casas-wrap{ grid-template-columns:repeat(2,1fr); } }
+    .casa-card { background:linear-gradient(165deg, color-mix(in srgb, var(--c) 22%, var(--surface)), var(--surface)); border:1px solid var(--c); border-radius:14px; padding:18px; position:relative; overflow:hidden; }
+    .casa-card::before { content:''; position:absolute; top:-40px; right:-40px; width:140px; height:140px; background:radial-gradient(circle, color-mix(in srgb, var(--c) 35%, transparent), transparent 70%); pointer-events:none; }
+    .casa-top { display:flex; align-items:center; gap:14px; margin-bottom:12px; }
+    .casa-nome { font-family:'Sora',sans-serif; font-weight:800; font-size:21px; letter-spacing:2px; color:#fff; text-transform:uppercase; }
+    .casa-tag { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--c); filter:brightness(1.5); }
+    .casa-lema { font-family:'Lora',serif; font-style:italic; font-size:15px; color:var(--gold-light); margin-bottom:2px; }
+    .casa-lema-pt { font-size:12px; color:var(--text-muted); margin-bottom:12px; }
+    .casa-carac { display:flex; flex-wrap:wrap; gap:7px; }
+    .carac { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--text); background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.1); border-radius:14px; padding:4px 11px; }
+    .carac i { width:6px; height:6px; border-radius:50%; background:var(--c); filter:brightness(1.6); flex:none; }
+    .minha-casa-banner { display:flex; align-items:center; gap:14px; background:linear-gradient(160deg, color-mix(in srgb, var(--c) 30%, var(--surface)), var(--surface)); border:1px solid var(--c); border-radius:14px; padding:16px; margin-bottom:18px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+<div class="main" id="main-content"><span class="loading">Carregando...</span></div>
+
+<script src="shared.js"></script>
+<script>
+function brasaoEl(slug, size) { const d = document.createElement('div'); d.style.cssText='flex:none;line-height:0;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5));'; d.innerHTML = getCasaBrasao(slug, size); return d; } // SVG hardcoded — seguro
+
+async function init() {
+  const ctx = await initModulo();
+  if (!ctx) return;
+  renderHeader(ctx, 'minha-casa');
+  renderBottomNav(ctx, 'minha-casa');
+  const main = document.getElementById('main-content'); main.textContent = '';
+  const title = document.createElement('h1'); title.className = 'page-title'; title.textContent = 'Minha Casa'; main.appendChild(title);
+
+  const { data: casas } = await sb.from('acolitos_casas').select('*').order('ordem');
+  const lista = casas || [];
+  const minhaCasaId = ctx.membro ? ctx.membro.casa_id : null;
+  const minha = minhaCasaId && lista.find(c => c.id === minhaCasaId);
+
+  if (minha) {
+    const b = document.createElement('div'); b.className = 'minha-casa-banner'; b.style.setProperty('--c', minha.cor || '#8a6a24');
+    b.appendChild(brasaoEl(minha.slug, 64));
+    const info = document.createElement('div');
+    const l = document.createElement('div'); l.style.cssText = 'font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;'; l.textContent = 'Você pertence à casa';
+    const n = document.createElement('div'); n.style.cssText = 'font-family:Sora,sans-serif;font-weight:800;font-size:20px;letter-spacing:2px;color:#fff;'; n.textContent = (minha.nome||'').toUpperCase();
+    const le = document.createElement('div'); le.style.cssText = 'font-family:Lora,serif;font-style:italic;color:var(--gold-light);font-size:13px;'; le.textContent = '"' + (minha.lema||'') + '"';
+    info.append(l, n, le); b.appendChild(info); main.appendChild(b);
+  } else {
+    const t = document.createElement('div'); t.className = 'teaser';
+    const h = document.createElement('h2'); h.textContent = 'Olá, meu querido servo do altar';
+    const p = document.createElement('p'); p.textContent = 'Em breve você será acolhido em uma destas casas, para uma jornada ainda mais especial — onde irmãos caminham juntos, cada um com a sua força. Conheça as casas e comece a sentir de qual delas o seu coração se aproxima.';
+    const soon = document.createElement('span'); soon.className = 'soon'; soon.textContent = 'Em breve · seleção das casas';
+    t.append(h, p, soon); main.appendChild(t);
+  }
+
+  const wrap = document.createElement('div'); wrap.className = 'casas-wrap';
+  lista.forEach(c => {
+    const card = document.createElement('div'); card.className = 'casa-card'; card.style.setProperty('--c', c.cor || '#8a6a24');
+    const top = document.createElement('div'); top.className = 'casa-top';
+    top.appendChild(brasaoEl(c.slug, 64));
+    const tt = document.createElement('div');
+    const nm = document.createElement('div'); nm.className = 'casa-nome'; nm.textContent = c.nome;
+    const tg = document.createElement('div'); tg.className = 'casa-tag'; tg.textContent = c.tagline || '';
+    tt.append(nm, tg); top.appendChild(tt); card.appendChild(top);
+    const lema = document.createElement('div'); lema.className = 'casa-lema'; lema.textContent = '"' + (c.lema||'') + '"'; card.appendChild(lema);
+    const lpt = document.createElement('div'); lpt.className = 'casa-lema-pt'; lpt.textContent = c.lema_pt || ''; card.appendChild(lpt);
+    const car = document.createElement('div'); car.className = 'casa-carac';
+    (c.caracteristicas || []).forEach(x => { const chip = document.createElement('span'); chip.className = 'carac'; const dot = document.createElement('i'); chip.append(dot, document.createTextNode(x)); car.appendChild(chip); });
+    card.appendChild(car);
+    wrap.appendChild(card);
+  });
+  main.appendChild(wrap);
+
+  const nota = document.createElement('p'); nota.style.cssText = 'font-size:12px;color:var(--text-muted);font-style:italic;text-align:center;margin-top:18px;line-height:1.5;'; nota.textContent = 'Nenhuma casa é “melhor” que a outra — cada uma tem uma força própria. É esse equilíbrio que faz tudo funcionar.';
+  main.appendChild(nota);
+}
+init();
+</script>
+</body>
+</html>

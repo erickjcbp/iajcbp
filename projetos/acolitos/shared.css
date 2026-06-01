@@ -143,14 +143,15 @@ body.has-switch { padding-top: calc(var(--header-h) + 46px); }
   box-shadow: 0 -2px 0 rgba(232,185,74,.1), 0 -6px 24px rgba(0,0,0,.6);
 }
 .nav-item {
-  flex: 1; display: flex; flex-direction: column;
+  flex: 1; min-width: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 4px;
   background: transparent; border: none; cursor: pointer;
   color: var(--text-muted); font-size: 9px; font-weight: 600;
-  font-family: 'Sora', sans-serif; letter-spacing: 1.5px; text-transform: uppercase;
-  text-decoration: none; transition: color .2s; padding: 6px 0; position: relative;
+  font-family: 'Sora', sans-serif; letter-spacing: .4px; text-transform: uppercase;
+  text-decoration: none; transition: color .2s; padding: 6px 2px; position: relative;
   -webkit-tap-highlight-color: transparent;
 }
+.nav-item span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-item svg { width: 23px; height: 23px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; transition: filter .2s; }
 .nav-item.active { color: var(--gold); }
 .nav-item.active svg { stroke: var(--gold); filter: drop-shadow(0 0 6px rgba(232,185,74,.7)); }

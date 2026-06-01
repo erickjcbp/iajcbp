@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Casas — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .casa-box { background:linear-gradient(165deg, color-mix(in srgb, var(--c) 18%, var(--surface)), var(--surface)); border:1px solid var(--c); border-radius:14px; padding:16px; margin-bottom:16px; }
+    .casa-hd { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+    .casa-hd .nm { font-family:'Sora',sans-serif; font-weight:800; font-size:18px; letter-spacing:1.5px; color:#fff; text-transform:uppercase; }
+    .casa-hd .tg { font-size:11px; color:var(--gold-light); font-style:italic; }
+    .casa-mem { display:flex; align-items:center; gap:8px; padding:6px 4px; border-bottom:1px solid rgba(255,255,255,.08); font-size:13px; }
+    .casa-mem .nm2 { flex:1; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .casa-mem-empty { font-size:12px; color:var(--text-muted); font-style:italic; padding:6px 2px; }
+    .casa-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .pick-list { max-height:50vh; overflow-y:auto; }
+    .pick-row { display:flex; align-items:center; gap:10px; padding:8px 4px; border-bottom:1px solid var(--border); cursor:pointer; }
+    .pick-row:hover { background:var(--surface2); }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+<div class="main" id="main-content"><span class="loading">Carregando...</span></div>
+
+<script src="shared.js"></script>
+<script>
+let ctx = null, casas = [], membros = [];
+function brasaoEl(slug, size) { const d = document.createElement('div'); d.style.cssText = 'flex:none;line-height:0;'; d.innerHTML = getCasaBrasao(slug, size); return d; } // SVG controlado — seguro
+
+async function init() {
+  ctx = await initModulo();
+  if (!ctx) return;
+  const c = navCaps(ctx);
+  if (!c.isAdmin && !c.perms.includes('casas')) { window.location.href = 'index.html'; return; }
+  renderHeader(ctx, 'casas');
+  renderBottomNav(ctx, 'casas');
+  await load();
+}
+
+async function load() {
+  const [cs, ms] = await Promise.all([
+    sb.from('acolitos_casas').select('*').order('ordem'),
+    sb.from('acolitos_membros').select('id,nome,apelido,foto_url,nivel,casa_id').eq('status','ativo').order('nome'),
+  ]);
+  casas = cs.data || []; membros = ms.data || [];
+  render();
+}
+
+function render() {
+  const main = document.getElementById('main-content'); main.textContent = '';
+  const title = document.createElement('h1'); title.className = 'page-title'; title.textContent = 'Casas'; main.appendChild(title);
+  const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 14px;'; hint.textContent = 'Edite as casas e distribua os membros. (Os membros já veem as casas na aba "Minha Casa".)'; main.appendChild(hint);
+
+  casas.forEach(casa => {
+    const doCasa = membros.filter(m => m.casa_id === casa.id);
+    const box = document.createElement('div'); box.className = 'casa-box'; box.style.setProperty('--c', casa.cor || '#8a6a24');
+    const hd = document.createElement('div'); hd.className = 'casa-hd';
+    hd.appendChild(brasaoEl(casa.slug, 52));
+    const ht = document.createElement('div'); ht.style.flex = '1';
+    const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = casa.nome;
+    const tg = document.createElement('div'); tg.className = 'tg'; tg.textContent = '"' + (casa.lema||'') + '" · ' + (casa.tagline||'') + ' · ' + doCasa.length + ' membro' + (doCasa.length===1?'':'s');
+    ht.append(nm, tg); hd.appendChild(ht); box.appendChild(hd);
+
+    if (!doCasa.length) { const em = document.createElement('div'); em.className = 'casa-mem-empty'; em.textContent = 'Nenhum membro nesta casa ainda.'; box.appendChild(em); }
+    else doCasa.forEach(m => {
+      const row = document.createElement('div'); row.className = 'casa-mem';
+      row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 30, { nivelSlug: m.nivel||'aspirante' }));
+      const n2 = document.createElement('div'); n2.className = 'nm2'; n2.textContent = m.apelido || m.nome; row.appendChild(n2);
+      const del = document.createElement('button'); del.className = 'mini-del'; del.textContent = '−'; del.title = 'Remover da casa';
+      del.onclick = () => moverMembro(m, null); row.appendChild(del);
+      box.appendChild(row);
+    });
+
+    const acts = document.createElement('div'); acts.className = 'casa-actions';
+    const bAdd = document.createElement('button'); bAdd.className = 'btn-sm gold'; bAdd.textContent = '+ Adicionar membro'; bAdd.onclick = () => abrirAddMembro(casa);
+    const bEd = document.createElement('button'); bEd.className = 'btn-sm gray'; bEd.textContent = '✎ Editar casa'; bEd.onclick = () => abrirEditarCasa(casa);
+    acts.append(bAdd, bEd); box.appendChild(acts);
+    main.appendChild(box);
+  });
+
+  const semCasa = membros.filter(m => !m.casa_id).length;
+  const nota = document.createElement('p'); nota.style.cssText = 'font-size:12px;color:var(--text-muted);text-align:center;margin-top:6px;'; nota.textContent = semCasa + ' membro(s) ainda sem casa.'; main.appendChild(nota);
+}
+
+async function moverMembro(m, casaId) {
+  const { error } = await sbAdmin.from('acolitos_membros').update({ casa_id: casaId }).eq('id', m.id);
+  if (error) { toast('Erro ao mover.', 'error'); return; }
+  m.casa_id = casaId;
+  toast(casaId ? '✓ Adicionado à casa.' : '✓ Removido da casa.');
+  render();
+}
+
+function abrirAddMembro(casa) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.maxWidth = '400px';
+  modal.innerHTML = '<div class="modal-handle"></div>';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Adicionar à ' + casa.nome; modal.appendChild(tt);
+  const busca = document.createElement('input'); busca.className = 'form-input'; busca.placeholder = '🔍 Buscar nome...'; busca.style.marginBottom = '10px'; modal.appendChild(busca);
+  const list = document.createElement('div'); list.className = 'pick-list'; modal.appendChild(list);
+  function popList() {
+    const q = busca.value.toLowerCase();
+    list.textContent = '';
+    membros.filter(m => m.casa_id !== casa.id && (m.nome||'').toLowerCase().includes(q)).slice(0, 60).forEach(m => {
+      const row = document.createElement('div'); row.className = 'pick-row';
+      row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 30, { nivelSlug: m.nivel||'aspirante' }));
+      const info = document.createElement('div'); info.style.flex = '1';
+      const n = document.createElement('div'); n.style.cssText = 'font-size:14px;color:var(--text);'; n.textContent = m.apelido || m.nome;
+      const sub = document.createElement('div'); sub.style.cssText = 'font-size:11px;color:var(--text-muted);'; sub.textContent = m.casa_id ? 'já está em outra casa' : nivelInfo(m.nivel||'aspirante').label;
+      info.append(n, sub); row.appendChild(info);
+      row.onclick = async () => { await moverMembro(m, casa.id); ov.remove(); };
+      list.appendChild(row);
+    });
+  }
+  busca.oninput = popList; popList();
+  const close = document.createElement('button'); close.className = 'btn-sm gray'; close.style.cssText = 'margin-top:12px;width:100%;'; close.textContent = 'Fechar'; close.onclick = () => ov.remove();
+  modal.appendChild(close);
+  ov.appendChild(modal); document.body.appendChild(ov);
+}
+
+function abrirEditarCasa(casa) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.maxWidth = '440px';
+  modal.innerHTML = '<div class="modal-handle"></div>';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Editar ' + casa.nome; modal.appendChild(tt);
+  const grupo = (lbl, el) => { const g = document.createElement('div'); g.className = 'form-group'; const l = document.createElement('label'); l.className = 'form-label'; l.textContent = lbl; g.append(l, el); return g; };
+  const iNome = document.createElement('input'); iNome.className = 'form-input'; iNome.value = casa.nome || '';
+  const iLema = document.createElement('input'); iLema.className = 'form-input'; iLema.value = casa.lema || '';
+  const iLemaPt = document.createElement('input'); iLemaPt.className = 'form-input'; iLemaPt.value = casa.lema_pt || '';
+  const iTag = document.createElement('input'); iTag.className = 'form-input'; iTag.value = casa.tagline || '';
+  const iCor = document.createElement('input'); iCor.type = 'color'; iCor.value = casa.cor || '#8a6a24'; iCor.style.cssText = 'width:60px;height:38px;padding:2px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);';
+  modal.append(grupo('Nome', iNome), grupo('Lema (latim)', iLema), grupo('Tradução do lema', iLemaPt), grupo('Frase (ex: Os líderes)', iTag), grupo('Cor', iCor));
+
+  // características editáveis
+  const lc = document.createElement('div'); lc.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin:4px 0;'; const lcl = document.createElement('label'); lcl.className = 'form-label'; lcl.style.margin = '0'; lcl.textContent = 'Características';
+  const addC = document.createElement('button'); addC.type = 'button'; addC.className = 'mini-add'; addC.textContent = '+ nova';
+  lc.append(lcl, addC); modal.appendChild(lc);
+  let carac = (casa.caracteristicas || []).slice();
+  const chips = document.createElement('div'); chips.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;'; modal.appendChild(chips);
+  function renderChips() {
+    chips.textContent = '';
+    carac.forEach((x, i) => {
+      const chip = document.createElement('span'); chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--gold);background:rgba(232,185,74,.1);border:1px solid var(--gold-dim);border-radius:12px;padding:3px 6px 3px 10px;';
+      chip.appendChild(document.createTextNode(x));
+      const xb = document.createElement('button'); xb.type = 'button'; xb.textContent = '×'; xb.style.cssText = 'background:none;border:none;color:var(--gold);cursor:pointer;font-weight:800;';
+      xb.onclick = () => { carac.splice(i, 1); renderChips(); }; chip.appendChild(xb); chips.appendChild(chip);
+    });
+  }
+  addC.onclick = () => { const v = (prompt('Nova característica:') || '').trim(); if (v) { carac.push(v); renderChips(); } };
+  renderChips();
+
+  const msg = document.createElement('div'); msg.className = 'msg'; modal.appendChild(msg);
+  const acts = document.createElement('div'); acts.className = 'modal-actions';
+  const cancel = document.createElement('button'); cancel.className = 'btn-sm gray'; cancel.textContent = 'Cancelar'; cancel.onclick = () => ov.remove();
+  const save = document.createElement('button'); save.className = 'btn-sm gold'; save.textContent = 'Salvar';
+  save.onclick = async () => {
+    save.disabled = true; save.textContent = 'Salvando...';
+    const payload = { nome: iNome.value.trim() || casa.nome, lema: iLema.value.trim() || null, lema_pt: iLemaPt.value.trim() || null, tagline: iTag.value.trim() || null, cor: iCor.value, caracteristicas: carac };
+    const { error } = await sbAdmin.from('acolitos_casas').update(payload).eq('id', casa.id);
+    if (error) { msg.className = 'msg error'; msg.textContent = 'Erro ao salvar.'; save.disabled = false; save.textContent = 'Salvar'; return; }
+    Object.assign(casa, payload); ov.remove(); toast('✓ Casa atualizada!'); render();
+  };
+  acts.append(cancel, save); modal.appendChild(acts);
+  ov.appendChild(modal); document.body.appendChild(ov);
+}
+
+init();
+</script>
+</body>
+</html>

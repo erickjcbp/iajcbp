@@ -515,7 +515,7 @@ function waLink(tel) {
 const MODULOS_LIBERAVEIS = [
   ['escala','Escala','escala.html'], ['membros','Membros','membros.html'],
   ['crm','Integração (CRM)','crm.html'], ['chamada','Chamada','chamada.html'],
-  ['tesouraria','Tesouraria','tesouraria.html'],
+  ['tesouraria','Tesouraria','tesouraria.html'], ['casas','Casas','casas.html'],
 ];
 
 // ── BOTTOM NAV ────────────────────────────────────────────────
@@ -528,8 +528,9 @@ const NAV_COORD_MODULOS = {
   crm:        { label:'CRM',        href:'crm.html',        icon:'shuffle' },
   chamada:    { label:'Chamada',    href:'chamada.html',    icon:'message-circle' },
   tesouraria: { label:'Tesouraria', href:'tesouraria.html', icon:'dollar' },
+  casas:      { label:'Casas',      href:'casas.html',      icon:'shield' },
 };
-const ORDEM_MODULOS = ['membros','escala','crm','chamada','tesouraria'];
+const ORDEM_MODULOS = ['membros','escala','crm','chamada','tesouraria','casas'];
 
 // Capacidades do usuário p/ navegação
 function navCaps(ctx) {
@@ -561,8 +562,37 @@ function _svgIcon(name) {
     'message-circle':'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
     dollar:         'M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
     star:           'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01z',
+    shield:         'M12 2l8 3v6c0 5-3.5 8.6-8 11-4.5-2.4-8-6-8-11V5z',
   };
   return `<svg viewBox="0 0 24 24"><path d="${d[name] || ''}"/></svg>`;
+}
+
+// ── BRASÕES DAS CASAS (SVG próprio, sem emoji) ────────────────
+const CASA_COR = { sanctaris:'#c0392b', seraphim:'#e67e22', veritatis:'#2980b9', templaris:'#27ae60' };
+function getCasaBrasao(slug, size) {
+  size = size || 80;
+  const cor = CASA_COR[slug] || '#8a6a24';
+  const uid = 'cb' + Math.random().toString(36).slice(2, 8);
+  const simbolos = {
+    sanctaris: '<g fill="none" stroke="#ffe9b0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M20 22 L42 48"/><path d="M44 22 L22 48"/>'
+      + '<path d="M17 21 l5 1 -1 5"/><path d="M47 21 l-5 1 1 5"/>'
+      + '<path d="M22 50 l-4 2"/><path d="M42 50 l4 2"/></g>',
+    seraphim: '<path d="M32 18 C26 28 21 32 21 40 a11 11 0 0 0 22 0 C43 32 38 28 32 18 Z" fill="#ffe9b0"/>'
+      + '<path d="M32 29 C29 34 26 36 26 41 a6 6 0 0 0 12 0 C38 36 35 34 32 29 Z" fill="' + cor + '"/>',
+    veritatis: '<g fill="none" stroke="#ffe9b0" stroke-width="2.4" stroke-linejoin="round">'
+      + '<path d="M32 27 C28 24 22 24 17 26 L17 47 C22 45 28 45 32 48 C36 45 42 45 47 47 L47 26 C42 24 36 24 32 27 Z"/>'
+      + '<path d="M32 27 L32 48"/></g>'
+      + '<circle cx="32" cy="19" r="2.8" fill="#ffe9b0"/>',
+    templaris: '<g fill="#ffe9b0"><rect x="28.5" y="20" width="7" height="32" rx="2"/><rect x="19" y="30" width="26" height="7" rx="2"/></g>',
+  };
+  const s = String(size);
+  return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 64 72" xmlns="http://www.w3.org/2000/svg">'
+    + '<defs><linearGradient id="' + uid + '" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0" stop-color="' + cor + '"/><stop offset="1" stop-color="#150a0d"/></linearGradient></defs>'
+    + '<path d="M32 3 L61 11 L61 39 C61 58 32 69 32 69 C32 69 3 58 3 39 L3 11 Z" fill="url(#' + uid + ')" stroke="#e8b94a" stroke-width="2.5"/>'
+    + '<path d="M32 9 L55.5 15.5 L55.5 38.5 C55.5 53 32 62.5 32 62.5 C32 62.5 8.5 53 8.5 38.5 L8.5 15.5 Z" fill="none" stroke="#8a6a24" stroke-width="1"/>'
+    + (simbolos[slug] || '') + '</svg>';
 }
 
 function renderBottomNav(ctx, activePage) {
@@ -579,6 +609,7 @@ function renderBottomNav(ctx, activePage) {
     items = [{ id:'home', href:'index.html', label:'Início', icon:'home' },
       { id:'escalas-membro', href:'escalas-membro.html', label:'Escalas', icon:'calendar' },
       { id:'destaques', href:'destaques.html', label:'Destaques', icon:'star' },
+      { id:'minha-casa', href:'minha-casa.html', label:'Casa', icon:'shield' },
       { id:'ausencias', href:'ausencias.html', label:'Ausência', icon:'x-circle' }];
     if (c.isCerimo) items.push({ id:'chamada', href:'chamada.html', label:'Chamada', icon:'message-circle' });
   }
