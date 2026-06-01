@@ -65,10 +65,17 @@ export default async function handler(req, res) {
     const cd = await cr.json();
     if (!cr.ok) { const ja = /registered|already|exists/i.test(cd.msg || cd.message || ''); return res.status(cr.status).json({ error: ja ? 'Esse usuário já existe.' : (cd.msg || cd.message || 'Erro ao criar.') }); }
     const newUid = cd.id;
+    let role = 'novo';
     if (membro_id) {
       await fetch(`${URL}/rest/v1/acolitos_membros?id=eq.${membro_id}`, { method: 'PATCH', headers: { ...jh, Prefer: 'return=minimal' }, body: JSON.stringify({ user_id: newUid }) });
+      // Membro já existente (com nível) recebe o PAPEL REAL — senão fica preso na tela de integração (role 'novo')
+      const mr = await fetch(`${URL}/rest/v1/acolitos_membros?id=eq.${membro_id}&select=nivel`, { headers: h });
+      const nivel = ((await mr.json())[0] || {}).nivel || '';
+      if (nivel) role = nivel.startsWith('cerimoniario') ? 'cerimonario'
+                       : (nivel.startsWith('acolito') || nivel === 'aspirante_cerimoniario') ? 'acolito'
+                       : nivel === 'coroinha' ? 'coroinha' : 'aspirante';
     }
-    await fetch(`${URL}/rest/v1/pastoral_members`, { method: 'POST', headers: { ...jh, Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: newUid, module_id: mod.id, role: 'novo' }) });
+    await fetch(`${URL}/rest/v1/pastoral_members`, { method: 'POST', headers: { ...jh, Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: newUid, module_id: mod.id, role }) });
     return res.status(200).json({ ok: true, user_id: newUid, email: synthEmail(usuario) });
   }
 
