@@ -687,21 +687,29 @@ async function gerarEscalaSemana(celebs, btnEl) {
   await loadDados();
 }
 
+let salvandoEscala=false;
 async function salvarEscala() {
-  if(!pendingCelebId)return;
+  if(salvandoEscala || !pendingCelebId){ if(!pendingCelebId) toast('Abra uma celebração para montar a escala.','error'); return; }
+  salvandoEscala=true;
   const btn=document.getElementById('btn-sv-escala');
   btn.disabled=true;btn.textContent='Salvando...';
-  await sb.from('acolitos_escalas').delete().eq('celebracao_id',pendingCelebId);
-  const novas=[];const seen={};
-  pendingEdicao.forEach(({sel,funcao})=>{
-    if(!sel.value)return;
-    const key=sel.value+'_'+funcao+novas.filter(n=>n.membro_id===sel.value&&n.funcao===funcao).length;
-    novas.push({celebracao_id:pendingCelebId,membro_id:sel.value,funcao,created_by:ctx.user.id});
-  });
-  if(novas.length){const{error}=await sb.from('acolitos_escalas').insert(novas);if(error){alert('Erro: '+error.message);btn.disabled=false;btn.textContent='Salvar Escala';return;}}
-  btn.disabled=false;btn.textContent='Salvar Escala';
-  fecharModal('modal-montagem');
-  await loadDados();
+  // monta só as vagas preenchidas — pode salvar INCOMPLETA (vagas vazias são ignoradas)
+  const novas=[];
+  pendingEdicao.forEach(({sel,funcao})=>{ if(sel.value) novas.push({celebracao_id:pendingCelebId,membro_id:sel.value,funcao,created_by:ctx.user.id}); });
+  const del=await sb.from('acolitos_escalas').delete().eq('celebracao_id',pendingCelebId);
+  if(del.error){ salvandoEscala=false; btn.disabled=false; btn.textContent='Salvar Escala'; toast('Erro ao salvar: '+del.error.message,'error'); return; }
+  if(novas.length){
+    const{error}=await sb.from('acolitos_escalas').insert(novas);
+    if(error){ salvandoEscala=false; btn.disabled=false; btn.textContent='Salvar Escala'; toast('Erro ao salvar: '+error.message,'error'); return; }
+  }
+  btn.className='btn-sm green'; btn.textContent='✓ Escala salva!';
+  toast('✓ Escala salva!'+(novas.length?' ('+novas.length+' posições)':' (vazia)'));
+  setTimeout(async ()=>{
+    fecharModal('modal-montagem');
+    btn.className='btn-sm gold'; btn.textContent='Salvar Escala'; btn.disabled=false;
+    salvandoEscala=false;
+    await loadDados();
+  }, 1000);
 }
 
 function renderPlanilha() {
