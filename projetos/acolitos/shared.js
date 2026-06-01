@@ -15,13 +15,29 @@ const sbAdmin = sb; // alias — todas as operações elevadas são via RLS com 
     const head = document.head; if (!head) return;
     const addMeta = (name, content) => { if (document.querySelector('meta[name="' + name + '"]')) return; const m = document.createElement('meta'); m.name = name; m.content = content; head.appendChild(m); };
     if (!document.querySelector('link[rel="manifest"]')) { const l = document.createElement('link'); l.rel = 'manifest'; l.href = 'manifest.json'; head.appendChild(l); }
-    addMeta('theme-color', '#150a0d');
-    addMeta('mobile-web-app-capable', 'yes');
-    addMeta('apple-mobile-web-app-capable', 'yes');
-    addMeta('apple-mobile-web-app-status-bar-style', 'black-translucent');
-    addMeta('apple-mobile-web-app-title', 'Acólitos JCBP');
+    addMeta('theme-color', '#150a0d'); addMeta('mobile-web-app-capable', 'yes'); addMeta('apple-mobile-web-app-capable', 'yes');
+    addMeta('apple-mobile-web-app-status-bar-style', 'black-translucent'); addMeta('apple-mobile-web-app-title', 'Acólitos JCBP');
     if (!document.querySelector('link[rel="apple-touch-icon"]')) { const a = document.createElement('link'); a.rel = 'apple-touch-icon'; a.href = 'icon-192.png'; head.appendChild(a); }
     if ('serviceWorker' in navigator) window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+
+    // banner "Instalar app"
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (standalone || localStorage.getItem('pwa-dismiss') === '1') return;
+    let deferred = null;
+    function banner(texto, btnLabel, onBtn) {
+      if (document.getElementById('pwa-banner') || !document.body) return;
+      const b = document.createElement('div'); b.id = 'pwa-banner';
+      b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(var(--nav-h,0px) + 14px);z-index:400;max-width:460px;margin:0 auto;background:#200d13;border:1px solid #8a6a24;border-radius:12px;padding:11px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 28px rgba(0,0,0,.55);';
+      const ic = document.createElement('img'); ic.src = 'icon-192.png'; ic.width = 34; ic.height = 34; ic.style.cssText = 'border-radius:8px;flex:none;';
+      const tx = document.createElement('div'); tx.style.cssText = 'flex:1;font-size:12.5px;color:#f7ebe7;line-height:1.35;'; tx.textContent = texto;
+      b.append(ic, tx);
+      if (onBtn) { const bt = document.createElement('button'); bt.textContent = btnLabel; bt.style.cssText = 'flex:none;background:linear-gradient(160deg,#ffd97a,#8a6a24);color:#2a1500;border:none;border-radius:8px;padding:8px 12px;font-weight:800;font-size:12px;cursor:pointer;'; bt.onclick = onBtn; b.appendChild(bt); }
+      const cl = document.createElement('button'); cl.textContent = '×'; cl.title = 'Dispensar'; cl.style.cssText = 'flex:none;background:none;border:none;color:#b88a8f;font-size:20px;line-height:1;cursor:pointer;'; cl.onclick = () => { localStorage.setItem('pwa-dismiss', '1'); b.remove(); }; b.appendChild(cl);
+      document.body.appendChild(b);
+    }
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; banner('Instale o app na sua tela inicial.', 'Instalar', () => { deferred.prompt(); deferred.userChoice.finally(() => { const el = document.getElementById('pwa-banner'); if (el) el.remove(); }); }); });
+    const ua = navigator.userAgent || '';
+    if (/iphone|ipad|ipod/i.test(ua) && /safari/i.test(ua) && !/crios|fxios|chrome|android/i.test(ua)) setTimeout(() => banner('Para instalar: toque em Compartilhar e depois “Adicionar à Tela de Início”.', null, null), 1500);
   } catch (e) { /* PWA é progressivo — falha não quebra o app */ }
 })();
 

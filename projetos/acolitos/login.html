@@ -6,6 +6,13 @@
   <title>Acólitos & Coroinhas — JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Oxanium:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#150a0d">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Acólitos JCBP">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
   <style>
     :root{
@@ -206,6 +213,31 @@
 
   // Se já está logado, vai direto para a home do módulo
   sb.auth.getSession().then(({ data:{ session } })=>{ if(session) window.location.href='index.html'; });
+</script>
+<script>
+// ── PWA: service worker + banner "Instalar app" (login não usa shared.js) ──
+(function(){
+  try {
+    if ('serviceWorker' in navigator) window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+    var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (standalone || localStorage.getItem('pwa-dismiss')==='1') return;
+    var deferred = null;
+    function banner(texto, btnLabel, onBtn){
+      if (document.getElementById('pwa-banner')) return;
+      var b=document.createElement('div'); b.id='pwa-banner';
+      b.style.cssText='position:fixed;left:12px;right:12px;bottom:14px;z-index:400;max-width:460px;margin:0 auto;background:#200d13;border:1px solid #8a6a24;border-radius:12px;padding:11px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 28px rgba(0,0,0,.55);';
+      var ic=document.createElement('img'); ic.src='icon-192.png'; ic.width=34; ic.height=34; ic.style.cssText='border-radius:8px;flex:none;';
+      var tx=document.createElement('div'); tx.style.cssText='flex:1;font-size:12.5px;color:#f7ebe7;line-height:1.35;'; tx.textContent=texto;
+      b.appendChild(ic); b.appendChild(tx);
+      if(onBtn){ var bt=document.createElement('button'); bt.textContent=btnLabel; bt.style.cssText='flex:none;background:linear-gradient(160deg,#ffd97a,#8a6a24);color:#2a1500;border:none;border-radius:8px;padding:8px 12px;font-weight:800;font-size:12px;cursor:pointer;'; bt.onclick=onBtn; b.appendChild(bt); }
+      var cl=document.createElement('button'); cl.textContent='×'; cl.style.cssText='flex:none;background:none;border:none;color:#b88a8f;font-size:20px;line-height:1;cursor:pointer;'; cl.onclick=function(){ localStorage.setItem('pwa-dismiss','1'); b.remove(); }; b.appendChild(cl);
+      document.body.appendChild(b);
+    }
+    window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); deferred=e; banner('Instale o app na sua tela inicial.','Instalar',function(){ deferred.prompt(); deferred.userChoice.finally(function(){ var el=document.getElementById('pwa-banner'); if(el) el.remove(); }); }); });
+    var ua=navigator.userAgent||'';
+    if(/iphone|ipad|ipod/i.test(ua) && /safari/i.test(ua) && !/crios|fxios|chrome|android/i.test(ua)) setTimeout(function(){ banner('Para instalar: toque em Compartilhar e depois “Adicionar à Tela de Início”.', null, null); }, 1500);
+  } catch(e){}
+})();
 </script>
 </body>
 </html>
