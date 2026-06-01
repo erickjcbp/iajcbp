@@ -612,6 +612,15 @@ function planejarVagas(vagas, horKey, ausNesta, usados, carga) {
     return true;
   }
 
+  // 0) COMPLETAR FAMÍLIA dos já escalados (manual/existente): irmãos que servem junto entram também.
+  //    Não remove a escolha manual — só adiciona o(s) irmão(s) disponível(is) numa vaga apta.
+  Array.from(usados).forEach(id => {
+    const m = membros.find(x => x.id === id);
+    if (!m || !m.escalar_com_irmao || !m.grupo_irmaos) return;
+    membros.filter(x => x.grupo_irmaos===m.grupo_irmaos && x.escalar_com_irmao && x.id!==id && !usados.has(x.id) && !ausNesta.has(x.id) && disp(x.id))
+      .forEach(irm => { const i = livres().find(j => apta(irm.id, vagas[j])); if (i !== undefined) assign(i, irm.id); });
+  });
+
   // 1) blocos de irmãos (tudo-ou-nada)
   const visited = new Set(); const sibUnits = [];
   membros.forEach(m => {
