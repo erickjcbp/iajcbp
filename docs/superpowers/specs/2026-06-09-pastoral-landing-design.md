@@ -40,11 +40,15 @@ crianças/jovens e famílias a participar, com caminhos claros de contato.
 3. **O chamado (3 pilares)** — Servir · Formar-se · Fraternidade, cada um com um ícone
    tirado de `midia/elementos/` (ex.: cálice, cruz, sino) e uma frase curta.
 4. **Galeria** — grade responsiva de fotos de `midia/landing/` (molduras douradas + vinheta).
-5. **Nossas missas** — convite a participar, listando as comunidades e horários:
+5. **Nosso app** — destaque do aplicativo próprio dos coroinhas: jornada gamificada
+   (níveis, missões/XP, conquistas/medalhas, casas), escalas e agenda, chamada/presença.
+   Tom: "a vida no altar também acontece no seu bolso". Ícone do app (`icon-192.png`),
+   3–4 destaques curtos com ícones, e botão **[Acessar o app]** (→ `login.html`).
+6. **Nossas missas** — convite a participar, listando as comunidades e horários:
    Matriz 7h · 9h · 17h · 19h; Santo Antônio 18h30. (Dias a confirmar pelo usuário.)
-6. **Como participar (CTA de recrutamento)** — botões: **WhatsApp** (abre conversa),
+7. **Como participar (CTA de recrutamento)** — botões: **WhatsApp** (abre conversa),
    **Instagram** (@somosdoaltar), **Quero servir** (→ `login.html`, aba de cadastro).
-7. **Rodapé** — Paróquia · Limeira/SP · Instagram; e links discretos: "Acesso dos coroinhas"
+8. **Rodapé** — Paróquia · Limeira/SP · Instagram; e links discretos: "Acesso dos coroinhas"
    (→ `login.html`) e "Informar ausência" (→ `/ausencias`).
 
 ## CTAs e links
@@ -57,11 +61,17 @@ crianças/jovens e famílias a participar, com caminhos claros de contato.
 
 ## Assets
 
-- A página consome as imagens presentes em `midia/landing/` (o usuário vai adicioná-las).
-  Os nomes/arquivos reais são fiados na implementação (o controller checa o que existe em
-  `midia/landing/` e referencia). Enquanto não houver fotos, usa placeholders elegantes
-  (blocos com ornamento) que não quebram o layout (com `onerror` escondendo `<img>` faltante).
-- Marca: `brasao-pastoral.png` e logos em `midia/logos/`.
+- O usuário adicionou ~20 fotos em `midia/landing/` **em resolução cheia (5–16 MB cada,
+  ~350 MB no total)** — inviável para web.
+- **Otimização obrigatória (tarefa do plano):** gerar versões web em `midia/landing/web/`
+  com `sips` (nativo do macOS): redimensionar para no máx. ~1600px no maior lado, qualidade
+  ~80, alvo < ~300 KB cada. Os **originais NÃO vão pro deploy** (entram no `.gitignore`;
+  só as versões `web/` são commitadas/servidas). Remover o duplicado (`_DSC7307 2.JPG`).
+- **Curadoria:** escolher ~1 foto forte para o hero e ~6–8 para a galeria (o usuário pode
+  trocar depois). A página referencia nomes fixos das versões otimizadas.
+- Placeholders elegantes (com `onerror` escondendo `<img>` faltante) evitam layout quebrado
+  se alguma imagem faltar.
+- Marca: `brasao-pastoral.png` e logos em `midia/logos/`; ícone do app `icon-192.png`.
 
 ## Conteúdo a fornecer (não bloqueia o desenho; entram como slots)
 
