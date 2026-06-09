@@ -1,5 +1,11 @@
 /* shared.js — módulo Acólitos e Coroinhas */
 
+// Bloqueia zoom por pinça/gesto no iOS Safari (que ignora user-scalable=no no navegador).
+// O viewport (maximum-scale=1) + touch-action no CSS cobrem PWA e Android; isto fecha o iOS web.
+['gesturestart', 'gesturechange', 'gestureend'].forEach(function (ev) {
+  document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false });
+});
+
 // ── SUPABASE ─────────────────────────────────────────────────
 const SUPABASE_URL = 'https://fttjgsotuosjfrasttds.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGpnc290dW9zamZyYXN0dGRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MzU3NjUsImV4cCI6MjA5NTExMTc2NX0.BvofcR2cIXP7Bc3r2V0VOgc-JXPefX7JGGwtzv0d_eA';
@@ -109,6 +115,7 @@ async function initModulo(requiredRoles = null) {
   if (!session) { window.location.href = 'login.html'; return null; }
 
   await loadListasCustom();
+  try { await loadConfig(); } catch (e) {}
 
   const { data: modulo } = await sbAdmin
     .from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
@@ -167,7 +174,7 @@ async function initModulo(requiredRoles = null) {
     }
   }
 
-  if (membro && Array.isArray(membro.avisos) && membro.avisos.length) showAvisos(membro);
+  queueNotificacoes(membro);
 
   return { user: session.user, membership, membro, conta, grupoIrmaos };
 }
@@ -225,31 +232,518 @@ function avisoEl(aviso, membro) {
     const p = document.createElement('div'); p.style.cssText = 'font-size:14px;color:var(--text);line-height:1.6;'; p.textContent = aviso.texto || aviso.msg || '';
     wrap.append(t, p); return wrap;
   }
+  if (aviso && aviso.tipo === 'quest_exclusiva') {
+    const wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:14px;padding:12px;background:rgba(155,89,212,.1);border-radius:6px;border-left:3px solid #9b59d4;';
+    const t = document.createElement('div'); t.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:#cd9ef2;margin-bottom:6px;'; t.textContent = '✨ Quest Exclusiva';
+    const p = document.createElement('div'); p.style.cssText = 'font-size:14px;color:var(--text);line-height:1.5;'; p.textContent = aviso.titulo || aviso.msg || '';
+    wrap.append(t, p); return wrap;
+  }
   const p = document.createElement('div'); p.style.cssText = 'font-size:14px;line-height:1.6;color:var(--text);margin-bottom:12px;padding:12px;background:var(--surface);border-left:3px solid var(--gold);border-radius:4px;';
   p.textContent = (aviso && aviso.msg) ? aviso.msg : String(aviso);
   return p;
 }
 
-// Pop-up ao acessar: mostra os avisos NÃO vistos; marca como vistos; encerra sessão se preciso
-async function showAvisos(membro) {
-  const avisos = Array.isArray(membro.avisos) ? membro.avisos : [];
-  const naoVistos = avisos.filter(a => a && !a.seen); if (!naoVistos.length) return;
-  const precisaLogout = naoVistos.some(a => a.logout);
-  const atualizados = avisos.map(a => ({ ...a, seen: true }));
-  try { await sb.from('acolitos_membros').update({ avisos: atualizados }).eq('id', membro.id); } catch (e) {}
-  membro.avisos = atualizados;
-  const b = document.getElementById('sino-badge'); if (b) b.style.display = 'none';
+// ── FILA DE NOTIFICAÇÕES (uma por vez; level-up "Parabéns" tem prioridade) ──
+let _notifFila = [];
+let _notifRodando = false;
+function enqueueNotif(prio, render) { _notifFila.push({ prio, render }); }
+function _notifNext() {
+  const item = _notifFila.shift();
+  if (!item) { _notifRodando = false; return; }
+  item.render(() => _notifNext());          // cada pop-up chama done() ao fechar → próximo
+}
+function _notifStart() {
+  if (_notifRodando || !_notifFila.length) return;
+  _notifRodando = true;
+  _notifFila.sort((a, b) => b.prio - a.prio); // maior prioridade primeiro (sort estável mantém a ordem dos avisos)
+  _notifNext();
+}
 
+// Coleta o que precisa aparecer ao acessar e enfileira (mostra um de cada vez)
+function queueNotificacoes(membro) {
+  if (!membro) return;
+  // 1) Parabéns de nível — PRIORIDADE MÁXIMA; só na home (onde showLevelUp existe)
+  if (typeof window.showLevelUp === 'function') {
+    const nivel = membro.nivel || nivelFromRole(membro.role || 'aspirante');
+    const seenIdx = membro.nivel_visto ? nivelIndex(membro.nivel_visto) : -1;
+    const curIdx = nivelIndex(nivel);
+    if (curIdx > -1 && curIdx > seenIdx) {
+      membro.nivel_visto = nivel;
+      sb.from('acolitos_membros').update({ nivel_visto: nivel }).eq('id', membro.id).then(() => {}, () => {});
+      enqueueNotif(100, (done) => window.showLevelUp(nivel, membro.nome || '', done));
+    }
+  }
+  // 2) Cadastro incompleto — pede pra completar (prioridade alta; 1x por sessão de acesso)
+  const faltando = camposIncompletos(membro);
+  if (faltando.length && !sessionStorage.getItem('cadastro-prompt-' + membro.id)) {
+    sessionStorage.setItem('cadastro-prompt-' + membro.id, '1');
+    enqueueNotif(50, (done) => showCompletarCadastroPrompt(membro, faltando, done));
+  }
+  // 3) Avisos não vistos — cada um no seu pop-up (logout vai por último)
+  const avisos = Array.isArray(membro.avisos) ? membro.avisos : [];
+  const naoVistos = avisos.filter(a => a && !a.seen);
+  if (naoVistos.length) {
+    const atualizados = avisos.map(a => ({ ...a, seen: true }));
+    membro.avisos = atualizados;
+    sb.from('acolitos_membros').update({ avisos: atualizados }).eq('id', membro.id).then(() => {}, () => {});
+    const b = document.getElementById('sino-badge'); if (b) b.style.display = 'none';
+    const _celebTipos = { xp_ganho: 1, medalha: 1, campeao: 1, estrela_nova: 1, quest_exclusiva: 1 };
+    naoVistos.forEach(a => enqueueNotif(a && a.logout ? -10 : (a && _celebTipos[a.tipo] ? 10 : 0), (done) => showAvisoUnico(a, membro, done)));
+  }
+  _notifStart();
+}
+
+// Pop-up especial e bonito de Quest Exclusiva
+// ── NÚCLEO DE CELEBRAÇÃO REUTILIZÁVEL ──────────────────────────────────────
+// Overlay cinematográfico (raios girando, halo, anel de choque, faíscas radiais,
+// confete) com cor temática. Usado por estrela, quest exclusiva, medalha e campeão.
+// opts: { icon, tag, hero, sub(html-safe via heroStrong/subStrong), theme{--cg...},
+//         actions:[{label,primary,onClick(close)}], sound:'star'|'level'|false, autoClose }
+function _celebInject() {
+  if (typeof _xpgEnsureStyle === 'function') _xpgEnsureStyle(); // garante os keyframes compartilhados
+  if (document.getElementById('celeb-style')) return;
+  const st = document.createElement('style'); st.id = 'celeb-style';
+  st.textContent = `
+  .celeb-overlay{position:fixed;inset:0;z-index:9991;display:flex;align-items:center;justify-content:center;padding:22px;background:radial-gradient(circle at 50% 40%,var(--cbg,rgba(120,20,30,.5)),rgba(6,3,5,.9) 62%);backdrop-filter:blur(4px);animation:xpgIn .35s ease both;
+    --cg:var(--red-glow);--cg2:var(--gold-light);--cring:rgba(255,217,122,.85);--cspark:var(--gold);--cray:rgba(232,185,74,.18)}
+  .celeb-overlay.closing{opacity:0;transition:opacity .3s ease}
+  .celeb-card{position:relative;width:100%;max-width:340px;text-align:center;padding:30px 24px 24px;animation:xpgPop .6s cubic-bezier(.18,1.4,.4,1) both}
+  .celeb-rays{position:absolute;top:0;left:50%;width:300px;height:300px;transform:translateX(-50%);pointer-events:none;z-index:0;opacity:.6;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,var(--cray) 8deg 16deg);border-radius:50%;-webkit-mask:radial-gradient(circle,#000 10%,transparent 60%);mask:radial-gradient(circle,#000 10%,transparent 60%);animation:xpgSpin 9s linear infinite}
+  .celeb-halo{position:absolute;top:16px;left:50%;width:210px;height:210px;transform:translateX(-50%);pointer-events:none;z-index:0;background:radial-gradient(circle,var(--cg),transparent 62%);animation:xpgHalo 1.7s ease-in-out infinite}
+  .celeb-iconwrap{position:relative;z-index:2;width:104px;height:92px;margin:8px auto 0;display:flex;align-items:center;justify-content:center}
+  .celeb-icon{position:relative;z-index:2;font-size:76px;line-height:1;text-align:center;filter:drop-shadow(0 0 20px var(--cg2));transform:scale(0) rotate(-40deg);animation:celebIn .9s cubic-bezier(.18,1.6,.4,1) forwards,celebPulse 1.9s ease-in-out 1s infinite}
+  @keyframes celebIn{0%{transform:scale(0) rotate(-40deg)}60%{transform:scale(1.25) rotate(8deg)}100%{transform:scale(1) rotate(0)}}
+  @keyframes celebPulse{0%,100%{filter:drop-shadow(0 0 16px var(--cg2))}50%{filter:drop-shadow(0 0 30px var(--cg2))}}
+  .celeb-ring{position:absolute;top:50%;left:50%;width:20px;height:20px;border-radius:50%;transform:translate(-50%,-50%);z-index:1;box-shadow:0 0 0 0 var(--cring);animation:xpgRing .9s ease-out forwards}
+  .celeb-rsparks{position:absolute;top:50%;left:50%;width:0;height:0;z-index:3}
+  .celeb-rsparks i{position:absolute;top:0;left:0;width:9px;height:9px;border-radius:50%;background:radial-gradient(circle,#fff,var(--cspark) 60%,transparent);transform:translate(-50%,-50%) scale(.3);opacity:0;animation:xpgRspark .95s ease-out forwards}
+  .celeb-tag{position:relative;z-index:2;font-family:'Oxanium',sans-serif;font-weight:800;letter-spacing:3px;font-size:15px;color:var(--cg2);margin-top:14px;text-shadow:0 0 14px var(--cg);animation:xpgUp .5s ease .4s both}
+  .celeb-hero{position:relative;z-index:2;font-family:'Sora',sans-serif;font-weight:800;font-size:21px;color:#fff;line-height:1.25;margin-top:8px;text-shadow:0 0 16px var(--cg);animation:xpgUp .5s ease .48s both}
+  .celeb-sub{position:relative;z-index:2;font-size:13px;color:var(--text);margin-top:8px;line-height:1.5;animation:xpgUp .5s ease .56s both}
+  .celeb-sub b{color:var(--cg2)}
+  .celeb-actions{position:relative;z-index:2;display:flex;flex-direction:column;gap:9px;margin-top:20px;animation:xpgUp .5s ease .66s both}
+  .celeb-btn{font-family:'Oxanium',sans-serif;font-weight:700;letter-spacing:.5px;font-size:13px;padding:12px 20px;border-radius:10px;cursor:pointer;border:1px solid var(--border-wine);background:transparent;color:var(--text-muted)}
+  .celeb-btn.primary{border:none;color:#2a1a00;background:linear-gradient(180deg,var(--cg2),var(--cspark));box-shadow:0 4px 20px var(--cg)}
+  .celeb-confetti{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+  .celeb-confetti i{position:absolute;top:-10px;width:7px;height:12px;border-radius:1px;opacity:.9;animation:xpgFall linear forwards}`;
+  document.head.appendChild(st);
+}
+function showCeleb(opts) {
+  opts = opts || {}; _celebInject();
+  if (opts.sound !== false) _celebrate(opts.sound === 'level' ? playLevelUpSound : playStarSound);
+  const ov = document.createElement('div'); ov.className = 'celeb-overlay';
+  const th = opts.theme || {}; Object.keys(th).forEach(k => ov.style.setProperty(k, th[k]));
+  ov.innerHTML =
+    '<div class="celeb-card">' +
+      '<div class="celeb-rays"></div><div class="celeb-halo"></div><div class="celeb-confetti"></div>' +
+      '<div class="celeb-iconwrap"><div class="celeb-ring"></div><div class="celeb-rsparks"></div><div class="celeb-icon"></div></div>' +
+      '<div class="celeb-tag"></div><div class="celeb-hero"></div><div class="celeb-sub"></div>' +
+      '<div class="celeb-actions"></div>' +
+    '</div>';
+  document.body.appendChild(ov);
+  const card = ov.querySelector('.celeb-card');
+  ov.querySelector('.celeb-icon').textContent = opts.icon || '⭐';
+  ov.querySelector('.celeb-tag').textContent = opts.tag || '';
+  const heroEl = ov.querySelector('.celeb-hero'); if (opts.hero) heroEl.textContent = opts.hero; else heroEl.style.display = 'none';
+  const subEl = ov.querySelector('.celeb-sub');
+  if (opts.subStrong) { subEl.append(document.createTextNode(opts.subPre || ''), Object.assign(document.createElement('b'), { textContent: opts.subStrong }), document.createTextNode(opts.subPost || '')); }
+  else if (opts.sub) subEl.textContent = opts.sub; else subEl.style.display = 'none';
+  // faíscas radiais
+  const rs = ov.querySelector('.celeb-rsparks');
+  for (let i = 0; i < 12; i++) { const ang = (i / 12) * Math.PI * 2, r = 62 + Math.random() * 26; const sp = document.createElement('i'); sp.style.setProperty('--dx', (Math.cos(ang) * r).toFixed(0) + 'px'); sp.style.setProperty('--dy', (Math.sin(ang) * r).toFixed(0) + 'px'); sp.style.animationDelay = (Math.random() * 0.15).toFixed(2) + 's'; rs.appendChild(sp); }
+  // confete
+  const conf = ov.querySelector('.celeb-confetti'); const cores = opts.confetti || ['var(--cspark)', 'var(--cg2)', '#fff', 'var(--red-soft)'];
+  for (let i = 0; i < 20; i++) { const c = document.createElement('i'); c.style.cssText = 'left:' + (Math.random() * 100) + '%;background:' + cores[i % cores.length] + ';animation-duration:' + (1.4 + Math.random() * 1).toFixed(2) + 's;animation-delay:' + (Math.random() * 0.5).toFixed(2) + 's;'; conf.appendChild(c); }
+  let closed = false;
+  const close = () => { if (closed) return; closed = true; clearTimeout(ov._t); ov.classList.add('closing'); setTimeout(() => { ov.remove(); if (typeof opts.done === 'function') opts.done(); }, 300); };
+  const acts = ov.querySelector('.celeb-actions');
+  (opts.actions && opts.actions.length ? opts.actions : [{ label: 'Continuar' }]).forEach(a => {
+    const b = document.createElement('button'); b.className = 'celeb-btn' + (a.primary ? ' primary' : ''); b.textContent = a.label;
+    b.onclick = () => { if (a.onClick) a.onClick(close); else close(); };
+    acts.appendChild(b);
+  });
+  ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+  if (opts.autoClose) ov._t = setTimeout(close, opts.autoClose);
+  return { close, ov, card };
+}
+const _TEMA_ROXO = { '--cbg': 'rgba(60,20,90,.58)', '--cg': 'rgba(155,89,212,.55)', '--cg2': '#cd9ef2', '--cring': 'rgba(155,89,212,.85)', '--cspark': '#a86fd6', '--cray': 'rgba(155,89,212,.20)' };
+
+function showQuestExclusivaPop(aviso, done) {
+  const titulo = aviso.titulo || String(aviso.msg || '').replace(/^[^:]*:\s*/, '').replace(/[!.].*$/, '') || 'Nova missão';
+  showCeleb({
+    icon: '✨', tag: 'QUEST EXCLUSIVA', hero: titulo, sub: 'Uma missão especial caiu pra você!',
+    theme: _TEMA_ROXO, sound: 'star', done: done,
+    actions: [
+      { label: '🔥 Bora fazer!', primary: true, onClick: (close) => { close(); if (!location.pathname.endsWith('missoes.html')) location.href = 'missoes.html'; } },
+      { label: 'Depois' }
+    ]
+  });
+}
+
+// ── ÁUDIO (arquivos WAV) — toca SOMENTE nas notificações animadas (estrela/level up).
+// SEM "prime" silencioso no 1º gesto: aquilo ativava a sessão de áudio do iOS e
+// acendia a ilha dinâmica mesmo sem comemoração. Agora a sessão de áudio só é
+// ativada quando uma comemoração realmente toca o som. Sons são criados/carregados
+// sob demanda (1ª comemoração), nada toca ao abrir telas ou ao tocar na tela.
+let _sndStar = null, _sndLevel = null;
+function _initSounds() {
+  if (_sndStar) return;
+  try {
+    _sndStar = new Audio('/midia/som-estrela.wav'); _sndStar.preload = 'auto';
+    _sndLevel = new Audio('/midia/som-levelup.wav'); _sndLevel.preload = 'auto';
+  } catch (e) {}
+}
+function _playSnd(a) { if (!a) return null; try { a.pause(); a.currentTime = 0; a.muted = false; a.volume = 1; return a.play(); } catch (e) { return null; } }
+function playStarSound() { _initSounds(); return _playSnd(_sndStar); }
+function playLevelUpSound() { _initSounds(); return _playSnd(_sndLevel); }
+// toca o som SÓ na hora do popup da comemoração
+function _celebrate(soundFn) {
+  try { const p = soundFn(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+}
+
+// Pop-up de NOVA ESTRELA (micro-progressão do nível)
+function showStarUp(n, done) {
+  showCeleb({
+    icon: '⭐', tag: 'NOVA ESTRELA!',
+    hero: '⭐'.repeat(Math.min(n, 5)) + (n > 5 ? ' ×' + n : ''),
+    subPre: 'Você conquistou sua ', subStrong: n + 'ª estrela', subPost: ' neste nível! Cada uma mostra seu empenho em servir bem. 🌟',
+    sound: 'star', done: done,
+    actions: [{ label: 'Continuar servindo 🙏', primary: true }]
+  });
+}
+// 🏅 Medalha conquistada (missão com concede_badge aprovada)
+function showMedalha(label, done) {
+  showCeleb({
+    icon: '🏅', tag: 'MEDALHA CONQUISTADA', hero: label || 'Nova insígnia',
+    sub: 'Uma nova medalha brilha no seu mural de conquistas!', sound: 'level', done: done,
+    actions: [
+      { label: '🎖️ Ver no mural', primary: true, onClick: (close) => { close(); if (!location.pathname.endsWith('conquistas.html')) location.href = 'conquistas.html'; } },
+      { label: 'Fechar' }
+    ]
+  });
+}
+// 🏆 Campeão de temporada (liga)
+function showCampeao(liga, temporada, done) {
+  const LL = { iniciantes: 'Iniciantes', acolitos: 'Acólitos', cerimoniarios: 'Cerimoniários' };
+  showCeleb({
+    icon: '🏆', tag: 'CAMPEÃO DA TEMPORADA', hero: 'Liga ' + (LL[liga] || liga || ''),
+    subPre: 'Você foi o destaque da temporada ', subStrong: temporada || '', subPost: '! Que servo exemplar. 👏',
+    sound: 'level', done: done,
+    actions: [
+      { label: '🏅 Ver destaques', primary: true, onClick: (close) => { close(); if (!location.pathname.endsWith('destaques.html')) location.href = 'destaques.html'; } },
+      { label: 'Fechar' }
+    ]
+  });
+}
+
+// ── ANIMAÇÃO DE GANHO DE XP ────────────────────────────────────────────────
+// gain=XP ganho · fromXp=XP que o membro já tinha DENTRO do nível atual (desde
+// nivel_desde) · quest=título da missão. Se o ganho cruzar o limiar de estrela
+// (200), encadeia a comemoração de NOVA ESTRELA (bem animada).
+const XPG_LIMIAR = 200;
+function _xpgEnsureStyle() {
+  if (document.getElementById('xpg-style')) return;
+  const st = document.createElement('style'); st.id = 'xpg-style';
+  st.textContent = `
+  .xpg-overlay{position:fixed;inset:0;z-index:9990;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 50% 38%,rgba(120,20,30,.42),rgba(6,3,5,.86) 62%);backdrop-filter:blur(3px);animation:xpgIn .35s ease both}
+  .xpg-overlay.closing{opacity:0;transition:opacity .3s ease}
+  @keyframes xpgIn{from{opacity:0}to{opacity:1}}
+  .xpg-card{position:relative;width:100%;max-width:340px;text-align:center;padding:26px 22px 22px;animation:xpgPop .6s cubic-bezier(.18,1.4,.4,1) both}
+  @keyframes xpgPop{0%{transform:scale(.7);opacity:0}60%{opacity:1}100%{transform:scale(1);opacity:1}}
+  .xpg-rays{position:absolute;top:6px;left:50%;width:280px;height:280px;transform:translateX(-50%);pointer-events:none;z-index:0;opacity:.55;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,rgba(232,185,74,.16) 8deg 16deg);border-radius:50%;-webkit-mask:radial-gradient(circle,#000 12%,transparent 62%);mask:radial-gradient(circle,#000 12%,transparent 62%);animation:xpgSpin 9s linear infinite}
+  @keyframes xpgSpin{to{transform:translateX(-50%) rotate(360deg)}}
+  .xpg-halo{position:absolute;top:14px;left:50%;width:200px;height:200px;transform:translateX(-50%);pointer-events:none;z-index:0;background:radial-gradient(circle,var(--red-glow),transparent 62%);animation:xpgHalo 1.7s ease-in-out infinite}
+  @keyframes xpgHalo{0%,100%{opacity:.5;transform:translateX(-50%) scale(.92)}50%{opacity:.95;transform:translateX(-50%) scale(1.08)}}
+  .xpg-orb{position:relative;z-index:1;width:96px;height:96px;margin:6px auto 0;border-radius:50%;background:radial-gradient(circle at 38% 32%,#fff3d0,var(--gold) 42%,#7a3a12 100%);box-shadow:0 0 0 3px rgba(255,217,122,.65),0 0 34px 6px var(--red-glow),inset 0 -8px 18px rgba(122,40,12,.7);display:flex;align-items:center;justify-content:center;animation:xpgOrb 2.2s ease-in-out infinite;transition:opacity .4s ease,transform .4s ease}
+  @keyframes xpgOrb{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+  .xpg-orb.gone{opacity:0;transform:scale(.4)}
+  .xpg-orb span{font-family:'Oxanium',sans-serif;font-size:46px;font-weight:800;color:#3a2102;text-shadow:0 1px 0 rgba(255,255,255,.5);line-height:1}
+  .xpg-tag{position:relative;z-index:1;font-family:'Oxanium',sans-serif;font-size:11px;font-weight:700;letter-spacing:4px;color:var(--gold-light);margin-top:16px;animation:xpgUp .5s ease .25s both}
+  .xpg-num{position:relative;z-index:1;font-family:'Oxanium',sans-serif;font-weight:800;font-size:62px;line-height:1;margin-top:2px;color:var(--gold-light);text-shadow:0 0 18px var(--red-glow),0 2px 0 #7a3a12;animation:xpgUp .5s ease .3s both}
+  .xpg-num b{font-size:34px;vertical-align:super;opacity:.9}
+  .xpg-num small{font-family:'Oxanium',sans-serif;font-size:22px;font-weight:700;letter-spacing:2px;margin-left:6px;color:var(--gold)}
+  .xpg-num.punch{animation:xpgPunch .26s ease}
+  @keyframes xpgPunch{0%{transform:scale(1)}40%{transform:scale(1.14)}100%{transform:scale(1)}}
+  .xpg-quest{position:relative;z-index:1;font-size:13px;font-weight:600;color:var(--text);margin-top:8px;animation:xpgUp .5s ease .4s both}
+  .xpg-quest b{color:var(--gold-light)}
+  .xpg-barwrap{position:relative;z-index:1;margin-top:16px;animation:xpgUp .5s ease .5s both}
+  .xpg-bar{position:relative;height:13px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid var(--border-wine);overflow:hidden}
+  .xpg-fill{position:absolute;inset:0 auto 0 0;width:0%;border-radius:8px;background:linear-gradient(90deg,#b8341f,var(--gold) 70%,var(--gold-light));box-shadow:0 0 12px var(--red-glow);transition:width 1.1s cubic-bezier(.25,.9,.3,1)}
+  .xpg-fill::after{content:'';position:absolute;inset:0;border-radius:8px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);transform:translateX(-100%);animation:xpgShine 1.3s ease .4s infinite}
+  @keyframes xpgShine{to{transform:translateX(220%)}}
+  .xpg-bar.flash{animation:xpgFlash .5s ease}
+  @keyframes xpgFlash{0%,100%{box-shadow:0 0 0 transparent}50%{box-shadow:0 0 18px 4px var(--gold-light)}}
+  .xpg-hint{font-family:'Oxanium',sans-serif;font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--gold-light);margin-top:7px;text-shadow:0 0 8px var(--red-glow)}
+  .xpg-btn{position:relative;z-index:1;margin-top:18px;font-family:'Oxanium',sans-serif;font-weight:700;letter-spacing:.5px;font-size:13px;padding:11px 26px;border-radius:10px;cursor:pointer;border:1px solid var(--border-wine);background:transparent;color:var(--text-muted);animation:xpgUp .5s ease .7s both}
+  @keyframes xpgUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .xpg-sparks{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+  .xpg-sparks i{position:absolute;bottom:30%;width:7px;height:7px;border-radius:50%;opacity:0;background:radial-gradient(circle,#fff,var(--gold) 60%,transparent);animation:xpgSpark 1.4s ease-out forwards}
+  @keyframes xpgSpark{0%{opacity:0;transform:translateY(0) scale(.4)}15%{opacity:1}100%{opacity:0;transform:translateY(-150px) scale(1)}}
+  /* ── estrela super animada ── */
+  .xpg-starzone{position:absolute;top:6px;left:0;right:0;height:120px;z-index:3;pointer-events:none}
+  .xpg-srays{position:absolute;top:-12px;left:50%;width:260px;height:260px;transform:translateX(-50%);background:repeating-conic-gradient(from 0deg,transparent 0 9deg,rgba(255,217,122,.30) 9deg 18deg);border-radius:50%;-webkit-mask:radial-gradient(circle,#000 6%,transparent 56%);mask:radial-gradient(circle,#000 6%,transparent 56%);animation:xpgSpin2 5s linear infinite;opacity:0;animation-fill-mode:both}
+  @keyframes xpgSpin2{to{transform:translateX(-50%) rotate(360deg)}}
+  .xpg-sring{position:absolute;top:54px;left:50%;width:20px;height:20px;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 0 rgba(255,217,122,.85);animation:xpgRing .85s ease-out forwards}
+  @keyframes xpgRing{0%{box-shadow:0 0 0 0 rgba(255,217,122,.85)}100%{box-shadow:0 0 0 110px rgba(255,217,122,0)}}
+  .xpg-bigstar{position:absolute;top:54px;left:50%;font-size:82px;line-height:1;transform:translate(-50%,-50%) scale(0) rotate(-45deg);filter:drop-shadow(0 0 20px var(--gold-light));animation:xpgStarIn .9s cubic-bezier(.18,1.6,.4,1) forwards,xpgStarPulse 1.8s ease-in-out 1s infinite}
+  @keyframes xpgStarIn{0%{transform:translate(-50%,-50%) scale(0) rotate(-45deg)}60%{transform:translate(-50%,-50%) scale(1.3) rotate(10deg)}100%{transform:translate(-50%,-50%) scale(1) rotate(0)}}
+  @keyframes xpgStarPulse{0%,100%{filter:drop-shadow(0 0 16px var(--gold-light))}50%{filter:drop-shadow(0 0 30px var(--gold-light))}}
+  .xpg-rspark{position:absolute;top:54px;left:50%;width:9px;height:9px;border-radius:50%;background:radial-gradient(circle,#fff,var(--gold) 60%,transparent);transform:translate(-50%,-50%) scale(.3);opacity:0;animation:xpgRspark .95s ease-out forwards}
+  @keyframes xpgRspark{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}18%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1)}}
+  .xpg-starlbl{position:absolute;top:104px;left:0;right:0;font-family:'Oxanium',sans-serif;font-weight:800;letter-spacing:2px;font-size:15px;color:var(--gold-light);text-shadow:0 0 14px var(--gold-light);opacity:0;animation:xpgUp .5s ease .5s both}
+  .xpg-confetti{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:hidden}
+  .xpg-confetti i{position:absolute;top:-10px;width:7px;height:12px;border-radius:1px;opacity:.9;animation:xpgFall linear forwards}
+  @keyframes xpgFall{to{transform:translateY(420px) rotate(540deg)}}
+  `;
+  document.head.appendChild(st);
+}
+function showXpGain(gain, fromXp, quest, done) {
+  _xpgEnsureStyle();
+  _celebrate(playStarSound);
+  gain = Number(gain) || 0; fromXp = Number(fromXp) || 0;
+  const toXp = fromXp + gain;
+  const crossesStar = Math.floor(toXp / XPG_LIMIAR) > Math.floor(fromXp / XPG_LIMIAR);
+  const novaEstrela = Math.floor(toXp / XPG_LIMIAR);
+
+  const ov = document.createElement('div'); ov.className = 'xpg-overlay';
+  ov.innerHTML =
+    '<div class="xpg-card">' +
+      '<div class="xpg-rays"></div><div class="xpg-halo"></div>' +
+      '<div class="xpg-sparks"></div><div class="xpg-confetti"></div>' +
+      '<div class="xpg-orb"><span>✦</span></div>' +
+      '<div class="xpg-tag">XP CONQUISTADO</div>' +
+      '<div class="xpg-num"><b>+</b><span class="xpg-val">0</span><small>XP</small></div>' +
+      '<div class="xpg-quest">Missão: <b class="xpg-qname"></b></div>' +
+      '<div class="xpg-barwrap"><div class="xpg-bar"><div class="xpg-fill"></div></div><div class="xpg-hint"></div></div>' +
+      '<button class="xpg-btn">Continuar 🙏</button>' +
+    '</div>';
+  document.body.appendChild(ov);
+  ov.querySelector('.xpg-qname').textContent = quest || 'concluída'; // textContent: à prova de XSS (título vem do banco)
+
+  const card = ov.querySelector('.xpg-card');
+  const numEl = ov.querySelector('.xpg-num'), valEl = ov.querySelector('.xpg-val');
+  const fill = ov.querySelector('.xpg-fill'), bar = ov.querySelector('.xpg-bar');
+  const hint = ov.querySelector('.xpg-hint'), sparks = ov.querySelector('.xpg-sparks');
+  const btn = ov.querySelector('.xpg-btn');
+
+  for (let i = 0; i < 14; i++) { const s = document.createElement('i'); s.style.left = (8 + Math.random() * 84) + '%'; s.style.animationDelay = (Math.random() * 0.8).toFixed(2) + 's'; sparks.appendChild(s); }
+
+  const startPct = (fromXp % XPG_LIMIAR) / XPG_LIMIAR * 100;
+  fill.style.transition = 'none'; fill.style.width = startPct + '%'; void fill.offsetWidth; fill.style.transition = '';
+
+  const t0 = performance.now(), DUR = 1000; let lastPunch = 0;
+  function tick(now) {
+    const t = Math.min(1, (now - t0) / DUR);
+    const v = Math.round((1 - Math.pow(1 - t, 3)) * gain);
+    valEl.textContent = v;
+    if (v >= lastPunch + Math.max(1, Math.round(gain / 8))) { lastPunch = v; numEl.classList.remove('punch'); void numEl.offsetWidth; numEl.classList.add('punch'); }
+    if (t < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  setTimeout(() => {
+    if (crossesStar) {
+      fill.style.width = '100%';
+      setTimeout(() => { _celebrate(playStarSound); bar.classList.add('flash'); _xpgStarShow(card, novaEstrela); }, 700);
+      setTimeout(() => { fill.style.transition = 'none'; fill.style.width = '0%'; void fill.offsetWidth; fill.style.transition = ''; fill.style.width = ((toXp % XPG_LIMIAR) / XPG_LIMIAR * 100) + '%'; }, 1100);
+      hint.textContent = 'faltam ' + (XPG_LIMIAR - (toXp % XPG_LIMIAR)) + ' XP pra próxima ⭐';
+    } else {
+      fill.style.width = ((toXp % XPG_LIMIAR) / XPG_LIMIAR * 100) + '%';
+      hint.textContent = 'faltam ' + (XPG_LIMIAR - (toXp % XPG_LIMIAR)) + ' XP pra próxima ⭐';
+    }
+  }, 450);
+
+  let closed = false;
+  const close = () => { if (closed) return; closed = true; clearTimeout(ov._timer); ov.classList.add('closing'); setTimeout(() => { ov.remove(); if (typeof done === 'function') done(); }, 300); };
+  btn.onclick = close;
+  ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+  ov._timer = setTimeout(close, crossesStar ? 5600 : 4200);
+}
+// Comemoração de estrela dentro da animação de XP (raios, anel, faíscas radiais, confete)
+function _xpgStarShow(card, n) {
+  const orb = card.querySelector('.xpg-orb'); if (orb) orb.classList.add('gone');
+  const zone = document.createElement('div'); zone.className = 'xpg-starzone';
+  const rays = document.createElement('div'); rays.className = 'xpg-srays';
+  const ring = document.createElement('div'); ring.className = 'xpg-sring';
+  const star = document.createElement('div'); star.className = 'xpg-bigstar'; star.textContent = '⭐';
+  const lbl = document.createElement('div'); lbl.className = 'xpg-starlbl'; lbl.textContent = 'NOVA ESTRELA!' + (n > 1 ? ' (' + n + 'ª)' : '');
+  zone.append(rays, ring, star, lbl);
+  // faíscas radiais
+  for (let i = 0; i < 12; i++) {
+    const ang = (i / 12) * Math.PI * 2, r = 60 + Math.random() * 26;
+    const sp = document.createElement('div'); sp.className = 'xpg-rspark';
+    sp.style.setProperty('--dx', (Math.cos(ang) * r).toFixed(0) + 'px');
+    sp.style.setProperty('--dy', (Math.sin(ang) * r).toFixed(0) + 'px');
+    sp.style.animationDelay = (Math.random() * 0.15).toFixed(2) + 's';
+    zone.appendChild(sp);
+  }
+  card.appendChild(zone);
+  requestAnimationFrame(() => { rays.style.animationName = 'xpgSpin2'; rays.style.opacity = '.9'; });
+  // confete
+  const conf = card.querySelector('.xpg-confetti');
+  if (conf) { const cores = ['var(--red-soft)', 'var(--gold)', 'var(--gold-light)', '#fff']; for (let i = 0; i < 18; i++) { const c = document.createElement('i'); c.style.cssText = 'left:' + (Math.random() * 100) + '%;background:' + cores[i % 4] + ';animation-duration:' + (1 + Math.random() * 0.8).toFixed(2) + 's;animation-delay:' + (Math.random() * 0.3).toFixed(2) + 's;'; conf.appendChild(c); } }
+}
+
+// Mostra UM aviso isolado; done() avança a fila (logout encerra a sessão)
+function showAvisoUnico(aviso, membro, done) {
+  if (aviso && aviso.tipo === 'quest_exclusiva') { showQuestExclusivaPop(aviso, done); return; }
+  if (aviso && aviso.tipo === 'estrela_nova') { showStarUp(Number(aviso.n) || 1, done); return; }
+  if (aviso && aviso.tipo === 'xp_ganho') { showXpGain(Number(aviso.gain) || 0, Number(aviso.from_xp) || 0, aviso.titulo || '', done); return; }
+  if (aviso && aviso.tipo === 'medalha') { showMedalha(aviso.label || '', done); return; }
+  if (aviso && aviso.tipo === 'campeao') { showCampeao(aviso.liga, aviso.temporada, done); return; }
+  if (aviso && aviso.tipo === 'levelup_demo') { if (typeof window.showLevelUp === 'function') window.showLevelUp(aviso.nivel, aviso.nome || '', done); else if (typeof done === 'function') done(); return; }
+  const precisaLogout = !!(aviso && aviso.logout);
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '500';
   const modal = document.createElement('div'); modal.className = 'modal';
   const handle = document.createElement('div'); handle.className = 'modal-handle';
-  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Avisos da Coordenação';
-  modal.append(handle, tt);
-  naoVistos.forEach(a => modal.appendChild(avisoEl(a, membro)));
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Aviso da Coordenação';
+  modal.append(handle, tt, avisoEl(aviso, membro));
   const btn = document.createElement('button'); btn.className = 'btn gold'; btn.style.marginTop = '8px';
   btn.textContent = precisaLogout ? 'Entendi — sair e entrar de novo' : 'Entendi';
-  btn.onclick = async () => { if (precisaLogout) { try { await sb.auth.signOut(); } catch (e) {} window.location.href = 'login.html'; } else ov.remove(); };
+  btn.onclick = async () => {
+    if (precisaLogout) { try { await sb.auth.signOut(); } catch (e) {} window.location.href = 'login.html'; return; }
+    ov.remove(); if (typeof done === 'function') done();
+  };
   modal.appendChild(btn);
+  ov.appendChild(modal); document.body.appendChild(ov);
+}
+
+// ── CADASTRO INCOMPLETO (o membro precisa completar os próprios dados) ──
+// TODOS os campos que PODEM ser exigidos no "Complete seu cadastro" (padrao = exigido por padrão).
+// O superadmin liga/desliga cada um no Config → Campos do cadastro (chave cadastro_campos).
+const CAMPOS_OBRIGATORIOS = [
+  { key:'data_nascimento', label:'Data de nascimento', tipo:'date', padrao:true },
+  { key:'telefone', label:'Telefone', tipo:'tel', padrao:true },
+  { key:'telefone_whatsapp', label:'Esse telefone é WhatsApp?', tipo:'bool', padrao:true },
+  { key:'comunidade', label:'Comunidade que frequenta', tipo:'select', opcoes:[['matriz','Matriz'],['santo_antonio','Santo Antônio'],['outra','Outra']], padrao:true },
+  { key:'endereco', label:'Endereço', tipo:'text', padrao:true },
+  { key:'celular_recado', label:'Telefone de recado (responsável/familiar)', tipo:'tel', padrao:true },
+  { key:'responsavel', label:'Nome do responsável', tipo:'text', padrao:false },
+  { key:'celular_mae', label:'Telefone da mãe', tipo:'tel', padrao:false },
+  { key:'pode_outras_comunidades', label:'Pode servir em outras comunidades?', tipo:'bool', padrao:false },
+  { key:'necessidades_especiais', label:'Necessidades especiais (TEA, TDAH, limitações…)', tipo:'text', padrao:false },
+  { key:'batismo', label:'É batizado(a)?', tipo:'bool', padrao:true },
+  { key:'primeira_eucaristia', label:'Fez a 1ª Eucaristia?', tipo:'bool', padrao:true },
+  { key:'crisma', label:'É crismado(a)?', tipo:'bool', padrao:true },
+  { key:'tem_tunica', label:'Possui túnica própria?', tipo:'bool', padrao:true },
+  { key:'no_grupo_whatsapp', label:'Está no grupo do WhatsApp da pastoral?', tipo:'bool', padrao:true },
+];
+// um campo é exigido se o Config disser; sem config, usa o `padrao` do campo
+function campoExigido(key, padrao) {
+  const cc = (typeof cfg === 'function') ? cfg('cadastro_campos', null) : null;
+  return (cc && (key in cc)) ? cc[key] !== false : padrao;
+}
+function camposIncompletos(membro) {
+  const faltam = CAMPOS_OBRIGATORIOS.filter(c => {
+    if (!campoExigido(c.key, !!c.padrao)) return false;
+    const v = membro[c.key];
+    if (c.tipo === 'bool') return v === null || v === undefined;       // bool: precisa responder sim/não
+    return v === null || v === undefined || String(v).trim() === '';    // texto/data/select: não pode vazio
+  });
+  if (campoExigido('foto', true) && !membro.foto_url) faltam.push({ key:'foto_url', label:'Foto de perfil', tipo:'foto' });
+  return faltam;
+}
+
+// Pop-up inicial avisando que faltam dados (com botão Preencher)
+function showCompletarCadastroPrompt(membro, faltando, done) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '505';
+  const modal = document.createElement('div'); modal.className = 'modal';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Complete seu cadastro';
+  const p = document.createElement('p'); p.style.cssText = 'font-size:14px;line-height:1.6;color:var(--text);margin:4px 0 6px;';
+  p.textContent = 'Você possui informações incompletas. Preencha agora para que a coordenação possa te escalar e entrar em contato corretamente.';
+  const sub = document.createElement('div'); sub.style.cssText = 'font-size:12px;color:var(--gold);font-weight:700;margin-bottom:12px;';
+  sub.textContent = faltando.length + (faltando.length === 1 ? ' campo pendente' : ' campos pendentes');
+  modal.append(handle, tt, p, sub);
+  const btn = document.createElement('button'); btn.className = 'btn gold'; btn.style.width = '100%'; btn.textContent = 'Preencher agora';
+  btn.onclick = () => { ov.remove(); showCompletarCadastroForm(membro, done); };
+  const skip = document.createElement('button'); skip.className = 'btn'; skip.style.cssText = 'width:100%;margin-top:8px;background:transparent;border:none;color:var(--text-muted);box-shadow:none;font-size:13px;';
+  skip.textContent = 'Agora não';
+  skip.onclick = () => { ov.remove(); if (typeof done === 'function') done(); };
+  modal.append(btn, skip);
+  ov.appendChild(modal); document.body.appendChild(ov);
+}
+
+// Formulário com todos os campos obrigatórios; salva e atualiza o registro do membro
+function showCompletarCadastroForm(membro, done) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '510';
+  const modal = document.createElement('div'); modal.className = 'modal';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Complete seu cadastro';
+  const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-8px 0 14px;font-weight:600;';
+  sub.textContent = 'Confira e preencha os dados abaixo. Leva um minutinho.';
+  modal.append(handle, tt, sub);
+
+  // Foto de perfil — só aparece se for exigida (salva na hora; não trava o "Salvar", mas o lembrete volta até ter)
+  if (campoExigido('foto', true)) {
+    const fotoWrap = document.createElement('div'); fotoWrap.style.cssText = 'display:flex;align-items:center;gap:14px;margin-bottom:14px;padding:10px;background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;';
+    const fotoTxt = document.createElement('div'); fotoTxt.style.flex = '1';
+    const fotoLab = document.createElement('div'); fotoLab.style.cssText = 'font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;'; fotoLab.textContent = 'Foto de perfil';
+    const fotoHint = document.createElement('div'); fotoHint.style.cssText = 'font-size:12px;color:var(--gold);margin-top:3px;'; fotoHint.textContent = membro.foto_url ? 'Toque na foto para trocar.' : 'Toque na foto para adicionar.';
+    const av = buildAvatarEl(membro.foto_url, nivelInfo(membro.nivel || 'aspirante').base, 64, {
+      editable: true, membro: membro, nivelSlug: membro.nivel || 'aspirante',
+      onUpload: (url) => { membro.foto_url = url; fotoHint.textContent = '✓ Foto adicionada!'; fotoHint.style.color = 'var(--success-text)'; }
+    });
+    fotoTxt.append(fotoLab, fotoHint); fotoWrap.append(av, fotoTxt); modal.appendChild(fotoWrap);
+  }
+
+  const campos = [];
+  CAMPOS_OBRIGATORIOS.filter(def => campoExigido(def.key, !!def.padrao)).forEach(def => {
+    const wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:12px;';
+    const lab = document.createElement('label'); lab.style.cssText = 'display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;';
+    lab.textContent = def.label; wrap.appendChild(lab);
+    let getValue, isValid, markErr;
+    if (def.tipo === 'bool') {
+      let estado = membro[def.key] === true ? 'sim' : (membro[def.key] === false ? 'nao' : null);
+      const seg = document.createElement('div'); seg.style.cssText = 'display:flex;gap:8px;';
+      const mk = (val, txt) => {
+        const b = document.createElement('button'); b.type = 'button'; b.textContent = txt;
+        const paint = () => { b.style.cssText = 'flex:1;padding:10px;border-radius:9px;font-family:Sora,sans-serif;font-weight:700;font-size:13px;cursor:pointer;border:1px solid ' + (estado === val ? 'var(--gold)' : 'var(--border-wine)') + ';background:' + (estado === val ? 'linear-gradient(165deg,rgba(232,185,74,.2),var(--surface2))' : 'var(--surface2)') + ';color:' + (estado === val ? 'var(--gold-light)' : 'var(--text)') + ';'; };
+        paint(); b.onclick = () => { estado = val; seg.querySelectorAll('button').forEach(x => x._paint && x._paint()); wrap.style.outline = 'none'; };
+        b._paint = paint; return b;
+      };
+      seg.append(mk('sim', 'Sim'), mk('nao', 'Não')); wrap.appendChild(seg);
+      getValue = () => estado === 'sim' ? true : (estado === 'nao' ? false : null);
+      isValid = () => estado !== null;
+      markErr = () => { wrap.style.outline = '1px solid var(--danger,#c0392b)'; wrap.style.outlineOffset = '3px'; wrap.style.borderRadius = '8px'; };
+    } else if (def.tipo === 'select') {
+      const sel = document.createElement('select'); sel.className = 'form-input';
+      (def.opcoes || []).forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; if ((membro[def.key] || '') === v) o.selected = true; sel.appendChild(o); });
+      if (!membro[def.key]) { const o = document.createElement('option'); o.value = ''; o.textContent = '— selecione —'; o.selected = true; sel.insertBefore(o, sel.firstChild); }
+      wrap.appendChild(sel);
+      getValue = () => sel.value; isValid = () => !!sel.value;
+      markErr = () => { sel.style.borderColor = 'var(--danger,#c0392b)'; };
+    } else {
+      const inp = document.createElement('input'); inp.className = 'form-input';
+      inp.type = def.tipo === 'date' ? 'date' : 'text';
+      if (def.tipo === 'tel') inp.inputMode = 'tel';
+      inp.value = membro[def.key] || '';
+      wrap.appendChild(inp);
+      getValue = () => inp.value.trim(); isValid = () => inp.value.trim() !== '';
+      markErr = () => { inp.style.borderColor = 'var(--danger,#c0392b)'; };
+    }
+    campos.push({ def, getValue, isValid, markErr });
+    modal.appendChild(wrap);
+  });
+
+  const msg = document.createElement('div'); msg.style.cssText = 'font-size:12px;color:var(--danger,#e07a6a);min-height:16px;margin:2px 0 8px;';
+  modal.appendChild(msg);
+  const save = document.createElement('button'); save.className = 'btn gold'; save.style.width = '100%'; save.textContent = 'Salvar e atualizar';
+  save.onclick = async () => {
+    const faltam = campos.filter(c => !c.isValid());
+    if (faltam.length) { faltam.forEach(c => c.markErr()); msg.textContent = 'Preencha todos os campos destacados.'; return; }
+    save.disabled = true; save.textContent = 'Salvando...'; msg.textContent = '';
+    const patch = {}; campos.forEach(c => { patch[c.def.key] = c.getValue(); });
+    const { error } = await sb.from('acolitos_membros').update(patch).eq('id', membro.id);
+    if (error) { msg.textContent = 'Erro ao salvar. Tente de novo.'; save.disabled = false; save.textContent = 'Salvar e atualizar'; return; }
+    Object.assign(membro, patch);
+    toast('✓ Cadastro atualizado!');
+    ov.remove(); if (typeof done === 'function') done();
+  };
+  const fechar = document.createElement('button'); fechar.className = 'btn'; fechar.style.cssText = 'width:100%;margin-top:8px;background:transparent;border:none;color:var(--text-muted);box-shadow:none;font-size:13px;';
+  fechar.textContent = 'Depois';
+  fechar.onclick = () => { ov.remove(); if (typeof done === 'function') done(); };
+  modal.append(save, fechar);
   ov.appendChild(modal); document.body.appendChild(ov);
 }
 
@@ -545,14 +1039,85 @@ let _listasCarregadas = false;
 async function loadListasCustom(force = false) {
   if (_listasCarregadas && !force) return;
   try {
-    const { data } = await sb.from('acolitos_listas').select('*').in('tipo', ['habilidade', 'competencia', 'setor']).order('label');
-    (data || []).forEach(r => {
-      if (r.tipo === 'habilidade') { if (!(r.valor in HABILIDADE_LABEL)) { HABILIDADES.push([r.valor, r.label]); } HABILIDADE_LABEL[r.valor] = r.label; }
-      else if (r.tipo === 'competencia') { if (!(r.valor in COMPETENCIA_LABEL)) { COMPETENCIAS.push([r.valor, r.label]); } COMPETENCIA_LABEL[r.valor] = r.label; }
-      else if (r.tipo === 'setor') { if (!(r.valor in SETOR_LABEL)) { SETORES.push([r.valor, r.label]); } SETOR_LABEL[r.valor] = r.label; }
-    });
+    const { data } = await sb.from('acolitos_listas').select('tipo,valor,label').in('tipo', ['habilidade', 'competencia', 'setor']).order('label');
+    const byTipo = { habilidade: [], competencia: [], setor: [] };
+    (data || []).forEach(r => { if (byTipo[r.tipo]) byTipo[r.tipo].push([r.valor, r.label]); });
+    // DB é a fonte da verdade: se há linhas no banco p/ o tipo, substitui a lista; vazio → mantém o padrão do código (fallback de fábrica)
+    const aplicar = (arr, labelObj, rows) => {
+      if (!rows.length) return;
+      arr.length = 0; Object.keys(labelObj).forEach(k => delete labelObj[k]);
+      rows.forEach(([v, l]) => { arr.push([v, l]); labelObj[v] = l; });
+    };
+    aplicar(HABILIDADES, HABILIDADE_LABEL, byTipo.habilidade);
+    aplicar(COMPETENCIAS, COMPETENCIA_LABEL, byTipo.competencia);
+    aplicar(SETORES, SETOR_LABEL, byTipo.setor);
     _listasCarregadas = true;
-  } catch (e) { /* listas custom indisponíveis — segue com as padrão */ }
+  } catch (e) { /* listas indisponíveis — segue com as padrão */ }
+}
+// ── CONFIG GLOBAL (tabela acolitos_config) ────────────────────
+let _APP_CONFIG = {};
+let _CONFIG_CARREGADO = false;
+async function loadConfig() {
+  try {
+    const { data } = await sb.from('acolitos_config').select('chave,valor');
+    _APP_CONFIG = {}; (data||[]).forEach(r => { _APP_CONFIG[r.chave] = r.valor; });
+    // listas usadas como config (tipos de celebração e funções) — guardadas com prefixo __
+    const { data: lst } = await sb.from('acolitos_listas').select('tipo,valor,label,meta').in('tipo', ['tipo_celebracao','funcao']);
+    _APP_CONFIG.__tipos = (lst||[]).filter(x => x.tipo === 'tipo_celebracao');
+    _APP_CONFIG.__funcoes = (lst||[]).filter(x => x.tipo === 'funcao');
+    _CONFIG_CARREGADO = true;
+    aplicarIdentidade();
+    aplicarNiveisEstrutura();
+    aplicarNiveis();
+  } catch (e) { _APP_CONFIG = {}; }
+}
+// Estrutura dos níveis (Config → Níveis): se há 'niveis_full' (lista completa), substitui NIVEIS inteiro.
+// Permite adicionar/reordenar/excluir. Sem isso, usa os níveis padrão do código.
+function aplicarNiveisEstrutura() {
+  const full = (_APP_CONFIG && _APP_CONFIG.niveis_full) || null;
+  if (!Array.isArray(full) || !full.length || typeof NIVEIS === 'undefined') return;
+  NIVEIS.length = 0;
+  full.forEach((e, i) => {
+    NIVEIS.push({
+      slug: e.slug, label: e.label || e.slug, base: e.base || 'acolito',
+      int: (e.int != null ? Number(e.int) : i), pips: (e.pips != null ? Number(e.pips) : 0),
+      emoji: e.emoji || '', titulo: e.titulo || '',
+      intro: e.intro || '', missao: e.missao || '', desafio: e.desafio || '', proximo: e.proximo || '',
+      _patch: e.patch || e._patch || null,
+    });
+  });
+}
+// Override dos textos dos níveis (Config → Níveis): label, título e tudo do "O caminho".
+function aplicarNiveis() {
+  const ov = (_APP_CONFIG && _APP_CONFIG.niveis) || null;
+  if (!ov || typeof NIVEIS === 'undefined') return;
+  NIVEIS.forEach(n => {
+    const o = ov[n.slug]; if (!o) return;
+    ['label', 'titulo', 'intro', 'missao', 'desafio', 'proximo'].forEach(k => { if (o[k] !== undefined && o[k] !== null) n[k] = o[k]; });
+    if (o.patch) n._patch = o.patch; // emblema customizado (gerador de patch)
+  });
+}
+// Aplica identidade/tema (cores) do Config em runtime — fallback: tema padrão do CSS
+function aplicarIdentidade() {
+  const idn = (_APP_CONFIG && _APP_CONFIG.identidade) || null;
+  if (!idn) return;
+  const root = document.documentElement;
+  if (idn.cor_ouro) { root.style.setProperty('--gold', idn.cor_ouro); root.style.setProperty('--gold-light', idn.cor_ouro); }
+  if (idn.cor_primaria) { root.style.setProperty('--wine', idn.cor_primaria); root.style.setProperty('--red', idn.cor_primaria); root.style.setProperty('--red-soft', idn.cor_primaria); }
+}
+function cfg(chave, padrao) { return (_APP_CONFIG && (chave in _APP_CONFIG)) ? _APP_CONFIG[chave] : padrao; }
+// Mescla os tipos de celebração customizados no objeto TIPO_LABEL da página (mutação de objeto — ok mesmo sendo const)
+function mergeTiposLabel(obj) {
+  const tps = cfg('__tipos', []) || [];
+  if (!tps.length) return; // banco vazio → mantém os tipos padrão do código (fallback)
+  Object.keys(obj).forEach(k => delete obj[k]); // banco é a fonte da verdade → substitui (excluir gruda)
+  tps.forEach(t => { if (t && t.valor) obj[t.valor] = t.label || t.valor; });
+}
+function isSuperadmin(ctx) {
+  const lista = cfg('superadmins', ['erickmartins','erickmartinsadmin']);
+  const email = (ctx && ctx.user && ctx.user.email) || '';
+  const usuario = email.includes('@') ? email.split('@')[0] : email;
+  return Array.isArray(lista) && lista.includes(usuario);
 }
 // Link wa.me a partir de um telefone BR (adiciona 55 se faltar)
 function waLink(tel) {
@@ -563,9 +1128,9 @@ function waLink(tel) {
 // Módulos que o admin pode liberar por pessoa (key, label, href). Hoje só os existentes.
 const MODULOS_LIBERAVEIS = [
   ['escala','Escala','escala.html'], ['membros','Membros','membros.html'],
-  ['crm','Integração (CRM)','crm.html'], ['chamada','Chamada','chamada.html'],
+  ['crm','Integração (CRM)','crm.html'],
   ['tesouraria','Tesouraria','tesouraria.html'], ['casas','Casas','casas.html'],
-];
+]; // 'chamada' foi fundida na Escala (botão por card) — não é mais um módulo de nav separado
 
 // ── BOTTOM NAV ────────────────────────────────────────────────
 const EQUIPE_ROLES = ['coord_admin','subadmin','membro_equipe'];
@@ -575,11 +1140,10 @@ const NAV_COORD_MODULOS = {
   membros:    { label:'Membros',    href:'membros.html',    icon:'users' },
   escala:     { label:'Escala',     href:'escala.html',     icon:'calendar' },
   crm:        { label:'CRM',        href:'crm.html',        icon:'shuffle' },
-  chamada:    { label:'Chamada',    href:'chamada.html',    icon:'message-circle' },
   tesouraria: { label:'Tesouraria', href:'tesouraria.html', icon:'dollar' },
   casas:      { label:'Casas',      href:'casas.html',      icon:'shield' },
 };
-const ORDEM_MODULOS = ['membros','escala','crm','chamada','tesouraria','casas'];
+const ORDEM_MODULOS = ['membros','escala','crm','tesouraria','casas']; // chamada fundida na Escala
 
 // Capacidades do usuário p/ navegação
 function navCaps(ctx) {
@@ -607,11 +1171,13 @@ function _svgIcon(name) {
     users:          'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75',
     shuffle:        'M16 3h5v5 M4 20L21 3 M21 16v5h-5 M15 15l6 6 M4 4l5 5',
     calendar:       'M8 2v4 M16 2v4 M3 10h18 M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z',
+    'calendar-days': 'M8 2v4 M16 2v4 M3 10h18 M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z M8 14h.01 M12 14h.01 M16 14h.01 M8 18h.01 M12 18h.01',
     'x-circle':     'M22 12A10 10 0 1 1 2 12a10 10 0 0 1 20 0z M15 9l-6 6 M9 9l6 6',
     'message-circle':'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
     dollar:         'M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
     star:           'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01z',
     shield:         'M12 2l8 3v6c0 5-3.5 8.6-8 11-4.5-2.4-8-6-8-11V5z',
+    settings:       'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
   };
   return `<svg viewBox="0 0 24 24"><path d="${d[name] || ''}"/></svg>`;
 }
@@ -660,15 +1226,25 @@ function renderBottomNav(ctx, activePage) {
   const c = navCaps(ctx); const mode = navMode(ctx);
   let items;
   if (mode === 'coordenacao') {
-    items = [{ id:'home', href:'index.html', label:'Início', icon:'home' }];
+    items = [{ id:'home', href:'index.html', label:'Início', icon:'home' },
+      { id:'agenda', href:'agenda.html', label:'Agenda', icon:'calendar-days' },
+      { id:'jornada', href:'jornada-admin.html', label:'Jornada', icon:'star' }];
     ORDEM_MODULOS.forEach(k => { if (c.perms.includes(k)) { const mod = NAV_COORD_MODULOS[k]; items.push({ id:k, href:mod.href, label:mod.label, icon:mod.icon }); } });
+    if (isSuperadmin(ctx)) items.push({ id:'config', href:'config.html', label:'Config', icon:'settings' });
   } else {
     items = [{ id:'home', href:'index.html', label:'Início', icon:'home' },
+      { id:'quests', href:'missoes.html', label:'Quests', icon:'star' },
       { id:'escalas-membro', href:'escalas-membro.html', label:'Escalas', icon:'calendar' },
+      { id:'agenda', href:'agenda.html', label:'Agenda', icon:'calendar-days' },
       { id:'destaques', href:'destaques.html', label:'Destaques', icon:'star' },
       { id:'minha-casa', href:'minha-casa.html', label:'Casa', icon:'shield' },
       { id:'ausencias', href:'ausencias.html', label:'Ausência', icon:'x-circle' }];
-    if (c.isCerimo) items.push({ id:'chamada', href:'chamada.html', label:'Chamada', icon:'message-circle' });
+    // Chamada foi fundida na Escala: o cerimoniário faz a chamada pelo botão no card de escala.
+  }
+  // ordem customizável da barra (Config → Navegação); itens fora da lista vão pro fim na ordem padrão
+  const _ordCfg = (typeof cfg === 'function') ? cfg(mode === 'coordenacao' ? 'nav_ordem_coord' : 'nav_ordem_jornada', null) : null;
+  if (Array.isArray(_ordCfg) && _ordCfg.length) {
+    items.sort((a, b) => { const ia = _ordCfg.indexOf(a.id), ib = _ordCfg.indexOf(b.id); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
   }
   items.forEach(item => {
     const a = document.createElement('a');
@@ -685,6 +1261,26 @@ function renderBottomNav(ctx, activePage) {
     a.append(iconDiv, labelSpan);
     el.appendChild(a);
   });
+  setupNavArrows(el);
+}
+
+// Setas de rolagem no rodapé (quando há mais submódulos do que cabem)
+function setupNavArrows(el) {
+  document.querySelectorAll('.nav-arrow').forEach(x => x.remove());
+  const chevron = (dir) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="' + (dir === 'left' ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6') + '"/></svg>';
+  const left = document.createElement('button'); left.className = 'nav-arrow left'; left.innerHTML = chevron('left'); left.setAttribute('aria-label', 'Mais à esquerda'); // SVG hardcoded — seguro
+  const right = document.createElement('button'); right.className = 'nav-arrow right'; right.innerHTML = chevron('right'); right.setAttribute('aria-label', 'Mais submódulos'); // SVG hardcoded — seguro
+  left.onclick = () => el.scrollBy({ left: -140, behavior: 'smooth' });
+  right.onclick = () => el.scrollBy({ left: 140, behavior: 'smooth' });
+  document.body.append(left, right);
+  const upd = () => {
+    const overflow = el.scrollWidth - el.clientWidth > 4;
+    left.hidden = !overflow || el.scrollLeft <= 4;
+    right.hidden = !overflow || el.scrollLeft >= el.scrollWidth - el.clientWidth - 4;
+  };
+  el.addEventListener('scroll', upd, { passive: true });
+  window.addEventListener('resize', upd);
+  requestAnimationFrame(() => { upd(); if (!right.hidden) { right.classList.add('hint'); setTimeout(() => right.classList.remove('hint'), 2600); } });
 }
 
 // Switch "Minha Jornada ⇄ Coordenação" — barra fixa abaixo do header (só quem tem os dois)
@@ -798,51 +1394,125 @@ function nivelFromRole(role) {
 
 // SVG do emblema por NÍVEL (escudo + símbolos que evoluem). Aspirante/Coroinha
 // usam os patches base; acólito e cerimoniário ganham composições próprias.
-function getNivelSvg(slug, size) {
-  size = size || 80; const s = String(size);
-  if (slug === 'aspirante') return getPatchSvg('aspirante', size);
-  if (slug === 'coroinha')  return getPatchSvg('coroinha', size);
-  const cer = nivelInfo(slug).base === 'cerimonario';
-  const C = cer
-    ? { fill:'#1c0b2e', edge:'#9b59d4', edge2:'#5a1a9a', acc:'#d8b3ff' }
-    : { fill:'#2a1a00', edge:'#e8b94a', edge2:'#7a5800', acc:'#ffe08a' };
-
-  const shieldA = `<path d="M13 14 H51 V38 Q51 54 32 62 Q13 54 13 38 Z" fill="${C.fill}" stroke="${C.edge}" stroke-width="2.6"/>`;
-  const shieldB = `<path d="M32 8 L51 15 V38 Q51 54 32 62 Q13 54 13 38 V15 Z" fill="${C.fill}" stroke="${C.edge}" stroke-width="2.6"/>`;
-  const innerA  = `<path d="M18 19 H46 V37 Q46 50 32 57 Q18 50 18 37 Z" fill="none" stroke="${C.edge2}" stroke-width="1.3"/>`;
-  const innerB  = `<path d="M32 13 L46 19 V37 Q46 50 32 57 Q18 50 18 37 V19 Z" fill="none" stroke="${C.edge2}" stroke-width="1.3"/>`;
-  const cross   = `<g stroke="${C.acc}" stroke-width="3" stroke-linecap="round"><line x1="32" y1="25" x2="32" y2="45"/><line x1="23" y1="33" x2="41" y2="33"/></g>`;
-  const sword   = `<g stroke="${C.acc}" stroke-linecap="round"><line x1="32" y1="22" x2="32" y2="44" stroke-width="3.2"/><line x1="25" y1="40" x2="39" y2="40" stroke-width="2.4"/><circle cx="32" cy="48" r="2.3" fill="${C.acc}" stroke="none"/></g>`;
-  const swords  = `<g stroke="${C.acc}" stroke-width="2.6" stroke-linecap="round"><line x1="22" y1="48" x2="43" y2="24"/><line x1="42" y1="48" x2="21" y2="24"/></g>`;
-  const thurible= `<g stroke="${C.acc}" stroke-width="1.8" fill="none" stroke-linecap="round"><circle cx="32" cy="18" r="1.9"/><line x1="31" y1="19.5" x2="28" y2="29"/><line x1="33" y1="19.5" x2="36" y2="29"/><path d="M27 29 H37 L35.5 33 H28.5 Z" fill="${C.fill}"/><path d="M28 33 Q28 43 32 43 Q36 43 36 33" fill="${C.fill}"/><line x1="29" y1="37" x2="35" y2="37"/><circle cx="32" cy="46" r="1.3" fill="${C.acc}" stroke="none"/></g>`;
-  const crown   = `<g fill="${C.acc}" stroke="${C.edge2}" stroke-width="0.6" stroke-linejoin="round"><path d="M20 12 L23 4 L28 9 L32 2 L36 9 L41 4 L44 12 Z"/></g>`;
-
-  const map = {
-    acolito_aspirante:      shieldA + cross,
-    acolito_guardiao:       shieldA + innerA + cross,
-    acolito_sentinela:      shieldA + innerA + sword,
-    aspirante_cerimoniario: shieldA + innerA + thurible,
-    cerimoniario_aspirante: shieldB + thurible,
-    cerimoniario_guardiao:  shieldB + innerB + thurible,
-    cerimoniario_magistral: shieldB + innerB + swords + thurible,
-    cerimoniario_mor:       shieldB + innerB + sword + thurible + crown,
+// ── GERADOR DE PATCH (spec → SVG) ────────────────────────────
+const PATCH_ESQUEMAS = {
+  ouro:     { label:'Ouro',     fill:'#2a1a00', edge:'#e8b94a', edge2:'#7a5800', acc:'#ffe08a' },
+  roxo:     { label:'Roxo',     fill:'#1c0b2e', edge:'#9b59d4', edge2:'#5a1a9a', acc:'#d8b3ff' },
+  vermelho: { label:'Vermelho', fill:'#2e0b0e', edge:'#e0455a', edge2:'#7a1822', acc:'#ffb3bd' },
+  azul:     { label:'Azul',     fill:'#0b1a2e', edge:'#4a90c4', edge2:'#1a4a7a', acc:'#b3dcff' },
+  verde:    { label:'Verde',    fill:'#0b2e16', edge:'#3fae6b', edge2:'#1a7a3a', acc:'#b3ffce' },
+  prata:    { label:'Prata',    fill:'#191c22', edge:'#c8cdd6', edge2:'#5a6068', acc:'#eef1f6' },
+  bronze:   { label:'Bronze',   fill:'#241404', edge:'#c0793a', edge2:'#7a4316', acc:'#f3c089' },
+  esmeralda:{ label:'Esmeralda',fill:'#04241c', edge:'#1fb89a', edge2:'#0a6e5a', acc:'#9cf6e0' },
+  rubi:     { label:'Rubi',     fill:'#2a0414', edge:'#d62a6a', edge2:'#8a0f3e', acc:'#ffa6c8' },
+  safira:   { label:'Safira',   fill:'#0a1038', edge:'#4a63e0', edge2:'#1e2a8a', acc:'#b9c4ff' },
+  ametista: { label:'Ametista', fill:'#1a0a2e', edge:'#b06ce8', edge2:'#6a2aa0', acc:'#e3c2ff' },
+  marfim:   { label:'Marfim',   fill:'#26221a', edge:'#e8dcc0', edge2:'#9a8a64', acc:'#fff6e4' },
+  onix:     { label:'Ônix',     fill:'#0c0d10', edge:'#6b7280', edge2:'#2a2e36', acc:'#c4cad6' },
+  rosa:     { label:'Rosa',     fill:'#2e0a22', edge:'#e85aa8', edge2:'#9a1a66', acc:'#ffc2e6' },
+  ceu:      { label:'Céu',      fill:'#06212e', edge:'#34b6d6', edge2:'#0e6a86', acc:'#a6ecff' },
+};
+const PATCH_SIMBOLOS = ['cruz','crucifixo','espada','espadas','turibulo','coroa','calice','hostia','pomba','chama','vela','livro','trigo','uva','coracao','ancora','alfaomega','sino','estrela'];
+function _patchSvg(spec, size) {
+  const s = String(size || 80);
+  const C = PATCH_ESQUEMAS[(spec && spec.esquema)] || PATCH_ESQUEMAS.ouro;
+  const forma = (spec && spec.forma) || 'arredondada';
+  const SHELL = {
+    arredondada: { out:'M13 14 H51 V38 Q51 54 32 62 Q13 54 13 38 Z',                 in:'M18 19 H46 V37 Q46 50 32 57 Q18 50 18 37 Z' },
+    pontuda:     { out:'M32 8 L51 15 V38 Q51 54 32 62 Q13 54 13 38 V15 Z',           in:'M32 13 L46 19 V37 Q46 50 32 57 Q18 50 18 37 V19 Z' },
+    redonda:     { out:'M32 11 A21 21 0 1 1 31.99 11 Z',                              in:'M32 16 A16 16 0 1 1 31.99 16 Z' },
+    ogival:      { out:'M32 7 Q49 18 49 24 V37 Q49 53 32 62 Q15 53 15 37 V24 Q15 18 32 7 Z', in:'M32 13 Q43 21 43 26 V37 Q43 50 32 57 Q21 50 21 37 V26 Q21 21 32 13 Z' },
   };
-  const body = map[slug] || (shieldA + cross);
-  return `<svg width="${s}" height="${s}" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
+  const sh = SHELL[forma] || SHELL.arredondada;
+  const shield = `<path d="${sh.out}" fill="${C.fill}" stroke="${C.edge}" stroke-width="2.6"/>`;
+  const inner = !(spec && spec.anel) ? '' : `<path d="${sh.in}" fill="none" stroke="${C.edge2}" stroke-width="1.3"/>`;
+  const SIMB = {
+    cruz:    `<g stroke="${C.acc}" stroke-width="3" stroke-linecap="round"><line x1="32" y1="24" x2="32" y2="46"/><line x1="23" y1="33" x2="41" y2="33"/></g>`,
+    crucifixo:`<g stroke="${C.acc}" stroke-linecap="round" fill="none"><g stroke-width="2.8"><line x1="32" y1="22" x2="32" y2="47"/><line x1="23" y1="30" x2="41" y2="30"/></g><path d="M32 33 q-4 2 -4 6 q0 3 4 4 q4 -1 4 -4 q0 -4 -4 -6Z" fill="${C.acc}" stroke="none"/><line x1="29" y1="22" x2="35" y2="22" stroke-width="2"/></g>`,
+    espada:  `<g stroke="${C.acc}" stroke-linecap="round"><line x1="32" y1="20" x2="32" y2="40" stroke-width="3.2"/><line x1="25" y1="36" x2="39" y2="36" stroke-width="2.4"/><circle cx="32" cy="44" r="2.3" fill="${C.acc}" stroke="none"/></g>`,
+    espadas: `<g stroke="${C.acc}" stroke-width="2.6" stroke-linecap="round"><line x1="22" y1="48" x2="43" y2="24"/><line x1="42" y1="48" x2="21" y2="24"/></g>`,
+    turibulo:`<g stroke="${C.acc}" stroke-width="1.8" fill="none" stroke-linecap="round"><circle cx="32" cy="18" r="1.9"/><line x1="31" y1="19.5" x2="28" y2="29"/><line x1="33" y1="19.5" x2="36" y2="29"/><path d="M27 29 H37 L35.5 33 H28.5 Z" fill="${C.fill}"/><path d="M28 33 Q28 43 32 43 Q36 43 36 33" fill="${C.fill}"/><line x1="29" y1="37" x2="35" y2="37"/></g>`,
+    coroa:   `<path d="M23 13 L24.5 5 L28.5 9.5 L32 3 L35.5 9.5 L39.5 5 L41 13 Z" fill="${C.acc}" stroke="${C.edge2}" stroke-width="0.5" stroke-linejoin="round"/>`,
+    calice:  `<g stroke="${C.acc}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="32" cy="20" r="4.5" fill="${C.fill}"/><path d="M24 28 Q24 39 32 39 Q40 39 40 28 Z" fill="${C.fill}"/><line x1="32" y1="39" x2="32" y2="47"/><line x1="25" y1="48" x2="39" y2="48" stroke-width="2.4"/></g>`,
+    hostia:  `<g stroke="${C.acc}" fill="none" stroke-linecap="round"><g stroke-width="1.5"><line x1="32" y1="13" x2="32" y2="17"/><line x1="32" y1="47" x2="32" y2="51"/><line x1="13" y1="32" x2="17" y2="32"/><line x1="47" y1="32" x2="51" y2="32"/><line x1="19" y1="19" x2="22" y2="22"/><line x1="45" y1="45" x2="42" y2="42"/><line x1="45" y1="19" x2="42" y2="22"/><line x1="19" y1="45" x2="22" y2="42"/></g><circle cx="32" cy="32" r="10.5" stroke-width="2" fill="${C.fill}"/><g stroke-width="2"><line x1="32" y1="26.5" x2="32" y2="37.5"/><line x1="26.5" y1="32" x2="37.5" y2="32"/></g></g>`,
+    pomba:   `<g fill="${C.acc}" stroke="none"><circle cx="32" cy="19" r="3"/><path d="M32 22 Q29.5 27 30 33 L32 45 L34 33 Q34.5 27 32 22 Z"/><path d="M30 27 Q21 27 17 36 Q23 32.5 30 35 Z"/><path d="M34 27 Q43 27 47 36 Q41 32.5 34 35 Z"/></g><g stroke="${C.acc}" stroke-width="1.5" fill="none" stroke-linecap="round"><line x1="32" y1="16" x2="32" y2="13"/></g>`,
+    chama:   `<path d="M32 18 C28 27 23 30 23 38 a9 9 0 0 0 18 0 C41 32 38 31 37 27 C35 31 33 30 33 26 C33 23 33 21 32 18 Z" fill="${C.acc}"/>`,
+    vela:    `<g stroke="${C.acc}" stroke-linecap="round" stroke-linejoin="round"><path d="M32 16 C29.5 20 28 22 28 25.5 a4 4 0 0 0 8 0 C36 22 34.5 20 32 16 Z" fill="${C.acc}" stroke="none"/><line x1="32" y1="29" x2="32" y2="32" stroke-width="1.4"/><rect x="27" y="32" width="10" height="16" rx="1.5" fill="${C.fill}" stroke-width="2"/><line x1="23" y1="48" x2="41" y2="48" stroke-width="2.4"/></g>`,
+    livro:   `<g stroke="${C.acc}" stroke-width="2" fill="${C.fill}" stroke-linejoin="round" stroke-linecap="round"><path d="M32 24 C28 21.5 22 21.5 18 23.5 V43 C22 41 28 41 32 43.5 C36 41 42 41 46 43 V23.5 C42 21.5 36 21.5 32 24 Z"/><line x1="32" y1="24" x2="32" y2="43.5" stroke-width="1.5"/><g stroke-width="1.3"><line x1="25" y1="29.5" x2="25" y2="36.5"/><line x1="21.5" y1="33" x2="28.5" y2="33"/></g></g>`,
+    trigo:   `<g stroke="${C.acc}" stroke-width="1.6" stroke-linecap="round"><line x1="32" y1="34" x2="32" y2="49"/><line x1="32" y1="42" x2="26" y2="38"/><line x1="32" y1="42" x2="38" y2="38"/><g fill="${C.acc}" stroke="none"><ellipse cx="32" cy="18" rx="2" ry="4"/><ellipse cx="27.5" cy="24" rx="1.9" ry="3.7" transform="rotate(-26 27.5 24)"/><ellipse cx="36.5" cy="24" rx="1.9" ry="3.7" transform="rotate(26 36.5 24)"/><ellipse cx="26.5" cy="31" rx="1.9" ry="3.7" transform="rotate(-30 26.5 31)"/><ellipse cx="37.5" cy="31" rx="1.9" ry="3.7" transform="rotate(30 37.5 31)"/></g></g>`,
+    uva:     `<g><g stroke="${C.acc}" stroke-width="1.6" fill="none" stroke-linecap="round"><path d="M32 27 V22"/><path d="M32 22 Q37 21 40 17"/></g><g fill="${C.acc}" stroke="${C.fill}" stroke-width="0.6"><circle cx="32" cy="30" r="3.1"/><circle cx="26.5" cy="33" r="3.1"/><circle cx="37.5" cy="33" r="3.1"/><circle cx="29" cy="38" r="3.1"/><circle cx="35" cy="38" r="3.1"/><circle cx="32" cy="43" r="3.1"/></g></g>`,
+    coracao: `<g><path d="M32 46 C18 36 21 24 28 24 Q32 24 32 29 Q32 24 36 24 C43 24 46 36 32 46 Z" fill="${C.fill}" stroke="${C.acc}" stroke-width="2" stroke-linejoin="round"/><path d="M32 14 C30.5 17 29.5 18.5 29.5 21 a2.5 2.5 0 0 0 5 0 C34.5 18.5 33.5 17 32 14 Z" fill="${C.acc}" stroke="none"/><line x1="32" y1="30" x2="32" y2="40" stroke="${C.acc}" stroke-width="1.6" stroke-linecap="round"/><line x1="28" y1="34" x2="36" y2="34" stroke="${C.acc}" stroke-width="1.6" stroke-linecap="round"/></g>`,
+    ancora:  `<g stroke="${C.acc}" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="32" cy="18" r="3"/><line x1="32" y1="21" x2="32" y2="46"/><line x1="25" y1="28" x2="39" y2="28"/><path d="M21 37 Q21 47 32 47 Q43 47 43 37"/><path d="M21 37 L18 34 M21 37 L24.5 38"/><path d="M43 37 L46 34 M43 37 L39.5 38"/></g>`,
+    lirio:   `<g fill="${C.acc}" stroke="none"><path d="M32 13 C30 19 30 26 32 31 C34 26 34 19 32 13 Z"/><path d="M31 31 C27 26 21 27 20 32 C19 38 25 40 30 36 C26 35 26 33 31 31 Z"/><path d="M33 31 C37 26 43 27 44 32 C45 38 39 40 34 36 C38 35 38 33 33 31 Z"/><path d="M30 33 H34 L33.2 48 C33 50 31 50 30.8 48 Z"/></g><rect x="26.5" y="32" width="11" height="3" rx="1.2" fill="${C.acc}"/><rect x="29" y="32.5" width="6" height="2" fill="${C.fill}"/>`,
+    alfaomega:`<g fill="${C.acc}" stroke="none" font-family="Georgia,'Times New Roman',serif" font-weight="700"><text x="22.5" y="40" font-size="21" text-anchor="middle">Α</text><text x="42" y="40" font-size="21" text-anchor="middle">Ω</text></g>`,
+    sino:    `<g stroke="${C.acc}" stroke-width="2" fill="${C.fill}" stroke-linejoin="round" stroke-linecap="round"><path d="M32 17 a2 2 0 0 1 2 2 C39.5 21 41 33 44 42 H20 C23 33 24.5 21 30 19 a2 2 0 0 1 2 -2 Z"/><line x1="18" y1="42" x2="46" y2="42" stroke-width="2.4"/><circle cx="32" cy="46.5" r="2.2" fill="${C.acc}" stroke="none"/></g>`,
+    estrela: `<path d="M32 18 L35 28 L45 28 L37 34 L40 44 L32 38 L24 44 L27 34 L19 28 L29 28 Z" fill="${C.acc}"/>`,
+  };
+  const simb = ((spec && spec.simbolos) || []).map(k => SIMB[k] || '').join('');
+  return `<svg width="${s}" height="${s}" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">${shield}${inner}${simb}</svg>`;
+}
+// Fileira de pips (diamantes dourados animados) ABAIXO do patch — usada em todo lugar que mostra o emblema.
+// Retorna null se o nível não tem pips. size = tamanho do patch (escala os pips proporcionalmente).
+function pipRowEl(slug, size, spec) {
+  const info = (typeof nivelInfo === 'function') ? nivelInfo(slug) : { pips: 0 };
+  const n = (spec && spec.pips != null) ? Number(spec.pips) : (info ? info.pips : 0);
+  if (!n || n < 1) return null;
+  size = size || 48;
+  const ps = Math.max(5, Math.min(9, Math.round(size * 0.14)));
+  const gap = Math.max(3, Math.round(size * 0.08));
+  const pr = document.createElement('div');
+  pr.style.cssText = `display:flex;gap:${gap}px;justify-content:center;margin-top:${Math.max(4, Math.round(size * 0.1))}px;line-height:0;`;
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement('span'); p.className = 'emblem-pip';
+    p.style.width = ps + 'px'; p.style.height = ps + 'px'; p.style.animationDelay = (i * 0.18).toFixed(2) + 's';
+    pr.appendChild(p);
+  }
+  return pr;
 }
 
-// Emblema do rank com animação que intensifica por nível (patch + raios + pips)
-function buildRankEmblem(slug, size) {
+// Spec PADRÃO de cada nível — FONTE ÚNICA de verdade (usada tanto pra desenhar o emblema atual
+// quanto pra abrir o gerador "a partir do atual"). Tudo passa por _patchSvg → idêntico em todo lugar.
+const _NIVEL_COMP = {
+  aspirante:              { esquema:'prata', forma:'arredondada', anel:true,  simbolos:['cruz'] },
+  coroinha:               { esquema:'azul',  forma:'arredondada', anel:true,  simbolos:['coroa'] },
+  acolito_aspirante:      { esquema:'ouro',  forma:'arredondada', anel:false, simbolos:['cruz'] },
+  acolito_guardiao:       { esquema:'ouro',  forma:'arredondada', anel:true,  simbolos:['cruz'] },
+  acolito_sentinela:      { esquema:'ouro',  forma:'arredondada', anel:true,  simbolos:['espada'] },
+  aspirante_cerimoniario: { esquema:'ouro',  forma:'arredondada', anel:true,  simbolos:['turibulo'] },
+  cerimoniario_aspirante: { esquema:'roxo',  forma:'pontuda',     anel:false, simbolos:['turibulo'] },
+  cerimoniario_guardiao:  { esquema:'roxo',  forma:'pontuda',     anel:true,  simbolos:['turibulo'] },
+  cerimoniario_magistral: { esquema:'roxo',  forma:'pontuda',     anel:true,  simbolos:['espadas','turibulo'] },
+  cerimoniario_mor:       { esquema:'roxo',  forma:'pontuda',     anel:true,  simbolos:['espada','turibulo','coroa'] },
+};
+function specPadraoNivel(slug) {
+  const inf = (typeof nivelInfo === 'function') ? nivelInfo(slug) : { base:'acolito', pips:0, int:0 };
+  const cer = inf.base === 'cerimonario';
+  const d = _NIVEL_COMP[slug] || { esquema: cer?'roxo':'ouro', forma: cer?'pontuda':'arredondada', anel:true, simbolos:['cruz'] };
+  return { esquema:d.esquema, forma:d.forma, anel:d.anel, simbolos:d.simbolos.slice(), pips:(inf.pips||0), glow:(inf.int!=null?inf.int:0) };
+}
+function getNivelSvg(slug, size, spec) {
+  size = size || 80;
+  // sem spec: usa o patch customizado salvo no nível, senão a spec PADRÃO do nível — tudo via _patchSvg
+  if (!spec) { const _inf = (typeof nivelInfo === 'function') ? nivelInfo(slug) : null; spec = (_inf && _inf._patch) ? _inf._patch : specPadraoNivel(slug); }
+  return _patchSvg(spec, size);
+}
+
+// Emblema do rank com animação que intensifica por nível (patch + raios + pips).
+// spec opcional (gerador de patch); senão usa o _patch salvo no nível, senão o padrão por slug.
+function buildRankEmblem(slug, size, spec) {
   const info = nivelInfo(slug); size = size || 80;
-  const glow = 6 + info.int * 3, glow2 = 12 + info.int * 5;
-  const spd = (2.5 - info.int * 0.14).toFixed(2);
-  const sc = (1.05 + info.int * 0.007).toFixed(3);
+  spec = spec || info._patch || null;
+  const intEff = (spec && spec.glow != null) ? Number(spec.glow) : info.int;
+  const pipsEff = (spec && spec.pips != null) ? Number(spec.pips) : info.pips;
+  const glow = 6 + intEff * 3, glow2 = 12 + intEff * 5;
+  const spd = (2.5 - intEff * 0.14).toFixed(2);
+  const sc = (1.05 + intEff * 0.007).toFixed(3);
 
   const wrap = document.createElement('div');
   wrap.style.cssText = 'display:inline-flex;flex-direction:column;align-items:center;gap:9px;';
   const core = document.createElement('div');
   core.style.cssText = 'position:relative;display:inline-flex;align-items:center;justify-content:center;line-height:0;';
-  if (info.int >= 6) {
+  if (intEff >= 6) {
     const halo = document.createElement('div'); halo.className = 'emblem-halo';
     halo.style.cssText = `position:absolute;top:50%;left:50%;width:${Math.round(size*1.55)}px;height:${Math.round(size*1.55)}px;transform:translate(-50%,-50%);z-index:0;`;
     for (let k = 0; k < 3; k++) { const ring = document.createElement('i'); ring.style.animationDelay = (k * 0.8) + 's'; halo.appendChild(ring); }
@@ -850,31 +1520,73 @@ function buildRankEmblem(slug, size) {
   }
   const pdiv = document.createElement('div');
   pdiv.style.cssText = `position:relative;z-index:1;line-height:0;--glow:${glow}px;--glow2:${glow2}px;--spd:${spd}s;--sc:${sc};animation:emblemPulse var(--spd) ease-in-out infinite;`;
-  pdiv.innerHTML = getNivelSvg(slug, size); // SVG hardcoded — seguro
+  pdiv.innerHTML = getNivelSvg(slug, size, spec); // SVG controlado (spec do gerador ou padrão)
   core.appendChild(pdiv);
   wrap.appendChild(core);
-  if (info.pips > 0) {
-    const pr = document.createElement('div'); pr.style.cssText = 'display:flex;gap:5px;';
-    for (let i = 0; i < info.pips; i++) { const p = document.createElement('span'); p.className = 'emblem-pip'; pr.appendChild(p); }
-    wrap.appendChild(pr);
-  }
+  const pr = pipRowEl(slug, size, spec); if (pr) wrap.appendChild(pr); // pips animados abaixo do logo
   return wrap;
 }
 
 // Bloco de nome com apelido em destaque + nome menor embaixo.
 // Sem apelido, mostra só o nome (em destaque, na classe primária).
-function nameBlock(nome, apelido, primaryClass, secondaryClass) {
+// trailing (opcional): elemento que vai INLINE na linha principal (apelido, ou
+// nome se não houver apelido) — ex.: badge de estrelas. center=true centraliza
+// a linha principal (usado em cards).
+function nameBlock(nome, apelido, primaryClass, secondaryClass, trailing, center) {
   const wrap = document.createElement('div'); wrap.className = 'name-block';
   const ap = (apelido || '').trim();
-  if (ap) {
-    const a = document.createElement('div'); a.className = primaryClass; a.textContent = ap;
-    const n = document.createElement('div'); n.className = secondaryClass; n.textContent = nome || '';
-    wrap.append(a, n);
+  const primaryText = ap || (nome || '');
+  const prim = document.createElement('div'); prim.className = primaryClass;
+  if (trailing) {
+    prim.style.display = 'flex'; prim.style.alignItems = 'center'; prim.style.gap = '5px';
+    if (center) prim.style.justifyContent = 'center';
+    const txt = document.createElement('span'); txt.textContent = primaryText;
+    txt.style.cssText = 'min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    prim.append(txt, trailing);
   } else {
-    const n = document.createElement('div'); n.className = primaryClass; n.textContent = nome || '';
-    wrap.append(n);
+    prim.textContent = primaryText;
   }
+  wrap.append(prim);
+  if (ap) { const n = document.createElement('div'); n.className = secondaryClass; n.textContent = nome || ''; wrap.append(n); }
   return wrap;
+}
+
+// ── ESTRELAS (micro-progressão visível para todos) ─────────────────────────
+// Cache em memória de membro_id -> nº de estrelas, populado em lote via RPC
+// pública acolitos_estrelas_lote. Visível a todos (qualquer membro vê as
+// estrelas de qualquer outro nas listas / destaques).
+const _estrelasCache = {};
+async function acEstrelasLote(ids) {
+  const faltam = (ids || []).filter(id => id && _estrelasCache[id] === undefined);
+  if (faltam.length) {
+    try {
+      const { data } = await sb.rpc('acolitos_estrelas_lote', { p_membros: faltam });
+      if (data && typeof data === 'object') {
+        faltam.forEach(id => { _estrelasCache[id] = Number(data[id]) || 0; });
+      }
+    } catch (e) {}
+  }
+  const out = {};
+  (ids || []).forEach(id => { out[id] = _estrelasCache[id] || 0; });
+  return out;
+}
+// Badge compacto de estrelas (inline). n=0 retorna elemento vazio (sem ocupar
+// espaço). Mostra até 5 ⭐ e "×N" quando passa disso.
+function estrelaTag(n) {
+  const el = document.createElement('span'); el.className = 'estrela-tag';
+  n = Number(n) || 0;
+  if (n > 0) el.textContent = '⭐'.repeat(Math.min(n, 5)) + (n > 5 ? '×' + n : '');
+  return el;
+}
+// Atalho: já cria o badge e o preenche assincronamente a partir do cache/RPC.
+function estrelaTagAsync(membroId) {
+  const el = estrelaTag(0);
+  if (membroId) (async () => {
+    const mapa = await acEstrelasLote([membroId]);
+    const n = mapa[membroId] || 0;
+    if (n > 0) el.textContent = '⭐'.repeat(Math.min(n, 5)) + (n > 5 ? '×' + n : '');
+  })();
+  return el;
 }
 
 // Retorna HTMLElement (div container) com foto + patch sobreposto.
@@ -1108,19 +1820,24 @@ function buildPresencaChart(escalas) {
     return box;
   }
   const row = document.createElement('div');
-  row.style.cssText = 'display:flex;align-items:flex-end;gap:6px;height:104px;';
+  row.style.cssText = 'display:flex;align-items:flex-end;gap:6px;height:116px;';
+  const H = 72; // altura máx. da barra (deixa espaço pro rótulo numérico em cima)
+  const barCol = (val, cor, corNum) => {
+    const col = document.createElement('div');
+    col.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:flex-end;';
+    const num = document.createElement('div');
+    num.style.cssText = 'font-size:9px;font-weight:700;line-height:1;margin-bottom:2px;color:' + corNum + ';';
+    num.textContent = val > 0 ? val : '';
+    const bar = document.createElement('div');
+    bar.style.cssText = 'width:11px;border-radius:2px 2px 0 0;min-height:2px;background:' + cor + ';height:' + (val / max * H) + 'px;';
+    col.append(num, bar); return col;
+  };
   arr.forEach(b => {
     const g = document.createElement('div');
     g.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;';
     const pair = document.createElement('div');
-    pair.style.cssText = 'display:flex;gap:3px;align-items:flex-end;height:80px;';
-    const s = document.createElement('div');
-    s.style.cssText = 'width:11px;border-radius:2px 2px 0 0;min-height:2px;background:var(--gold);height:' + (b.serv / max * 80) + 'px;';
-    s.title = b.serv + ' servidas';
-    const f = document.createElement('div');
-    f.style.cssText = 'width:11px;border-radius:2px 2px 0 0;min-height:2px;background:var(--wine);height:' + (b.falt / max * 80) + 'px;';
-    f.title = b.falt + ' faltas';
-    pair.append(s, f);
+    pair.style.cssText = 'display:flex;gap:3px;align-items:flex-end;height:88px;';
+    pair.append(barCol(b.serv, 'var(--gold)', 'var(--gold-light)'), barCol(b.falt, 'var(--wine)', 'var(--wine-bright,#d45050)'));
     const lbl = document.createElement('div');
     lbl.style.cssText = 'font-size:9px;color:var(--text-muted);font-family:Sora,sans-serif;margin-top:5px;text-transform:uppercase;';
     lbl.textContent = b.mes;

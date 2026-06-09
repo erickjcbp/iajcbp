@@ -2,7 +2,7 @@
 <html lang="pt-BR" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Casas — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
@@ -146,9 +146,23 @@ function renderConsilium(main, casa) {
 
 async function removerSetor(m, slug) {
   const novos = (m.setores || []).filter(s => s !== slug);
-  const { error } = await sbAdmin.from('acolitos_membros').update({ setores: novos }).eq('id', m.id);
+  const ultimo = novos.length === 0; // saiu do último setor → deixa de ser equipe
+  const patch = ultimo ? { setores: novos, eh_equipe: false } : { setores: novos };
+  const { error } = await sbAdmin.from('acolitos_membros').update(patch).eq('id', m.id);
   if (error) { toast('Erro.', 'error'); return; }
-  m.setores = novos; toast('✓ Removido do setor.'); render();
+  m.setores = novos;
+  if (ultimo) {
+    m.eh_equipe = false;
+    // rebaixa o acesso ao papel-base do nível — sem rebaixar admins (coord_admin/subadmin)
+    if (m.user_id && !['coord_admin', 'subadmin'].includes(roleMap[m.user_id])) {
+      const base = nivelInfo(m.nivel || 'aspirante').base;
+      try { await apiPost('/api/acolito-admin', { action: 'sync_role', user_id: m.user_id, role: base }); roleMap[m.user_id] = base; } catch (e) {}
+    }
+    toast('✓ Removido — não faz mais parte da equipe.');
+  } else {
+    toast('✓ Removido do setor.');
+  }
+  render();
 }
 
 async function addMembroSetor(m, slug) {

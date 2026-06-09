@@ -2,7 +2,7 @@
 <html lang="pt-BR" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Membros — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -242,6 +242,7 @@ function renderGrid() {
     em.textContent = 'Nenhum membro encontrado.'; grid.appendChild(em); return;
   }
   const comLabel = (c) => c === 'matriz' ? 'Matriz' : c === 'santo_antonio' ? 'Sto. Antônio' : 'Outra';
+  acEstrelasLote(lista.map(m => m.id)); // pré-carrega estrelas em lote (1 request)
   lista.forEach(m => {
     const slug = m.nivel || nivelFromRole(m.role);
     const ninfo = nivelInfo(slug);
@@ -251,7 +252,7 @@ function renderGrid() {
       row.onclick = () => abrirFicha(m);
       const av = buildAvatarEl(m.foto_url, m.role, 42, { nivelSlug: slug }); av.style.flexShrink = '0';
       const info = document.createElement('div'); info.className = 'list-info';
-      info.appendChild(nameBlock(m.nome, m.apelido, 'list-name', 'list-subname'));
+      info.appendChild(nameBlock(m.nome, m.apelido, 'list-name', 'list-subname', estrelaTagAsync(m.id)));
       const sub = document.createElement('div'); sub.className = 'list-meta';
       const badge = document.createElement('span'); badge.className = 'badge ' + ninfo.base; badge.textContent = ninfo.label;
       const com = document.createElement('span'); com.className = 'list-com'; com.textContent = comLabel(m.comunidade);
@@ -266,7 +267,7 @@ function renderGrid() {
     card.onclick = () => abrirFicha(m);
     const avatarWrap = document.createElement('div'); avatarWrap.className = 'member-card-avatar';
     avatarWrap.appendChild(buildAvatarEl(m.foto_url, m.role, 60, { nivelSlug: slug }));
-    const nome = nameBlock(m.nome, m.apelido, 'member-card-name', 'member-card-subname');
+    const nome = nameBlock(m.nome, m.apelido, 'member-card-name', 'member-card-subname', estrelaTagAsync(m.id), true);
     const meta = document.createElement('div'); meta.className = 'member-card-meta';
     const badge = document.createElement('span'); badge.className = 'badge ' + ninfo.base;
     badge.textContent = ninfo.label; // nome segue o NÍVEL na jornada, não o papel
@@ -359,7 +360,8 @@ async function abrirFicha(membro) {
       renderGrid();
     }
   }));
-  const nomeEl = nameBlock(membro.nome, membro.apelido, 'ficha-nome', 'ficha-subname');
+  const stf = estrelaTagAsync(membro.id); stf.style.fontSize = '13px';
+  const nomeEl = nameBlock(membro.nome, membro.apelido, 'ficha-nome', 'ficha-subname', stf);
   const subEl  = document.createElement('div'); subEl.className  = 'ficha-sub';
   let subTxt = nivelInfo(membro.nivel || nivelFromRole(membro.role)).label + ' · ' +
     (membro.comunidade === 'matriz' ? 'Matriz' : membro.comunidade === 'santo_antonio' ? 'Sto. Antônio' : 'Outra');
@@ -378,7 +380,7 @@ async function abrirFicha(membro) {
   const ehAdmin = ['coord_admin','subadmin'].includes(ctx.membership.role);
   const tabs = ['Pessoal'];
   if (ehAdmin) tabs.push('Acessos'); // logo no começo, bem visível
-  tabs.push('Evolução','Disponibilidade','Família','Frequência','Mensagem');
+  tabs.push('Disponibilidade','Família','Frequência','Mensagem');
   const tabsEl = document.getElementById('ficha-tabs'); tabsEl.textContent = '';
   tabs.forEach((t, i) => {
     const btn = document.createElement('button'); btn.className = 'ficha-tab' + (i === 0 ? ' active' : '') + (t === 'Acessos' ? ' destaque' : '');
@@ -701,52 +703,6 @@ async function renderTab(tab) {
     }
   }
 
-  if (tab === 'Evolução') {
-    const slug = m.nivel || nivelFromRole(m.role);
-    const idx = nivelIndex(slug);
-    // Nível atual
-    const head = document.createElement('div'); head.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:4px;';
-    head.appendChild(buildRankEmblem(slug, 56));
-    const ht = document.createElement('div');
-    const hl = document.createElement('div'); hl.style.cssText = 'font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;'; hl.textContent = 'Nível atual';
-    const hn = document.createElement('div'); hn.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:15px;color:var(--text);'; hn.textContent = nivelInfo(slug).label;
-    const htt = document.createElement('div'); htt.style.cssText = 'font-size:12px;color:var(--gold);font-style:italic;'; htt.textContent = nivelInfo(slug).titulo ? '🏆 ' + nivelInfo(slug).titulo : '';
-    ht.append(hl, hn, htt); head.appendChild(ht); el.appendChild(head);
-
-    const sec = (txt) => { const t = document.createElement('div'); t.className = 'section-card-title'; t.style.marginTop = '16px'; t.textContent = txt; el.appendChild(t); };
-    const secAdd = (txt, tipo) => {
-      const w = document.createElement('div'); w.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:16px;';
-      const t = document.createElement('div'); t.className = 'section-card-title'; t.style.margin = '0'; t.textContent = txt;
-      const add = document.createElement('button'); add.type = 'button'; add.className = 'mini-add'; add.textContent = '+ ' + (tipo === 'habilidade' ? 'habilidade' : 'competência');
-      add.onclick = () => addCustomLista(tipo);
-      w.append(t, add); el.appendChild(w);
-    };
-    const habRem = { removable: new Set(listasCustom.habilidade.map(x => x.valor)), onRemove: (v) => removeCustomLista('habilidade', v) };
-    const compRem = { removable: new Set(listasCustom.competencia.map(x => x.valor)), onRemove: (v) => removeCustomLista('competencia', v) };
-    secAdd('Habilidades a desenvolver', 'habilidade'); el.appendChild(editMulti('', 'desenvolvimento_habilidades', m.desenvolvimento_habilidades, HABILIDADES, habRem));
-    sec('Habilidades desenvolvidas'); el.appendChild(editMulti('', 'habilidades_desenvolvidas', m.habilidades_desenvolvidas, HABILIDADES, habRem));
-    secAdd('Competências a desenvolver', 'competencia'); el.appendChild(editMulti('', 'desenvolvimento_competencias', m.desenvolvimento_competencias, COMPETENCIAS, compRem));
-    sec('Competências desenvolvidas'); el.appendChild(editMulti('', 'competencias_desenvolvidas', m.competencias_desenvolvidas, COMPETENCIAS, compRem));
-
-    sec('Habilitações (proficiência por função)');
-    await appendHabilitacoes(el, m);
-
-    // Próxima etapa: próximo nível pulsando
-    sec('Próxima etapa da jornada');
-    const next = NIVEIS[idx + 1];
-    const pe = document.createElement('div'); pe.style.cssText = 'display:flex;align-items:center;gap:12px;';
-    if (next) {
-      pe.appendChild(buildRankEmblem(next.slug, 52));
-      const pt = document.createElement('div');
-      const pn = document.createElement('div'); pn.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:14px;color:var(--gold-light);'; pn.textContent = next.label;
-      const ptt = document.createElement('div'); ptt.style.cssText = 'font-size:12px;color:var(--text-muted);'; ptt.textContent = next.titulo ? '🏆 ' + next.titulo : '';
-      pt.append(pn, ptt); pe.appendChild(pt);
-    } else {
-      const pn = document.createElement('div'); pn.style.cssText = 'font-size:13px;color:var(--gold);font-weight:700;'; pn.textContent = '🏆 Nível máximo alcançado!'; pe.appendChild(pn);
-    }
-    el.appendChild(pe);
-  }
-
   if (tab === 'Acessos') {
     const tLogin = document.createElement('div'); tLogin.className = 'section-card-title'; tLogin.textContent = 'Login'; el.appendChild(tLogin);
     const info = document.createElement('p'); info.style.cssText = 'font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.5;';
@@ -844,7 +800,9 @@ function abrirSeletorNivel(membro, rankBtn) {
     const num = document.createElement('span'); num.className = 'nivelsel-num'; num.textContent = i + 1;
     const emb = document.createElement('div'); emb.className = 'nivelsel-emb'; emb.innerHTML = getNivelSvg(n.slug, 46); // SVG hardcoded — seguro
     const lbl = document.createElement('div'); lbl.className = 'nivelsel-lbl'; lbl.textContent = n.label;
-    cell.append(num, emb, lbl);
+    cell.append(num, emb);
+    const pr = pipRowEl(n.slug, 32); if (pr) cell.appendChild(pr); // pips animados abaixo do patch
+    cell.appendChild(lbl);
     cell.onclick = () => { escolha = n.slug; Object.values(cells).forEach(c => c.classList.remove('sel')); cell.classList.add('sel'); titEl.textContent = '🏆 ' + n.titulo; };
     cells[n.slug] = cell; grid.appendChild(cell);
   });
@@ -991,8 +949,7 @@ async function salvarFicha() {
   }
   // Avisos detalhados ao membro + sincronização do papel (RLS) quando muda a coordenação
   const editados = Object.keys(fichaEdits);
-  const engajCampos = ['desenvolvimento_habilidades', 'desenvolvimento_competencias', 'habilidades_desenvolvidas', 'competencias_desenvolvidas']; // aba Evolução
-  const mudouEngaj = editados.some(k => engajCampos.includes(k));
+  const engajCampos = ['desenvolvimento_habilidades', 'desenvolvimento_competencias', 'habilidades_desenvolvidas', 'competencias_desenvolvidas']; // desenvolvimento (agora editado na Jornada, sem notificar)
   const mudouMensagem = editados.includes('mensagem_coordenacao'); // aba Mensagem (separada)
   if (membroAtual.user_id) {
     // Sincroniza pastoral_members.role com eh_equipe (a RLS libera acesso por role). Auto-corrige a cada save
@@ -1013,11 +970,10 @@ async function salvarFicha() {
     if (editados.includes('serve')) msgs.push(fichaEdits.serve ? 'Você está marcado como servo do altar.' : 'Você não está mais marcado como servo do altar.');
     const cobertos = ['permissoes', 'eh_equipe', 'setores', 'serve', 'nivel', 'mensagem_coordenacao'].concat(engajCampos);
     if (editados.some(k => !cobertos.includes(k))) msgs.push('A coordenação atualizou seus dados cadastrais.');
-    if (msgs.length || mudouEngaj || mudouMensagem) {
+    if (msgs.length || mudouMensagem) {
       try {
         const novos = Array.isArray(membroAtual.avisos) ? [...membroAtual.avisos] : [];
         msgs.forEach(msg => novos.push({ msg, logout: false, seen: false, ts: Date.now() }));
-        if (mudouEngaj) novos.push({ tipo: 'engajamento', logout: false, seen: false, ts: Date.now() });
         // Aba Mensagem: aviso próprio, só com a mensagem (se não estiver vazia)
         if (mudouMensagem && (membroAtual.mensagem_coordenacao || '').trim()) {
           novos.push({ tipo: 'mensagem', texto: membroAtual.mensagem_coordenacao, logout: false, seen: false, ts: Date.now() });

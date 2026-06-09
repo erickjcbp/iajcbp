@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Conquistas — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#150a0d">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    .cq-sec { font-family:'Sora',sans-serif; font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); margin:22px 0 4px; }
+    .cq-desc { font-size:12px; color:var(--text-muted); margin-bottom:12px; line-height:1.5; }
+    .cq-resumo { display:flex; gap:8px; margin-bottom:6px; }
+    .cq-stat { flex:1; background:var(--surface2); border:1px solid var(--border-wine); border-radius:8px; padding:10px 6px; text-align:center; }
+    .cq-stat b { display:block; font-family:'Sora',sans-serif; font-weight:800; font-size:20px; color:var(--gold); }
+    .cq-stat span { font-size:9.5px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+    .cq-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    .cq-ins { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 6px; text-align:center; position:relative; transition:border-color .2s; }
+    .cq-ins.ganha { border-color:var(--gold-dim); background:linear-gradient(165deg,rgba(232,185,74,.08),var(--surface)); }
+    .cq-ins.locked .cq-patch { filter:grayscale(1) brightness(.45); opacity:.6; }
+    .cq-patch { display:flex; justify-content:center; margin-bottom:6px; }
+    .cq-nome { font-family:'Sora',sans-serif; font-size:10.5px; font-weight:700; color:var(--text); line-height:1.2; }
+    .cq-ins.locked .cq-nome { color:var(--text-muted); }
+    .cq-lock { position:absolute; top:6px; right:8px; font-size:12px; opacity:.6; }
+    .cq-trofeu { display:flex; align-items:center; gap:12px; padding:11px 10px; border-radius:10px; margin-bottom:8px; background:linear-gradient(165deg,rgba(232,185,74,.1),var(--surface)); border:1px solid var(--gold-dim); }
+    .cq-tro-ico { flex:none; width:42px; height:42px; }
+    .cq-tro-info { flex:1; min-width:0; }
+    .cq-tro-tit { font-family:'Sora',sans-serif; font-weight:700; font-size:14px; color:var(--gold-light); }
+    .cq-tro-sub { font-size:11px; color:var(--text-muted); }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+<div class="main" id="main-content"><span class="loading">Carregando...</span></div>
+
+<script src="shared.js"></script>
+<script>
+let ctx = null;
+const LIGA_LABEL = { iniciantes:'Iniciantes', acolitos:'Acólitos', cerimoniarios:'Cerimoniários' };
+function trofeuSvg(size) {
+  return '<svg viewBox="0 0 48 48" width="' + size + '" height="' + size + '" fill="none">'
+    + '<path d="M14 8h20v6a10 10 0 0 1-20 0V8Z" fill="#e8b94a" stroke="#b8860b" stroke-width="1.2"/>'
+    + '<path d="M14 10H9a4 4 0 0 0 0 8h6M34 10h5a4 4 0 0 1 0 8h-6" stroke="#b8860b" stroke-width="1.6" fill="none"/>'
+    + '<path d="M21 23h6v5h-6z" fill="#e8b94a"/><path d="M17 36h14v3H17z" fill="#b8860b"/><path d="M19 31h10v5H19z" fill="#e8b94a" stroke="#b8860b" stroke-width="1"/>'
+    + '<path d="M24 11.5l1.2 2.6 2.8.3-2.1 1.9.6 2.8-2.5-1.4-2.5 1.4.6-2.8-2.1-1.9 2.8-.3z" fill="#fff8e1"/></svg>';
+}
+function tierDe(nivel) {
+  if (['coroinha', 'acolito_aspirante', 'aspirante'].includes(nivel)) return 'bronze';
+  if (['acolito_guardiao', 'acolito_sentinela'].includes(nivel)) return 'prata';
+  return 'ouro';
+}
+let _medalN = 0;
+function medalSvg(simbolo, tier, size) {
+  size = size || 64;
+  const id = 'mgr' + (_medalN++);
+  const T = {
+    bronze: { hi:'#f0b878', mid:'#cf8842', lo:'#8a4f20', ring:'#6e3c18', disc:'#f1e3c8', ribbon:'#8a4a22', ribbonD:'#5e3214' },
+    prata:  { hi:'#f6f9fd', mid:'#c4cbd5', lo:'#7c8694', ring:'#69707a', disc:'#eef1f7', ribbon:'#6a7078', ribbonD:'#474c54' },
+    ouro:   { hi:'#ffe89a', mid:'#edbb3c', lo:'#9a6b10', ring:'#86600c', disc:'#f8efcc', ribbon:'#7a1f2b', ribbonD:'#561420' },
+  };
+  const c = T[tier] || T.ouro, acc = c.lo, fill = c.mid;
+  const cx = 36, cy = 39;
+  const PNG = { sino:'sino.png', sino2:'sino (1).png', calice:'calice.png', calice_sagrado:'calice-sagrado.png', crucifixo:'cruz.png', livro:'biblia.png', pomba:'santo-fantasma.png', rosario:'rosario.png' };
+  const SIMB = {
+    vela:    `<g><path d="M32 14 C28.8 18.5 27.2 21 27.2 24.8 a4.8 4.8 0 0 0 9.6 0 C36.8 21 35.2 18.5 32 14 Z" fill="#ff9f1c"/><path d="M32 18 C30.2 21 29.3 22.5 29.3 24.6 a2.7 2.7 0 0 0 5.4 0 C34.7 22.5 33.8 21 32 18 Z" fill="#ffd24a"/><line x1="32" y1="27" x2="32" y2="30" stroke="#7a5230" stroke-width="1.4" stroke-linecap="round"/><rect x="26.5" y="30" width="11" height="17" rx="2" fill="#fff6e2" stroke="#e2cda0" stroke-width="1"/><rect x="27.6" y="31" width="3" height="15" rx="1.5" fill="#ffffff" opacity=".5"/><rect x="23.5" y="46.4" width="17" height="3.6" rx="1.7" fill="#e8b94a" stroke="#c8941f" stroke-width=".8"/></g>`,
+    sino:    `<g stroke="${acc}" stroke-width="2" fill="${fill}" stroke-linejoin="round" stroke-linecap="round"><path d="M32 17 a2 2 0 0 1 2 2 C39.5 21 41 33 44 42 H20 C23 33 24.5 21 30 19 a2 2 0 0 1 2 -2 Z"/><line x1="18" y1="42" x2="46" y2="42" stroke-width="2.4"/><circle cx="32" cy="46.5" r="2.2" fill="${acc}" stroke="none"/></g>`,
+    livro:   `<g stroke="${acc}" stroke-width="2" fill="${fill}" stroke-linejoin="round" stroke-linecap="round"><path d="M32 24 C28 21.5 22 21.5 18 23.5 V43 C22 41 28 41 32 43.5 C36 41 42 41 46 43 V23.5 C42 21.5 36 21.5 32 24 Z"/><line x1="32" y1="24" x2="32" y2="43.5" stroke-width="1.5"/><g stroke-width="1.3"><line x1="25" y1="29.5" x2="25" y2="36.5"/><line x1="21.5" y1="33" x2="28.5" y2="33"/></g></g>`,
+    turibulo:`<g><path d="M32 50.5 q-3 -3.5 0 -7" stroke="#cdd3da" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".6"/><line x1="32" y1="15" x2="26.5" y2="29" stroke="#c8941f" stroke-width="1.3" stroke-linecap="round"/><line x1="32" y1="15" x2="37.5" y2="29" stroke="#c8941f" stroke-width="1.3" stroke-linecap="round"/><circle cx="32" cy="14.5" r="2" fill="#f4cf64" stroke="#c8941f" stroke-width="1"/><path d="M25.5 29 H38.5 L36.5 33 H27.5 Z" fill="#f4cf64" stroke="#c8941f" stroke-width="1" stroke-linejoin="round"/><path d="M26.5 33 Q26.5 44 32 44 Q37.5 44 37.5 33 Z" fill="#e8b94a" stroke="#c8941f" stroke-width="1.2" stroke-linejoin="round"/><line x1="28" y1="37.6" x2="36" y2="37.6" stroke="#c8941f" stroke-width="1.1"/><circle cx="30" cy="35" r=".9" fill="#9a6b10"/><circle cx="34" cy="35" r=".9" fill="#9a6b10"/></g>`,
+    pomba:   `<g fill="${acc}" stroke="none"><circle cx="32" cy="19" r="3"/><path d="M32 22 Q29.5 27 30 33 L32 45 L34 33 Q34.5 27 32 22 Z"/><path d="M30 27 Q21 27 17 36 Q23 32.5 30 35 Z"/><path d="M34 27 Q43 27 47 36 Q41 32.5 34 35 Z"/></g>`,
+    calice:  `<g stroke="${acc}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="32" cy="20" r="4.5" fill="${fill}"/><path d="M24 28 Q24 39 32 39 Q40 39 40 28 Z" fill="${fill}"/><line x1="32" y1="39" x2="32" y2="47"/><line x1="25" y1="48" x2="39" y2="48" stroke-width="2.4"/></g>`,
+    coroa:   `<g><path d="M24 44 V30 Q24 17 32 12.5 Q40 17 40 30 V44 Z" fill="#fff6e2" stroke="#e2cda0" stroke-width="1.2" stroke-linejoin="round"/><rect x="30" y="15" width="4" height="29" fill="#e8b94a"/><rect x="24.5" y="36" width="15" height="3.6" fill="#e8b94a"/><line x1="32" y1="9" x2="32" y2="14" stroke="#c8941f" stroke-width="1.6" stroke-linecap="round"/><line x1="29.2" y1="11" x2="34.8" y2="11" stroke="#c8941f" stroke-width="1.6" stroke-linecap="round"/><rect x="27" y="43.5" width="2.8" height="6" rx="1" fill="#e8b94a"/><rect x="34.2" y="43.5" width="2.8" height="6" rx="1" fill="#e8b94a"/></g>`,
+    estrela: `<g><path d="M32 14.5 L35.6 25.8 L47.5 25.8 L37.9 32.8 L41.6 44 L32 37.2 L22.4 44 L26.1 32.8 L16.5 25.8 L28.4 25.8 Z" fill="#e8b94a" stroke="#c8941f" stroke-width="1.2" stroke-linejoin="round"/><path d="M32 14.5 L35.6 25.8 L47.5 25.8 L37.9 32.8 L32 28.5 Z" fill="#f6d877"/></g>`,
+    espadas: `<g stroke-linecap="round"><line x1="21" y1="25" x2="41" y2="46" stroke="#dce2e9" stroke-width="3.4"/><line x1="21" y1="25" x2="41" y2="46" stroke="#b3bac4" stroke-width="1.1"/><line x1="43" y1="25" x2="23" y2="46" stroke="#dce2e9" stroke-width="3.4"/><line x1="43" y1="25" x2="23" y2="46" stroke="#b3bac4" stroke-width="1.1"/><line x1="37" y1="41" x2="45.5" y2="45" stroke="#e8b94a" stroke-width="2.6"/><line x1="27" y1="41" x2="18.5" y2="45" stroke="#e8b94a" stroke-width="2.6"/><circle cx="42" cy="47.5" r="2.3" fill="#e8b94a" stroke="#c8941f" stroke-width=".8"/><circle cx="22" cy="47.5" r="2.3" fill="#e8b94a" stroke="#c8941f" stroke-width=".8"/></g>`,
+    coracao: `<g><path d="M32 47 C16.5 36.5 19.5 23.5 27 23.5 Q32 23.5 32 28.5 Q32 23.5 37 23.5 C44.5 23.5 47.5 36.5 32 47 Z" fill="#e0584d" stroke="#b8423a" stroke-width="1.3" stroke-linejoin="round"/><path d="M30.4 28 h3.2 v3.4 h3.4 v3.2 h-3.4 v6 h-3.2 v-6 h-3.4 v-3.2 h3.4 z" fill="#fff6e2"/><ellipse cx="26" cy="30.5" rx="2.6" ry="4.6" fill="#ffffff" opacity=".22" transform="rotate(-30 26 30.5)"/></g>`,
+    trigo:   `<g><path d="M18.5 33 Q32 29 45.5 33 Q41.5 43 32 43 Q22.5 43 18.5 33 Z" fill="#e8b94a" stroke="#c8941f" stroke-width="1.2" stroke-linejoin="round"/><path d="M19.5 33 Q25.5 30.5 32 31.5 L32 33 Z" fill="#f6d877"/><rect x="29.5" y="43" width="5" height="3.4" fill="#c8941f"/><rect x="25" y="46" width="14" height="3.2" rx="1.5" fill="#e8b94a" stroke="#c8941f" stroke-width=".8"/><line x1="32" y1="24" x2="32" y2="31" stroke="#c8941f" stroke-width="1.6" stroke-linecap="round"/><line x1="28.5" y1="26.5" x2="35.5" y2="26.5" stroke="#c8941f" stroke-width="1.6" stroke-linecap="round"/></g>`,
+    hostia:  `<g><g stroke="#e8b94a" stroke-width="2" stroke-linecap="round"><line x1="32" y1="19" x2="32" y2="16"/><line x1="39.4" y1="22.6" x2="41.5" y2="20.5"/><line x1="24.6" y1="22.6" x2="22.5" y2="20.5"/><line x1="42.5" y1="30" x2="45.5" y2="30"/><line x1="21.5" y1="30" x2="18.5" y2="30"/></g><rect x="30" y="39" width="4" height="5" fill="#c8941f"/><rect x="26" y="44" width="12" height="3.2" rx="1.5" fill="#e8b94a" stroke="#c8941f" stroke-width=".8"/><circle cx="32" cy="30" r="9" fill="#e8b94a" stroke="#c8941f" stroke-width="1.3"/><circle cx="32" cy="30" r="5.8" fill="#fff6e2" stroke="#e2cda0" stroke-width="1"/><line x1="32" y1="26.6" x2="32" y2="33.4" stroke="#c8941f" stroke-width="1.4"/><line x1="28.6" y1="30" x2="35.4" y2="30" stroke="#c8941f" stroke-width="1.4"/></g>`,
+    crucifixo:`<g stroke="${acc}" stroke-linecap="round" fill="none"><g stroke-width="2.8"><line x1="32" y1="22" x2="32" y2="47"/><line x1="23" y1="30" x2="41" y2="30"/></g><line x1="29" y1="22" x2="35" y2="22" stroke-width="2"/></g>`,
+  };
+  const S = 0.66, tx = (cx - 32 * S).toFixed(1), ty = (cy - 31 * S).toFixed(1);
+  const sym = SIMB[simbolo] || SIMB.estrela;
+  const png = PNG[simbolo];
+  const emblema = png
+    ? '<image href="/midia/elementos/' + png.replace(/ /g, '%20') + '" x="' + (cx - 13) + '" y="' + (cy - 13) + '" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>'
+    : '<g transform="translate(' + tx + ' ' + ty + ') scale(' + S + ')">' + sym + '</g>';
+  const np = 16; let burst = '';
+  for (let i = 0; i < np * 2; i++) { const a = Math.PI * i / np - Math.PI / 2, r = (i % 2) ? 20.5 : 27; burst += (i ? 'L' : 'M') + (cx + r * Math.cos(a)).toFixed(1) + ' ' + (cy + r * Math.sin(a)).toFixed(1) + ' '; }
+  burst += 'Z';
+  let beads = ''; const nb = 20;
+  for (let i = 0; i < nb; i++) { const a = 2 * Math.PI * i / nb; beads += '<circle cx="' + (cx + 18 * Math.cos(a)).toFixed(1) + '" cy="' + (cy + 18 * Math.sin(a)).toFixed(1) + '" r="0.85" fill="' + c.hi + '"/>'; }
+  return '<svg viewBox="0 0 72 88" width="' + size + '" height="' + (size * 88 / 72).toFixed(0) + '" fill="none" xmlns="http://www.w3.org/2000/svg">'
+    + '<defs><radialGradient id="' + id + '" cx="0.5" cy="0.34" r="0.7"><stop offset="0" stop-color="' + c.hi + '"/><stop offset="0.55" stop-color="' + c.mid + '"/><stop offset="1" stop-color="' + c.lo + '"/></radialGradient></defs>'
+    + '<path d="M29 58 L22 86 L32 78 L36 62 Z" fill="' + c.ribbon + '"/>'
+    + '<path d="M43 58 L50 86 L40 78 L36 62 Z" fill="' + c.ribbonD + '"/>'
+    + '<path d="' + burst + '" fill="' + c.mid + '" opacity="0.5"/>'
+    + '<circle cx="' + cx + '" cy="' + cy + '" r="22" fill="url(#' + id + ')" stroke="' + c.ring + '" stroke-width="1.3"/>'
+    + beads
+    + '<circle cx="' + cx + '" cy="' + cy + '" r="15" fill="' + c.disc + '"/>'
+    + '<circle cx="' + cx + '" cy="' + cy + '" r="15" fill="none" stroke="' + c.ring + '" stroke-width="0.9" opacity="0.5"/>'
+    + emblema
+    + '<ellipse cx="29" cy="29" rx="9" ry="4.5" fill="#ffffff" opacity="0.3" transform="rotate(-35 29 29)"/>'
+    + '</svg>';
+}
+
+async function init() {
+  ctx = await initModulo();
+  if (!ctx) return;
+  renderHeader(ctx, 'conquistas');
+  renderBottomNav(ctx, 'conquistas');
+  const main = document.getElementById('main-content'); main.textContent = '';
+  const title = document.createElement('h1'); title.className = 'page-title'; title.textContent = 'Conquistas'; main.appendChild(title);
+  const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 8px;line-height:1.5;'; hint.textContent = 'Sua coleção de insígnias e troféus na jornada do altar. 🏅'; main.appendChild(hint);
+
+  const nivel = (ctx.membro && ctx.membro.nivel) || 'aspirante';
+  const meuIdx = Math.max(0, nivelIndex(nivel));
+
+  // troféus de temporada (campeões) + medalhas de marcos
+  let campeoes = [], badges = [];
+  if (ctx.membro) {
+    try { const { data } = await sb.rpc('acolitos_campeoes'); campeoes = (data || []).filter(c => c.membro_id === ctx.membro.id); } catch (e) {}
+    try { const { data } = await sb.rpc('acolitos_badges_membro', { p_membro: ctx.membro.id }); badges = data || []; } catch (e) {}
+  }
+  const medGanhas = badges.filter(b => b.ganho).length;
+
+  // resumo
+  const resumo = document.createElement('div'); resumo.className = 'cq-resumo';
+  [[(meuIdx + 1) + '/' + NIVEIS.length, 'Insígnias'], [medGanhas + '/' + badges.length, 'Medalhas'], [String(campeoes.length), 'Troféus']].forEach(([v, l]) => {
+    const c = document.createElement('div'); c.className = 'cq-stat'; c.innerHTML = '<b>' + v + '</b><span>' + l + '</span>'; resumo.appendChild(c);
+  });
+  main.appendChild(resumo);
+
+  // Insígnias de nível
+  const s1 = document.createElement('div'); s1.className = 'cq-sec'; s1.textContent = '🎖️ Insígnias de Nível'; main.appendChild(s1);
+  const d1 = document.createElement('div'); d1.className = 'cq-desc'; d1.textContent = 'Cada nível conquistado é uma insígnia sua. As próximas estão te esperando.'; main.appendChild(d1);
+  const grid = document.createElement('div'); grid.className = 'cq-grid'; main.appendChild(grid);
+  NIVEIS.forEach((n, i) => {
+    const ganha = i <= meuIdx;
+    const cell = document.createElement('div'); cell.className = 'cq-ins' + (ganha ? ' ganha' : ' locked');
+    const patch = document.createElement('div'); patch.className = 'cq-patch'; patch.appendChild(buildRankEmblem(n.slug, 64));
+    const nome = document.createElement('div'); nome.className = 'cq-nome'; nome.textContent = n.label;
+    cell.append(patch, nome);
+    if (!ganha) { const lk = document.createElement('div'); lk.className = 'cq-lock'; lk.textContent = '🔒'; cell.appendChild(lk); }
+    grid.appendChild(cell);
+  });
+
+  // Troféus de temporada
+  const s2 = document.createElement('div'); s2.className = 'cq-sec'; s2.textContent = '🏆 Troféus de Temporada'; main.appendChild(s2);
+  const d2 = document.createElement('div'); d2.className = 'cq-desc'; d2.textContent = 'Cada vez que você fecha uma temporada como campeão da sua liga, ganha um troféu.'; main.appendChild(d2);
+  if (!campeoes.length) {
+    const e = document.createElement('span'); e.className = 'empty'; e.textContent = 'Ainda sem troféus — a próxima temporada pode ser sua! 🏆'; main.appendChild(e);
+  } else {
+    campeoes.forEach(c => {
+      const row = document.createElement('div'); row.className = 'cq-trofeu';
+      const ico = document.createElement('div'); ico.className = 'cq-tro-ico'; ico.innerHTML = trofeuSvg(42);
+      const info = document.createElement('div'); info.className = 'cq-tro-info';
+      const t = document.createElement('div'); t.className = 'cq-tro-tit'; t.textContent = 'Campeão · ' + (LIGA_LABEL[c.liga] || c.liga);
+      const sub = document.createElement('div'); sub.className = 'cq-tro-sub'; sub.textContent = 'Temporada ' + c.temporada + ' · ' + c.xp + ' XP';
+      info.append(t, sub); row.append(ico, info); main.appendChild(row);
+    });
+  }
+
+  // Medalhas de marcos
+  const s3 = document.createElement('div'); s3.className = 'cq-sec'; s3.textContent = '🏅 Medalhas'; main.appendChild(s3);
+  const d3 = document.createElement('div'); d3.className = 'cq-desc'; d3.textContent = 'Medalhas por marcos importantes da jornada — aptidões e momentos especiais. Toque numa medalha para ver os detalhes.'; main.appendChild(d3);
+  if (!badges.length) { const e = document.createElement('span'); e.className = 'empty'; e.textContent = 'Sem medalhas por aqui ainda.'; main.appendChild(e); }
+  else {
+    const mg = document.createElement('div'); mg.className = 'cq-grid'; main.appendChild(mg);
+    badges.forEach(b => {
+      const cell = document.createElement('div'); cell.className = 'cq-ins' + (b.ganho ? ' ganha' : ' locked');
+      cell.style.cursor = 'pointer'; cell.onclick = () => abrirMedalha(b);
+      const ico = document.createElement('div'); ico.className = 'cq-patch'; ico.innerHTML = medalSvg(b.icone, b.tier || tierDe(b.nivel), 58);
+      const nome = document.createElement('div'); nome.className = 'cq-nome'; nome.textContent = b.label;
+      cell.append(ico, nome);
+      if (!b.ganho) { const lk = document.createElement('div'); lk.className = 'cq-lock'; lk.textContent = '🔒'; cell.appendChild(lk); }
+      mg.appendChild(cell);
+    });
+  }
+}
+function abrirMedalha(b) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const md = document.createElement('div'); md.className = 'modal'; md.style.cssText = 'max-width:360px;text-align:center;';
+  const ico = document.createElement('div'); ico.style.cssText = 'display:flex;justify-content:center;margin:6px 0 4px;' + (b.ganho ? '' : 'filter:grayscale(1) opacity(.5);'); ico.innerHTML = medalSvg(b.icone, b.tier || tierDe(b.nivel), 92);
+  const nm = document.createElement('div'); nm.style.cssText = 'font-family:Sora,sans-serif;font-weight:800;font-size:18px;color:var(--gold-light);margin-top:6px;'; nm.textContent = b.label;
+  const st = document.createElement('div'); st.style.cssText = 'font-size:12px;font-weight:700;margin:4px 0 12px;color:' + (b.ganho ? 'var(--success-text)' : 'var(--text-muted)') + ';'; st.textContent = b.ganho ? '✓ Conquistada' : '🔒 Ainda não conquistada';
+  const desc = document.createElement('div'); desc.style.cssText = 'font-size:13px;color:var(--text);line-height:1.5;margin-bottom:12px;'; desc.textContent = b.desc || '';
+  const reqL = document.createElement('div'); reqL.style.cssText = 'font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;'; reqL.textContent = 'Como ganhar';
+  const req = document.createElement('div'); req.style.cssText = 'font-size:13px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px;margin-bottom:14px;'; req.textContent = b.requisito || '';
+  const btn = document.createElement('button'); btn.className = 'btn gold'; btn.style.width = '100%'; btn.textContent = 'Fechar'; btn.onclick = () => ov.remove();
+  md.append(ico, nm, st, desc, reqL, req, btn); ov.appendChild(md); document.body.appendChild(ov);
+}
+init();
+</script>
+</body>
+</html>

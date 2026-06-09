@@ -2,7 +2,7 @@
 <html lang="pt-BR" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Escalas — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -27,6 +27,9 @@
     .esc-line .fn { color:var(--gold); font-weight:700; }
     .esc-line .nm { color:var(--text); text-align:right; }
     .esc-cat { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin:12px 0 2px; font-weight:700; }
+    .esc-chamada-btn { margin-top:10px; width:100%; padding:9px; border-radius:8px; border:1px solid var(--gold-dim); background:linear-gradient(165deg, rgba(232,185,74,.14), var(--surface2)); color:var(--gold-light); font-family:'Sora',sans-serif; font-weight:700; font-size:12px; letter-spacing:.3px; cursor:pointer; }
+    .esc-chamada-btn:hover { border-color:var(--gold); box-shadow:0 0 12px var(--red-glow); }
+    .esc-chamada-btn.feita { border-color:var(--success-text,#4caf50); background:linear-gradient(165deg, rgba(76,175,80,.14), var(--surface2)); color:var(--success-text,#7bd88f); }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
 </head>
@@ -51,6 +54,8 @@ function comLabel(c) { return c==='matriz'?'Matriz':'Sto. Antônio'; }
 async function init() {
   const ctx = await initModulo();
   if (!ctx) return;
+  mergeTiposLabel(TIPO_LABEL); // tipos customizados do Config aparecem com o rótulo certo
+  const isCerimo = navCaps(ctx).isCerimo; // só cerimoniário vê o botão de Chamada
   renderHeader(ctx, 'escalas-membro');
   renderBottomNav(ctx, 'escalas-membro');
   const main = document.getElementById('main-content'); main.textContent = '';
@@ -61,6 +66,10 @@ async function init() {
   if (error) { const e=document.createElement('span'); e.className='empty'; e.textContent='Não foi possível carregar as escalas.'; main.appendChild(e); return; }
   const cels = data || [];
   if (!cels.length) { const e=document.createElement('span'); e.className='empty'; e.textContent='Nenhuma missa futura cadastrada.'; main.appendChild(e); return; }
+
+  // celebrações que já tiveram chamada (pra rotular o botão) — só cerimoniário lê
+  let chamadasFeitas = new Set();
+  if (isCerimo) { try { const { data: chs } = await sb.from('acolitos_chamadas').select('celebracao_id'); (chs||[]).forEach(x => chamadasFeitas.add(x.celebracao_id)); } catch (e) {} }
 
   // agrupa por semana (segunda-feira)
   const semanas = {};
@@ -83,10 +92,28 @@ async function init() {
       cnt.innerHTML = n ? '<b>'+n+'</b> escalado'+(n>1?'s':'')+' — toque para ver' : 'Escala ainda não montada';
       card.append(dt, sb2, cnt);
       card.onclick = () => abrirEscala(c);
+      if (isCerimo && n) {
+        const feita = c.id && chamadasFeitas.has(c.id);
+        const bCh = document.createElement('button'); bCh.className = 'esc-chamada-btn' + (feita ? ' feita' : '');
+        bCh.textContent = feita ? '✓ Chamada feita' : '✋ Fazer chamada';
+        bCh.onclick = (ev) => { ev.stopPropagation(); abrirChamadaCeleb(c); };
+        card.appendChild(bCh);
+      }
       grid.appendChild(card);
     });
     main.appendChild(grid);
   });
+}
+
+// Abre a chamada daquela missa (deep-link). Se o RPC não trouxe id, resolve por data+horário+comunidade.
+async function abrirChamadaCeleb(c) {
+  let id = c.id;
+  if (!id) {
+    const { data } = await sb.from('acolitos_celebracoes').select('id').eq('data', c.data).eq('horario', c.horario).eq('comunidade', c.comunidade).maybeSingle();
+    id = data && data.id;
+  }
+  if (!id) { toast('Não foi possível abrir a chamada desta missa.', 'error'); return; }
+  window.location.href = 'chamada.html?celeb=' + id;
 }
 
 function abrirEscala(c) {

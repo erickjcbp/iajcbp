@@ -2,7 +2,7 @@
 <html lang="pt-BR" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Chamada — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -74,7 +74,7 @@ let ctx = null;
 let celebAtual = null;
 let escalasAtuais = [];
 let resultados = {};
-let membrosCh = [], habMapCh = {}, substitutos = {}, subRows = {};
+let membrosCh = [], habMapCh = {}, substitutos = {}, subRows = {}, rosterMap = {};
 
 function eligiveis(funcao) {
   const scheduled = new Set(escalasAtuais.map(e => e.membro_id));
@@ -85,11 +85,17 @@ function eligiveis(funcao) {
   });
 }
 
+let _deepLink = false; // veio do botão "Chamada" de um card de escala (?celeb=<id>)
 async function init() {
   ctx = await initModulo(['coord_admin','subadmin','membro_equipe','cerimonario']);
   if (!ctx) return;
   renderHeader(ctx, 'chamada');
   renderBottomNav(ctx, 'chamada');
+  const celId = new URLSearchParams(location.search).get('celeb');
+  if (celId) {
+    const { data: cel } = await sb.from('acolitos_celebracoes').select('*').eq('id', celId).maybeSingle();
+    if (cel) { _deepLink = true; abrirChamada(cel); return; }
+  }
   await renderSelecao();
 }
 
@@ -145,7 +151,7 @@ async function abrirChamada(celeb) {
   // Busca escala
   const { data: esc } = await sb
     .from('acolitos_escalas')
-    .select('id, funcao, status, membro_id, acolitos_membros!membro_id(nome,foto_url)')
+    .select('id, funcao, status, membro_id, acolitos_membros!membro_id(nome,foto_url,nivel)')
     .eq('celebracao_id', celeb.id).order('funcao');
   escalasAtuais = esc||[];
 
@@ -153,24 +159,30 @@ async function abrirChamada(celeb) {
     const em=document.createElement('span');em.className='empty';em.textContent='Nenhum membro escalado.';main.appendChild(em);return;
   }
 
-  // Membros aptos para eventual substituição
-  const [{ data: mems }, { data: habs }] = await Promise.all([
-    sb.from('acolitos_membros').select('id,nome').eq('status','ativo').order('nome'),
-    sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia'),
-  ]);
-  membrosCh = mems||[];
-  habMapCh = {}; (habs||[]).forEach(h=>{if(!habMapCh[h.membro_id])habMapCh[h.membro_id]={};habMapCh[h.membro_id][h.funcao]=h.proficiencia;});
+  // Membros aptos para eventual substituição — via RPC (cerimoniário não lê o roster direto por RLS;
+  // a RPC devolve só id+nome+habilitações de todos os ativos, sem expor dados sensíveis)
+  const { data: roster } = await sb.rpc('acolitos_roster_substituicao');
+  membrosCh = (roster && roster.membros) || [];
+  // mapa id->membro (à prova de RLS): cerimoniário não lê acolitos_membros direto,
+  // então o embed da escala volta nomes vazios — o roster (security-definer) cobre todos.
+  rosterMap = {}; membrosCh.forEach(mm => { rosterMap[mm.id] = mm; });
+  habMapCh = {}; ((roster && roster.habs) || []).forEach(h=>{if(!habMapCh[h.membro_id])habMapCh[h.membro_id]={};habMapCh[h.membro_id][h.funcao]=h.proficiencia;});
 
-  // Verifica chamada existente
+  // Verifica chamada existente — e RECARREGA os itens salvos (resultado + substituto)
+  const savedItens = {};
   const { data: chExist } = await sb.from('acolitos_chamadas').select('id').eq('celebracao_id',celeb.id).maybeSingle();
   if (chExist) {
     const av=document.createElement('div');av.className='msg warn';av.textContent='Chamada já realizada. Você pode editá-la.';main.appendChild(av);
+    const { data: itens } = await sb.from('acolitos_chamadas_itens').select('escala_id,resultado,substituto_id').eq('chamada_id', chExist.id);
+    (itens||[]).forEach(it => { savedItens[it.escala_id] = it; });
   }
 
-  // Inicializa resultados
+  // Inicializa resultados — prioriza o que foi salvo na chamada (não o status derivado da escala)
   escalasAtuais.forEach(e=>{
-    if(['presente','ausente','atrasado'].includes(e.status)) resultados[e.id]=e.status;
-    else if(e.status==='ausente_justificado') resultados[e.id]='ausente';
+    const sv = savedItens[e.id];
+    if (sv) { resultados[e.id] = sv.resultado; if (sv.substituto_id) substitutos[e.id] = sv.substituto_id; }
+    else if(['presente','ausente','atrasado'].includes(e.status)) resultados[e.id]=e.status;
+    else if(e.status==='ausente_justificado' || e.status==='substituido') resultados[e.id]='ausente';
     else resultados[e.id]='presente';
   });
 
@@ -190,11 +202,12 @@ async function abrirChamada(celeb) {
     const catEl=document.createElement('div');catEl.className='chamada-cat';catEl.textContent=cat;main.appendChild(catEl);
     items.forEach(e=>{
       const m=e.acolitos_membros;
+      const r=rosterMap[e.membro_id]||{}; // fonte à prova de RLS (cerimoniário não lê o embed)
       const block=document.createElement('div');
       const item=document.createElement('div');item.className='chamada-item';
-      const av=buildAvatarEl(m?.foto_url,patchRoleFromHabs(habMapCh[e.membro_id]||{}),40);av.style.flexShrink='0';
+      const av=buildAvatarEl(m?.foto_url||r.foto_url,patchRoleFromHabs(habMapCh[e.membro_id]||{}),40,{nivelSlug:m?.nivel||r.nivel||nivelFromRole(patchRoleFromHabs(habMapCh[e.membro_id]||{}))});av.style.flexShrink='0';
       const info=document.createElement('div');info.className='chamada-info';
-      const nEl=document.createElement('div');nEl.className='chamada-nome-el';nEl.textContent=m?.nome||'—';
+      const nEl=document.createElement('div');nEl.className='chamada-nome-el';nEl.textContent=r.apelido||r.nome||m?.nome||'—';
       const fEl=document.createElement('div');fEl.className='chamada-fn';fEl.textContent=FUNCAO_LABEL[e.funcao]||e.funcao;
       info.append(nEl,fEl);
       const btns=document.createElement('div');btns.className='r-btns';
@@ -215,7 +228,10 @@ async function abrirChamada(celeb) {
       const subLbl=document.createElement('span');subLbl.className='sub-lbl';subLbl.textContent='Trocado por:';
       const subSel=document.createElement('select');subSel.className='form-select sub-sel';
       const o0=document.createElement('option');o0.value='';o0.textContent='— ninguém / vaga aberta —';subSel.appendChild(o0);
-      eligiveis(e.funcao).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.nome;if(substitutos[e.id]===s.id)o.selected=true;subSel.appendChild(o);});
+      const elig=eligiveis(e.funcao);
+      // garante que o substituto já salvo apareça, mesmo que não esteja mais elegível
+      if(substitutos[e.id] && !elig.some(s=>s.id===substitutos[e.id]) && rosterMap[substitutos[e.id]]) elig.unshift(rosterMap[substitutos[e.id]]);
+      elig.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.apelido||s.nome;if(substitutos[e.id]===s.id)o.selected=true;subSel.appendChild(o);});
       subSel.onchange=()=>{ if(subSel.value)substitutos[e.id]=subSel.value; else delete substitutos[e.id]; };
       subRow.append(subLbl,subSel);
       block.appendChild(subRow);
@@ -225,14 +241,75 @@ async function abrirChamada(celeb) {
     });
   });
 
+  // Avulsos (quem veio sem estar escalado)
+  await renderAvulsos(main, celeb.id);
+
   // Botões
   const btnConf=document.createElement('button');btnConf.className='btn gold';
   btnConf.style.marginTop='20px';btnConf.textContent='Confirmar Chamada';
   btnConf.id='btn-conf-ch';btnConf.onclick=confirmarChamada;
   const btnVolt=document.createElement('button');btnVolt.className='btn';
   btnVolt.style.cssText='margin-top:8px;background:transparent;border:1px solid var(--border);color:var(--text-muted);';
-  btnVolt.textContent='← Escolher outra celebração';btnVolt.onclick=renderSelecao;
-  main.append(btnConf,btnVolt);
+  if(_deepLink){ btnVolt.textContent='← Voltar para a escala'; btnVolt.onclick=()=>{ if(history.length>1) history.back(); else window.location.href='escalas-membro.html'; }; }
+  else { btnVolt.textContent='← Escolher outra celebração'; btnVolt.onclick=renderSelecao; }
+  main.append(btnConf);
+  if(chExist){
+    const btnLimpar=document.createElement('button');btnLimpar.className='btn';
+    btnLimpar.style.cssText='margin-top:8px;background:transparent;border:1px solid var(--danger-text);color:var(--danger-text);';
+    btnLimpar.textContent='🧹 Limpar chamada (refazer)';
+    btnLimpar.onclick=limparChamada;
+    main.append(btnLimpar);
+  }
+  main.append(btnVolt);
+}
+
+// Seção de presenças avulsas: quem serviu sem estar escalado (+10 XP cada)
+async function renderAvulsos(main, celebId){
+  const sec=document.createElement('div'); sec.style.cssText='margin-top:24px;border-top:1px solid var(--border);padding-top:16px;';
+  const h=document.createElement('div'); h.className='chamada-cat'; h.textContent='➕ Vieram sem estar escalados'; sec.appendChild(h);
+  const hint=document.createElement('div'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:-4px 0 10px;'; hint.textContent='Adicione quem serviu hoje sem estar na escala. Cada um ganha +10 XP e entra no ranking Solícitos.'; sec.appendChild(hint);
+  const lista=document.createElement('div'); lista.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;'; sec.appendChild(lista);
+  const busca=document.createElement('input'); busca.className='form-input'; busca.placeholder='Buscar nome para adicionar…'; sec.appendChild(busca);
+  const drop=document.createElement('div'); drop.style.cssText='max-height:170px;overflow-y:auto;margin-top:4px;'; sec.appendChild(drop);
+  main.appendChild(sec);
+
+  const avulsos=[];
+  const { data: existentes }=await sb.rpc('acolitos_avulsos_celebracao',{p_celebracao:celebId});
+  (existentes||[]).forEach(a=>avulsos.push(a));
+
+  function pintaLista(){
+    lista.textContent='';
+    if(!avulsos.length){ const e=document.createElement('span'); e.style.cssText='font-size:12px;color:var(--text-muted);font-style:italic;'; e.textContent='Ninguém adicionado ainda.'; lista.appendChild(e); return; }
+    avulsos.forEach(a=>{
+      const chip=document.createElement('span'); chip.style.cssText='background:var(--surface2);border:1px solid var(--gold-dim);color:var(--gold-light);border-radius:14px;padding:4px 10px;font-size:12px;display:flex;align-items:center;gap:6px;';
+      chip.appendChild(document.createTextNode(a.nome));
+      const x=document.createElement('span'); x.textContent='✕'; x.style.cursor='pointer';
+      x.onclick=async()=>{ const { data:r }=await sb.rpc('acolitos_avulso_remove',{p_celebracao:celebId,p_membro:a.membro_id}); if(r&&r.ok){ const i=avulsos.findIndex(z=>z.membro_id===a.membro_id); if(i>=0)avulsos.splice(i,1); pintaLista(); pintaDrop(); toast('Removido (−10 XP)'); } else toast('Erro','error'); };
+      chip.appendChild(x); lista.appendChild(chip);
+    });
+  }
+  function pintaDrop(){
+    const termo=busca.value.trim().toLowerCase(); drop.textContent='';
+    if(!termo) return;
+    const scheduled=new Set(escalasAtuais.map(e=>e.membro_id));
+    const added=new Set(avulsos.map(a=>a.membro_id));
+    membrosCh.filter(m=> !scheduled.has(m.id) && !added.has(m.id) && (((m.apelido||'').toLowerCase().includes(termo)) || ((m.nome||'').toLowerCase().includes(termo))))
+      .slice(0,12).forEach(m=>{
+        const it=document.createElement('div'); it.style.cssText='padding:8px 6px;font-size:13px;color:var(--text);border-bottom:1px solid var(--border);cursor:pointer;'; it.textContent=m.apelido||m.nome;
+        it.onclick=async()=>{ const { data:r }=await sb.rpc('acolitos_avulso_add',{p_celebracao:celebId,p_membro:m.id}); if(r&&r.ok){ avulsos.push({membro_id:m.id,nome:m.apelido||m.nome}); busca.value=''; pintaLista(); pintaDrop(); toast('✅ Adicionado (+10 XP)'); } else toast('Erro: '+(r&&r.erro||'tente de novo'),'error'); };
+        drop.appendChild(it);
+      });
+  }
+  busca.oninput=pintaDrop; pintaLista();
+}
+
+// Limpa/reseta a chamada desta missa (apaga registro e volta as escalas p/ 'escalado') — via RPC
+async function limparChamada(){
+  if(!confirm('Limpar a chamada desta missa? Os status voltam para "escalado" e você poderá fazer a chamada de novo.')) return;
+  const { error } = await sb.rpc('acolitos_limpar_chamada', { p_celebracao: celebAtual.id });
+  if(error){ toast('Erro ao limpar a chamada.','error'); return; }
+  toast('✓ Chamada limpa. Pode refazer.');
+  abrirChamada(celebAtual);
 }
 
 function getCat(f){

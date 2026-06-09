@@ -2,7 +2,7 @@
 <html lang="pt-BR" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Tesouraria — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -90,6 +90,8 @@ async function load() {
   lancamentos = fin.data || [];
   customCats = { entrada: [], saida: [] };
   (lst.data || []).forEach(r => customCats[r.tipo === 'cat_entrada' ? 'entrada' : 'saida'].push([r.valor, r.label]));
+  // DB é a fonte da verdade: se há categorias no banco, substituem os padrões do código (excluir gruda)
+  ['entrada', 'saida'].forEach(t => { if (customCats[t].length) { CATEGORIAS[t] = customCats[t]; customCats[t] = []; } });
   rebuildCatLabel();
   render();
 }

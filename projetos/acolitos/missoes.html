@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Minha Jornada — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#150a0d">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    .lab-tag { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); border:1px solid var(--gold-dim); border-radius:10px; padding:2px 8px; }
+    .mx-card { background:var(--surface); border:1px solid var(--border-wine); border-radius:6px; padding:14px; margin-bottom:14px;
+      clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+    .mx-hd { font-family:'Sora',sans-serif; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+    .mx-prox { display:flex; align-items:center; gap:14px; }
+    .mx-prox-info { flex:1; min-width:0; }
+    .mx-prox-nome { font-family:'Sora',sans-serif; font-weight:700; font-size:15px; color:var(--text); }
+    .mx-bar { height:10px; background:var(--surface2); border-radius:5px; overflow:hidden; margin-top:8px; border:1px solid var(--border); }
+    .mx-bar-fill { height:100%; background:linear-gradient(90deg,var(--gold-dim),var(--gold)); border-radius:5px; transition:width .4s; }
+    .mx-q { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+    .mx-q:last-child { border-bottom:none; }
+    .mx-q-ico { width:22px; height:22px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; }
+    .mx-q-ico.done { background:rgba(47,158,87,.25); color:var(--success-text); border:1px solid var(--success); }
+    .mx-q-ico.wait { background:rgba(176,125,22,.22); color:var(--warn-text); border:1px solid var(--warn); }
+    .mx-q-ico.pend { background:var(--surface2); color:var(--text-muted); border:1px solid var(--border-wine); }
+    .mx-q-body { flex:1; min-width:0; }
+    .mx-q-tit { font-size:13px; color:var(--text); }
+    .mx-q-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
+    .mx-q-xp { font-family:'Sora',sans-serif; font-size:12px; font-weight:700; color:var(--gold); flex-shrink:0; }
+    .mx-elig { background:linear-gradient(165deg, rgba(47,158,87,.18), var(--surface)); border:1px solid var(--success); color:var(--success-text);
+      border-radius:6px; padding:12px 14px; font-size:13px; font-weight:600; margin-bottom:14px; text-align:center; }
+    .mx-xp-big { font-family:'Sora',sans-serif; font-size:26px; font-weight:700; color:var(--gold-light); text-shadow:0 0 12px var(--red-glow); }
+    .mx-empty { color:var(--text-muted); font-size:12px; font-style:italic; padding:6px 0; }
+    .mx-fila-item { background:var(--surface2); border:1px solid var(--border-wine); border-radius:6px; padding:10px 12px; margin-bottom:8px; }
+    .mx-fila-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .mx-fila-acts { display:flex; gap:6px; margin-top:8px; }
+    .mx-mini { font-size:12px; font-weight:700; border-radius:6px; padding:6px 12px; cursor:pointer; border:1px solid var(--border-wine); background:var(--surface); color:var(--text); }
+    .mx-mini.ok { border-color:var(--success); color:var(--success-text); }
+    .mx-mini.no { border-color:var(--danger); color:var(--danger-text); }
+    .mx-mini.go { border-color:var(--gold); color:var(--gold-light); background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2)); }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+<div class="main" id="main"><span class="loading">Carregando...</span></div>
+
+<script src="shared.js"></script>
+<script>
+const COORD = ['coord_admin','subadmin','membro_equipe'];
+const NIVEIS_SLUGS = () => NIVEIS.map(n => n.slug);
+let ctx = null;
+
+async function init() {
+  ctx = await initModulo();
+  if (!ctx) return;
+  renderHeader(ctx, 'missoes');
+  renderBottomNav(ctx, 'quests');
+  // F2: avalia as missões automáticas (servir missas, apto numa função, idade) antes de mostrar
+  if (ctx.membro) { try { await sb.rpc('acolitos_avaliar_missoes', { p_membro: ctx.membro.id, p_niveis: NIVEIS_SLUGS() }); } catch (e) {} }
+  // medalhas standalone (marcos, tempo, solícitos, campeão…) — concede e comemora as novas
+  if (ctx.membro) { try { await sb.rpc('acolitos_medalhas_avaliar', { p_membro: ctx.membro.id }); } catch (e) {} }
+  await renderAll();
+}
+
+async function renderAll() {
+  const main = document.getElementById('main');
+  main.textContent = '';
+
+  const title = document.createElement('h1'); title.className = 'page-title';
+  title.textContent = 'Minha Jornada';
+  main.appendChild(title);
+
+  if (ctx.membro) await renderBoard(main);
+  else { const e = document.createElement('p'); e.className = 'mx-empty'; e.textContent = 'Sua conta não tem um perfil de membro ativo.'; main.appendChild(e); }
+  // painel de coordenação migrado p/ jornada-admin.html (aba Jornada na coordenação)
+}
+
+let revisoesMap = {}, revHabMap = {}; // missao_id->obs e funcao->obs (revisões da coordenação)
+function statusIco(status) {
+  const d = document.createElement('div'); d.className = 'mx-q-ico ' + (status === 'concluida' ? 'done' : status === 'em_analise' ? 'wait' : 'pend');
+  d.textContent = status === 'concluida' ? '✓' : status === 'em_analise' ? '⏳' : status === 'revisao' ? '📝' : '○';
+  return d;
+}
+function subDe(q) {
+  if (q.status === 'concluida') return 'Concluída';
+  if (q.status === 'em_analise') return 'Em análise pela coordenação';
+  if (q.validacao === 'avaliada') return 'A coordenação avalia';
+  if (q.validacao === 'automatica') return 'Conta sozinha quando você cumprir';
+  return 'Toque em “Já fiz” quando cumprir';
+}
+// "Já faço" numa função pendente → modal pedindo explicação detalhada (igual aptidão)
+function pedirHab(f) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '440px';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Já faço: ' + f.label; md.appendChild(tt);
+  const d = document.createElement('p'); d.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;'; d.textContent = 'Reivindique que já sabe servir nesta função. A coordenação vai avaliar pela sua explicação e, se aprovar, você fica Apto.'; md.appendChild(d);
+  if (revHabMap[f.funcao] != null) {
+    const rb = document.createElement('div'); rb.style.cssText = 'background:rgba(209,16,32,.12);border:1px solid var(--danger);border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--text);line-height:1.4;';
+    const bb = document.createElement('b'); bb.style.color = 'var(--danger-text)'; bb.textContent = '📝 A coordenação pediu: ';
+    rb.append(bb, document.createTextNode(revHabMap[f.funcao] || 'explique melhor')); md.appendChild(rb);
+  }
+  const l = document.createElement('div'); l.style.cssText = 'font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 5px;'; l.textContent = 'Explique como se serve nessa função *'; md.appendChild(l);
+  const ta = document.createElement('textarea'); ta.className = 'form-input'; ta.rows = 4;
+  ta.placeholder = 'Com suas palavras: o que você faz nessa função, em que momentos da missa, e como — pra mostrar que sabe servir bem.';
+  md.appendChild(ta);
+  const aviso = document.createElement('div'); aviso.style.cssText = 'font-size:11px;color:var(--wine-bright,#d45050);margin-top:5px;font-style:italic;'; aviso.textContent = '😏 Escreve com suas palavras! Se colar resposta de ChatGPT aqui, o tio Erick vai saber 👀'; md.appendChild(aviso);
+  const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:16px;';
+  const cancelar = document.createElement('button'); cancelar.className = 'btn'; cancelar.style.flex = '1'; cancelar.textContent = 'Cancelar'; cancelar.onclick = () => ov.remove();
+  const enviar = document.createElement('button'); enviar.className = 'btn gold'; enviar.style.flex = '1'; enviar.textContent = 'Enviar';
+  enviar.onclick = async () => {
+    if (!ta.value.trim()) { toast('A explicação é obrigatória', 'error'); ta.focus(); return; }
+    enviar.disabled = true; enviar.textContent = 'Enviando…';
+    const { data: r } = await sb.rpc('acolitos_hab_pedir', { p_membro: ctx.membro.id, p_funcao: f.funcao, p_label: f.label, p_evidencia: ta.value.trim() });
+    if (r && r.ok) { ov.remove(); toast('✅ Pedido enviado! A coordenação vai avaliar.'); await renderAll(); }
+    else { enviar.disabled = false; enviar.textContent = 'Enviar'; toast('Erro: ' + (r && r.erro || 'tente de novo'), 'error'); }
+  };
+  acts.append(cancelar, enviar); md.appendChild(acts);
+  ov.appendChild(md); document.body.appendChild(ov);
+}
+function questRow(q) {
+  const row = document.createElement('div'); row.className = 'mx-q';
+  row.appendChild(statusIco(q.status));
+  const body = document.createElement('div'); body.className = 'mx-q-body';
+  const t = document.createElement('div'); t.className = 'mx-q-tit'; t.textContent = q.titulo + (q.obrigatoria === false ? ' · opcional' : '');
+  body.appendChild(t);
+  if (q.descricao) { const d = document.createElement('div'); d.className = 'mx-q-sub'; d.textContent = q.descricao; body.appendChild(d); }
+  if (q.competencia) { const c = document.createElement('div'); c.className = 'mx-q-sub'; c.style.cssText = 'color:var(--gold);font-size:10px;margin-top:2px;font-weight:700;'; c.textContent = '💪 Trabalha: ' + q.competencia; body.appendChild(c); }
+  // progresso cumulativo (missas/ensaios/funções distintas) → barra X/N
+  if (q.alvo != null && q.atual != null) {
+    const done = q.atual >= q.alvo;
+    const pg = document.createElement('div'); pg.style.cssText = 'display:flex;align-items:center;gap:6px;margin-top:4px;';
+    const bar = document.createElement('div'); bar.style.cssText = 'flex:1;max-width:130px;height:5px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden;';
+    const fill = document.createElement('div'); fill.style.cssText = 'height:100%;border-radius:3px;width:' + Math.min(100, Math.round(q.atual / q.alvo * 100)) + '%;background:' + (done ? 'var(--success-text)' : 'var(--gold)') + ';';
+    bar.appendChild(fill);
+    const txt = document.createElement('span'); txt.style.cssText = 'font-size:10px;font-weight:700;color:' + (done ? 'var(--success-text)' : 'var(--gold-light)') + ';'; txt.textContent = q.atual + '/' + q.alvo;
+    pg.append(bar, txt); body.appendChild(pg);
+  }
+  // claimable: reivindicada ("Já fiz") e aptidão de função ("Eu já faço"). Missas/ensaios são
+  // automáticas de verdade (enchem pela chamada/presença) → NÃO têm botão.
+  const claimable = ((q.validacao === 'reivindicada' || q.validacao === 'avaliada' || (q.validacao === 'automatica' && q.fonte === 'habilitacao')) && (q.status === 'pendente' || q.status === 'revisao'));
+  if (q.status === 'em_analise' || q.validacao === 'avaliada') { const h = document.createElement('div'); h.className = 'mx-q-sub'; h.style.cssText = 'color:var(--gold-dim);font-size:10px;margin-top:2px;'; h.textContent = subDe(q); body.appendChild(h); }
+  if (q.status === 'revisao' && revisoesMap[q.id] != null) { const rv = document.createElement('div'); rv.className = 'mx-q-sub'; rv.style.cssText = 'color:var(--danger-text);font-size:10px;margin-top:2px;font-weight:700;'; rv.textContent = '📝 Revisão: ' + (revisoesMap[q.id] || 'reenvie sua resposta'); body.appendChild(rv); }
+  row.appendChild(body);
+  const xp = document.createElement('span'); xp.className = 'mx-q-xp'; xp.textContent = '+' + q.xp + ' XP'; row.appendChild(xp);
+  if (claimable) {
+    const b = document.createElement('button'); b.className = 'mx-mini go'; b.textContent = (q.status === 'revisao' ? 'Reenviar' : q.fonte === 'habilitacao' ? 'Eu já faço' : 'Já fiz');
+    b.onclick = () => abrirClaimModal(q); row.appendChild(b);
+  }
+  return row;
+}
+// Card de um capítulo (desbloqueado mostra missões; travado mostra cadeado)
+function capCard(c) {
+  const card = document.createElement('div'); card.className = 'mx-card';
+  if (!c.desbloqueado) card.style.opacity = '.6';
+  const hd = document.createElement('div'); hd.className = 'mx-hd';
+  hd.textContent = 'Capítulo ' + c.capitulo + (c.completo ? ' ✓ concluído' : c.desbloqueado ? '' : ' 🔒 bloqueado');
+  card.appendChild(hd);
+  if (!c.desbloqueado) {
+    const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = '🔒 Conclua o capítulo anterior pra desbloquear.'; card.appendChild(e);
+  } else {
+    (c.missoes || []).forEach(q => card.appendChild(questRow(q)));
+  }
+  return card;
+}
+
+async function renderBoard(main) {
+  const { data, error } = await sb.rpc('acolitos_missoes_board', { p_membro: ctx.membro.id, p_niveis: NIVEIS_SLUGS() });
+  if (error || !data || data.erro) { const e = document.createElement('p'); e.className = 'mx-empty'; e.textContent = 'Não foi possível carregar (' + (data?.erro || error?.message) + ').'; main.appendChild(e); return; }
+  try { const { data: rv } = await sb.rpc('acolitos_revisoes_minhas', { p_membro: ctx.membro.id }); revisoesMap = rv || {}; } catch (e) { revisoesMap = {}; }
+  try { const { data: rh } = await sb.rpc('acolitos_hab_revisoes_minhas', { p_membro: ctx.membro.id }); revHabMap = rh || {}; } catch (e) { revHabMap = {}; }
+
+  // 🎖️ Minhas Conquistas (topo)
+  const cqBtn = document.createElement('button'); cqBtn.className = 'btn-sm gold'; cqBtn.style.cssText = 'width:100%;margin:0 0 12px;'; cqBtn.textContent = '🎖️ Minhas Conquistas';
+  cqBtn.onclick = () => { window.location.href = 'conquistas.html'; }; main.appendChild(cqBtn);
+
+  if (data.elegivel) { const el = document.createElement('div'); el.className = 'mx-elig'; el.textContent = '🎉 Pronto pra subir de nível! Aguardando a coordenação confirmar.'; main.appendChild(el); }
+
+  // Card "Sua jornada"
+  const caps = data.capitulos || [];
+  const capsOk = caps.filter(c => c.completo).length;
+  const card = document.createElement('div'); card.className = 'mx-card';
+  const hd = document.createElement('div'); hd.className = 'mx-hd'; hd.textContent = data.proximo_nivel ? 'Sua jornada' : 'Nível máximo'; card.appendChild(hd);
+  if (data.proximo_nivel) {
+    const prox = document.createElement('div'); prox.className = 'mx-prox';
+    prox.appendChild(buildRankEmblem(data.proximo_nivel, 54));
+    const info = document.createElement('div'); info.className = 'mx-prox-info';
+    const nm = document.createElement('div'); nm.className = 'mx-prox-nome'; nm.textContent = 'Próximo: ' + nivelInfo(data.proximo_nivel).label;
+    const xpl = document.createElement('div'); xpl.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold-light);margin:3px 0 6px;text-shadow:0 0 8px var(--red-glow);'; xpl.textContent = '✦ ' + data.xp_total + ' XP adquiridos na Jornada Principal';
+    const estl = document.createElement('div'); estl.style.cssText = 'font-size:13px;margin:0 0 6px;letter-spacing:1px;';
+    try {
+      const { data: ed } = await sb.rpc('acolitos_estrelas', { p_membro: ctx.membro.id });
+      if (ed && !ed.erro) {
+        const n = Number(ed.estrelas) || 0;
+        estl.innerHTML = (n > 0
+          ? '<span style="font-size:17px;letter-spacing:2px;">' + '⭐'.repeat(Math.min(n, 5)) + '</span>' + (n > 5 ? ' <b style="color:var(--gold-light);font-size:13px;">×' + n + '</b>' : '')
+            + '<span style="display:block;font-size:10px;color:var(--gold-light);font-weight:700;margin-top:1px;">' + n + ' estrela' + (n > 1 ? 's' : '') + ' conquistada' + (n > 1 ? 's' : '') + ' neste nível</span>'
+          : '<span style="color:var(--gold-dim);font-style:italic;font-size:12px;">Primeira estrela a caminho ✨</span>')
+          + '<span style="display:block;font-size:9.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;">faltam ' + ed.xp_prox + ' XP pra próxima ⭐</span>';
+      }
+    } catch (e) {}
+    const bar = document.createElement('div'); bar.className = 'mx-bar'; const fill = document.createElement('div'); fill.className = 'mx-bar-fill';
+    fill.style.width = (caps.length ? Math.round(100 * capsOk / caps.length) : 0) + '%'; bar.appendChild(fill);
+    const cnt = document.createElement('div'); cnt.className = 'mx-q-sub'; cnt.style.marginTop = '4px'; cnt.textContent = capsOk + ' de ' + caps.length + ' capítulos concluídos';
+    info.append(nm, xpl, estl, bar, cnt); prox.appendChild(info); card.appendChild(prox);
+  } else {
+    const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = '🏆 Você está no topo da jornada com ' + data.xp_total + ' XP!'; card.appendChild(e);
+  }
+  main.appendChild(card);
+
+  // ✨ Quests Exclusivas + ⭐ Missão da Semana (logo abaixo da Sua jornada)
+  try {
+    const { data: ex } = await sb.rpc('acolitos_quests_exclusivas', { p_membro: ctx.membro.id });
+    if (ex && ex.length) {
+      const ec = document.createElement('div'); ec.className = 'mx-card'; ec.style.cssText = 'border-color:#9b59d4;background:linear-gradient(165deg,rgba(155,89,212,.18),var(--surface));';
+      const eh = document.createElement('div'); eh.className = 'mx-hd'; eh.style.color = '#cd9ef2'; eh.textContent = '✨ Quest' + (ex.length > 1 ? 's' : '') + ' Exclusiva' + (ex.length > 1 ? 's' : ''); ec.appendChild(eh);
+      ex.forEach(q => ec.appendChild(questRow(q)));
+      main.appendChild(ec);
+    }
+  } catch (e) {}
+  try {
+    const { data: ws } = await sb.rpc('acolitos_missao_semana', { p_membro: ctx.membro.id, p_niveis: NIVEIS_SLUGS() });
+    if (ws && ws.missao) {
+      const wc = document.createElement('div'); wc.className = 'mx-card'; wc.style.cssText = 'border-color:var(--gold);background:linear-gradient(165deg,rgba(232,185,74,.13),var(--surface));';
+      const wh = document.createElement('div'); wh.className = 'mx-hd'; wh.style.color = 'var(--gold-light)'; wh.textContent = '⭐ Missão da Semana' + (ws.tema ? ' · ' + ws.tema : ''); wc.appendChild(wh);
+      wc.appendChild(questRow(ws.missao));
+      main.appendChild(wc);
+    }
+  } catch (e) {}
+
+  // 🔒 Funções pendentes + Capítulos (só quando há próximo nível)
+  if (data.proximo_nivel) {
+    const pend = data.pendencias || [];
+    if (pend.length) {
+      const { data: meus } = await sb.rpc('acolitos_hab_pedidos_meus', { p_membro: ctx.membro.id });
+      const pendSet = new Set(meus || []);
+      const pc = document.createElement('div'); pc.className = 'mx-card'; pc.style.borderColor = 'var(--danger)';
+      const ph = document.createElement('div'); ph.className = 'mx-hd'; ph.style.color = 'var(--danger-text)'; ph.textContent = '🔒 Funções pendentes do seu nível'; pc.appendChild(ph);
+      const ps = document.createElement('div'); ps.className = 'mx-q-sub'; ps.style.marginBottom = '6px'; ps.textContent = 'Você precisa dominar estas funções (ficar Apto) antes de subir de nível. Treine nas missas e ensaios — ou marque "Já faço" pra coordenação avaliar.'; pc.appendChild(ps);
+      pend.forEach(f => {
+        const r = document.createElement('div'); r.className = 'mx-q';
+        const ic = document.createElement('span'); ic.style.cssText = 'font-size:15px;flex:none;'; ic.textContent = '⚠️'; r.appendChild(ic);
+        const bd = document.createElement('div'); bd.className = 'mx-q-body';
+        const t = document.createElement('div'); t.className = 'mx-q-tit'; t.textContent = 'Ficar Apto: ' + f.label; bd.appendChild(t);
+        r.appendChild(bd);
+        if (pendSet.has(f.funcao)) {
+          const tag = document.createElement('span'); tag.className = 'mx-q-sub'; tag.style.cssText = 'color:var(--gold-dim);font-size:11px;font-weight:700;flex:none;'; tag.textContent = '⏳ em análise'; r.appendChild(tag);
+        } else {
+          if (revHabMap[f.funcao] != null) { const rv = document.createElement('div'); rv.className = 'mx-q-sub'; rv.style.cssText = 'color:var(--danger-text);font-size:10px;margin-top:2px;font-weight:700;'; rv.textContent = '📝 Revisão: ' + (revHabMap[f.funcao] || 'reenvie'); bd.appendChild(rv); }
+          const b = document.createElement('button'); b.className = 'mx-mini go'; b.textContent = revHabMap[f.funcao] != null ? 'Reenviar' : 'Já faço';
+          b.onclick = () => pedirHab(f); r.appendChild(b);
+        }
+        pc.appendChild(r);
+      });
+      main.appendChild(pc);
+    }
+    if (caps.length) caps.forEach(c => main.appendChild(capCard(c)));
+    else { const e = document.createElement('div'); e.className = 'mx-empty'; e.style.padding = '8px 2px'; e.textContent = 'Nenhum capítulo cadastrado pra este nível ainda.'; main.appendChild(e); }
+  }
+
+  // Bônus
+  const bonus = data.bonus || [];
+  const bc = document.createElement('div'); bc.className = 'mx-card';
+  const bhd = document.createElement('div'); bhd.className = 'mx-hd'; bhd.textContent = 'Missões bônus'; bc.appendChild(bhd);
+  if (bonus.length) bonus.forEach(q => bc.appendChild(questRow(q)));
+  else { const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = 'Nenhuma missão bônus disponível agora.'; bc.appendChild(e); }
+  main.appendChild(bc);
+}
+
+let _rosterCache = null;
+async function getRoster() {
+  if (_rosterCache) return _rosterCache;
+  const { data } = await sb.rpc('acolitos_roster_nomes');
+  _rosterCache = (data || []).filter(p => p.id !== (ctx.membro && ctx.membro.id)); // sem o próprio
+  return _rosterCache;
+}
+async function abrirClaimModal(q) {
+  const roster = await getRoster();
+  // missões de aptidão (habilitação) exigem explicar COMO se serve na função
+  let aptidao = false;
+  if (q.validacao === 'automatica') {
+    try { const { data } = await sb.from('acolitos_missoes').select('criterio').eq('id', q.id).maybeSingle();
+      aptidao = !!(data && data.criterio && data.criterio.fonte === 'habilitacao'); } catch (e) {}
+  }
+  const selecionados = []; // {id,nome}
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '440px';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = q.titulo; md.appendChild(tt);
+  if (q.descricao) { const d = document.createElement('p'); d.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;'; d.textContent = q.descricao; md.appendChild(d); }
+  if (q.status === 'revisao' && revisoesMap[q.id] != null) {
+    const rb = document.createElement('div'); rb.style.cssText = 'background:rgba(209,16,32,.12);border:1px solid var(--danger);border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--text);line-height:1.4;';
+    const bb = document.createElement('b'); bb.style.color = 'var(--danger-text)'; bb.textContent = '📝 A coordenação pediu: ';
+    rb.append(bb, document.createTextNode(revisoesMap[q.id] || 'reenvie sua resposta corrigida')); md.appendChild(rb);
+  }
+  const lab = (txt) => { const l = document.createElement('div'); l.style.cssText = 'font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 5px;'; l.textContent = txt; md.appendChild(l); };
+  // resposta obrigatória (na aptidão, pede pra explicar como se serve na função)
+  lab(aptidao ? 'Explique como se serve nessa função *' : 'Conte o que você fez *');
+  const ta = document.createElement('textarea'); ta.className = 'form-input'; ta.rows = 3;
+  ta.placeholder = aptidao ? 'Com suas palavras: o que você faz nessa função, em que momentos da missa, e como — pra mostrar que sabe servir.' : 'Descreva com suas palavras como você cumpriu (obrigatório)';
+  md.appendChild(ta);
+  const aviso = document.createElement('div'); aviso.style.cssText = 'font-size:11px;color:var(--wine-bright,#d45050);margin-top:5px;font-style:italic;'; aviso.textContent = '😏 Escreve com suas palavras! Se colar resposta de ChatGPT aqui, o tio Erick vai saber 👀'; md.appendChild(aviso);
+  // marcar participantes
+  lab('Envolveu alguém? marque (ganham XP)');
+  const chips = document.createElement('div'); chips.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;'; md.appendChild(chips);
+  const busca = document.createElement('input'); busca.className = 'form-input'; busca.placeholder = 'Buscar nome…'; md.appendChild(busca);
+  const lista = document.createElement('div'); lista.style.cssText = 'max-height:150px;overflow-y:auto;margin-top:6px;'; md.appendChild(lista);
+  function pintaChips() {
+    chips.textContent = '';
+    selecionados.forEach(p => { const c = document.createElement('span'); c.style.cssText = 'background:var(--surface2);border:1px solid var(--gold-dim);color:var(--gold-light);border-radius:14px;padding:3px 10px;font-size:12px;cursor:pointer;'; c.textContent = p.nome + ' ✕'; c.onclick = () => { const i = selecionados.findIndex(x => x.id === p.id); if (i >= 0) selecionados.splice(i, 1); pintaChips(); pintaLista(); }; chips.appendChild(c); });
+  }
+  function pintaLista() {
+    const termo = busca.value.trim().toLowerCase(); lista.textContent = '';
+    if (!termo) return;
+    roster.filter(p => p.nome.toLowerCase().includes(termo) && !selecionados.some(s => s.id === p.id)).slice(0, 12)
+      .forEach(p => { const it = document.createElement('div'); it.style.cssText = 'padding:8px 6px;font-size:13px;color:var(--text);border-bottom:1px solid var(--border);cursor:pointer;'; it.textContent = p.nome; it.onclick = () => { selecionados.push(p); busca.value = ''; pintaChips(); pintaLista(); }; lista.appendChild(it); });
+  }
+  busca.oninput = pintaLista;
+  // botões
+  const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:16px;';
+  const cancelar = document.createElement('button'); cancelar.className = 'btn'; cancelar.style.flex = '1'; cancelar.textContent = 'Cancelar'; cancelar.onclick = () => ov.remove();
+  const enviar = document.createElement('button'); enviar.className = 'btn gold'; enviar.style.flex = '1'; enviar.textContent = 'Enviar';
+  enviar.onclick = async () => {
+    if (!ta.value.trim()) { toast('A resposta é obrigatória', 'error'); ta.focus(); return; }
+    enviar.disabled = true; enviar.textContent = 'Enviando…';
+    const { data, error } = await sb.rpc('acolitos_missao_reivindicar', { p_missao: q.id, p_evidencia: ta.value.trim(), p_envolvidos: selecionados.length ? selecionados.map(p => p.id) : null });
+    if (error || data?.erro) { toast('Erro: ' + (data?.erro || error?.message), 'error'); enviar.disabled = false; enviar.textContent = 'Enviar'; return; }
+    ov.remove(); toast('✓ Enviado pra coordenação aprovar'); await renderAll();
+  };
+  acts.append(cancelar, enviar); md.appendChild(acts);
+  ov.appendChild(md); document.body.appendChild(ov);
+}
+
+async function renderCoord(main) {
+  const head = document.createElement('h2'); head.style.cssText = 'font-family:Sora,sans-serif;font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 12px;';
+  head.textContent = '⚙️ Coordenação'; main.appendChild(head);
+
+  // Fila de aprovação
+  const { data: fila } = await sb.rpc('acolitos_missoes_fila');
+  const fc = document.createElement('div'); fc.className = 'mx-card';
+  const fhd = document.createElement('div'); fhd.className = 'mx-hd'; fhd.textContent = 'Fila de aprovação (' + (fila?.length || 0) + ')'; fc.appendChild(fhd);
+  if (fila && fila.length) fila.forEach(item => {
+    const it = document.createElement('div'); it.className = 'mx-fila-item';
+    const top = document.createElement('div'); top.className = 'mx-fila-top';
+    const lbl = document.createElement('div'); lbl.style.fontSize = '13px'; lbl.innerHTML = '<b>' + escHtml(item.membro) + '</b> — ' + escHtml(item.titulo);
+    const xp = document.createElement('span'); xp.className = 'mx-q-xp'; xp.textContent = '+' + item.xp + ' XP';
+    top.append(lbl, xp); it.appendChild(top);
+    if (item.evidencia) { const ev = document.createElement('div'); ev.className = 'mx-q-sub'; ev.textContent = '“' + item.evidencia + '”'; it.appendChild(ev); }
+    if (item.envolvidos) { const en = document.createElement('div'); en.className = 'mx-q-sub'; en.style.color = 'var(--gold-light)'; en.textContent = '👥 Com: ' + item.envolvidos + ' (ganham XP ao aprovar)'; it.appendChild(en); }
+    const acts = document.createElement('div'); acts.className = 'mx-fila-acts';
+    const ok = document.createElement('button'); ok.className = 'mx-mini ok'; ok.textContent = '✓ Aprovar'; ok.onclick = () => decidir(item.missao_id, item.membro_id, 'aprovar');
+    const no = document.createElement('button'); no.className = 'mx-mini no'; no.textContent = '✕ Recusar'; no.onclick = () => decidir(item.missao_id, item.membro_id, 'recusar');
+    acts.append(ok, no); it.appendChild(acts); fc.appendChild(it);
+  });
+  else { const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = 'Nada pra aprovar agora.'; fc.appendChild(e); }
+  main.appendChild(fc);
+
+  // Promoções pendentes
+  const { data: prom } = await sb.rpc('acolitos_promocoes_pendentes', { p_niveis: NIVEIS_SLUGS() });
+  const pc = document.createElement('div'); pc.className = 'mx-card';
+  const phd = document.createElement('div'); phd.className = 'mx-hd'; phd.textContent = 'Promoções pendentes (' + (prom?.length || 0) + ')'; pc.appendChild(phd);
+  if (prom && prom.length) prom.forEach(p => {
+    const it = document.createElement('div'); it.className = 'mx-fila-item';
+    const top = document.createElement('div'); top.className = 'mx-fila-top';
+    const lbl = document.createElement('div'); lbl.style.fontSize = '13px'; lbl.innerHTML = '<b>' + escHtml(p.membro) + '</b> → ' + escHtml(nivelInfo(p.proximo).label);
+    const go = document.createElement('button'); go.className = 'mx-mini go'; go.textContent = '⬆ Promover'; go.onclick = () => promover(p.membro_id, p.proximo, p.membro);
+    top.append(lbl, go); it.appendChild(top); pc.appendChild(it);
+  });
+  else { const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = 'Ninguém elegível no momento.'; pc.appendChild(e); }
+  main.appendChild(pc);
+}
+
+async function decidir(missao, membro, decisao) {
+  const { data, error } = await sb.rpc('acolitos_missao_decidir', { p_missao: missao, p_membro: membro, p_decisao: decisao });
+  if (error || data?.erro) { toast('Erro: ' + (data?.erro || error?.message), 'error'); return; }
+  toast(decisao === 'aprovar' ? '✓ Aprovada (+' + data.xp + ' XP)' : '✕ Recusada'); await renderAll();
+}
+async function promover(membro, nivel, nome) {
+  if (!confirm('Promover ' + nome + ' para ' + nivelInfo(nivel).label + '?')) return;
+  const { data, error } = await sb.rpc('acolitos_promover', { p_membro: membro, p_novo_nivel: nivel });
+  if (error || data?.erro) { toast('Erro: ' + (data?.erro || error?.message), 'error'); return; }
+  toast('🎉 Promovido para ' + nivelInfo(nivel).label); await renderAll();
+}
+
+init();
+</script>
+</body>
+</html>

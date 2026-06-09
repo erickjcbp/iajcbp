@@ -2,7 +2,7 @@
 <html lang="pt-BR" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>CRM — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -107,12 +107,13 @@
 
 <script src="shared.js"></script>
 <script>
-const ETAPAS = ['aprovacao_cadastro','integracao','whatsapp','tunica','disponivel_escala','integrado'];
-const ETAPA_LABEL = {
+// Etapas padrão (fallback). O Config (cfg('crm_etapas') = lista ordenada) substitui tudo no init.
+let ETAPAS = ['aprovacao_cadastro','integracao','whatsapp','tunica','disponivel_escala','integrado'];
+let ETAPA_LABEL = {
   aprovacao_cadastro:'Aprovação', integracao:'Integração', whatsapp:'WhatsApp', tunica:'Túnica',
   disponivel_escala:'Disp. Escala', integrado:'Integrado'
 };
-const ETAPA_ACAO = {
+let ETAPA_ACAO = {
   aprovacao_cadastro:'Aprovar o cadastro. O membro segue para a etapa de integração.',
   integracao:      'Reunião de integração realizada com o membro.',
   whatsapp:        'Entrada nos grupos de WhatsApp confirmada.',
@@ -129,6 +130,13 @@ let currentView = 'pipeline';
 async function init() {
   ctx = await initModulo(['coord_admin','subadmin','membro_equipe']);
   if (!ctx) return;
+  // Etapas vêm do Config (lista ordenada de {slug,label,acao}); senão usa o padrão
+  const _ov = (typeof cfg === 'function') ? cfg('crm_etapas', null) : null;
+  if (Array.isArray(_ov) && _ov.length) {
+    ETAPAS = _ov.map(e => e.slug);
+    ETAPA_LABEL = {}; ETAPA_ACAO = {};
+    _ov.forEach(e => { ETAPA_LABEL[e.slug] = e.label || e.slug; ETAPA_ACAO[e.slug] = e.acao || ''; });
+  }
   renderHeader(ctx, 'crm');
   renderBottomNav(ctx, 'crm');
   await loadCrm();
@@ -241,7 +249,7 @@ function renderLista() {
 
     const tdEtapa = document.createElement('td');
     const etBadge = document.createElement('span'); etBadge.className = 'etapa-badge';
-    etBadge.textContent = ETAPA_LABEL[c.etapa]; tdEtapa.appendChild(etBadge);
+    etBadge.textContent = ETAPA_LABEL[c.etapa] || c.etapa; tdEtapa.appendChild(etBadge);
 
     const tdDias = document.createElement('td');
     const pill = document.createElement('span');

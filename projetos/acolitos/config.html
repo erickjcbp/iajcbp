@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Configuração — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#150a0d">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <script>window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__bip=e;});</script>
+  <style>
+    /* menu lateral esquerdo (seções) + conteúdo à direita */
+    .cfg-wrap { display:flex; gap:14px; align-items:flex-start; }
+    .cfg-side { flex:0 0 174px; display:flex; flex-direction:column; gap:6px; position:sticky; top:8px; }
+    .cfg-item { position:relative; text-align:left; padding:11px 12px 11px 15px; background:linear-gradient(165deg, var(--surface2), var(--surface)); border:1px solid var(--border-wine); color:var(--text-muted); font-family:'Sora',sans-serif; font-weight:700; font-size:12.5px; letter-spacing:.4px; cursor:pointer; line-height:1.2; clip-path:polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px); transition:border-color .15s, color .15s, box-shadow .15s; }
+    .cfg-item::before { content:''; position:absolute; left:0; top:3px; bottom:3px; width:3px; background:transparent; }
+    .cfg-item:hover { border-color:var(--gold-dim); color:var(--text); }
+    .cfg-item.on { color:var(--gold-light); border-color:var(--gold); background:linear-gradient(165deg, rgba(232,185,74,.16), var(--surface)); box-shadow:0 0 14px var(--red-glow), inset 0 0 0 1px rgba(232,185,74,.12); }
+    .cfg-item.on::before { background:linear-gradient(180deg, var(--gold), var(--red-soft)); box-shadow:0 0 8px var(--red-glow); }
+    .cfg-body { flex:1; min-width:0; }
+    @media(max-width:560px){ .cfg-side{ flex-basis:124px; } .cfg-item{ font-size:11.5px; padding:9px 10px; } }
+    /* sub-abas dentro de uma seção (continuam horizontais) */
+    .cfg-nav { display:flex; gap:6px; overflow-x:auto; margin:-2px 0 12px; -webkit-overflow-scrolling:touch; }
+    .cfg-nav::-webkit-scrollbar { display:none; }
+    .cfg-tab { padding:7px 12px; border-radius:20px; border:1px solid var(--border-wine); background:var(--surface2); color:var(--text-muted); font-family:'Sora',sans-serif; font-weight:700; font-size:12px; white-space:nowrap; cursor:pointer; }
+    .cfg-tab.on { background:linear-gradient(165deg,rgba(232,185,74,.18),var(--surface)); color:var(--gold-light); border-color:var(--gold-dim); }
+    /* cards ricos (Níveis, CRM, etc.) — visual Hextech */
+    .cfg-card { position:relative; background:linear-gradient(165deg, var(--surface2), var(--surface)); border:1px solid var(--border-wine); border-radius:10px; padding:12px; margin-bottom:10px; clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px); }
+    .cfg-card-hd { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+    .cfg-card-hd .nmwrap { flex:1; min-width:0; }
+    .cfg-card-hd .stp { font-size:10px; font-weight:700; color:var(--gold-dim); text-transform:uppercase; letter-spacing:1px; }
+    .cfg-patch { width:48px; height:54px; flex:none; line-height:0; filter:drop-shadow(0 0 6px var(--red-glow)); }
+    .cfg-fld { margin-top:8px; }
+    .cfg-fld > label { display:block; font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px; }
+    .cfg-mini { width:30px; height:30px; flex:none; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border-wine); background:var(--surface2); color:var(--gold); border-radius:7px; cursor:pointer; font-size:14px; font-weight:700; }
+    .cfg-mini:hover:not(:disabled) { border-color:var(--gold); box-shadow:0 0 10px var(--red-glow); }
+    .cfg-mini:disabled { opacity:.25; cursor:default; }
+    .cfg-mini.danger { color:var(--danger-text); }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+<div class="main" id="main-content"><span class="loading">Carregando...</span></div>
+
+<script src="shared.js"></script>
+<script>
+let ctx = null, secaoAtual = 'listas';
+const SECOES = [
+  ['navegacao','Navegação'], ['equipe','Equipe & Permissões'], ['tipos','Tipos & Modelos'], ['funcoes','Funções litúrgicas'],
+  ['gerador','Regras do gerador'], ['comunidades','Comunidades & horários'],
+  ['cadastro','Campos do cadastro'], ['tesouraria','Categorias da Tesouraria'], ['crm','Etapas do CRM'], ['niveis','Níveis / Jornada'], ['missoes','Missões & XP'], ['logins','Logins (usuário/senha)'], ['admins','Admins & superadmin'],
+];
+async function init(){
+  ctx = await initModulo();
+  if (!ctx) return;
+  if (!isSuperadmin(ctx)) { window.location.href = 'index.html'; return; }
+  renderHeader(ctx, 'config'); renderBottomNav(ctx, 'config');
+  render();
+}
+function render(){
+  const main = document.getElementById('main-content'); main.textContent='';
+  const t = document.createElement('h1'); t.className='page-title'; t.textContent='Configuração'; main.appendChild(t);
+  const wrap = document.createElement('div'); wrap.className='cfg-wrap';
+  const side = document.createElement('div'); side.className='cfg-side';
+  SECOES.forEach(([id,label])=>{ const b=document.createElement('button'); b.className='cfg-item'+(id===secaoAtual?' on':''); b.textContent=label; b.onclick=()=>{secaoAtual=id;render();}; side.appendChild(b); });
+  const body = document.createElement('div'); body.id='cfg-body'; body.className='cfg-body';
+  wrap.append(side, body); main.appendChild(wrap);
+  ({ listas:renderListas, tipos:renderTiposModelos, funcoes:renderFuncoes, gerador:renderGerador,
+     comunidades:renderComunidades, cadastro:renderCadastro, admins:renderAdmins, identidade:renderIdentidade,
+     navegacao:renderNavOrdem, equipe:renderEquipe, tesouraria:renderTesouraria, modelos:renderModelos,
+     crm:renderCrm, niveis:renderNiveis, missoes:renderMissoes, logins:renderLogins
+   }[secaoAtual] || (()=>{}))(body);
+}
+// ── Logins (usuário/senha) — só superadmin ──
+async function renderLogins(b){
+  b.textContent='';
+  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 8px;line-height:1.5;';
+  hint.innerHTML='Usuário e senha de cada membro. <b>A senha só aparece se foi definida por aqui</b> — a antiga fica criptografada e não dá pra recuperar (é só redefinir pra registrar). Só superadmin vê esta tela.';
+  b.appendChild(hint);
+  const box=document.createElement('div'); box.innerHTML='<span class="loading">Carregando...</span>'; b.appendChild(box);
+  const { data } = await sb.rpc('acolitos_logins_listar');
+  box.textContent='';
+  if(!data || data.erro){ box.textContent='Sem permissão.'; return; }
+  const membros = data.membros || [];
+  const busca=document.createElement('input'); busca.className='form-input'; busca.placeholder='buscar membro…'; busca.style.marginBottom='8px'; box.appendChild(busca);
+  const list=document.createElement('div'); box.appendChild(list);
+  const mini=(txt,danger)=>{ const x=document.createElement('button'); x.textContent=txt; x.style.cssText='font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;border:1px solid '+(danger?'var(--danger)':'var(--gold-dim)')+';background:var(--surface2);color:'+(danger?'var(--danger-text)':'var(--gold-light)')+';'; return x; };
+  async function setSenha(m){
+    const s=(prompt('Nova senha para '+m.nome+' (mín. 6 caracteres):')||'').trim(); if(!s) return; if(s.length<6){alert('Senha muito curta.');return;}
+    const r=await apiPost('/api/acolito-admin',{action:'password',user_id:m.user_id,password:s});
+    if(!r.ok){alert('Erro: '+((r.data&&r.data.error)||'tente de novo'));return;}
+    await sb.rpc('acolitos_login_registrar',{p_membro:m.id,p_usuario:null,p_senha:s});
+    m.senha=s; desenha();
+  }
+  async function setUser(m){
+    const u=(prompt('Novo usuário (login) de '+m.nome+':', m.usuario||'')||'').trim(); if(!u) return;
+    const r=await apiPost('/api/acolito-admin',{action:'username',user_id:m.user_id,usuario:u});
+    if(!r.ok){alert('Erro: '+((r.data&&r.data.error)||'tente de novo'));return;}
+    await sb.rpc('acolitos_login_registrar',{p_membro:m.id,p_usuario:u,p_senha:null});
+    m.usuario=u; desenha();
+  }
+  async function criarConta(m){
+    const u=(prompt('Usuário (login) de '+m.nome+':')||'').trim(); if(!u) return;
+    const s=(prompt('Senha (mín. 6 caracteres):')||'').trim(); if(!s){return;} if(s.length<6){alert('Senha muito curta.');return;}
+    const r=await apiPost('/api/acolito-admin',{action:'create',usuario:u,password:s,nome:m.nome,membro_id:m.id});
+    if(!r.ok){alert('Erro: '+((r.data&&r.data.error)||'tente de novo'));return;}
+    await sb.rpc('acolitos_login_registrar',{p_membro:m.id,p_usuario:u,p_senha:s});
+    m.tem_conta=true; if(r.data&&r.data.user_id) m.user_id=r.data.user_id; m.usuario=u; m.senha=s; desenha();
+  }
+  function desenha(){
+    list.textContent=''; const q=busca.value.trim().toLowerCase();
+    const arr=membros.filter(m=>!q||(m.nome||'').toLowerCase().includes(q));
+    arr.slice(0,300).forEach(m=>{
+      const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--border);';
+      const info=document.createElement('div'); info.style.cssText='flex:1;min-width:0;';
+      const nm=document.createElement('div'); nm.style.cssText='font-weight:700;font-size:13px;color:var(--text);'; nm.textContent=m.nome;
+      const sub=document.createElement('div'); sub.style.cssText='font-size:11px;color:var(--text-muted);word-break:break-all;';
+      if(m.tem_conta){ sub.innerHTML='usuário: <b style="color:var(--gold-light)">'+escHtml(m.usuario||'—')+'</b> · senha: '+(m.senha?'<b style="color:var(--gold-light)">'+escHtml(m.senha)+'</b>':'<i>não registrada</i>'); }
+      else { sub.innerHTML='<i style="color:var(--danger-text)">sem conta</i>'; }
+      info.append(nm,sub); row.appendChild(info);
+      if(m.tem_conta){ const bu=mini('Usuário'); bu.onclick=()=>setUser(m); const bs=mini('Senha'); bs.onclick=()=>setSenha(m); row.append(bu,bs); }
+      else { const bc=mini('Criar conta'); bc.onclick=()=>criarConta(m); row.append(bc); }
+      list.appendChild(row);
+    });
+    if(arr.length>300){ const e=document.createElement('div'); e.style.cssText='font-size:11px;color:var(--text-muted);padding:6px 0;'; e.textContent='Mostrando 300 de '+arr.length+' — refine a busca.'; list.appendChild(e); }
+  }
+  busca.oninput=desenha; desenha();
+}
+async function setConfig(chave, valor){
+  const { error } = await sb.from('acolitos_config').upsert({ chave, valor, updated_by: ctx.user.id, updated_at: new Date().toISOString() }, { onConflict:'chave' });
+  if (error) { toast('Erro ao salvar.', 'error'); return false; }
+  _APP_CONFIG[chave] = valor; toast('✓ Salvo!'); return true;
+}
+const LISTAS_TIPOS = [['competencia','Competências']];
+let _listaTipo = 'competencia';
+async function renderListas(b){
+  b.textContent='';
+  const subnav=document.createElement('div'); subnav.className='cfg-nav';
+  LISTAS_TIPOS.forEach(([t,l])=>{ const x=document.createElement('button'); x.className='cfg-tab'+(t===_listaTipo?' on':''); x.textContent=l; x.onclick=()=>{_listaTipo=t;renderListas(b);}; subnav.appendChild(x); });
+  b.appendChild(subnav);
+  const { data } = await sb.from('acolitos_listas').select('id,valor,label').eq('tipo',_listaTipo).order('valor');
+  (data||[]).forEach(item=>{
+    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
+    const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=item.label||item.valor;
+    const del=document.createElement('button'); del.className='mini-del'; del.textContent='−';
+    del.onclick=async()=>{ if(!confirm('Remover "'+(item.label||item.valor)+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',item.id); renderListas(b); };
+    row.append(nm,del); b.appendChild(row);
+  });
+  const add=document.createElement('div'); add.style.cssText='display:flex;gap:8px;margin-top:10px;';
+  const inp=document.createElement('input'); inp.className='form-input'; inp.placeholder='Novo item…';
+  const bt=document.createElement('button'); bt.className='mini-add'; bt.textContent='+';
+  bt.onclick=async()=>{ const v=inp.value.trim(); if(!v)return; const slug=v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''); await sb.from('acolitos_listas').insert({tipo:_listaTipo,valor:slug,label:v}); inp.value=''; renderListas(b); };
+  add.append(inp,bt); b.appendChild(add);
+}
+// Aba unificada: Tipos de celebração + Modelos (vagas por função) — antes eram 2 abas
+async function renderTiposModelos(b){
+  b.textContent='';
+  const sec=(txt)=>{ const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);letter-spacing:.5px;margin:6px 0 8px;'; h.textContent=txt; b.appendChild(h); };
+  sec('🗓 Tipos de celebração');
+  const d1=document.createElement('div'); b.appendChild(d1); renderTipos(d1);
+  const hr=document.createElement('div'); hr.style.cssText='border-top:1px solid var(--border-wine);margin:18px 0 0;'; b.appendChild(hr);
+  sec('🪑 Modelos — vagas por função');
+  const d2=document.createElement('div'); b.appendChild(d2); renderModelos(d2);
+}
+async function renderTipos(b){
+  b.textContent='';
+  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 10px;'; hint.textContent='Tipos disponíveis ao criar uma celebração (além dos padrões do sistema).'; b.appendChild(hint);
+  const { data } = await sb.from('acolitos_listas').select('id,valor,label').eq('tipo','tipo_celebracao').order('label');
+  (data||[]).forEach(item=>{
+    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
+    const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=item.label||item.valor;
+    const sl=document.createElement('span'); sl.style.cssText='font-size:11px;color:var(--text-muted);'; sl.textContent=item.valor;
+    const del=document.createElement('button'); del.className='mini-del'; del.textContent='−';
+    del.onclick=async()=>{ if(!confirm('Remover "'+(item.label||item.valor)+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',item.id); renderTipos(b); };
+    row.append(nm,sl,del); b.appendChild(row);
+  });
+  const add=document.createElement('div'); add.style.cssText='display:flex;gap:8px;margin-top:10px;';
+  const inp=document.createElement('input'); inp.className='form-input'; inp.placeholder='Novo tipo (ex.: Missa de Formatura)';
+  const bt=document.createElement('button'); bt.className='mini-add'; bt.textContent='+';
+  bt.onclick=async()=>{ const v=inp.value.trim(); if(!v)return; const slug=v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''); await sb.from('acolitos_listas').insert({tipo:'tipo_celebracao',valor:slug,label:v}); inp.value=''; renderTipos(b); };
+  add.append(inp,bt); b.appendChild(add);
+}
+async function renderFuncoes(b){
+  b.textContent='';
+  const FUNCOES_DEFAULT=[['cred_altar','Cerimonial de Altar'],['cred_credencia','Cerimonial de Credência'],['missal','Missal'],['turibulo','Turíbulo'],['naveta','Naveta'],['altar','Altar'],['cruz','Cruz'],['vela','Vela'],['sineta','Sineta'],['sinao','Sinão'],['apoio','Apoio'],['mitra','Mitra'],['baculo','Báculo']];
+  const MAIORES_DEFAULT=['cred_altar','cred_credencia','missal','turibulo','naveta','mitra','baculo'];
+  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 10px;'; hint.textContent='Funções litúrgicas (= habilidades). Marque cada uma como Maior (reserva cerimoniário) ou Menor; crie, edite e exclua funções próprias. Clique em Salvar ao terminar.'; b.appendChild(hint);
+  const { data: custom } = await sb.from('acolitos_listas').select('id,valor,label').eq('tipo','funcao').order('label');
+  const sel = new Set(cfg('funcoes_maiores', MAIORES_DEFAULT));
+  const todas = FUNCOES_DEFAULT.map(([v,l])=>({valor:v,label:l,custom:false})).concat((custom||[]).map(c=>({valor:c.valor,label:c.label||c.valor,custom:true,id:c.id})));
+  todas.forEach(f=>{
+    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
+    const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=f.label+(f.custom?' (própria)':'');
+    const tg=document.createElement('button'); tg.className='btn-sm'; tg.style.minWidth='66px';
+    const paint=()=>{ const on=sel.has(f.valor); tg.textContent=on?'Maior':'Menor'; tg.style.cssText='min-width:66px;'+(on?'background:linear-gradient(180deg,var(--gold-light),var(--gold-dim));border-color:var(--gold-light);color:#2a1400;':'background:var(--surface2);color:var(--text-muted);'); };
+    paint(); tg.onclick=()=>{ if(sel.has(f.valor))sel.delete(f.valor); else sel.add(f.valor); paint(); };
+    row.append(nm,tg);
+    if(f.custom){
+      const ed=document.createElement('button'); ed.className='mini-add'; ed.textContent='✎'; ed.onclick=async()=>{ const nv=(prompt('Novo nome da função:', f.label)||'').trim(); if(!nv)return; await sb.from('acolitos_listas').update({label:nv}).eq('id',f.id); renderFuncoes(b); }; row.append(ed);
+      const del=document.createElement('button'); del.className='mini-del'; del.textContent='−'; del.onclick=async()=>{ if(!confirm('Remover função própria "'+f.label+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',f.id); renderFuncoes(b); }; row.append(del);
+    }
+    b.appendChild(row);
+  });
+  const save=document.createElement('button'); save.className='btn gold'; save.style.marginTop='12px'; save.textContent='Salvar funções maiores'; save.onclick=async()=>{ await setConfig('funcoes_maiores',[...sel]); }; b.appendChild(save);
+  const add=document.createElement('div'); add.style.cssText='display:flex;gap:8px;margin-top:14px;';
+  const inp=document.createElement('input'); inp.className='form-input'; inp.placeholder='Nova função própria (ex.: Báculo Auxiliar)';
+  const bt=document.createElement('button'); bt.className='mini-add'; bt.textContent='+';
+  bt.onclick=async()=>{ const v=inp.value.trim(); if(!v)return; const slug=v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''); await sb.from('acolitos_listas').insert({tipo:'funcao',valor:slug,label:v}); inp.value=''; renderFuncoes(b); };
+  add.append(inp,bt); b.appendChild(add);
+}
+function renderGerador(b){
+  b.textContent='';
+  const ger = cfg('gerador', {}) || {};
+  const kit = ger.kit_leve || { comunidade:'santo_antonio', funcoes:['cruz','vela'], idade_min:7 };
+  const mk=(label)=>{ const L=document.createElement('label'); L.style.cssText='display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px;'; L.textContent=label; b.appendChild(L); };
+  mk('Janela do rodízio (dias) — quanto histórico o gerador considera');
+  const iJ=document.createElement('input'); iJ.className='form-input'; iJ.type='number'; iJ.min='7'; iJ.value=ger.janela_dias||42; b.appendChild(iJ);
+  const sep=document.createElement('div'); sep.style.cssText='margin-top:16px;font-family:Sora,sans-serif;font-weight:700;color:var(--gold-light);font-size:12px;'; sep.textContent='Kit leve (funções liberadas por idade numa comunidade)'; b.appendChild(sep);
+  mk('Comunidade');
+  const sC=document.createElement('select'); sC.className='form-input';
+  [['santo_antonio','Santo Antônio'],['matriz','Matriz']].forEach(([v,l])=>{ const o=document.createElement('option'); o.value=v; o.textContent=l; if(kit.comunidade===v)o.selected=true; sC.appendChild(o); }); b.appendChild(sC);
+  mk('Funções liberadas (slugs separados por vírgula: cruz, vela, sineta…)');
+  const iF=document.createElement('input'); iF.className='form-input'; iF.value=(kit.funcoes||['cruz','vela']).join(', '); b.appendChild(iF);
+  mk('Idade mínima');
+  const iI=document.createElement('input'); iI.className='form-input'; iI.type='number'; iI.min='0'; iI.value=(kit.idade_min!=null?kit.idade_min:7); b.appendChild(iI);
+  const save=document.createElement('button'); save.className='btn gold'; save.style.marginTop='16px'; save.textContent='Salvar regras';
+  save.onclick=async()=>{ await setConfig('gerador', { janela_dias:Number(iJ.value)||42, kit_leve:{ comunidade:sC.value, funcoes:iF.value.split(',').map(s=>s.trim()).filter(Boolean), idade_min:Number(iI.value)||0 } }); };
+  b.appendChild(save);
+}
+function renderComunidades(b){
+  b.textContent='';
+  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 10px;'; hint.textContent='Comunidades e horários de missa (alimentam o select ao criar celebração). Renomeie o rótulo livremente; evite trocar comunidades já em uso.'; b.appendChild(hint);
+  let coms = cfg('comunidades', null);
+  if (!Array.isArray(coms) || !coms.length) coms = [{slug:'matriz',label:'Matriz',horarios:['17h','7h','9h','19h']},{slug:'santo_antonio',label:'Sto. Antônio',horarios:['18h30']}];
+  const work = coms.map(c=>({slug:c.slug,label:c.label||c.slug,horarios:(c.horarios||[]).slice()}));
+  const cont=document.createElement('div');
+  const repaint=()=>{
+    cont.textContent='';
+    work.forEach((c,ci)=>{
+      const card=document.createElement('div'); card.style.cssText='border:1px solid var(--border-wine);border-radius:8px;padding:10px;margin-bottom:10px;background:var(--surface);';
+      const top=document.createElement('div'); top.style.cssText='display:flex;gap:8px;align-items:center;';
+      const lab=document.createElement('input'); lab.className='form-input'; lab.style.flex='1'; lab.value=c.label; lab.oninput=()=>{ c.label=lab.value; };
+      const sl=document.createElement('span'); sl.style.cssText='font-size:10px;color:var(--text-muted);'; sl.textContent=c.slug;
+      const rm=document.createElement('button'); rm.className='mini-del'; rm.textContent='−'; rm.title='Remover'; rm.onclick=()=>{ if(confirm('Remover comunidade "'+c.label+'"?')){ work.splice(ci,1); repaint(); } };
+      top.append(lab,sl,rm); card.appendChild(top);
+      const chips=document.createElement('div'); chips.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center;';
+      c.horarios.forEach((h,hi)=>{ const ch=document.createElement('span'); ch.style.cssText='display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:2px 4px 2px 9px;font-size:12px;'; ch.textContent=h; const x=document.createElement('button'); x.className='mini-del'; x.textContent='×'; x.style.cssText='width:18px;height:18px;font-size:11px;'; x.onclick=()=>{ c.horarios.splice(hi,1); repaint(); }; ch.appendChild(x); chips.appendChild(ch); });
+      const addH=document.createElement('input'); addH.className='form-input'; addH.placeholder='+ horário'; addH.style.cssText='flex:0 0 96px;'; addH.onkeydown=(e)=>{ if(e.key==='Enter'){ e.preventDefault(); const v=addH.value.trim(); if(v){ c.horarios.push(v); repaint(); } } };
+      chips.appendChild(addH); card.appendChild(chips); cont.appendChild(card);
+    });
+  };
+  repaint(); b.appendChild(cont);
+  const acts=document.createElement('div'); acts.style.cssText='display:flex;gap:8px;margin-top:4px;';
+  const addC=document.createElement('button'); addC.className='btn'; addC.textContent='+ Comunidade'; addC.onclick=()=>{ const nome=prompt('Nome da comunidade:'); if(!nome)return; const slug=nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''); work.push({slug,label:nome,horarios:[]}); repaint(); };
+  const save=document.createElement('button'); save.className='btn gold'; save.textContent='Salvar comunidades'; save.onclick=async()=>{ await setConfig('comunidades', work); };
+  acts.append(addC,save); b.appendChild(acts);
+}
+function renderCadastro(b){
+  b.textContent='';
+  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 10px;'; hint.textContent='Marque o que o "Complete seu cadastro" deve exigir do membro. O lembrete fica até a pessoa preencher os exigidos.'; b.appendChild(hint);
+  const itens = (typeof CAMPOS_OBRIGATORIOS!=='undefined' ? CAMPOS_OBRIGATORIOS.map(c=>[c.key,c.label,!!c.padrao]) : []).concat([['foto','Foto de perfil',true]]);
+  const estado = {}; itens.forEach(([k,,padrao])=>{ estado[k] = (typeof campoExigido==='function') ? campoExigido(k, padrao) : padrao; });
+  itens.forEach(([k,label])=>{
+    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
+    const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=label;
+    const tg=document.createElement('button'); tg.className='btn-sm'; tg.style.minWidth='92px';
+    const paint=()=>{ tg.textContent = estado[k]?'Exigir':'Não exigir'; tg.style.cssText='min-width:92px;'+(estado[k]?'background:linear-gradient(180deg,var(--gold-light),var(--gold-dim));border-color:var(--gold-light);color:#2a1400;':'background:var(--surface2);color:var(--text-muted);'); };
+    paint(); tg.onclick=()=>{ estado[k]=!estado[k]; paint(); };
+    row.append(nm,tg); b.appendChild(row);
+  });
+  const save=document.createElement('button'); save.className='btn gold'; save.style.marginTop='12px'; save.textContent='Salvar exigências'; save.onclick=async()=>{ await setConfig('cadastro_campos', estado); }; b.appendChild(save);
+}
+async function renderAdmins(b){
+  b.textContent='';
+  const titulo=(t)=>{ const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;color:var(--gold-light);font-size:13px;margin:6px 0;'; h.textContent=t; b.appendChild(h); };
+  const linha=(t)=>{ const p=document.createElement('p'); p.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 8px;'; p.textContent=t; b.appendChild(p); };
+  // ── Superadmins ──
+  titulo('Superadmins (acesso ao Config)');
+  linha('Usernames com acesso a esta tela. Não remova a si mesmo sem outro superadmin.');
+  let supers=(cfg('superadmins',['erickmartins','erickmartinsadmin'])||[]).slice();
+  const supBox=document.createElement('div'); supBox.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;';
+  const repaintSup=()=>{ supBox.textContent=''; supers.forEach((u,i)=>{ const ch=document.createElement('span'); ch.style.cssText='display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--gold-dim);border-radius:14px;padding:2px 4px 2px 10px;font-size:12px;color:var(--gold-light);'; ch.textContent=u; const x=document.createElement('button'); x.className='mini-del'; x.textContent='×'; x.style.cssText='width:18px;height:18px;font-size:11px;'; x.onclick=()=>{ supers.splice(i,1); repaintSup(); }; ch.appendChild(x); supBox.appendChild(ch); }); };
+  repaintSup(); b.appendChild(supBox);
+  const supAdd=document.createElement('div'); supAdd.style.cssText='display:flex;gap:8px;';
+  const supInp=document.createElement('input'); supInp.className='form-input'; supInp.placeholder='username (ex.: erickmartins)';
+  const supBt=document.createElement('button'); supBt.className='mini-add'; supBt.textContent='+'; supBt.onclick=()=>{ const v=supInp.value.trim().toLowerCase(); if(v&&!supers.includes(v)){ supers.push(v); supInp.value=''; repaintSup(); } };
+  supAdd.append(supInp,supBt); b.appendChild(supAdd);
+  const supSave=document.createElement('button'); supSave.className='btn gold'; supSave.style.margin='8px 0 18px'; supSave.textContent='Salvar superadmins'; supSave.onclick=async()=>{ await setConfig('superadmins',supers); }; b.appendChild(supSave);
+  // ── Admins (coord_admin/subadmin) ──
+  titulo('Coordenação (admins)');
+  const { data: mod } = await sb.from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
+  if(!mod){ linha('Módulo não encontrado.'); return; }
+  const { data: mems } = await sb.from('acolitos_membros').select('id,nome,user_id').not('user_id','is',null).eq('status','ativo').order('nome');
+  const nomePorUser={}; (mems||[]).forEach(m=>{ nomePorUser[m.user_id]=m.nome; });
+  const listaAdmins=document.createElement('div'); b.appendChild(listaAdmins);
+  const carregarAdmins=async()=>{
+    listaAdmins.textContent='';
+    const { data: pms } = await sb.from('pastoral_members').select('user_id,role').eq('module_id',mod.id).in('role',['coord_admin','subadmin']);
+    if(!pms||!pms.length){ const e=document.createElement('div'); e.style.cssText='font-size:13px;color:var(--text-muted);font-style:italic;'; e.textContent='Nenhum admin ainda.'; listaAdmins.appendChild(e); }
+    (pms||[]).forEach(pm=>{
+      const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
+      const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=nomePorUser[pm.user_id]||'(sem nome)';
+      const tag=document.createElement('span'); tag.style.cssText='font-size:11px;color:var(--gold);'; tag.textContent=pm.role==='coord_admin'?'Coord. Admin':'Subadmin';
+      const dn=document.createElement('button'); dn.className='btn-sm gray'; dn.textContent='Rebaixar'; dn.onclick=async()=>{ if(!confirm('Rebaixar '+nm.textContent+' para equipe?'))return; const {error}=await sb.rpc('acolitos_set_admin_role',{p_user:pm.user_id,p_role:'membro_equipe'}); if(error){toast('Erro.','error');return;} toast('✓ Rebaixado.'); carregarAdmins(); };
+      row.append(nm,tag,dn); listaAdmins.appendChild(row);
+    });
+  };
+  await carregarAdmins();
+  // ── Promover ──
+  titulo('Promover membro');
+  const promo=document.createElement('div'); promo.style.cssText='display:flex;gap:8px;';
+  const pInp=document.createElement('input'); pInp.className='form-input'; pInp.placeholder='buscar membro por nome…';
+  promo.appendChild(pInp); b.appendChild(promo);
+  const res=document.createElement('div'); res.style.cssText='margin-top:6px;'; b.appendChild(res);
+  pInp.oninput=()=>{ const q=pInp.value.trim().toLowerCase(); res.textContent=''; if(q.length<2)return;
+    (mems||[]).filter(m=>(m.nome||'').toLowerCase().includes(q)).slice(0,8).forEach(m=>{
+      const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid var(--border);';
+      const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=m.nome;
+      const bs=document.createElement('button'); bs.className='btn-sm'; bs.textContent='Subadmin'; bs.onclick=()=>setAdmin(m,'subadmin');
+      const bc=document.createElement('button'); bc.className='btn-sm gold'; bc.textContent='Coord'; bc.onclick=()=>setAdmin(m,'coord_admin');
+      row.append(nm,bs,bc); res.appendChild(row);
+    });
+  };
+  async function setAdmin(m,role){ if(!confirm('Tornar '+m.nome+' '+(role==='coord_admin'?'Coord. Admin':'Subadmin')+'?'))return; const {error}=await sb.rpc('acolitos_set_admin_role',{p_user:m.user_id,p_role:role}); if(error){toast('Erro (a pessoa tem login?).','error');return;} toast('✓ Promovido!'); pInp.value=''; res.textContent=''; carregarAdmins(); }
+}
+function renderIdentidade(b){
+  b.textContent='';
+  const idn = cfg('identidade', {}) || {};
+  const mk=(label)=>{ const L=document.createElement('label'); L.style.cssText='display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px;'; L.textContent=label; b.appendChild(L); };
+  mk('Nome da pastoral');
+  const iNome=document.createElement('input'); iNome.className='form-input'; iNome.value=idn.nome||''; iNome.placeholder='Acólitos & Coroinhas'; b.appendChild(iNome);
+  mk('Paróquia');
+  const iPar=document.createElement('input'); iPar.className='form-input'; iPar.value=idn.paroquia||''; iPar.placeholder='Jesus Cristo Bom Pastor — Limeira/SP'; b.appendChild(iPar);
+  mk('Logo/brasão (URL — opcional)');
+  const iLogo=document.createElement('input'); iLogo.className='form-input'; iLogo.value=idn.logo_url||''; iLogo.placeholder='https://…'; b.appendChild(iLogo);
+  const cores=document.createElement('div'); cores.style.cssText='display:flex;gap:18px;margin-top:12px;align-items:center;';
+  const colorBox=(label,val)=>{ const w=document.createElement('div'); const l=document.createElement('div'); l.style.cssText='font-size:11px;color:var(--text-muted);margin-bottom:4px;'; l.textContent=label; const c=document.createElement('input'); c.type='color'; c.value=val; c.style.cssText='width:52px;height:34px;border:none;background:none;cursor:pointer;'; w.append(l,c); cores.appendChild(w); return c; };
+  const cPrim=colorBox('Cor primária', idn.cor_primaria||'#d11020');
+  const cOuro=colorBox('Cor de destaque', idn.cor_ouro||'#e8b94a');
+  b.appendChild(cores);
+  const hint=document.createElement('p'); hint.style.cssText='font-size:11px;color:var(--text-muted);margin:8px 0 0;'; hint.textContent='As cores aplicam no app inteiro (com fallback pro tema padrão).'; b.appendChild(hint);
+  const save=document.createElement('button'); save.className='btn gold'; save.style.marginTop='14px'; save.textContent='Salvar identidade';
+  save.onclick=async()=>{ const novo={ nome:iNome.value.trim()||null, paroquia:iPar.value.trim()||null, logo_url:iLogo.value.trim()||null, cor_primaria:cPrim.value, cor_ouro:cOuro.value }; const ok=await setConfig('identidade', novo); if(ok && typeof aplicarIdentidade==='function') aplicarIdentidade(); };
+  b.appendChild(save);
+}
+
+// ── Seção Navegação: reordenar a barra inferior (jornada / coordenação) ──
+let _navModo = 'jornada';
+const NAV_ITENS = {
+  jornada: [['home','Início'],['quests','Quests'],['escalas-membro','Escalas'],['agenda','Agenda'],['destaques','Destaques'],['minha-casa','Casa'],['ausencias','Ausência']],
+  coord:   [['home','Início'],['agenda','Agenda'],['jornada','Jornada'],['membros','Membros'],['escala','Escala'],['crm','CRM'],['tesouraria','Tesouraria'],['casas','Casas'],['config','Config']],
+};
+function renderNavOrdem(b){
+  b.textContent='';
+  const subnav=document.createElement('div'); subnav.className='cfg-nav';
+  [['jornada','Membro (Jornada)'],['coord','Coordenação']].forEach(([m,l])=>{ const x=document.createElement('button'); x.className='cfg-tab'+(m===_navModo?' on':''); x.textContent=l; x.onclick=()=>{_navModo=m;renderNavOrdem(b);}; subnav.appendChild(x); });
+  b.appendChild(subnav);
+  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 10px;'; hint.textContent='Use as setas para reordenar. A barra inferior do app segue esta ordem.'; b.appendChild(hint);
+  const base = NAV_ITENS[_navModo]; const ids = base.map(x=>x[0]);
+  const chave = _navModo==='coord' ? 'nav_ordem_coord' : 'nav_ordem_jornada';
+  const saved = cfg(chave, null);
+  let ordem = Array.isArray(saved) ? saved.filter(id=>ids.includes(id)) : [];
+  ids.forEach(id=>{ if(!ordem.includes(id)) ordem.push(id); });
+  const labelDe = id => (base.find(x=>x[0]===id)||[id,id])[1];
+  const list=document.createElement('div');
+  const repaint=()=>{
+    list.textContent='';
+    ordem.forEach((id,i)=>{
+      const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
+      const num=document.createElement('span'); num.style.cssText='width:22px;color:var(--text-muted);font-size:12px;'; num.textContent=(i+1)+'.';
+      const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=labelDe(id);
+      const up=document.createElement('button'); up.className='mini-del'; up.textContent='↑'; up.disabled=(i===0); up.onclick=()=>{ const t=ordem[i-1]; ordem[i-1]=ordem[i]; ordem[i]=t; repaint(); };
+      const dn=document.createElement('button'); dn.className='mini-del'; dn.textContent='↓'; dn.disabled=(i===ordem.length-1); dn.onclick=()=>{ const t=ordem[i+1]; ordem[i+1]=ordem[i]; ordem[i]=t; repaint(); };
+      row.append(num,nm,up,dn); list.appendChild(row);
+    });
+  };
+  repaint(); b.appendChild(list);
+  const save=document.createElement('button'); save.className='btn gold'; save.style.marginTop='12px'; save.textContent='Salvar ordem'; save.onclick=async()=>{ await setConfig(chave, ordem); }; b.appendChild(save);
+}
+
+// ── Seção Equipe & Permissões: quem é equipe, setor, e acessos por módulo ──
+function _toggleSimNao(inicial, onChange){
+  const wrap=document.createElement('div'); wrap.style.cssText='display:flex;gap:8px;'; let v=inicial;
+  const mk=(val,txt)=>{ const btn=document.createElement('button'); btn.type='button'; const paint=()=>{ btn.style.cssText='flex:1;padding:9px;border-radius:8px;font-family:Sora,sans-serif;font-weight:700;font-size:12px;cursor:pointer;border:1px solid '+((v===val)?'var(--gold)':'var(--border-wine)')+';background:'+((v===val)?'linear-gradient(165deg,rgba(232,185,74,.2),var(--surface2))':'var(--surface2)')+';color:'+((v===val)?'var(--gold-light)':'var(--text)')+';'; }; btn.textContent=txt; paint(); btn._paint=paint; btn.onclick=()=>{ v=val; wrap.querySelectorAll('button').forEach(x=>x._paint&&x._paint()); onChange(v); }; return btn; };
+  wrap.append(mk(true,'Sim'), mk(false,'Não')); return { el:wrap };
+}
+function _chipsMulti(opcoes, selSet){
+  const box=document.createElement('div'); box.style.cssText='display:flex;flex-wrap:wrap;gap:6px;';
+  opcoes.forEach(([v,l])=>{ const ch=document.createElement('button'); ch.type='button'; ch.textContent=l; const paint=()=>{ const on=selSet.has(v); ch.style.cssText='padding:5px 11px;border-radius:16px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid '+(on?'var(--gold-dim)':'var(--border)')+';background:'+(on?'linear-gradient(165deg,rgba(232,185,74,.18),var(--surface))':'var(--surface2)')+';color:'+(on?'var(--gold-light)':'var(--text-muted)')+';'; }; paint(); ch.onclick=()=>{ if(selSet.has(v))selSet.delete(v); else selSet.add(v); paint(); }; box.appendChild(ch); });
+  return box;
+}
+async function renderEquipe(b){
+  b.textContent='';
+  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 8px;'; hint.textContent='Quem é equipe, setores e acessos da Coordenação. Toque num membro pra editar; busque pra incluir alguém.'; b.appendChild(hint);
+  const { data: mod } = await sb.from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
+  const [{ data: mems }, { data: pms }] = await Promise.all([
+    sb.from('acolitos_membros').select('id,nome,eh_equipe,setores,permissoes,serve,nivel,user_id').eq('status','ativo').order('nome'),
+    mod ? sb.from('pastoral_members').select('user_id,role').eq('module_id',mod.id) : Promise.resolve({data:[]}),
+  ]);
+  const roleMap={}; (pms||[]).forEach(p=>{ roleMap[p.user_id]=p.role; });
+  const inp=document.createElement('input'); inp.className='form-input'; inp.placeholder='buscar membro…'; inp.style.marginBottom='8px'; b.appendChild(inp);
+  const list=document.createElement('div'); b.appendChild(list);
+  const setorLabel = s => (typeof SETOR_LABEL!=='undefined' && SETOR_LABEL[s]) || s;
+  const desenha=()=>{
+    const q=inp.value.trim().toLowerCase(); list.textContent='';
+    const base=(mems||[]).filter(m=> q ? (m.nome||'').toLowerCase().includes(q) : m.eh_equipe);
+    if(!base.length){ const e=document.createElement('div'); e.style.cssText='font-size:13px;color:var(--text-muted);font-style:italic;padding:8px 0;'; e.textContent=q?'Ninguém encontrado.':'Ninguém é equipe ainda — busque um membro pra incluir.'; list.appendChild(e); }
+    base.slice(0,40).forEach(m=>{
+      const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--border);cursor:pointer;';
+      const info=document.createElement('div'); info.style.flex='1';
+      const nm=document.createElement('div'); nm.style.cssText='font-weight:700;font-size:13px;'; nm.textContent=m.nome;
+      const role=roleMap[m.user_id];
+      const roleTxt = role==='coord_admin'?'Coord. Admin':role==='subadmin'?'Subadmin':m.eh_equipe?'Equipe':'—';
+      const setoresTxt=(m.setores||[]).map(setorLabel).join(', ');
+      const sub=document.createElement('div'); sub.style.cssText='font-size:11px;color:var(--text-muted);'; sub.textContent=roleTxt+(setoresTxt?(' · '+setoresTxt):'')+(m.eh_equipe?(' · '+((m.permissoes||[]).length)+' módulos'):'');
+      info.append(nm,sub);
+      const btEq=document.createElement('button'); btEq.className='btn-sm'; btEq.style.minWidth='62px'; btEq.textContent='Equipe'; btEq.onclick=()=>abrirEditorEquipeMembro(m, roleMap[m.user_id], desenha);
+      const btPe=document.createElement('button'); btPe.className='btn-sm'; btPe.style.minWidth='84px'; btPe.textContent='Permissões'; btPe.onclick=()=>abrirPermissoesMembro(m, desenha);
+      row.style.cursor=''; row.append(info, btEq, btPe); list.appendChild(row);
+    });
+  };
+  inp.oninput=desenha; desenha();
+  // Gerência da LISTA de setores (movida das Listas) — aqui se cria/exclui os setores existentes
+  const hr=document.createElement('div'); hr.style.cssText='border-top:1px solid var(--border-wine);margin:20px 0 10px;'; b.appendChild(hr);
+  const sh=document.createElement('div'); sh.style.cssText='font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; sh.textContent='🗂 Setores (lista)'; b.appendChild(sh);
+  const setBox=document.createElement('div'); b.appendChild(setBox); renderSetorLista(setBox);
+}
+// CRUD da lista de setores (acolitos_listas tipo='setor')
+async function renderSetorLista(b){
+  b.textContent='';
+  const { data } = await sb.from('acolitos_listas').select('id,valor,label').eq('tipo','setor').order('label');
+  (data||[]).forEach(item=>{
+    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
+    const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=item.label||item.valor;
+    const del=document.createElement('button'); del.className='mini-del'; del.textContent='−';
+    del.onclick=async()=>{ if(!confirm('Remover setor "'+(item.label||item.valor)+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',item.id); renderSetorLista(b); };
+    row.append(nm,del); b.appendChild(row);
+  });
+  const add=document.createElement('div'); add.style.cssText='display:flex;gap:8px;margin-top:10px;';
+  const inp=document.createElement('input'); inp.className='form-input'; inp.placeholder='Novo setor (ex.: Logística)';
+  const bt=document.createElement('button'); bt.className='mini-add'; bt.textContent='+';
+  bt.onclick=async()=>{ const v=inp.value.trim(); if(!v)return; const slug=v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''); await sb.from('acolitos_listas').insert({tipo:'setor',valor:slug,label:v}); inp.value=''; renderSetorLista(b); };
+  add.append(inp,bt); b.appendChild(add);
+}
+// [Equipe] — é equipe? participa de escalas? setores
+function abrirEditorEquipeMembro(m, role, onSaved){
+  const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=(e)=>{ if(e.target===ov) ov.remove(); };
+  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='440px';
+  const tt=document.createElement('div'); tt.className='modal-title'; tt.textContent=m.nome; md.appendChild(tt);
+  const ehAdmin=['coord_admin','subadmin'].includes(role);
+  if(ehAdmin){ const w=document.createElement('div'); w.style.cssText='font-size:12px;color:var(--gold);margin:-6px 0 8px;'; w.textContent='É admin ('+(role==='coord_admin'?'Coord. Admin':'Subadmin')+') — o papel é gerido em "Admins & superadmin".'; md.appendChild(w); }
+  let ehEquipe=!!m.eh_equipe, serve=m.serve!==false; const setoresSel=new Set(m.setores||[]);
+  const lab=(t)=>{ const l=document.createElement('div'); l.style.cssText='font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 5px;'; l.textContent=t; md.appendChild(l); };
+  lab('Faz parte da equipe/coordenação?'); md.appendChild(_toggleSimNao(ehEquipe, v=>{ehEquipe=v;}).el);
+  lab('Participa das escalas (Minha Jornada)?'); md.appendChild(_toggleSimNao(serve, v=>{serve=v;}).el);
+  lab('Setores'); md.appendChild(_chipsMulti((typeof SETORES!=='undefined'?SETORES:[]), setoresSel));
+  const save=document.createElement('button'); save.className='btn gold'; save.style.cssText='width:100%;margin-top:16px;'; save.textContent='Salvar';
+  save.onclick=async()=>{
+    save.disabled=true; save.textContent='Salvando...';
+    const patch={ eh_equipe:ehEquipe, serve, setores:[...setoresSel] };
+    const { error } = await sb.from('acolitos_membros').update(patch).eq('id', m.id);
+    if(error){ toast('Erro ao salvar.','error'); save.disabled=false; save.textContent='Salvar'; return; }
+    if(m.user_id && !ehAdmin){ const novoRole = ehEquipe ? 'membro_equipe' : ((typeof nivelInfo==='function')?nivelInfo(m.nivel||'aspirante').base:'aspirante'); try { await apiPost('/api/acolito-admin', { action:'sync_role', user_id:m.user_id, role:novoRole }); } catch(e){} }
+    Object.assign(m, patch); toast('✓ Salvo!'); ov.remove(); if(onSaved) onSaved();
+  };
+  md.appendChild(save);
+  ov.appendChild(md); document.body.appendChild(ov);
+}
+// [Permissões] — quais módulos da Coordenação o membro acessa
+function abrirPermissoesMembro(m, onSaved){
+  const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=(e)=>{ if(e.target===ov) ov.remove(); };
+  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='440px';
+  const tt=document.createElement('div'); tt.className='modal-title'; tt.textContent='Permissões — '+m.nome; md.appendChild(tt);
+  if(!m.eh_equipe){ const w=document.createElement('div'); w.style.cssText='font-size:12px;color:var(--gold);margin:-6px 0 8px;'; w.textContent='Só vale se o membro for equipe. (admins veem todos os módulos)'; md.appendChild(w); }
+  const permsSel=new Set(m.permissoes||[]);
+  const lab=document.createElement('div'); lab.style.cssText='font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 5px;'; lab.textContent='Acesso a módulos da Coordenação'; md.appendChild(lab);
+  md.appendChild(_chipsMulti((typeof MODULOS_LIBERAVEIS!=='undefined'?MODULOS_LIBERAVEIS.map(x=>[x[0],x[1]]):[]), permsSel));
+  const save=document.createElement('button'); save.className='btn gold'; save.style.cssText='width:100%;margin-top:16px;'; save.textContent='Salvar permissões';
+  save.onclick=async()=>{
+    save.disabled=true; save.textContent='Salvando...';
+    const patch={ permissoes:[...permsSel] };
+    const { error } = await sb.from('acolitos_membros').update(patch).eq('id', m.id);
+    if(error){ toast('Erro ao salvar.','error'); save.disabled=false; save.textContent='Salvar permissões'; return; }
+    Object.assign(m, patch); toast('✓ Salvo!'); ov.remove(); if(onSaved) onSaved();
+  };
+  md.appendChild(save);
+  ov.appendChild(md); document.body.appendChild(ov);
+}
+
+// ── Seção Tesouraria: categorias de entrada/saída (acolitos_listas cat_entrada/cat_saida) ──
+let _tesTipo='cat_entrada';
+async function renderTesouraria(b){
+  b.textContent='';
+  const subnav=document.createElement('div'); subnav.className='cfg-nav';
+  [['cat_entrada','Entradas'],['cat_saida','Saídas']].forEach(([t,l])=>{ const x=document.createElement('button'); x.className='cfg-tab'+(t===_tesTipo?' on':''); x.textContent=l; x.onclick=()=>{_tesTipo=t;renderTesouraria(b);}; subnav.appendChild(x); });
+  b.appendChild(subnav);
+  const { data } = await sb.from('acolitos_listas').select('id,valor,label').eq('tipo',_tesTipo).order('label');
+  (data||[]).forEach(item=>{
+    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
+    const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=item.label||item.valor;
+    const del=document.createElement('button'); del.className='mini-del'; del.textContent='−';
+    del.onclick=async()=>{ if(!confirm('Remover "'+(item.label||item.valor)+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',item.id); renderTesouraria(b); };
+    row.append(nm,del); b.appendChild(row);
+  });
+  const add=document.createElement('div'); add.style.cssText='display:flex;gap:8px;margin-top:10px;';
+  const inp=document.createElement('input'); inp.className='form-input'; inp.placeholder='Nova categoria…';
+  const bt=document.createElement('button'); bt.className='mini-add'; bt.textContent='+';
+  bt.onclick=async()=>{ const v=inp.value.trim(); if(!v)return; const slug=v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''); await sb.from('acolitos_listas').insert({tipo:_tesTipo,valor:slug,label:v}); inp.value=''; renderTesouraria(b); };
+  add.append(inp,bt); b.appendChild(add);
+}
+
+// ── Seção Modelos de celebração: vagas por função por tipo+comunidade (acolitos_modelos) ──
+const FUNCOES_MODELO=[['cred_altar','Cerim. de Altar'],['cred_credencia','Cerim. de Credência'],['missal','Missal'],['turibulo','Turíbulo'],['naveta','Naveta'],['altar','Altar'],['cruz','Cruz'],['vela','Vela'],['sineta','Sineta'],['sinao','Sinão'],['apoio','Apoio'],['mitra','Mitra'],['baculo','Báculo']];
+let _mdTipo='missa_comum', _mdCom='matriz', _mdQty={};
+async function renderModelos(b){
+  b.textContent='';
+  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 10px;'; hint.textContent='Quantas vagas de cada função por tipo de celebração e comunidade. Salve ao terminar.'; b.appendChild(hint);
+  const tipos=(cfg('__tipos',[])||[]); const tiposOpc = tipos.length ? tipos.map(t=>[t.valor,t.label]) : [['missa_comum','Missa Comum']];
+  const coms=cfg('comunidades',null); const comsOpc = (Array.isArray(coms)&&coms.length)?coms.map(c=>[c.slug,c.label]):[['matriz','Matriz'],['santo_antonio','Sto. Antônio']];
+  const sels=document.createElement('div'); sels.style.cssText='display:flex;gap:8px;margin-bottom:10px;';
+  const sT=document.createElement('select'); sT.className='form-input'; tiposOpc.forEach(([v,l])=>{ const o=document.createElement('option'); o.value=v; o.textContent=l; if(v===_mdTipo)o.selected=true; sT.appendChild(o); });
+  const sC=document.createElement('select'); sC.className='form-input'; comsOpc.forEach(([v,l])=>{ const o=document.createElement('option'); o.value=v; o.textContent=l; if(v===_mdCom)o.selected=true; sC.appendChild(o); });
+  sT.onchange=()=>{ _mdTipo=sT.value; renderModelos(b); }; sC.onchange=()=>{ _mdCom=sC.value; renderModelos(b); };
+  if(!tiposOpc.some(o=>o[0]===_mdTipo)) _mdTipo=tiposOpc[0][0];
+  if(!comsOpc.some(o=>o[0]===_mdCom)) _mdCom=comsOpc[0][0];
+  sels.append(sT,sC); b.appendChild(sels);
+  const { data } = await sb.from('acolitos_modelos').select('funcao,quantidade').eq('tipo',_mdTipo).eq('comunidade',_mdCom);
+  _mdQty={}; (data||[]).forEach(r=>{ _mdQty[r.funcao]=r.quantidade; });
+  FUNCOES_MODELO.forEach(([f,l])=>{
+    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:10px;padding:5px 2px;border-bottom:1px solid var(--border);';
+    const lbl=document.createElement('span'); lbl.style.cssText='flex:1;font-size:13px;'; lbl.textContent=l;
+    const minus=document.createElement('button'); minus.className='mini-del'; minus.textContent='−';
+    const num=document.createElement('span'); num.style.cssText='min-width:24px;text-align:center;font-weight:800;color:var(--gold);'; num.textContent=_mdQty[f]||0;
+    const plus=document.createElement('button'); plus.className='mini-del'; plus.textContent='+';
+    minus.onclick=()=>{ _mdQty[f]=Math.max(0,(_mdQty[f]||0)-1); num.textContent=_mdQty[f]; };
+    plus.onclick=()=>{ _mdQty[f]=(_mdQty[f]||0)+1; num.textContent=_mdQty[f]; };
+    row.append(lbl,minus,num,plus); b.appendChild(row);
+  });
+  const save=document.createElement('button'); save.className='btn gold'; save.style.marginTop='12px'; save.textContent='Salvar modelo';
+  save.onclick=async()=>{ const payload=FUNCOES_MODELO.map(([f],i)=>({tipo:_mdTipo,comunidade:_mdCom,funcao:f,quantidade:_mdQty[f]||0,ordem:i})); const {error}=await sb.from('acolitos_modelos').upsert(payload,{onConflict:'tipo,comunidade,funcao'}); if(error){toast('Erro ao salvar.','error');return;} toast('✓ Modelo salvo!'); };
+  b.appendChild(save);
+}
+
+// ── Gerador de patch (emblema) ao vivo ──
+// Ponto de partida do gerador = o emblema EXATO atual do nível. Se já tem patch custom, edita ele;
+// senão usa a spec PADRÃO (mesma fonte que desenha o atual em todo o app) → abre idêntico ao atual.
+function _specPadraoNivel(slug){
+  const inf=(typeof nivelInfo==='function')?nivelInfo(slug):null;
+  if(inf && inf._patch) return Object.assign({}, inf._patch, {simbolos:(inf._patch.simbolos||[]).slice()});
+  if(typeof specPadraoNivel==='function') return specPadraoNivel(slug);
+  return { esquema:'ouro', forma:'arredondada', anel:true, simbolos:['cruz'], pips:inf?(inf.pips||0):0, glow:inf?(inf.int||0):0 };
+}
+function abrirGeradorPatch(slug, specIni, onSave){
+  const spec=Object.assign({esquema:'ouro',forma:'arredondada',anel:true,simbolos:['cruz'],pips:0,glow:0}, specIni||{}); spec.simbolos=(spec.simbolos||[]).slice();
+  const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=(e)=>{ if(e.target===ov) ov.remove(); };
+  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='460px';
+  const tt=document.createElement('div'); tt.className='modal-title'; tt.textContent='Gerador de patch'; md.appendChild(tt);
+  const prev=document.createElement('div'); prev.style.cssText='display:flex;justify-content:center;padding:14px;background:var(--surface);border:1px solid var(--gold-dim);border-radius:10px;margin-bottom:12px;box-shadow:0 0 16px var(--red-glow);';
+  const repaint=()=>{ prev.textContent=''; if(typeof buildRankEmblem==='function') prev.appendChild(buildRankEmblem(slug,96,spec)); };
+  md.appendChild(prev);
+  const lab=(t)=>{ const l=document.createElement('div'); l.style.cssText='font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 5px;'; l.textContent=t; md.appendChild(l); };
+  lab('Cor');
+  const esq=document.createElement('div'); esq.style.cssText='display:flex;flex-wrap:wrap;gap:6px;';
+  Object.keys(PATCH_ESQUEMAS).forEach(k=>{ const c=PATCH_ESQUEMAS[k]; const ch=document.createElement('button'); ch.textContent=c.label; const p=()=>{ ch.style.cssText='padding:5px 11px;border-radius:16px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid '+(spec.esquema===k?c.edge:'var(--border)')+';background:'+c.fill+';color:'+c.acc+';'; }; p(); ch._p=p; ch.onclick=()=>{ spec.esquema=k; esq.querySelectorAll('button').forEach(x=>x._p&&x._p()); repaint(); }; esq.appendChild(ch); });
+  md.appendChild(esq);
+  const segm=(titulo,opcoes,getter,setter)=>{ lab(titulo); const box=document.createElement('div'); box.style.cssText='display:flex;gap:8px;'; opcoes.forEach(([v,l])=>{ const btn=document.createElement('button'); const p=()=>{ const on=getter()===v; btn.style.cssText='flex:1;padding:8px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;border:1px solid '+(on?'var(--gold)':'var(--border-wine)')+';background:'+(on?'rgba(232,185,74,.18)':'var(--surface2)')+';color:'+(on?'var(--gold-light)':'var(--text)')+';'; }; btn.textContent=l; p(); btn._p=p; btn.onclick=()=>{ setter(v); box.querySelectorAll('button').forEach(x=>x._p&&x._p()); repaint(); }; box.appendChild(btn); }); md.appendChild(box); };
+  segm('Forma do escudo',[['arredondada','Arredondado'],['pontuda','Pontudo'],['redonda','Redondo'],['ogival','Ogival']], ()=>spec.forma, v=>spec.forma=v);
+  segm('Anel interno',[[true,'Com anel'],[false,'Sem anel']], ()=>spec.anel, v=>spec.anel=v);
+  lab('Símbolos');
+  const SIM_LABEL={cruz:'Cruz',crucifixo:'Crucifixo',espada:'Espada',espadas:'Espadas',turibulo:'Turíbulo',coroa:'Coroa',calice:'Cálice',hostia:'Hóstia',pomba:'Pomba',chama:'Chama',vela:'Vela',livro:'Evangelho',trigo:'Trigo',uva:'Uva',coracao:'Coração',ancora:'Âncora',alfaomega:'Α e Ω',sino:'Sino',estrela:'Estrela'};
+  const simBox=document.createElement('div'); simBox.style.cssText='display:flex;flex-wrap:wrap;gap:6px;';
+  PATCH_SIMBOLOS.forEach(k=>{ const ch=document.createElement('button'); ch.textContent=SIM_LABEL[k]||k; const p=()=>{ const on=spec.simbolos.includes(k); ch.style.cssText='padding:5px 11px;border-radius:16px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid '+(on?'var(--gold-dim)':'var(--border)')+';background:'+(on?'linear-gradient(165deg,rgba(232,185,74,.18),var(--surface))':'var(--surface2)')+';color:'+(on?'var(--gold-light)':'var(--text-muted)')+';'; }; p(); ch.onclick=()=>{ const i=spec.simbolos.indexOf(k); if(i>=0)spec.simbolos.splice(i,1); else spec.simbolos.push(k); p(); repaint(); }; simBox.appendChild(ch); });
+  md.appendChild(simBox);
+  const nums=document.createElement('div'); nums.style.cssText='display:flex;gap:12px;margin-top:10px;';
+  const numField=(l,val,min,max,onch)=>{ const w=document.createElement('div'); w.style.flex='1'; const lb=document.createElement('div'); lb.style.cssText='font-size:11px;color:var(--text-muted);margin-bottom:4px;'; lb.textContent=l; const inp=document.createElement('input'); inp.className='form-input'; inp.type='number'; inp.min=min; inp.max=max; inp.value=val; inp.oninput=()=>{ onch(Number(inp.value)); repaint(); }; w.append(lb,inp); nums.appendChild(w); };
+  numField('Pips (0–4)', spec.pips, 0, 4, v=>spec.pips=v);
+  numField('Brilho (0–9)', spec.glow, 0, 9, v=>spec.glow=v);
+  md.appendChild(nums);
+  const save=document.createElement('button'); save.className='btn gold'; save.style.cssText='width:100%;margin-top:16px;'; save.textContent='Usar este patch'; save.onclick=()=>{ onSave(spec); ov.remove(); }; md.appendChild(save);
+  ov.appendChild(md); document.body.appendChild(ov); repaint();
+}
+
+// helper de campo (label + input/textarea) pros editores ricos
+function _cfgField(parent, label, val, tipo, onin){
+  const f=document.createElement('div'); f.className='cfg-fld';
+  const l=document.createElement('label'); l.textContent=label;
+  const el=document.createElement(tipo==='area'?'textarea':'input'); el.className='form-input'; if(tipo==='area') el.rows=2; el.value=val||'';
+  el.oninput=()=>onin(el.value); f.append(l,el); parent.appendChild(f); return el;
+}
+
+// ── Seção Missões & XP: CRUD do catálogo (capítulos / obrigatória / critério / badge) ──
+const MX_VALID = [['reivindicada','Reivindicada (membro pede)'],['avaliada','Avaliada (coordenação observa)'],['automatica','Automática (dados)']];
+const MX_FONTES = [['missas_servidas','Missas servidas'],['habilitacao','Habilitação'],['ensaio','Ensaios'],['idade','Idade']];
+function mxNivelLabel(slug){ const n=(typeof NIVEIS!=='undefined')?NIVEIS.find(x=>x.slug===slug):null; return n?n.label:slug; }
+async function renderMissoes(b){
+  b.textContent='';
+  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 12px;';
+  hint.textContent='Catálogo de missões. Cada nível tem capítulos (abrem em sequência); as obrigatórias travam o capítulo. Missões sem nível = pool de bônus.'; b.appendChild(hint);
+  const { data: rows } = await sb.from('acolitos_missoes').select('*').order('nivel_alvo',{nullsFirst:false}).order('capitulo',{nullsFirst:true}).order('ordem');
+  const miss = rows||[];
+  const cont=document.createElement('div'); b.appendChild(cont);
+  function mxRow(m){
+    const card=document.createElement('div'); card.className='cfg-card'; card.style.padding='10px 12px';
+    const hd=document.createElement('div'); hd.style.cssText='display:flex;align-items:center;gap:8px;';
+    const tt=document.createElement('div'); tt.style.cssText='flex:1;min-width:0;';
+    const nm=document.createElement('div'); nm.style.cssText='font-size:13px;color:var(--text);'; nm.textContent=m.titulo;
+    const tags=document.createElement('div'); tags.style.cssText='font-size:11px;color:var(--text-muted);margin-top:2px;';
+    const cap=m.capitulo!=null?('Cap.'+m.capitulo+' · '):''; const ob=m.nivel_alvo?((m.obrigatoria?'obrigatória':'opcional')+' · '):'';
+    tags.textContent=cap+ob+m.validacao+' · '+m.xp+' XP'+(m.recorrente?' · 🔁':'')+(m.concede_badge?' · 🏅':'');
+    tt.append(nm,tags);
+    const ed=document.createElement('button'); ed.className='cfg-mini'; ed.textContent='✎';
+    ed.onclick=()=>abrirEditorMissao(m, async(patch)=>{ const {error}=await sb.from('acolitos_missoes').update(patch).eq('id',m.id); if(error){toast('Erro ao salvar','error');return false;} Object.assign(m,patch); toast('✓ Salvo'); pinta(); return true; });
+    const del=document.createElement('button'); del.className='cfg-mini danger'; del.textContent='×';
+    del.onclick=async()=>{ if(!confirm('Excluir "'+m.titulo+'"?'))return; const {error}=await sb.from('acolitos_missoes').delete().eq('id',m.id); if(error){toast('Erro','error');return;} const i=miss.indexOf(m); if(i>=0)miss.splice(i,1); toast('✓ Excluída'); pinta(); };
+    hd.append(tt,ed,del); card.appendChild(hd); return card;
+  }
+  function pinta(){
+    cont.textContent='';
+    const grupos={}; miss.forEach(m=>{ const k=m.nivel_alvo||'__pool__'; (grupos[k]=grupos[k]||[]).push(m); });
+    const ordem=[]; if(typeof NIVEIS!=='undefined') NIVEIS.forEach(n=>{ if(grupos[n.slug]) ordem.push(n.slug); }); if(grupos['__pool__']) ordem.push('__pool__');
+    if(!ordem.length){ const e=document.createElement('div'); e.style.cssText='color:var(--text-muted);font-size:13px;padding:10px 0;'; e.textContent='Nenhuma missão cadastrada ainda. Use "+ Missão".'; cont.appendChild(e); }
+    ordem.forEach(k=>{ const t=document.createElement('div'); t.style.cssText='font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);margin:14px 0 6px;letter-spacing:.5px;'; t.textContent=k==='__pool__'?'🎲 Pool de bônus':('🎯 '+mxNivelLabel(k)); cont.appendChild(t); grupos[k].sort((a,b2)=>(a.capitulo||0)-(b2.capitulo||0)||(a.ordem||0)-(b2.ordem||0)).forEach(m=>cont.appendChild(mxRow(m))); });
+  }
+  pinta();
+  const add=document.createElement('button'); add.className='btn'; add.textContent='+ Missão'; add.style.marginTop='14px';
+  add.onclick=()=>abrirEditorMissao(null, async(patch)=>{ const {data,error}=await sb.from('acolitos_missoes').insert(patch).select().single(); if(error){toast('Erro ao criar','error');return false;} miss.push(data); toast('✓ Criada'); pinta(); return true; });
+  b.appendChild(add);
+}
+function abrirEditorMissao(m, onSave){
+  const spec = Object.assign({ titulo:'', descricao:'', validacao:'reivindicada', xp:10, nivel_alvo:null, capitulo:null, obrigatoria:true, recorrente:false, aplica_de:null, aplica_ate:null, seriedade:'seria', criterio:null, concede_badge:false, badge_label:'' }, m||{});
+  const cr0 = spec.criterio || {};
+  const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=(e)=>{if(e.target===ov)ov.remove();};
+  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='460px';
+  const tt=document.createElement('div'); tt.className='modal-title'; tt.textContent=(m&&m.id)?'Editar missão':'Nova missão'; md.appendChild(tt);
+  const lab=(t)=>{ const l=document.createElement('div'); l.style.cssText='font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px;'; l.textContent=t; md.appendChild(l); };
+  const inp=(val,ph,tipo)=>{ const e=document.createElement(tipo==='area'?'textarea':'input'); e.className='form-input'; if(tipo==='area')e.rows=2; if(tipo==='number')e.type='number'; e.value=(val==null?'':val); if(ph)e.placeholder=ph; return e; };
+  const selOf=(opts,val)=>{ const s=document.createElement('select'); s.className='form-input'; opts.forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;if(String(val)===String(v))o.selected=true;s.appendChild(o);}); return s; };
+  lab('Título'); const fTit=inp(spec.titulo,'Ex.: Apto na Sineta'); md.appendChild(fTit);
+  lab('Descrição'); const fDesc=inp(spec.descricao,'Como cumprir','area'); md.appendChild(fDesc);
+  lab('Validação'); const fVal=selOf(MX_VALID, spec.validacao); md.appendChild(fVal);
+  lab('XP'); const fXp=inp(spec.xp,'','number'); md.appendChild(fXp);
+  lab('Nível-alvo (vazio = pool bônus)'); const nivOpts=[['','— Pool de bônus —']]; if(typeof NIVEIS!=='undefined')NIVEIS.forEach(n=>nivOpts.push([n.slug,n.label])); const fNiv=selOf(nivOpts, spec.nivel_alvo||''); md.appendChild(fNiv);
+  const blocoCap=document.createElement('div'); md.appendChild(blocoCap);
+  const blocoBonus=document.createElement('div'); md.appendChild(blocoBonus);
+  function pintaCond(){
+    blocoCap.textContent=''; blocoBonus.textContent='';
+    if(fNiv.value){
+      const l1=document.createElement('div'); l1.style.cssText='font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin:10px 0 4px;'; l1.textContent='Capítulo (nº)'; blocoCap.appendChild(l1);
+      blocoCap._cap=inp(spec.capitulo,'1','number'); blocoCap.appendChild(blocoCap._cap);
+      const row=document.createElement('label'); row.style.cssText='display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--text);';
+      blocoCap._ob=document.createElement('input'); blocoCap._ob.type='checkbox'; blocoCap._ob.checked=spec.obrigatoria!==false; row.append(blocoCap._ob, document.createTextNode('Obrigatória (trava o capítulo)')); blocoCap.appendChild(row);
+    } else {
+      const aplOpts=[['','(todos)']]; if(typeof NIVEIS!=='undefined')NIVEIS.forEach(n=>aplOpts.push([n.slug,n.label]));
+      const l1=document.createElement('div'); l1.style.cssText='font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin:10px 0 4px;'; l1.textContent='Aparece de / até (faixa de nível)'; blocoBonus.appendChild(l1);
+      const r=document.createElement('div'); r.style.cssText='display:flex;gap:8px;'; blocoBonus._de=selOf(aplOpts, spec.aplica_de||''); blocoBonus._ate=selOf(aplOpts, spec.aplica_ate||''); r.append(blocoBonus._de,blocoBonus._ate); blocoBonus.appendChild(r);
+    }
+  }
+  fNiv.onchange=pintaCond; pintaCond();
+  const recRow=document.createElement('label'); recRow.style.cssText='display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--text);';
+  const fRec=document.createElement('input'); fRec.type='checkbox'; fRec.checked=!!spec.recorrente; recRow.append(fRec, document.createTextNode('🔁 Recorrente (repete no intervalo)')); md.appendChild(recRow);
+  lab('Tom'); const fSer=selOf([['seria','Séria'],['divertida','Divertida'],['surpresa','Surpresa']], spec.seriedade||'seria'); md.appendChild(fSer);
+  lab('Competência que a quest trabalha (opcional)'); const fComp=selOf([['','— nenhuma —']], cr0.competencia||''); md.appendChild(fComp);
+  sb.from('acolitos_listas').select('valor,label').eq('tipo','competencia').order('label').then(({data})=>{ (data||[]).forEach(c=>{ const o=document.createElement('option'); o.value=c.valor; o.textContent=c.label; fComp.appendChild(o); }); fComp.value=cr0.competencia||''; });
+  const blocoCrit=document.createElement('div'); md.appendChild(blocoCrit);
+  function pintaCrit(){
+    blocoCrit.textContent=''; if(fVal.value!=='automatica')return;
+    const l=document.createElement('div'); l.style.cssText='font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;margin:12px 0 4px;'; l.textContent='Critério automático'; blocoCrit.appendChild(l);
+    blocoCrit._fonte=selOf(MX_FONTES, cr0.fonte||'missas_servidas'); blocoCrit.appendChild(blocoCrit._fonte);
+    const r=document.createElement('div'); r.style.cssText='display:flex;gap:8px;margin-top:6px;';
+    blocoCrit._qtd=inp(cr0.quantidade!=null?cr0.quantidade:(cr0.min!=null?cr0.min:''),'qtd / idade mín','number'); blocoCrit._qtd.style.flex='1';
+    blocoCrit._prof=selOf([['','(proficiência)'],['em_formacao','em_formacao'],['apto','apto'],['experiente','experiente'],['referencia','referencia']], cr0.proficiencia||''); blocoCrit._prof.style.flex='1';
+    r.append(blocoCrit._qtd, blocoCrit._prof); blocoCrit.appendChild(r);
+    blocoCrit._func=inp((cr0.funcoes?(Array.isArray(cr0.funcoes)?cr0.funcoes.join(','):cr0.funcoes):(cr0.funcao||'')),'função(ões): missal,turibulo'); blocoCrit._func.style.marginTop='6px'; blocoCrit.appendChild(blocoCrit._func);
+  }
+  fVal.onchange=pintaCrit; pintaCrit();
+  const badgeRow=document.createElement('label'); badgeRow.style.cssText='display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--text);';
+  const fBadge=document.createElement('input'); fBadge.type='checkbox'; fBadge.checked=!!spec.concede_badge; badgeRow.append(fBadge, document.createTextNode('🏅 Concede badge')); md.appendChild(badgeRow);
+  const fBLbl=inp(spec.badge_label,'Nome da conquista (badge)'); fBLbl.style.marginTop='6px'; md.appendChild(fBLbl);
+  const save=document.createElement('button'); save.className='btn gold'; save.style.cssText='width:100%;margin-top:16px;'; save.textContent='Salvar missão';
+  save.onclick=async()=>{
+    const patch={ titulo:fTit.value.trim(), descricao:fDesc.value.trim(), validacao:fVal.value, xp:Number(fXp.value)||0, nivel_alvo:fNiv.value||null, recorrente:fRec.checked, seriedade:fSer.value, concede_badge:fBadge.checked, badge_label:fBLbl.value.trim()||null };
+    if(!patch.titulo){ toast('Dê um título','error'); return; }
+    if(patch.nivel_alvo){ patch.capitulo=Number(blocoCap._cap.value)||1; patch.obrigatoria=blocoCap._ob.checked; patch.aplica_de=null; patch.aplica_ate=null; }
+    else { patch.capitulo=null; patch.obrigatoria=false; patch.aplica_de=blocoBonus._de.value||null; patch.aplica_ate=blocoBonus._ate.value||null; }
+    const comp=fComp.value||null;
+    if(patch.validacao==='automatica'){ const f=blocoCrit._fonte.value; const cr={fonte:f}; if(blocoCrit._qtd.value!==''){ const q=Number(blocoCrit._qtd.value); if(f==='idade')cr.min=q; else cr.quantidade=q; } if(blocoCrit._prof.value)cr.proficiencia=blocoCrit._prof.value; if(blocoCrit._func.value.trim())cr.funcoes=blocoCrit._func.value.split(',').map(s=>s.trim()).filter(Boolean); if(comp)cr.competencia=comp; patch.criterio=cr; } else patch.criterio = comp ? { competencia:comp } : null;
+    const ok=await onSave(patch); if(ok!==false) ov.remove();
+  };
+  md.appendChild(save);
+  ov.appendChild(md); document.body.appendChild(ov);
+}
+
+// ── Seção Etapas do CRM: CRUD completo (reordenar, editar, excluir, adicionar) ──
+function renderCrm(b){
+  b.textContent='';
+  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 12px;'; hint.textContent='Fases de integração do novo membro. Reordene (↑↓), edite, exclua ou adicione. A última fase é o estado "concluído".'; b.appendChild(hint);
+  const DEF=[['aprovacao_cadastro','Aprovação','Aprovar o cadastro. O membro segue para a etapa de integração.'],['integracao','Integração','Reunião de integração realizada com o membro.'],['whatsapp','WhatsApp','Entrada nos grupos de WhatsApp confirmada.'],['tunica','Túnica','Recebimento da túnica confirmado.'],['disponivel_escala','Disp. Escala','Disponibilidade preenchida. Membro pronto para ser escalado.'],['integrado','Integrado','Membro totalmente integrado! Defina o nível pastoral.']];
+  let work=cfg('crm_etapas',null);
+  work=(Array.isArray(work)&&work.length)?work.map(e=>({slug:e.slug,label:e.label,acao:e.acao||''})):DEF.map(([slug,label,acao])=>({slug,label,acao}));
+  const cont=document.createElement('div'); b.appendChild(cont);
+  const repaint=()=>{
+    cont.textContent='';
+    work.forEach((et,i)=>{
+      const card=document.createElement('div'); card.className='cfg-card';
+      const hd=document.createElement('div'); hd.className='cfg-card-hd';
+      const nw=document.createElement('div'); nw.className='nmwrap';
+      const stp=document.createElement('div'); stp.className='stp'; stp.textContent='Fase '+(i+1)+(i===work.length-1?' · final':'');
+      const li=document.createElement('input'); li.className='form-input'; li.value=et.label; li.placeholder='Nome da fase'; li.oninput=()=>{ et.label=li.value; };
+      nw.append(stp,li);
+      const up=document.createElement('button'); up.className='cfg-mini'; up.textContent='↑'; up.disabled=(i===0); up.onclick=()=>{ const t=work[i-1]; work[i-1]=work[i]; work[i]=t; repaint(); };
+      const dn=document.createElement('button'); dn.className='cfg-mini'; dn.textContent='↓'; dn.disabled=(i===work.length-1); dn.onclick=()=>{ const t=work[i+1]; work[i+1]=work[i]; work[i]=t; repaint(); };
+      const del=document.createElement('button'); del.className='cfg-mini danger'; del.textContent='×'; del.onclick=()=>{ if(confirm('Excluir a fase "'+et.label+'"? Membros nela ficam sem etapa válida.')){ work.splice(i,1); repaint(); } };
+      hd.append(nw,up,dn,del); card.appendChild(hd);
+      _cfgField(card,'Texto da ação', et.acao, 'area', v=>{ et.acao=v; });
+      cont.appendChild(card);
+    });
+  };
+  repaint();
+  const acts=document.createElement('div'); acts.style.cssText='display:flex;gap:8px;';
+  const add=document.createElement('button'); add.className='btn'; add.textContent='+ Fase'; add.onclick=()=>{ const nome=(prompt('Nome da nova fase:')||'').trim(); if(!nome)return; const slug=(nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''))||('fase_'+Date.now()); work.splice(Math.max(0,work.length-1),0,{slug,label:nome,acao:''}); repaint(); };
+  const save=document.createElement('button'); save.className='btn gold'; save.textContent='Salvar fases'; save.onclick=async()=>{ await setConfig('crm_etapas', work); };
+  acts.append(add,save); b.appendChild(acts);
+}
+
+// ── Seção Níveis / Jornada: lista ordenável com add/excluir + patch generator + edição do "O caminho" ──
+function renderNiveis(b){
+  b.textContent='';
+  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 12px;'; hint.textContent='Edite, reordene (↑↓), exclua ou adicione níveis. O patch aparece ao lado — toque em "Gerar patch" pra customizar. A trilha da Jornada segue esta ordem.'; b.appendChild(hint);
+  const niv=(typeof NIVEIS!=='undefined')?NIVEIS:[];
+  const work=niv.map(n=>({ slug:n.slug, label:n.label, base:n.base||'acolito', int:(n.int!=null?n.int:0), pips:(n.pips!=null?n.pips:0), titulo:n.titulo||'', intro:n.intro||'', missao:n.missao||'', desafio:n.desafio||'', proximo:n.proximo||'', patch:n._patch||null }));
+  const cont=document.createElement('div'); b.appendChild(cont);
+  const repaint=()=>{
+    cont.textContent='';
+    work.forEach((w,i)=>{
+      const card=document.createElement('div'); card.className='cfg-card';
+      const hd=document.createElement('div'); hd.className='cfg-card-hd';
+      const patch=document.createElement('div'); patch.className='cfg-patch';
+      const pinta=()=>{ patch.textContent=''; if(typeof buildRankEmblem==='function') patch.appendChild(buildRankEmblem(w.slug,48,w.patch||null)); };
+      pinta();
+      const nw=document.createElement('div'); nw.className='nmwrap';
+      const stp=document.createElement('div'); stp.className='stp'; stp.textContent='Nível '+(i+1);
+      const li=document.createElement('input'); li.className='form-input'; li.value=w.label; li.placeholder='Nome'; li.oninput=()=>{ w.label=li.value; };
+      nw.append(stp,li);
+      const up=document.createElement('button'); up.className='cfg-mini'; up.textContent='↑'; up.disabled=(i===0); up.onclick=()=>{ const t=work[i-1]; work[i-1]=work[i]; work[i]=t; repaint(); };
+      const dn=document.createElement('button'); dn.className='cfg-mini'; dn.textContent='↓'; dn.disabled=(i===work.length-1); dn.onclick=()=>{ const t=work[i+1]; work[i+1]=work[i]; work[i]=t; repaint(); };
+      const del=document.createElement('button'); del.className='cfg-mini danger'; del.textContent='×'; del.onclick=()=>{ if(confirm('Excluir o nível "'+w.label+'"? Membros nele ficam sem nível válido.')){ work.splice(i,1); repaint(); } };
+      hd.append(patch,nw,up,dn,del); card.appendChild(hd);
+      const gp=document.createElement('button'); gp.className='btn-sm'; gp.style.cssText='margin-top:6px;background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2));border:1px solid var(--gold-dim);color:var(--gold-light);'; gp.textContent='🎨 Gerar patch';
+      gp.onclick=()=>abrirGeradorPatch(w.slug, w.patch || _specPadraoNivel(w.slug), (spec)=>{ w.patch=spec; pinta(); }); card.appendChild(gp);
+      const baseRow=document.createElement('div'); baseRow.className='cfg-fld';
+      const bl=document.createElement('label'); bl.textContent='Categoria (base)';
+      const bs=document.createElement('select'); bs.className='form-input';
+      [['aspirante','Aspirante'],['coroinha','Coroinha'],['acolito','Acólito'],['cerimonario','Cerimoniário']].forEach(([v,l])=>{ const o=document.createElement('option'); o.value=v; o.textContent=l; if(w.base===v)o.selected=true; bs.appendChild(o); });
+      bs.onchange=()=>{ w.base=bs.value; }; baseRow.append(bl,bs); card.appendChild(baseRow);
+      _cfgField(card,'Título', w.titulo, 'input', v=>{ w.titulo=v; });
+      _cfgField(card,'Introdução (texto do "O caminho")', w.intro, 'area', v=>{ w.intro=v; });
+      _cfgField(card,'Missão', w.missao, 'input', v=>{ w.missao=v; });
+      _cfgField(card,'Desafio', w.desafio, 'area', v=>{ w.desafio=v; });
+      _cfgField(card,'Próximo passo', w.proximo, 'input', v=>{ w.proximo=v; });
+      cont.appendChild(card);
+    });
+  };
+  repaint();
+  const acts=document.createElement('div'); acts.style.cssText='display:flex;gap:8px;';
+  const add=document.createElement('button'); add.className='btn'; add.textContent='+ Nível';
+  add.onclick=()=>{ const nome=(prompt('Nome do novo nível:')||'').trim(); if(!nome)return; const slug=(nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''))||('nivel_'+Date.now()); work.push({ slug, label:nome, base:'acolito', int:work.length, pips:0, titulo:'', intro:'', missao:'', desafio:'', proximo:'', patch:_specPadraoNivel('acolito_aspirante') }); repaint(); };
+  const save=document.createElement('button'); save.className='btn gold'; save.textContent='Salvar níveis';
+  save.onclick=async()=>{ const ok=await setConfig('niveis_full', work); if(ok){ if(typeof aplicarNiveisEstrutura==='function') aplicarNiveisEstrutura(); toast('✓ Salvo! Recarregue o app pra ver na Jornada.'); } };
+  acts.append(add,save); b.appendChild(acts);
+}
+init();
+</script>
+</body>
+</html>

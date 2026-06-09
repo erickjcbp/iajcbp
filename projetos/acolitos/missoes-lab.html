@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Missões (lab) — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#150a0d">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    .lab-tag { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); border:1px solid var(--gold-dim); border-radius:10px; padding:2px 8px; }
+    .mx-card { background:var(--surface); border:1px solid var(--border-wine); border-radius:6px; padding:14px; margin-bottom:14px;
+      clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+    .mx-hd { font-family:'Sora',sans-serif; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+    .mx-prox { display:flex; align-items:center; gap:14px; }
+    .mx-prox-info { flex:1; min-width:0; }
+    .mx-prox-nome { font-family:'Sora',sans-serif; font-weight:700; font-size:15px; color:var(--text); }
+    .mx-bar { height:10px; background:var(--surface2); border-radius:5px; overflow:hidden; margin-top:8px; border:1px solid var(--border); }
+    .mx-bar-fill { height:100%; background:linear-gradient(90deg,var(--gold-dim),var(--gold)); border-radius:5px; transition:width .4s; }
+    .mx-q { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+    .mx-q:last-child { border-bottom:none; }
+    .mx-q-ico { width:22px; height:22px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; }
+    .mx-q-ico.done { background:rgba(47,158,87,.25); color:var(--success-text); border:1px solid var(--success); }
+    .mx-q-ico.wait { background:rgba(176,125,22,.22); color:var(--warn-text); border:1px solid var(--warn); }
+    .mx-q-ico.pend { background:var(--surface2); color:var(--text-muted); border:1px solid var(--border-wine); }
+    .mx-q-body { flex:1; min-width:0; }
+    .mx-q-tit { font-size:13px; color:var(--text); }
+    .mx-q-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
+    .mx-q-xp { font-family:'Sora',sans-serif; font-size:12px; font-weight:700; color:var(--gold); flex-shrink:0; }
+    .mx-elig { background:linear-gradient(165deg, rgba(47,158,87,.18), var(--surface)); border:1px solid var(--success); color:var(--success-text);
+      border-radius:6px; padding:12px 14px; font-size:13px; font-weight:600; margin-bottom:14px; text-align:center; }
+    .mx-xp-big { font-family:'Sora',sans-serif; font-size:26px; font-weight:700; color:var(--gold-light); text-shadow:0 0 12px var(--red-glow); }
+    .mx-empty { color:var(--text-muted); font-size:12px; font-style:italic; padding:6px 0; }
+    .mx-fila-item { background:var(--surface2); border:1px solid var(--border-wine); border-radius:6px; padding:10px 12px; margin-bottom:8px; }
+    .mx-fila-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .mx-fila-acts { display:flex; gap:6px; margin-top:8px; }
+    .mx-mini { font-size:12px; font-weight:700; border-radius:6px; padding:6px 12px; cursor:pointer; border:1px solid var(--border-wine); background:var(--surface); color:var(--text); }
+    .mx-mini.ok { border-color:var(--success); color:var(--success-text); }
+    .mx-mini.no { border-color:var(--danger); color:var(--danger-text); }
+    .mx-mini.go { border-color:var(--gold); color:var(--gold-light); background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2)); }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+<div class="main" id="main"><span class="loading">Carregando...</span></div>
+
+<script src="shared.js"></script>
+<script>
+const COORD = ['coord_admin','subadmin','membro_equipe'];
+const NIVEIS_SLUGS = () => NIVEIS.map(n => n.slug);
+let ctx = null;
+
+async function init() {
+  ctx = await initModulo();
+  if (!ctx) return;
+  renderHeader(ctx, 'home');
+  renderBottomNav(ctx, 'home');
+  await renderAll();
+}
+
+async function renderAll() {
+  const main = document.getElementById('main');
+  main.textContent = '';
+
+  const title = document.createElement('h1'); title.className = 'page-title';
+  title.append('Missões '); const tag = document.createElement('span'); tag.className = 'lab-tag'; tag.textContent = 'laboratório'; title.appendChild(tag);
+  main.appendChild(title);
+
+  if (ctx.membro) await renderBoard(main);
+  else { const e = document.createElement('p'); e.className = 'mx-empty'; e.textContent = 'Sua conta não tem um perfil de membro ativo.'; main.appendChild(e); }
+
+  if (COORD.includes(ctx.membership?.role)) await renderCoord(main);
+}
+
+function statusIco(status) {
+  const d = document.createElement('div'); d.className = 'mx-q-ico ' + (status === 'concluida' ? 'done' : status === 'em_analise' ? 'wait' : 'pend');
+  d.textContent = status === 'concluida' ? '✓' : status === 'em_analise' ? '⏳' : '○';
+  return d;
+}
+function subDe(q) {
+  if (q.status === 'concluida') return 'Concluída';
+  if (q.status === 'em_analise') return 'Em análise pela coordenação';
+  if (q.validacao === 'avaliada') return 'A coordenação avalia';
+  if (q.validacao === 'automatica') return 'Automática (em breve)';
+  return 'Toque em “Já fiz” quando cumprir';
+}
+function questRow(q) {
+  const row = document.createElement('div'); row.className = 'mx-q';
+  row.appendChild(statusIco(q.status));
+  const body = document.createElement('div'); body.className = 'mx-q-body';
+  const t = document.createElement('div'); t.className = 'mx-q-tit'; t.textContent = q.titulo + (q.obrigatoria === false ? ' · opcional' : '');
+  const s = document.createElement('div'); s.className = 'mx-q-sub'; s.textContent = subDe(q);
+  body.append(t, s); row.appendChild(body);
+  if (q.validacao === 'reivindicada' && q.status === 'pendente') {
+    const b = document.createElement('button'); b.className = 'mx-mini go'; b.textContent = 'Já fiz';
+    b.onclick = () => reivindicar(q.id); row.appendChild(b);
+  } else {
+    const xp = document.createElement('span'); xp.className = 'mx-q-xp'; xp.textContent = '+' + q.xp + ' XP'; row.appendChild(xp);
+  }
+  return row;
+}
+// Card de um capítulo (desbloqueado mostra missões; travado mostra cadeado)
+function capCard(c) {
+  const card = document.createElement('div'); card.className = 'mx-card';
+  if (!c.desbloqueado) card.style.opacity = '.6';
+  const hd = document.createElement('div'); hd.className = 'mx-hd';
+  hd.textContent = 'Capítulo ' + c.capitulo + (c.completo ? ' ✓ concluído' : c.desbloqueado ? '' : ' 🔒 bloqueado');
+  card.appendChild(hd);
+  if (!c.desbloqueado) {
+    const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = '🔒 Conclua o capítulo anterior pra desbloquear.'; card.appendChild(e);
+  } else {
+    (c.missoes || []).forEach(q => card.appendChild(questRow(q)));
+  }
+  return card;
+}
+
+async function renderBoard(main) {
+  const { data, error } = await sb.rpc('acolitos_missoes_board', { p_membro: ctx.membro.id, p_niveis: NIVEIS_SLUGS() });
+  if (error || !data || data.erro) { const e = document.createElement('p'); e.className = 'mx-empty'; e.textContent = 'Não foi possível carregar (' + (data?.erro || error?.message) + ').'; main.appendChild(e); return; }
+
+  if (data.elegivel) { const el = document.createElement('div'); el.className = 'mx-elig'; el.textContent = '🎉 Pronto pra subir de nível! Aguardando a coordenação confirmar.'; main.appendChild(el); }
+
+  // Próximo nível + XP + capítulos (barra enche por missão obrigatória concluída)
+  const caps = data.capitulos || [];
+  const capsOk = caps.filter(c => c.completo).length;
+  let totObrig = 0, fezObrig = 0;
+  caps.forEach(c => (c.missoes || []).forEach(m => { if (m.obrigatoria !== false) { totObrig++; if (m.status === 'concluida') fezObrig++; } }));
+  const card = document.createElement('div'); card.className = 'mx-card';
+  const hd = document.createElement('div'); hd.className = 'mx-hd'; hd.textContent = data.proximo_nivel ? 'Sua jornada' : 'Nível máximo'; card.appendChild(hd);
+  if (data.proximo_nivel) {
+    const prox = document.createElement('div'); prox.className = 'mx-prox';
+    prox.appendChild(buildRankEmblem(data.proximo_nivel, 54));
+    const info = document.createElement('div'); info.className = 'mx-prox-info';
+    const nm = document.createElement('div'); nm.className = 'mx-prox-nome'; nm.textContent = 'Próximo: ' + nivelInfo(data.proximo_nivel).label;
+    const xpl = document.createElement('div'); xpl.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold-light);margin:3px 0 6px;text-shadow:0 0 8px var(--red-glow);'; xpl.textContent = '✦ ' + data.xp_total + ' XP';
+    const bar = document.createElement('div'); bar.className = 'mx-bar'; const fill = document.createElement('div'); fill.className = 'mx-bar-fill';
+    fill.style.width = (totObrig ? Math.round(100 * fezObrig / totObrig) : 0) + '%'; bar.appendChild(fill);
+    const cnt = document.createElement('div'); cnt.className = 'mx-q-sub'; cnt.style.marginTop = '4px'; cnt.textContent = fezObrig + ' de ' + totObrig + ' missões · ' + capsOk + '/' + caps.length + ' capítulos';
+    info.append(nm, xpl, bar, cnt); prox.appendChild(info); card.appendChild(prox);
+    main.appendChild(card);
+    if (caps.length) caps.forEach(c => main.appendChild(capCard(c)));
+    else { const e = document.createElement('div'); e.className = 'mx-empty'; e.style.padding = '8px 2px'; e.textContent = 'Nenhum capítulo cadastrado pra este nível ainda.'; main.appendChild(e); }
+  } else {
+    const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = '🏆 Você está no topo da jornada com ' + data.xp_total + ' XP!'; card.appendChild(e);
+    main.appendChild(card);
+  }
+
+  // Bônus
+  const bonus = data.bonus || [];
+  const bc = document.createElement('div'); bc.className = 'mx-card';
+  const bhd = document.createElement('div'); bhd.className = 'mx-hd'; bhd.textContent = 'Missões bônus'; bc.appendChild(bhd);
+  if (bonus.length) bonus.forEach(q => bc.appendChild(questRow(q)));
+  else { const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = 'Nenhuma missão bônus disponível agora.'; bc.appendChild(e); }
+  main.appendChild(bc);
+}
+
+async function reivindicar(missaoId) {
+  const ev = prompt('Conte rapidinho o que você fez (opcional):');
+  const { data, error } = await sb.rpc('acolitos_missao_reivindicar', { p_missao: missaoId, p_evidencia: (ev || null) });
+  if (error || data?.erro) { toast('Erro: ' + (data?.erro || error?.message), 'error'); return; }
+  toast('✓ Enviado pra avaliação da coordenação'); await renderAll();
+}
+
+async function renderCoord(main) {
+  const head = document.createElement('h2'); head.style.cssText = 'font-family:Sora,sans-serif;font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 12px;';
+  head.textContent = '⚙️ Coordenação'; main.appendChild(head);
+
+  // Fila de aprovação
+  const { data: fila } = await sb.rpc('acolitos_missoes_fila');
+  const fc = document.createElement('div'); fc.className = 'mx-card';
+  const fhd = document.createElement('div'); fhd.className = 'mx-hd'; fhd.textContent = 'Fila de aprovação (' + (fila?.length || 0) + ')'; fc.appendChild(fhd);
+  if (fila && fila.length) fila.forEach(item => {
+    const it = document.createElement('div'); it.className = 'mx-fila-item';
+    const top = document.createElement('div'); top.className = 'mx-fila-top';
+    const lbl = document.createElement('div'); lbl.style.fontSize = '13px'; lbl.innerHTML = '<b>' + escHtml(item.membro) + '</b> — ' + escHtml(item.titulo);
+    const xp = document.createElement('span'); xp.className = 'mx-q-xp'; xp.textContent = '+' + item.xp + ' XP';
+    top.append(lbl, xp); it.appendChild(top);
+    if (item.evidencia) { const ev = document.createElement('div'); ev.className = 'mx-q-sub'; ev.textContent = '“' + item.evidencia + '”'; it.appendChild(ev); }
+    const acts = document.createElement('div'); acts.className = 'mx-fila-acts';
+    const ok = document.createElement('button'); ok.className = 'mx-mini ok'; ok.textContent = '✓ Aprovar'; ok.onclick = () => decidir(item.missao_id, item.membro_id, 'aprovar');
+    const no = document.createElement('button'); no.className = 'mx-mini no'; no.textContent = '✕ Recusar'; no.onclick = () => decidir(item.missao_id, item.membro_id, 'recusar');
+    acts.append(ok, no); it.appendChild(acts); fc.appendChild(it);
+  });
+  else { const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = 'Nada pra aprovar agora.'; fc.appendChild(e); }
+  main.appendChild(fc);
+
+  // Promoções pendentes
+  const { data: prom } = await sb.rpc('acolitos_promocoes_pendentes', { p_niveis: NIVEIS_SLUGS() });
+  const pc = document.createElement('div'); pc.className = 'mx-card';
+  const phd = document.createElement('div'); phd.className = 'mx-hd'; phd.textContent = 'Promoções pendentes (' + (prom?.length || 0) + ')'; pc.appendChild(phd);
+  if (prom && prom.length) prom.forEach(p => {
+    const it = document.createElement('div'); it.className = 'mx-fila-item';
+    const top = document.createElement('div'); top.className = 'mx-fila-top';
+    const lbl = document.createElement('div'); lbl.style.fontSize = '13px'; lbl.innerHTML = '<b>' + escHtml(p.membro) + '</b> → ' + escHtml(nivelInfo(p.proximo).label);
+    const go = document.createElement('button'); go.className = 'mx-mini go'; go.textContent = '⬆ Promover'; go.onclick = () => promover(p.membro_id, p.proximo, p.membro);
+    top.append(lbl, go); it.appendChild(top); pc.appendChild(it);
+  });
+  else { const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = 'Ninguém elegível no momento.'; pc.appendChild(e); }
+  main.appendChild(pc);
+}
+
+async function decidir(missao, membro, decisao) {
+  const { data, error } = await sb.rpc('acolitos_missao_decidir', { p_missao: missao, p_membro: membro, p_decisao: decisao });
+  if (error || data?.erro) { toast('Erro: ' + (data?.erro || error?.message), 'error'); return; }
+  toast(decisao === 'aprovar' ? '✓ Aprovada (+' + data.xp + ' XP)' : '✕ Recusada'); await renderAll();
+}
+async function promover(membro, nivel, nome) {
+  if (!confirm('Promover ' + nome + ' para ' + nivelInfo(nivel).label + '?')) return;
+  const { data, error } = await sb.rpc('acolitos_promover', { p_membro: membro, p_novo_nivel: nivel });
+  if (error || data?.erro) { toast('Erro: ' + (data?.erro || error?.message), 'error'); return; }
+  toast('🎉 Promovido para ' + nivelInfo(nivel).label); await renderAll();
+}
+
+init();
+</script>
+</body>
+</html>

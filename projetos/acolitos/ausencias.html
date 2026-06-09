@@ -2,7 +2,7 @@
 <html lang="pt-BR" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Ausências — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -54,11 +54,25 @@
 
 <script src="shared.js"></script>
 <script>
-const MOTIVOS = { doenca:'🤒 Doença', viagem:'✈️ Viagem', familia:'👨‍👩‍👧 Família', outro:'📌 Outro' };
+let MOTIVOS = { doenca:'🤒 Doença', viagem:'✈️ Viagem', familia:'👨‍👩‍👧 Família', outro:'📌 Outro' }; // fallback; o Config (acolitos_listas tipo motivo) sobrescreve
+async function carregarMotivos(){
+  try { const { data } = await sb.from('acolitos_listas').select('valor,label').eq('tipo','motivo').order('label');
+    if (data && data.length) { MOTIVOS = {}; data.forEach(r => { MOTIVOS[r.valor] = r.label; }); }
+  } catch(e){}
+}
 const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 // EQUIPE_ROLES já vem do shared.js (redeclarar com const aqui quebrava o script)
 
 let ctx = null;
+let rosterMembrosAus = null, rosterMapAus = {};
+// Roster seguro (security-definer) — cobre o cerimoniário, que não lê acolitos_membros por RLS.
+async function carregarRosterAus() {
+  if (rosterMembrosAus) return rosterMembrosAus;
+  const { data } = await sb.rpc('acolitos_roster_substituicao');
+  rosterMembrosAus = (data && data.membros) || [];
+  rosterMapAus = {}; rosterMembrosAus.forEach(m => { rosterMapAus[m.id] = m; });
+  return rosterMembrosAus;
+}
 let motivoSelecionado = 'doenca';
 let datasAvulsasSel = []; // datas (YYYY-MM-DD) informadas sem celebração cadastrada
 
@@ -69,7 +83,10 @@ async function init() {
   if (!ctx) return;
   renderHeader(ctx, 'ausencias');
   renderBottomNav(ctx, 'ausencias');
-  EQUIPE_ROLES.includes(ctx.membership.role) ? renderViewEquipe() : renderViewMembro();
+  await carregarMotivos(); // motivos do Config (fallback: padrões)
+  // equipe E cerimoniários podem registrar ausência de outros (a RLS libera os dois)
+  const _r = ctx.membership.role;
+  (EQUIPE_ROLES.includes(_r) || _r === 'cerimonario') ? renderViewEquipe() : renderViewMembro();
 }
 
 // Rótulo amigável de uma celebração (missa)
@@ -285,31 +302,61 @@ async function renderViewEquipe() {
 
   const { data: ausencias } = await sb
     .from('acolitos_ausencias')
-    .select('*, acolitos_membros(nome), acolitos_celebracoes(data,horario,comunidade)')
+    .select('*, acolitos_membros(nome,apelido), acolitos_celebracoes(data,horario,comunidade)')
     .order('created_at',{ascending:false}).limit(60);
 
   if (!ausencias?.length) {
     const em=document.createElement('span');em.className='empty';em.textContent='Nenhuma ausência informada.';main.appendChild(em);return;
   }
 
+  // cerimoniário não lê acolitos_membros por RLS → embed volta vazio; roster (security-definer) cobre
+  await carregarRosterAus();
   ausencias.forEach(a => {
     const c=a.acolitos_celebracoes; const d=c?new Date(c.data+'T00:00:00'):null;
+    const rm=rosterMapAus[a.membro_id]||{};
     const row=document.createElement('div');row.className='equipe-row';
     const info=document.createElement('div');info.className='equipe-row-info';
-    const n=document.createElement('div');n.className='equipe-row-nome';n.textContent=a.acolitos_membros?.nome||'—';
+    const n=document.createElement('div');n.className='equipe-row-nome';n.textContent=a.acolitos_membros?.apelido||a.acolitos_membros?.nome||rm.apelido||rm.nome||'—';
     const m=document.createElement('div');m.className='equipe-row-meta';
     m.textContent=(d?DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' · '+c.horario:'—')+' · '+(MOTIVOS[a.motivo]||a.motivo);
     info.append(n,m);
     const badge=document.createElement('span');badge.className='badge coroinha';badge.textContent='AJ';
     row.append(info,badge);main.appendChild(row);
   });
+  if (EQUIPE_ROLES.includes(ctx.membership.role)) renderMotivosAdmin(main);
+}
+
+// ── GESTÃO DA LISTA DE MOTIVOS (movida do Config) — só equipe ──
+async function renderMotivosAdmin(main) {
+  const card = document.createElement('div'); card.style.cssText = 'background:var(--surface);border:1px solid var(--border-wine);border-radius:6px;padding:14px;margin-top:20px;';
+  const h = document.createElement('div'); h.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);margin-bottom:4px;'; h.textContent = '⚙ Motivos de ausência (gerir)'; card.appendChild(h);
+  const sub = document.createElement('div'); sub.style.cssText = 'font-size:11px;color:var(--text-muted);margin-bottom:8px;'; sub.textContent = 'Crie ou exclua os motivos que aparecem ao registrar uma ausência.'; card.appendChild(sub);
+  const box = document.createElement('div'); card.appendChild(box);
+  const miniBtn = (txt, danger) => { const b = document.createElement('button'); b.textContent = txt; b.style.cssText = 'width:30px;height:30px;border-radius:6px;cursor:pointer;font-weight:700;border:1px solid ' + (danger ? 'var(--danger)' : 'var(--gold-dim)') + ';background:var(--surface2);color:' + (danger ? 'var(--danger-text)' : 'var(--gold-light)') + ';'; return b; };
+  async function pinta() {
+    box.textContent = '';
+    const { data } = await sb.from('acolitos_listas').select('id,valor,label').eq('tipo', 'motivo').order('label');
+    (data || []).forEach(item => {
+      const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
+      const nm = document.createElement('span'); nm.style.cssText = 'flex:1;font-size:13px;color:var(--text);'; nm.textContent = item.label || item.valor;
+      const del = miniBtn('−', true);
+      del.onclick = async () => { if (!confirm('Remover motivo "' + (item.label || item.valor) + '"?')) return; await sb.from('acolitos_listas').delete().eq('id', item.id); pinta(); };
+      row.append(nm, del); box.appendChild(row);
+    });
+    const add = document.createElement('div'); add.style.cssText = 'display:flex;gap:8px;margin-top:10px;';
+    const inp = document.createElement('input'); inp.className = 'form-input'; inp.placeholder = 'Novo motivo (ex.: 🏫 Prova)';
+    const bt = miniBtn('+', false);
+    bt.onclick = async () => { const v = inp.value.trim(); if (!v) return; const slug = v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '_').replace(/^_|_$/g, ''); await sb.from('acolitos_listas').insert({ tipo: 'motivo', valor: slug, label: v }); inp.value = ''; pinta(); };
+    add.append(inp, bt); box.appendChild(add);
+  }
+  pinta();
+  main.appendChild(card);
 }
 
 // ── REGISTRAR AUSÊNCIA (equipe/admin, em nome de um membro) ───
 async function abrirRegistroAusencia() {
   const hoje = new Date().toISOString().slice(0,10);
-  const { data: membros } = await sb.from('acolitos_membros')
-    .select('id,nome,apelido,comunidade,pode_outras_comunidades,grupo_irmaos,escalar_com_irmao').eq('status','ativo').order('nome');
+  const membros = await carregarRosterAus(); // roster seguro (cobre cerimoniário; embed RLS volta vazio p/ ele)
   const { data: cels } = await sb.from('acolitos_celebracoes')
     .select('id,data,horario,comunidade').gte('data', hoje).order('data').order('horario');
   const futuras = cels || [];
@@ -329,14 +376,17 @@ async function abrirRegistroAusencia() {
     modal.append(em, close); return;
   }
 
-  // Membro
+  // Membros (múltiplos) + sugestão de irmão
+  const selecionados = [];
   const g1 = document.createElement('div'); g1.className = 'form-group';
-  const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Membro *';
-  const selM = document.createElement('select'); selM.className = 'form-select';
-  membros.forEach(m => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.nome; selM.appendChild(o); });
-  g1.append(l1, selM); modal.appendChild(g1);
+  const l1 = document.createElement('label'); l1.className = 'form-label'; l1.textContent = 'Membros * (um ou mais)';
+  const chips = document.createElement('div'); chips.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;';
+  const sugBox = document.createElement('div'); sugBox.style.cssText = 'display:flex;flex-direction:column;gap:5px;margin-bottom:6px;';
+  const buscaM = document.createElement('input'); buscaM.className = 'form-input'; buscaM.placeholder = 'Buscar membro…';
+  const listaM = document.createElement('div'); listaM.style.cssText = 'max-height:150px;overflow-y:auto;margin-top:4px;';
+  g1.append(l1, chips, sugBox, buscaM, listaM); modal.appendChild(g1);
 
-  // Missas (marque uma ou mais; filtra pela comunidade do membro, salvo se pode servir em outras)
+  // Missas
   const g2 = document.createElement('div'); g2.className = 'form-group';
   const l2 = document.createElement('label'); l2.className = 'form-label'; l2.textContent = 'Missas * (marque uma ou mais)';
   g2.appendChild(l2);
@@ -347,11 +397,41 @@ async function abrirRegistroAusencia() {
   const boxC = document.createElement('div'); boxC.className = 'aus-cel-box';
   g2.append(boxC); modal.appendChild(g2);
   chkAll.onchange = () => { boxC.querySelectorAll('.aus-cel').forEach(c => { c.checked = chkAll.checked; }); };
+
+  function add(m) { if (!selecionados.some(s => s.id === m.id)) selecionados.push(m); buscaM.value = ''; redraw(); }
+  function rem(id) { const i = selecionados.findIndex(s => s.id === id); if (i >= 0) selecionados.splice(i, 1); redraw(); }
+  function redraw() { pintaChips(); pintaSug(); pintaLista(); popMissas(); }
+  function pintaChips() {
+    chips.textContent = '';
+    selecionados.forEach(s => { const c = document.createElement('span'); c.style.cssText = 'background:var(--surface2);border:1px solid var(--gold-dim);color:var(--gold-light);border-radius:14px;padding:3px 10px;font-size:12px;cursor:pointer;'; c.textContent = (s.apelido || s.nome) + ' ✕'; c.onclick = () => rem(s.id); chips.appendChild(c); });
+  }
+  function pintaSug() {
+    sugBox.textContent = '';
+    const ids = new Set(selecionados.map(s => s.id)); const vistos = new Set();
+    selecionados.forEach(s => {
+      if (!s.grupo_irmaos) return;
+      membros.filter(m => m.grupo_irmaos === s.grupo_irmaos && m.id !== s.id && !ids.has(m.id)).forEach(irm => {
+        if (vistos.has(irm.id)) return; vistos.add(irm.id);
+        const sug = document.createElement('div'); sug.style.cssText = 'display:flex;align-items:center;gap:8px;background:rgba(232,185,74,.1);border:1px solid var(--gold-dim);border-radius:8px;padding:7px 10px;';
+        const txt = document.createElement('span'); txt.style.cssText = 'flex:1;font-size:12px;color:var(--text);'; txt.textContent = '💡 ' + (irm.apelido || irm.nome) + ' é irmão(ã) de ' + (s.apelido || s.nome);
+        const b = document.createElement('button'); b.className = 'btn-sm gold'; b.style.cssText = 'padding:5px 12px;font-size:12px;'; b.textContent = '+ Adicionar'; b.onclick = () => add(irm);
+        sug.append(txt, b); sugBox.appendChild(sug);
+      });
+    });
+  }
+  function pintaLista() {
+    const termo = buscaM.value.trim().toLowerCase(); listaM.textContent = '';
+    if (!termo) return;
+    membros.filter(m => !selecionados.some(s => s.id === m.id) && ((m.apelido || '').toLowerCase().includes(termo) || (m.nome || '').toLowerCase().includes(termo)))
+      .slice(0, 12).forEach(m => { const it = document.createElement('div'); it.style.cssText = 'padding:8px 6px;font-size:13px;color:var(--text);border-bottom:1px solid var(--border);cursor:pointer;'; it.textContent = m.apelido || m.nome; it.onclick = () => add(m); listaM.appendChild(it); });
+  }
   function popMissas() {
-    const m = membros.find(x => x.id === selM.value) || membros[0];
+    const coms = new Set(); let todas = false;
+    selecionados.forEach(s => { if (s.pode_outras_comunidades || !s.comunidade) todas = true; else coms.add(s.comunidade); });
     let lista = futuras;
-    if (m && m.comunidade && !m.pode_outras_comunidades) lista = futuras.filter(c => c.comunidade === m.comunidade);
+    if (!todas && coms.size) lista = futuras.filter(c => coms.has(c.comunidade));
     boxC.textContent = ''; chkAll.checked = false;
+    if (!selecionados.length) { const e = document.createElement('div'); e.style.cssText = 'font-size:12px;color:var(--text-muted);font-style:italic;padding:4px;'; e.textContent = '(escolha os membros primeiro)'; boxC.appendChild(e); return; }
     if (!lista.length) { const e = document.createElement('div'); e.style.cssText = 'font-size:12px;color:var(--text-muted);font-style:italic;padding:4px;'; e.textContent = '(sem missas para a comunidade)'; boxC.appendChild(e); return; }
     lista.forEach(c => {
       const row = document.createElement('label'); row.className = 'aus-cel-row';
@@ -360,7 +440,7 @@ async function abrirRegistroAusencia() {
       row.append(chk, sp); boxC.appendChild(row);
     });
   }
-  selM.onchange = popMissas; popMissas();
+  buscaM.oninput = pintaLista; redraw();
 
   const lMot = document.createElement('label'); lMot.className = 'form-label'; lMot.textContent = 'Motivo *'; modal.appendChild(lMot);
   const mGrid = document.createElement('div'); mGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;';
@@ -383,26 +463,18 @@ async function abrirRegistroAusencia() {
   const cancel = document.createElement('button'); cancel.className = 'btn-sm gray'; cancel.textContent = 'Cancelar'; cancel.onclick = () => ov.remove();
   const conf = document.createElement('button'); conf.className = 'btn-sm gold'; conf.textContent = 'Registrar';
   conf.onclick = async () => {
+    if (!selecionados.length) { msg.className='msg error'; msg.textContent='Escolha ao menos um membro.'; return; }
     const ids = [...boxC.querySelectorAll('.aus-cel:checked')].map(c => c.value);
     if (!ids.length) { msg.className='msg error'; msg.textContent='Selecione ao menos uma missa.'; return; }
     conf.disabled = true; conf.textContent = 'Salvando...';
-    const sel = membros.find(x => x.id === selM.value);
-    const irmaos = (sel && sel.grupo_irmaos && sel.escalar_com_irmao)
-      ? membros.filter(m => m.grupo_irmaos === sel.grupo_irmaos && m.escalar_com_irmao && m.id !== sel.id) : [];
     const obsVal = inpObs.value.trim() || null;
     const rows = [];
-    ids.forEach(id => {
-      rows.push({ membro_id: selM.value, celebracao_id: id, motivo: motivoSel, observacao: obsVal });
-      irmaos.forEach(irm => rows.push({ membro_id: irm.id, celebracao_id: id, motivo: motivoSel, observacao: obsVal }));
-    });
+    ids.forEach(id => { selecionados.forEach(s => rows.push({ membro_id: s.id, celebracao_id: id, motivo: motivoSel, observacao: obsVal })); });
     const { error } = await sb.from('acolitos_ausencias').upsert(rows, { onConflict: 'membro_id,celebracao_id' });
     if (error) { msg.className = 'msg error'; msg.textContent = 'Erro ao registrar. Tente novamente.'; conf.disabled = false; conf.textContent = 'Registrar'; return; }
-    // substituição automática na escala já montada
-    const membrosAll = [selM.value, ...irmaos.map(i => i.id)];
-    const { data: nSub } = await sb.rpc('acolitos_substituir_ausente', { p_membros: membrosAll, p_celebracoes: ids });
-    const irmaoTxt = irmaos.length ? ' (incluindo ' + irmaos.map(i => i.apelido || (i.nome||'').split(' ')[0]).join(', ') + ', que serve junto)' : '';
+    const { data: nSub } = await sb.rpc('acolitos_substituir_ausente', { p_membros: selecionados.map(s => s.id), p_celebracoes: ids });
     const subTxt = nSub ? ' Substituí ' + nSub + ' posição(ões) na escala.' : '';
-    msg.className = 'msg success'; msg.textContent = 'Registrado' + irmaoTxt + '.' + subTxt;
+    msg.className = 'msg success'; msg.textContent = 'Registrado para ' + selecionados.length + ' membro(s).' + subTxt;
     setTimeout(() => { ov.remove(); renderViewEquipe(); }, 1500);
   };
   acts.append(cancel, conf); modal.appendChild(acts);

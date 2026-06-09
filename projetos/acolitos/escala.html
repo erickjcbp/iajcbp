@@ -2,7 +2,7 @@
 <html lang="pt-BR" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Escala — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -22,12 +22,12 @@
     .aba-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,.08); }
     .escala-toolbar { margin-bottom:14px; }
     .escala-toolbar .form-select { width:100%; margin-bottom:8px; }
-    .escala-acoes { display:flex; gap:8px; }
-    .escala-acoes .btn-sm { flex:1; white-space:nowrap; padding:9px 6px; }
+    .escala-acoes { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+    .escala-acoes .btn-sm { white-space:nowrap; padding:10px 8px; font-size:13px; }
     @media(min-width:640px){
       .escala-toolbar { display:flex; align-items:center; gap:8px; }
       .escala-toolbar .form-select { width:auto; flex:1; max-width:220px; margin-bottom:0; }
-      .escala-acoes { flex:none; }
+      .escala-acoes { display:flex; gap:8px; }
       .escala-acoes .btn-sm { flex:none; }
     }
     .semana-grupo { margin-bottom:20px; }
@@ -81,6 +81,9 @@
       position:sticky; left:0; background:var(--surface); z-index:1; border-right:1px solid var(--border-wine);
     }
     .planilha-table tr:hover td { background:rgba(201,168,76,.03); }
+    .planilha-table tr.nivel-group td { background:linear-gradient(90deg, rgba(232,185,74,.16), rgba(232,185,74,.03)); border-top:1px solid var(--gold-dim); border-bottom:1px solid var(--gold-dim); padding:6px 10px; position:sticky; left:0; }
+    .planilha-table tr.nivel-group td > div { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--gold-light); }
+    .planilha-table tr.nivel-group:hover td { background:linear-gradient(90deg, rgba(232,185,74,.16), rgba(232,185,74,.03)); }
     .escala-cell {
       display:inline-block; padding:2px 6px; border-radius:2px;
       font-size:10px; font-family:'Sora',sans-serif;
@@ -130,6 +133,7 @@
       <button class="btn-sm gold" onclick="abrirNovaCeleb()">＋ Celebração</button>
       <button class="btn-sm gray" onclick="abrirModelos()" title="Modelos de celebração">⚙️ Modelos</button>
       <button class="btn-sm gray" onclick="abrirAusencias()" title="Últimas ausências">🚫 Ausências</button>
+      <button class="btn-sm gray" onclick="abrirFaltas()" title="Quem faltou na chamada">❌ Faltas</button>
     </div>
   </div>
   <div class="aba-toggle">
@@ -178,18 +182,7 @@
     </div>
     <div class="form-group">
       <label class="form-label">Tipo</label>
-      <select class="form-select" id="nc-tipo">
-        <option value="missa_comum">Missa Comum</option>
-        <option value="solene">Missa Solene</option>
-        <option value="pontifical">Pontifical (com Bispo)</option>
-        <option value="festa">Festa Litúrgica</option>
-        <option value="vigilia">Vigília</option>
-        <option value="crisma">Crisma</option>
-        <option value="casamento">Casamento</option>
-        <option value="batizado">Batizado</option>
-        <option value="ordenacao">Ordenação</option>
-        <option value="funeral">Exéquias</option>
-      </select>
+      <select class="form-select" id="nc-tipo"><!-- preenchido por popularTipos() (defaults + Config) --></select>
     </div>
     <div class="form-group">
       <label class="form-label">Observação</label>
@@ -244,6 +237,19 @@
     <div id="aus-body"><span class="loading">Carregando...</span></div>
     <div class="modal-actions">
       <button class="btn-sm gray" onclick="fecharModal('modal-ausencias')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal últimas faltas (ausentes na chamada) -->
+<div class="modal-overlay" id="modal-faltas">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Últimas faltas</div>
+    <div style="font-size:12px;color:var(--text-muted);margin:-6px 0 10px;">Escalados que foram marcados ausentes na chamada.</div>
+    <div id="faltas-body"><span class="loading">Carregando...</span></div>
+    <div class="modal-actions">
+      <button class="btn-sm gray" onclick="fecharModal('modal-faltas')">Fechar</button>
     </div>
   </div>
 </div>
@@ -346,13 +352,17 @@ const TIPO_LABEL = {
   batizado:'Batizado', ordenacao:'Ordenação', funeral:'Exéquias'
 };
 const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-const FUNCOES_ORDER = ['apoio','cruz','vela','sineta','sinao','altar','turibulo','naveta','missal','cred_altar','cred_credencia','mitra','baculo'];
+let FUNCOES_ORDER = ['apoio','cruz','vela','sineta','sinao','altar','turibulo','naveta','missal','cred_altar','cred_credencia','mitra','baculo'];
 const NIVEL_COR = { nao_treinado:'var(--border)', em_formacao:'#d4a060', apto:'var(--success-text)', experiente:'#4a90c4', referencia:'#9b59d4' };
 const NIVEL_LABEL = { nao_treinado:'Não treinado', em_formacao:'Em formação', apto:'Apto', experiente:'Experiente', referencia:'Referência' };
 
 let ctx = null, celebracoes = [], escalasMap = {}, membros = [], habMap = {}, dispMap = {};
-let freqMap = {}, restricaoMap = {}, ausMap = {};
+let freqMap = {}, restricaoMap = {}, ausMap = {}, chamadasFeitas = new Set(), semanaPassada = {};
 let pendingCelebId = null, pendingEdicao = [], abaAtual = 'cards', editCelebId = null, celAtual = null;
+
+// Fecha qualquer modal (remove a classe 'open'). Estava sendo chamada em vários lugares mas nunca foi definida —
+// por isso "Fechar" não funcionava e o "Salvar" travava em "✓ Escala salva!" (o erro abortava o reset do botão).
+function fecharModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('open'); }
 
 function openInfo(title, lines) {
   document.getElementById('info-title').textContent = title;
@@ -366,9 +376,43 @@ async function init() {
   if (!ctx) return;
   renderHeader(ctx, 'escala');
   renderBottomNav(ctx, 'escala');
+  mergeTiposLabel(TIPO_LABEL); // tipos customizados do Config entram no rótulo + select
+  mergeFuncoesConfig();        // funções próprias + "maiores" configuráveis
+  popularTipos();
+  popularComunidades();        // comunidades do Config no select de criar celebração
   await loadModelos();
   popHorarios();
   await loadDados();
+}
+
+// Aplica funções próprias e o conjunto "maiores" vindo do Config (com fallback pros padrões)
+function mergeFuncoesConfig() {
+  if (typeof cfg !== 'function') return;
+  (cfg('__funcoes', []) || []).forEach(f => {
+    if (f && f.valor) { FUNCAO_LABEL[f.valor] = f.label || f.valor; if (!FUNCOES_ORDER.includes(f.valor)) FUNCOES_ORDER.push(f.valor); }
+  });
+  const maiores = cfg('funcoes_maiores', null);
+  if (Array.isArray(maiores) && maiores.length) FUNCOES_MAIORES = new Set(maiores);
+}
+
+// Preenche o select de comunidade a partir do Config (fallback: mantém os defaults do HTML)
+function popularComunidades() {
+  const sel = document.getElementById('nc-com'); if (!sel) return;
+  const coms = (typeof cfg === 'function') ? cfg('comunidades', null) : null;
+  if (!Array.isArray(coms) || !coms.length) return;
+  const atual = sel.value; sel.textContent = '';
+  coms.forEach(c => { const o = document.createElement('option'); o.value = c.slug; o.textContent = c.label || c.slug; sel.appendChild(o); });
+  if (atual) sel.value = atual;
+}
+
+// Preenche o select de tipo de celebração a partir de TIPO_LABEL (defaults + tipos do Config)
+function popularTipos() {
+  const sel = document.getElementById('nc-tipo'); if (!sel) return;
+  const atual = sel.value; sel.textContent = '';
+  Object.entries(TIPO_LABEL).forEach(([slug, label]) => {
+    const o = document.createElement('option'); o.value = slug; o.textContent = label; sel.appendChild(o);
+  });
+  if (atual) sel.value = atual;
 }
 
 // Gera horários do dia todo, de hora em hora e meia-hora (ex.: 8h, 8h30)
@@ -403,14 +447,25 @@ async function loadDados() {
       if (!escalasMap[e.celebracao_id]) escalasMap[e.celebracao_id]=[];
       escalasMap[e.celebracao_id].push(e);
     });
-    const [{ data: mems }, { data: habs }, { data: disps }, freqData, { data: auss }] = await Promise.all([
-      sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,data_nascimento,foto_url,observacoes,necessidades_especiais,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro,grupo_irmaos,escalar_com_irmao').eq('status','ativo').order('nome'),
+    const [{ data: mems }, { data: habs }, { data: disps }, freqData, { data: auss }, { data: chs }] = await Promise.all([
+      sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,pode_outras_comunidades,data_nascimento,foto_url,observacoes,necessidades_especiais,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro,grupo_irmaos,escalar_com_irmao').eq('status','ativo').order('nome'),
       sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia'),
       sb.from('acolitos_disponibilidade').select('membro_id,dia,horario,restricao'),
       fetchFrequencia(),
       sb.from('acolitos_ausencias').select('membro_id,celebracao_id').in('celebracao_id', ids),
+      sb.from('acolitos_chamadas').select('celebracao_id').in('celebracao_id', ids),
     ]);
     membros = mems||[];
+    chamadasFeitas = new Set((chs||[]).map(x=>x.celebracao_id));
+    // semana passada: quem foi escalado nos últimos 7 dias + resultado (status da escala)
+    const sete = new Date(hoje); sete.setDate(hoje.getDate()-7);
+    const { data: escPas } = await sb.from('acolitos_escalas')
+      .select('membro_id,status, acolitos_celebracoes!inner(data)')
+      .gte('acolitos_celebracoes.data', sete.toISOString().slice(0,10))
+      .lt('acolitos_celebracoes.data', hoje.toISOString().slice(0,10));
+    semanaPassada = {};
+    const _rk = s => (s==='presente'||s==='atrasado') ? 3 : (s==='ausente'||s==='ausente_justificado'||s==='substituido') ? 2 : 1;
+    (escPas||[]).forEach(e => { const cur = semanaPassada[e.membro_id]; if (!cur || _rk(e.status) > _rk(cur)) semanaPassada[e.membro_id] = e.status; });
     ausMap = {}; (auss||[]).forEach(a=>{ if(!ausMap[a.celebracao_id]) ausMap[a.celebracao_id]=new Set(); ausMap[a.celebracao_id].add(a.membro_id); });
     // ausências avulsas por DATA (sem celebração): valem para todas as missas daquele dia
     const celDatas=[...new Set(celebracoes.map(c=>c.data))];
@@ -457,6 +512,7 @@ function getCobertura(celebId, comunidade, tipo) {
 
 function renderCards() {
   const el=document.getElementById('view-cards'); el.textContent='';
+  const isCerimo = ctx && navCaps(ctx).isCerimo; // botão de chamada só p/ cerimoniários
   if(!celebracoes.length){const em=document.createElement('span');em.className='empty';em.textContent='Nenhuma celebração no período.';el.appendChild(em);return;}
   const semanas={};
   celebracoes.forEach(c=>{
@@ -473,7 +529,8 @@ function renderCards() {
     const acoesSem=document.createElement('div');acoesSem.style.cssText='display:flex;gap:6px;flex-wrap:wrap;';
     const bGer=document.createElement('button');bGer.className='btn-sm wine';bGer.style.flexShrink='0';bGer.textContent='⚡ Gerar escala da semana';bGer.onclick=()=>gerarEscalaSemana(sem.items,bGer);
     const bLimp=document.createElement('button');bLimp.className='btn-sm gray';bLimp.style.flexShrink='0';bLimp.textContent='🧹 Limpar semana';bLimp.onclick=()=>limparEscalaSemana(sem.items,bLimp);
-    acoesSem.append(bGer,bLimp);
+    const bExp=document.createElement('button');bExp.className='btn-sm';bExp.style.cssText='flex-shrink:0;background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2));border:1px solid var(--gold-dim);color:var(--gold-light);';bExp.textContent='📤 Exportar';bExp.onclick=()=>exportarSemana(sem.items,sem.label);
+    acoesSem.append(bGer,bLimp,bExp);
     head.append(tit,acoesSem);
     const grid=document.createElement('div');grid.className='celebracoes-grid';
     sem.items.forEach(c=>{
@@ -505,6 +562,7 @@ function renderCards() {
       const btnM=document.createElement('button');btnM.className='btn-sm '+(cob.preenchido>0?'gold':'wine');
       btnM.textContent=cob.preenchido>0?'Editar Escala':'Montar Escala';
       btnM.onclick=()=>abrirMontagem(c);acts.appendChild(btnM);
+      if(isCerimo && cob.preenchido>0){const feita=chamadasFeitas.has(c.id);const btnCh=document.createElement('button');btnCh.className='btn-sm';btnCh.style.cssText=feita?'background:linear-gradient(165deg,rgba(76,175,80,.16),var(--surface2));border:1px solid var(--success-text,#4caf50);color:var(--success-text,#7bd88f);':'background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2));border:1px solid var(--gold-dim);color:var(--gold-light);';btnCh.textContent=feita?'✓ Chamada feita':'✋ Chamada';btnCh.onclick=()=>{window.location.href='chamada.html?celeb='+c.id;};acts.appendChild(btnCh);}
       const btnEd=document.createElement('button');btnEd.className='mini-del';btnEd.textContent='✏️';btnEd.title='Editar celebração';btnEd.style.marginLeft='auto';
       btnEd.onclick=()=>abrirEditarCeleb(c);acts.appendChild(btnEd);
       const btnDel=document.createElement('button');btnDel.className='mini-del';btnDel.textContent='🗑';btnDel.title='Excluir celebração';
@@ -541,6 +599,19 @@ function abrirMontagem(celeb) {
   const horKey=diaKey?diaKey+'_'+celeb.horario:null;
   pendingEdicao=[];
 
+  // ⚠️ Dupla escala na MESMA semana (evita escalar no sábado e no domingo)
+  const _mon=new Date(d);_mon.setDate(d.getDate()-((d.getDay()+6)%7));
+  const _wk=_mon.toISOString().slice(0,10);
+  const dupSemana={}; // membro_id -> Set de labels de OUTRAS missas da semana onde já está escalado
+  celebracoes.forEach(oc=>{
+    if(oc.id===celeb.id)return;
+    const od=new Date(oc.data+'T00:00:00');
+    const om=new Date(od);om.setDate(od.getDate()-((od.getDay()+6)%7));
+    if(om.toISOString().slice(0,10)!==_wk)return;
+    const lbl=DIAS[od.getDay()]+' '+od.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' '+oc.horario;
+    (escalasMap[oc.id]||[]).forEach(e=>{ (dupSemana[e.membro_id]=dupSemana[e.membro_id]||new Set()).add(lbl); });
+  });
+
   // Coluna posições
   const colPos=document.createElement('div');
   const t1=document.createElement('div');t1.style.cssText='font-family:Sora,sans-serif;font-size:12px;color:var(--gold);margin-bottom:10px;';t1.textContent='Posições';colPos.appendChild(t1);
@@ -555,12 +626,13 @@ function abrirMontagem(celeb) {
     const sel=document.createElement('select');sel.className='pos-select'+(exist?' filled':'');
     sel.setAttribute('data-funcao',pos.funcao);
     const optV=document.createElement('option');optV.value='';optV.textContent='— vazio —';sel.appendChild(optV);
-    membros.filter(m=>{const h=(habMap[m.id]||{})[pos.funcao];return h&&['apto','experiente','referencia'].includes(h);})
+    membros.filter(m=>elegivelFuncao(m,pos.funcao,celeb.comunidade))
       .forEach(m=>{
         const opt=document.createElement('option');opt.value=m.id;
         const disp=!horKey||(dispMap[m.id]||[]).includes(horKey);
         const ausente=ausNesta.has(m.id);
-        opt.textContent=(ausente?'🚫 ':(disp?'':'⚠ '))+(m.apelido||m.nome)+(ausente?' — ausência':'');
+        const jaSem=dupSemana[m.id];
+        opt.textContent=(ausente?'🚫 ':(disp?'':'⚠ '))+(m.apelido||m.nome)+(ausente?' — ausência':'')+(jaSem?' 🔁 já: '+[...jaSem].join(', '):'');
         if(ausente && exist?.membro_id!==m.id) opt.disabled=true; // bloqueado: declarou ausência
         if(exist?.membro_id===m.id)opt.selected=true;
         sel.appendChild(opt);
@@ -573,6 +645,23 @@ function abrirMontagem(celeb) {
     const clr=document.createElement('button');clr.type='button';clr.className='mini-del';clr.textContent='✕';clr.title='Limpar esta função';clr.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';
     clr.onclick=()=>{sel.value='';sel.classList.remove('filled');};
     row.append(lbl,sel,trc,clr);colPos.appendChild(row);
+    // ⚠️ já escalado em outra missa NESTA semana — embaixo do nome
+    const dup=exist&&dupSemana[exist.membro_id];
+    if(dup&&dup.size){
+      const dp=document.createElement('div');
+      dp.style.cssText='font-size:10px;margin:-4px 0 4px;padding-left:2px;font-weight:700;color:var(--danger-text);';
+      dp.textContent='⚠️ Já escalado(a) esta semana: '+[...dup].join(', ');
+      colPos.appendChild(dp);
+    }
+    // 🔁 escalado semana passada? (presença ou falta) — embaixo do nome já escalado
+    const stp=exist&&semanaPassada[exist.membro_id];
+    if(stp){
+      const pres=(stp==='presente'||stp==='atrasado'), falt=(stp==='ausente'||stp==='ausente_justificado'||stp==='substituido');
+      const sp=document.createElement('div');
+      sp.style.cssText='font-size:10px;margin:-4px 0 4px;padding-left:2px;font-weight:600;color:'+(pres?'var(--success-text)':falt?'var(--danger-text)':'var(--text-muted)')+';';
+      sp.textContent='🔁 Semana passada: '+(pres?'presença marcada ✓':falt?'faltou ✗':'escalado •');
+      colPos.appendChild(sp);
+    }
   });
 
   // Coluna membros
@@ -617,15 +706,53 @@ async function carregarAusenciasFresh(celebs) {
 }
 
 // Funções MAIORES (especializadas) — reservadas p/ cerimoniários; o resto é menor (altar/cruz/vela/apoio...)
-const FUNCOES_MAIORES = new Set(['cred_altar','cred_credencia','missal','turibulo','naveta','mitra','baculo']);
+// Elegibilidade numa função: habilitação (apto+) OU kit leve do Santo Antônio (cruz/vela liberados p/ coroinhas 7+).
+// Na Matriz vale só a habilitação (kit pesado — você controla por apto). Sem idade preenchida → cai no nível (coroinha+).
+function elegivelFuncao(m, f, comKey) {
+  const h = (habMap[m.id]||{})[f];
+  if (h && ['apto','experiente','referencia'].includes(h)) return true;
+  const ger = (typeof cfg === 'function') ? (cfg('gerador', {}) || {}) : {};
+  const kit = ger.kit_leve || { comunidade:'santo_antonio', funcoes:['cruz','vela'], idade_min:7 };
+  if (kit && comKey === kit.comunidade && (kit.funcoes||[]).includes(f)) {
+    const idade = m.data_nascimento ? calcIdade(m.data_nascimento) : null;
+    if (idade != null) return idade >= (kit.idade_min != null ? kit.idade_min : 7);
+    return nivelInfo(m.nivel||'aspirante').int >= 1;   // sem idade → coroinha pra cima
+  }
+  return false;
+}
+
+// Carga histórica p/ rodízio: consulta DIRETO no banco quantas vezes cada membro já foi escalado
+// nas ~6 semanas até o fim de semana de referência (NÃO depende do que está carregado na tela —
+// considera o histórico real, inclusive semanas passadas que a tela não traz).
+async function carregarCargaHistorica(refData) {
+  const ref = refData || new Date().toISOString().slice(0,10);
+  const _gerJ = (typeof cfg === 'function') ? (cfg('gerador', {}) || {}) : {};
+  const _dias = Number(_gerJ.janela_dias) || 42;
+  const ini = new Date(ref + 'T00:00:00'); ini.setDate(ini.getDate() - _dias); // janela móvel (config, default 6 semanas)
+  const iniStr = ini.toISOString().slice(0,10);
+  const base = {};
+  try {
+    // 2 passos (sem filtro em tabela aninhada, que falhava em silêncio): IDs das celebrações da janela → conta escalas
+    const { data: cels } = await sb.from('acolitos_celebracoes').select('id').gte('data', iniStr).lte('data', ref);
+    const ids = (cels || []).map(c => c.id);
+    if (!ids.length) return base;
+    const { data } = await sb.from('acolitos_escalas').select('membro_id').in('celebracao_id', ids).limit(5000);
+    (data || []).forEach(e => { base[e.membro_id] = (base[e.membro_id]||0)+1; });
+  } catch (err) { console.error('carga histórica falhou', err); }
+  return base;
+}
+
+let FUNCOES_MAIORES = new Set(['cred_altar','cred_credencia','missal','turibulo','naveta','mitra','baculo']);
 // Núcleo do gerador. vagas = array de funções (uma por vaga aberta). Retorna array alinhado de membro_id|null.
 // Regras: apto + não-ausente + sem repetir na missa; IRMÃOS juntos = bloco tudo-ou-nada;
-//   cerimoniários priorizados nas MAIORES (só em último caso vão p/ menores); não repetir no fim de semana (usadoFds); rodízio (carga).
-function planejarVagas(vagas, horKey, ausNesta, usados, carga, usadoFds) {
+//   cerimoniários priorizados nas MAIORES (só em último caso vão p/ menores); não repetir no fim de semana (usadoFds);
+//   COMUNIDADE da missa preferida (cruza só faltando); rodízio justo do mês (carga); mix de experiência nas menores.
+function planejarVagas(vagas, horKey, ausNesta, usados, carga, usadoFds, comKey) {
   usadoFds = usadoFds || new Set();
   const res = new Array(vagas.length).fill(null);
   const nint = {}; membros.forEach(m => { nint[m.id] = nivelInfo(m.nivel||'aspirante').int; });
-  const apta = (id,f) => { const h=(habMap[id]||{})[f]; return h && ['apto','experiente','referencia'].includes(h); };
+  const memById = {}; membros.forEach(m => { memById[m.id] = m; });
+  const apta = (id,f) => { const m = memById[id]; return m ? elegivelFuncao(m, f, comKey) : false; };
   const disp = id => !horKey || (dispMap[id]||[]).includes(horKey);
   const livres = () => res.map((r,i)=>r?-1:i).filter(i=>i>=0);
   const assign = (i,id) => { res[i]=id; usados.add(id); usadoFds.add(id); carga[id]=(carga[id]||0)+1; };
@@ -673,6 +800,8 @@ function planejarVagas(vagas, horKey, ausNesta, usados, carga, usadoFds) {
   });
   sibUnits.forEach(u => { if (!placeUnit(u)) u.forEach(id => bloqueados.add(id)); });
 
+  const mesmaCom = m => !comKey || (m.comunidade||'') === comKey;
+
   // 2) vagas individuais — funções MAIORES primeiro (cerimoniários nelas), depois mais escassas
   livres()
     .map(i => ({ i, maior: FUNCOES_MAIORES.has(vagas[i]), n: cands(i).length }))
@@ -682,20 +811,28 @@ function planejarVagas(vagas, horKey, ausNesta, usados, carga, usadoFds) {
       const menor = !FUNCOES_MAIORES.has(vagas[i]);
       const pool = cands(i); // já filtrado por disponibilidade (duro)
       if (!pool.length) return; // ninguém apto E disponível → vaga fica VAZIA (não força)
-      // camadas de preferência — cada uma só é usada se a anterior estiver vazia:
+      // CAMADA DE COMUNIDADE: prefere quem é da comunidade da missa; cruza só faltando (e quem pode); por fim qualquer
+      const comTiers = [ pool.filter(mesmaCom),
+                         pool.filter(m => !mesmaCom(m) && m.pode_outras_comunidades),
+                         pool ];
+      const comPool = comTiers.find(t => t.length);
+      // camadas internas — cada uma só usada se a anterior estiver vazia:
       const tiers = menor
-        ? [ pool.filter(m => !ehCerimo(m) && !usadoFds.has(m.id)),  // 1) não-cerimoniário e ainda não usado no fds
-            pool.filter(m => !ehCerimo(m)),                         // 2) não-cerimoniário (mesmo repetindo)
-            pool.filter(m => !usadoFds.has(m.id)),                  // 3) novo no fds (aceita cerimoniário)
-            pool ]                                                  // 4) qualquer (último caso)
-        : [ pool.filter(m => !usadoFds.has(m.id)),                  // maior: 1) ainda não usado no fds
-            pool ];                                                 // 2) qualquer
-      const grupo = tiers.find(t => t.length).slice().sort((a,b) => {
-        if (menor && nint[a.id]!==nint[b.id]) return nint[a.id]-nint[b.id]; // menor: menos graduado primeiro
-        if (!menor && nint[a.id]!==nint[b.id]) return nint[b.id]-nint[a.id]; // maior: mais graduado primeiro
-        return (carga[a.id]||0)-(carga[b.id]||0);                            // rodízio
+        ? [ comPool.filter(m => !ehCerimo(m) && !usadoFds.has(m.id)),  // 1) não-cerimoniário e novo no fds
+            comPool.filter(m => !ehCerimo(m)),                         // 2) não-cerimoniário (mesmo repetindo)
+            comPool.filter(m => !usadoFds.has(m.id)),                  // 3) novo no fds (aceita cerimoniário)
+            comPool ]                                                  // 4) qualquer (último caso)
+        : [ comPool.filter(m => !usadoFds.has(m.id)),                  // maior: 1) ainda não usado no fds
+            comPool ];                                                 // 2) qualquer
+      // ORDENA: rodízio primeiro (quem serviu menos no histórico), e EMPATE É ALEATÓRIO.
+      // (nível/mix saíram do meio de propósito — eram determinísticos e causavam repetição semana a semana.)
+      const grupo = tiers.find(t => t.length).slice();
+      grupo.sort((a,b) => {
+        if ((carga[a.id]||0)!==(carga[b.id]||0)) return (carga[a.id]||0)-(carga[b.id]||0); // RODÍZIO
+        return Math.random()-0.5;                                                            // empate → aleatório (varia)
       });
-      assign(i, grupo[0].id);
+      const escolhido = grupo[0];
+      assign(i, escolhido.id);
     });
   return res;
 }
@@ -708,7 +845,8 @@ async function gerarEscalaAuto() {
   ausMap[celAtual.id] = ausNesta;
   const open = pendingEdicao.filter(pe => !pe.sel.value);
   const usados = new Set(); pendingEdicao.forEach(pe => { if (pe.sel.value) usados.add(pe.sel.value); });
-  const res = planejarVagas(open.map(pe=>pe.funcao), horKeyDe(celAtual), ausNesta, usados, Object.assign({}, freqMap), new Set(usados));
+  const cargaH = await carregarCargaHistorica(celAtual.data);
+  const res = planejarVagas(open.map(pe=>pe.funcao), horKeyDe(celAtual), ausNesta, usados, cargaH, new Set(usados), celAtual.comunidade);
   res.forEach((id,i) => { if (id) { open[i].sel.value = id; open[i].sel.classList.add('filled'); } });
   const vazias = res.filter(r => !r).length;
   const btn = document.getElementById('btn-gerar-auto');
@@ -730,7 +868,7 @@ function trocarPosicao(pe) {
   const atual = pe.sel.value;
   const usadosOutros = new Set();
   pendingEdicao.forEach(p => { if (p !== pe && p.sel.value) usadosOutros.add(p.sel.value); });
-  const apta = (id,f) => { const h=(habMap[id]||{})[f]; return h && ['apto','experiente','referencia'].includes(h); };
+  const apta = (id,f) => { const m=membros.find(x=>x.id===id); return m ? elegivelFuncao(m, f, celAtual.comunidade) : false; };
   const disp = id => !horKey || (dispMap[id]||[]).includes(horKey);
   const nivel = id => { const m=membros.find(x=>x.id===id); return m?nivelInfo(m.nivel||'aspirante').int:0; };
   const menor = !FUNCOES_MAIORES.has(pe.funcao);
@@ -749,28 +887,112 @@ async function gerarEscalaSemana(celebs, btnEl) {
   if (!confirm('Gerar a escala de ' + celebs.length + ' missa(s) deste fim de semana?\n(Preenche as vagas ainda vazias, mantendo o que já estiver montado.)')) return;
   const txt0 = btnEl ? btnEl.textContent : '';
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Gerando...'; }
-  const carga = Object.assign({}, freqMap); // rodízio histórico
-  const usadoFds = new Set();                // ninguém repete no fim de semana (só em último caso)
-  const novas = [];
   const ordc = celebs.slice().sort((a,b) => (a.data+a.horario).localeCompare(b.data+b.horario));
+  const carga = await carregarCargaHistorica(ordc[0] ? ordc[0].data : ''); // rodízio: histórico real (banco) — ref = data mais antiga
+  const ausFresh = await carregarAusenciasFresh(ordc);
+  const usadoFds = new Set();                // ninguém repete no fim de semana
   ordc.forEach(c => (escalasMap[c.id]||[]).forEach(e => usadoFds.add(e.membro_id))); // já escalados contam
-  const ausFresh = await carregarAusenciasFresh(ordc); // ausências atualizadas (não escalar quem faltou)
-  for (const c of ordc) {
-    const modelo = modeloFor(c.tipo, c.comunidade);            // vagas do tipo+comunidade (já em ordem cerimoniais→...)
+  const nint = {}; membros.forEach(m => { nint[m.id] = nivelInfo(m.nivel||'aspirante').int; });
+  const ehCerimo = m => nint[m.id] >= 6;
+
+  // Monta TODAS as vagas abertas da semana (de todas as missas)
+  const usadosMissa = {}; const slots = [];
+  ordc.forEach(c => {
     const existing = escalasMap[c.id] || [];
+    usadosMissa[c.id] = new Set(existing.map(e => e.membro_id));
     const existPorFunc = {}; existing.forEach(e => { existPorFunc[e.funcao] = (existPorFunc[e.funcao]||0)+1; });
-    const cnt = {}; const vagas = [];
-    modelo.forEach(slot => { cnt[slot.funcao] = (cnt[slot.funcao]||0)+1; if (cnt[slot.funcao] > (existPorFunc[slot.funcao]||0)) vagas.push(slot.funcao); });
-    if (!vagas.length) continue;
-    const usados = new Set(existing.map(e => e.membro_id));
-    const res = planejarVagas(vagas, horKeyDe(c), ausFresh[c.id]||new Set(), usados, carga, usadoFds);
-    res.forEach((id,i) => { if (id) novas.push({ celebracao_id: c.id, membro_id: id, funcao: vagas[i], created_by: ctx.user.id }); });
+    const cnt = {};
+    modeloFor(c.tipo, c.comunidade).forEach(s => {
+      cnt[s.funcao] = (cnt[s.funcao]||0)+1;
+      if (cnt[s.funcao] > (existPorFunc[s.funcao]||0)) slots.push({ c, funcao: s.funcao, hk: horKeyDe(c), com: c.comunidade, filled: false });
+    });
+  });
+  // pool DURO de candidatos p/ uma vaga, no estado atual
+  const candsDe = s => {
+    const aus = ausFresh[s.c.id] || new Set();
+    return membros.filter(m => elegivelFuncao(m, s.funcao, s.com)
+      && (!s.hk || (dispMap[m.id]||[]).includes(s.hk))
+      && !usadoFds.has(m.id) && !usadosMissa[s.c.id].has(m.id) && !aus.has(m.id));
+  };
+  // escolha dentro do pool: comunidade → reserva cerimoniário (nas menores) → RODÍZIO → aleatório
+  const escolher = (s, pool) => {
+    const mesmaCom = m => !s.com || (m.comunidade||'') === s.com;
+    const comPool = [pool.filter(mesmaCom), pool.filter(m => !mesmaCom(m) && m.pode_outras_comunidades), pool].find(t => t.length);
+    const menor = !FUNCOES_MAIORES.has(s.funcao);
+    const tiers = menor ? [comPool.filter(m => !ehCerimo(m)), comPool] : [comPool];
+    const grupo = tiers.find(t => t.length).slice();
+    grupo.sort((a,b) => ((carga[a.id]||0)-(carga[b.id]||0)) || (Math.random()-0.5));
+    return grupo[0];
+  };
+  const novas = [];
+  const colocar = (s, m) => {
+    s.filled = true; usadoFds.add(m.id); usadosMissa[s.c.id].add(m.id); carga[m.id] = (carga[m.id]||0)+1;
+    novas.push({ celebracao_id: s.c.id, membro_id: m.id, funcao: s.funcao, created_by: ctx.user.id });
+  };
+  // GREEDY GLOBAL: preenche sempre a vaga com MENOS candidatos primeiro (reserva os "frescos" p/ onde há pouca opção)
+  while (true) {
+    let best = null, bestCands = null;
+    for (const s of slots) {
+      if (s.filled) continue;
+      const cs = candsDe(s);
+      if (best === null || cs.length < bestCands.length) { best = s; bestCands = cs; }
+    }
+    if (!best) break;
+    if (!bestCands.length) { best.filled = true; continue; } // ninguém apto+disponível → vaga fica vazia
+    const m = escolher(best, bestCands);
+    colocar(best, m);
+    // IRMÃOS JUNTOS: se serve com irmão, tenta colocar o(s) irmão(s) na MESMA missa
+    if (m.escalar_com_irmao && m.grupo_irmaos) {
+      membros.filter(x => x.grupo_irmaos === m.grupo_irmaos && x.escalar_com_irmao && !usadoFds.has(x.id))
+        .forEach(irm => {
+          const s2 = slots.find(s => !s.filled && s.c.id === best.c.id && candsDe(s).some(cc => cc.id === irm.id));
+          if (s2) colocar(s2, irm);
+        });
+    }
   }
   if (novas.length) {
     const { error } = await sb.from('acolitos_escalas').insert(novas);
     if (error) { alert('Erro ao salvar: ' + error.message); if (btnEl) { btnEl.disabled = false; btnEl.textContent = txt0; } return; }
   }
   await loadDados();
+}
+
+// Exporta as escalas da semana em texto "Nome - Função" (copiar/baixar p/ compartilhar)
+function exportarSemana(celebs, label) {
+  // ordem fixa das missas: 17h, 18h30, 7h, 9h, 19h (por dia); lista de cada missa em ordem ALFABÉTICA por nome
+  const HOR_ORDEM = ['17h','18h30','7h','9h','19h'];
+  const horRank = h => { const i = HOR_ORDEM.indexOf(String(h||'').replace(/^0/,'')); return i<0?99:i; };
+  const nomeDe = e => (e.acolitos_membros && e.acolitos_membros.nome) || '';
+  const ordc = celebs.slice().sort((a,b) => a.data.localeCompare(b.data) || horRank(a.horario)-horRank(b.horario));
+  let txt = (label ? label.toUpperCase() : 'ESCALA DA SEMANA') + '\n\n';
+  ordc.forEach(c => {
+    const d = new Date(c.data+'T00:00:00');
+    txt += DIAS[d.getDay()] + ' ' + d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) + ' · ' + c.horario + ' · ' + (c.comunidade==='matriz'?'Matriz':'Sto. Antônio') + '\n';
+    const escalas = (escalasMap[c.id]||[]).slice().sort((a,b) => nomeDe(a).localeCompare(nomeDe(b),'pt',{sensitivity:'base'}));
+    if (!escalas.length) txt += '(escala não montada)\n';
+    else escalas.forEach(e => { txt += (nomeDe(e)||'—') + ' - ' + (FUNCAO_LABEL[e.funcao]||e.funcao) + '\n'; });
+    txt += '\n';
+  });
+
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target===ov) ov.remove(); };
+  const m = document.createElement('div'); m.className = 'modal'; m.style.maxWidth = '460px';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Exportar escala';
+  const ta = document.createElement('textarea'); ta.readOnly = true; ta.value = txt.trim();
+  ta.style.cssText = 'width:100%;height:46vh;background:var(--surface2);border:1px solid var(--border-wine);border-radius:8px;color:var(--text);font-family:monospace;font-size:12px;line-height:1.5;padding:10px;white-space:pre;overflow:auto;';
+  const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:12px;';
+  const bCopy = document.createElement('button'); bCopy.className = 'btn gold'; bCopy.style.flex = '1'; bCopy.textContent = '📋 Copiar';
+  bCopy.onclick = async () => {
+    try { await navigator.clipboard.writeText(ta.value); } catch (e) { ta.select(); document.execCommand('copy'); }
+    bCopy.textContent = '✓ Copiado!'; setTimeout(() => { bCopy.textContent = '📋 Copiar'; }, 2000);
+  };
+  const bDown = document.createElement('button'); bDown.className = 'btn'; bDown.style.flex = '1'; bDown.textContent = '⬇️ Baixar .txt';
+  bDown.onclick = () => {
+    const blob = new Blob([ta.value], { type:'text/plain' }); const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'escala-' + (label||'semana').replace(/[^\w]+/g,'-').toLowerCase() + '.txt'; a.click(); URL.revokeObjectURL(url);
+  };
+  const bClose = document.createElement('button'); bClose.className = 'btn'; bClose.style.cssText = 'flex:1;background:transparent;border:1px solid var(--border);color:var(--text-muted);'; bClose.textContent = 'Fechar'; bClose.onclick = () => ov.remove();
+  acts.append(bCopy, bDown, bClose);
+  m.append(tt, ta, acts); ov.appendChild(m); document.body.appendChild(ov);
 }
 
 // Apaga TODAS as escalas das missas do fim de semana (direto no banco)
@@ -835,9 +1057,29 @@ function renderPlanilha() {
   });
   thead.appendChild(hr);table.appendChild(thead);
 
-  // Corpo
+  // Corpo — agrupado por nível (mais graduado primeiro), nome dentro do grupo
   const tbody=document.createElement('tbody');
-  membros.forEach(m=>{
+  const colspan=7+celebracoes.length;
+  const ordem=membros.slice().sort((a,b)=>{
+    const na=nivelInfo(a.nivel||'aspirante').int, nb=nivelInfo(b.nivel||'aspirante').int;
+    if(na!==nb) return nb-na;
+    return (a.apelido||a.nome||'').localeCompare(b.apelido||b.nome||'');
+  });
+  let nivelAtual=null;
+  ordem.forEach(m=>{
+    const nslug=m.nivel||'aspirante';
+    if(nslug!==nivelAtual){
+      nivelAtual=nslug;
+      const info=nivelInfo(nslug);
+      const qtd=ordem.filter(x=>(x.nivel||'aspirante')===nslug).length;
+      const trH=document.createElement('tr');trH.className='nivel-group';
+      const tdH=document.createElement('td');tdH.colSpan=colspan;
+      const box=document.createElement('div');box.style.cssText='display:flex;align-items:center;gap:8px;';
+      box.appendChild(buildRankEmblem(nslug,18));
+      const lab=document.createElement('span');lab.textContent=info.label;lab.style.fontWeight='800';
+      const ct=document.createElement('span');ct.style.cssText='color:var(--text-muted);font-weight:600;';ct.textContent='· '+qtd;
+      box.append(lab,ct);tdH.appendChild(box);trH.appendChild(tdH);tbody.appendChild(trH);
+    }
     const tr=document.createElement('tr');
     const habs=habMap[m.id]||{};
 
@@ -984,6 +1226,24 @@ async function abrirAusencias(){
     const del=document.createElement('button'); del.className='mini-del'; del.textContent='🗑'; del.title='Remover ausência';
     del.onclick=async()=>{ if(!confirm('Remover esta ausência?'))return; await sb.from('acolitos_ausencias').delete().eq('id',a.id); abrirAusencias(); loadDados(); };
     row.append(left,del); body.appendChild(row);
+  });
+}
+async function abrirFaltas(){
+  document.getElementById('modal-faltas').classList.add('open');
+  const body=document.getElementById('faltas-body'); body.textContent=''; const ld=document.createElement('span'); ld.className='loading'; ld.textContent='Carregando...'; body.appendChild(ld);
+  const { data }=await sb.rpc('acolitos_faltas_recentes');
+  body.textContent='';
+  if(!data||!data.length){ const em=document.createElement('span'); em.className='empty'; em.textContent='Nenhuma falta registrada ainda.'; body.appendChild(em); return; }
+  data.forEach(a=>{
+    const row=document.createElement('div'); row.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);';
+    const left=document.createElement('div'); left.style.cssText='min-width:0;flex:1;';
+    const nm=document.createElement('div'); nm.style.cssText='font-weight:700;font-size:14px;color:var(--text);'; nm.textContent=a.membro||'—';
+    const wh=document.createElement('div'); wh.style.cssText='font-size:12px;color:var(--gold);';
+    wh.textContent = (a.data?dataCurta(a.data):'—')+(a.horario?' '+a.horario:'')+' · '+(a.comunidade==='matriz'?'Matriz':'Sto. Antônio');
+    const fn=document.createElement('div'); fn.style.cssText='font-size:11px;color:var(--text-muted);'; fn.textContent=(FUNCAO_LABEL[a.funcao]||a.funcao)+(a.substituto?' · 🔄 coberto por '+a.substituto:' · vaga aberta');
+    left.append(nm,wh,fn);
+    const badge=document.createElement('span'); badge.style.cssText='font-size:11px;font-weight:700;color:var(--danger-text);flex:none;'; badge.textContent='❌ faltou';
+    row.append(left,badge); body.appendChild(row);
   });
 }
 init();
