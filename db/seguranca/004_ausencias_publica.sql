@@ -166,7 +166,9 @@ grant execute on function public.acolitos_ausencia_pendente_listar()  to authent
 grant execute on function public.acolitos_ausencia_pendente_count()   to authenticated;
 grant execute on function public.acolitos_ausencia_pendente_decidir(uuid[],text) to authenticated;
 
--- belt-and-suspenders: internas nunca a anon
-revoke execute on function public.acolitos_ausencia_pendente_listar()  from anon;
-revoke execute on function public.acolitos_ausencia_pendente_count()   from anon;
-revoke execute on function public.acolitos_ausencia_pendente_decidir(uuid[],text) from anon;
+-- internas nunca a anon. IMPORTANTE: revogar de PUBLIC (não só de anon) — o Supabase
+-- concede EXECUTE a PUBLIC por padrão e anon herda via PUBLIC; revoke from anon sozinho
+-- não basta. (O grant a authenticated acima preserva o acesso da equipe.)
+revoke execute on function public.acolitos_ausencia_pendente_listar()  from public;
+revoke execute on function public.acolitos_ausencia_pendente_count()   from public;
+revoke execute on function public.acolitos_ausencia_pendente_decidir(uuid[],text) from public;
