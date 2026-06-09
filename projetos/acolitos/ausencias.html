@@ -93,21 +93,53 @@ async function init() {
 }
 
 // Avisos recebidos pela página pública (/ausencias), aguardando confirmação.
+// Card fino (só a contagem) → toca para expandir → "Aprovar todas" de uma vez.
 async function renderPendentesPublicas(){
   const { data } = await sb.rpc('acolitos_ausencia_pendente_listar');
   const pend = (data && data.pendentes) || [];
   if(!pend.length) return;
   const main = document.getElementById('main-content');
+  const fmt = d => { const [y,m,da]=String(d).split('-'); return da+'/'+m+'/'+y; };
+
   const card = document.createElement('div'); card.className='section-card';
   card.style.cssText = (card.style.cssText||'') + ';border:1px solid var(--gold);';
-  const h = document.createElement('div');
-  h.style.cssText='font-family:Sora,sans-serif;font-weight:700;font-size:14px;color:var(--gold);margin-bottom:8px;';
-  h.textContent = '📋 Avisos recebidos (' + pend.length + ') — confirmar';
-  card.appendChild(h);
 
-  const fmt = d => { const [y,m,da]=String(d).split('-'); return da+'/'+m+'/'+y; };
+  // Cabeçalho fino clicável (toggle)
+  const head = document.createElement('div');
+  head.style.cssText='display:flex;align-items:center;gap:8px;cursor:pointer;font-family:Sora,sans-serif;font-weight:700;font-size:14px;color:var(--gold);';
+  const ht = document.createElement('span'); ht.style.flex='1';
+  const chev = document.createElement('span'); chev.textContent='▾'; chev.style.cssText='transition:transform .15s;font-size:12px;';
+  head.append(ht, chev); card.appendChild(head);
+
+  // Corpo (oculto por padrão)
+  const body = document.createElement('div'); body.style.cssText='display:none;margin-top:10px;'; card.appendChild(body);
+
+  const restantes = ()=>body.querySelectorAll('div[data-pend]').length;
+  const atualiza = ()=>{
+    const n = restantes();
+    ht.textContent = '📋 Avisos recebidos (' + n + ')';
+    bAll.textContent = '✓ Aprovar todas (' + n + ')';
+    if(!n) card.remove();
+  };
+  const decidir = async (ids, acao, onOk)=>{
+    const { data:r } = await sb.rpc('acolitos_ausencia_pendente_decidir',{ p_ids:ids, p_acao:acao });
+    if(r && r.ok){ onOk(); } else { alert('Erro ao processar.'); }
+  };
+
+  // Ação em massa
+  const bAll = document.createElement('button');
+  bAll.style.cssText='width:100%;font-size:12.5px;font-weight:800;padding:10px;border-radius:8px;cursor:pointer;border:none;margin-bottom:10px;background:linear-gradient(160deg,var(--gold-light,#ffd97a),var(--gold,#8a6a24));color:#2a1500;';
+  bAll.onclick = async ()=>{
+    const rows = Array.from(body.querySelectorAll('div[data-pend]'));
+    const ids = rows.map(r=>r.dataset.id); if(!ids.length) return;
+    bAll.disabled=true; bAll.textContent='Aprovando...';
+    await decidir(ids,'aprovar', ()=>{ rows.forEach(r=>r.remove()); });
+    bAll.disabled=false; atualiza();
+  };
+  body.appendChild(bAll);
+
   pend.forEach(p=>{
-    const row=document.createElement('div');
+    const row=document.createElement('div'); row.dataset.id=p.id; row.setAttribute('data-pend','1');
     row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--border);';
     const info=document.createElement('div'); info.style.cssText='flex:1;min-width:0;';
     const nm=document.createElement('div'); nm.style.cssText='font-weight:700;font-size:13px;color:var(--text);';
@@ -119,24 +151,21 @@ async function renderPendentesPublicas(){
     if(p.motivo) partes.push(p.motivo);
     sub.textContent = partes.join(' · ') || 'sem detalhes';
     info.append(nm,sub);
-    const decidir = async (acao)=>{
-      bOk.disabled = true; bNo.disabled = true;
-      const { data:r } = await sb.rpc('acolitos_ausencia_pendente_decidir',{ p_ids:[p.id], p_acao:acao });
-      if(r && r.ok){ row.remove();
-        const restantes = card.querySelectorAll('div[data-pend]').length;
-        h.textContent = '📋 Avisos recebidos (' + restantes + ') — confirmar';
-        if(!restantes) card.remove();
-      } else { bOk.disabled = false; bNo.disabled = false; alert('Erro ao processar.'); }
-    };
     const bOk=document.createElement('button'); bOk.textContent='Aprovar';
     bOk.style.cssText='font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;border:1px solid var(--gold-dim);background:var(--surface2);color:var(--gold-light);';
-    bOk.onclick=()=>decidir('aprovar');
     const bNo=document.createElement('button'); bNo.textContent='Rejeitar';
     bNo.style.cssText='font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;border:1px solid var(--danger);background:var(--surface2);color:var(--danger-text);';
-    bNo.onclick=()=>decidir('rejeitar');
-    row.setAttribute('data-pend','1');
-    row.append(info,bOk,bNo); card.appendChild(row);
+    const one = async (acao)=>{ bOk.disabled=true; bNo.disabled=true;
+      await decidir([p.id], acao, ()=>{ row.remove(); atualiza(); });
+      bOk.disabled=false; bNo.disabled=false; };
+    bOk.onclick=()=>one('aprovar'); bNo.onclick=()=>one('rejeitar');
+    row.append(info,bOk,bNo); body.appendChild(row);
   });
+
+  let aberto=false;
+  head.onclick = ()=>{ aberto=!aberto; body.style.display=aberto?'block':'none'; chev.style.transform=aberto?'rotate(180deg)':'none'; };
+
+  atualiza();
   main.insertBefore(card, main.firstChild);
 }
 
