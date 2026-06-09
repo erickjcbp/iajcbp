@@ -86,6 +86,8 @@ async function init() {
   await carregarMotivos(); // motivos do Config (fallback: padrões)
   // equipe E cerimoniários podem registrar ausência de outros (a RLS libera os dois)
   const _r = ctx.membership.role;
+  // renderPendentesPublicas sem await de propósito: carrega em background e prepende
+  // o card após a view de equipe já ter montado (ela limpa #main-content no início).
   if (EQUIPE_ROLES.includes(_r) || _r === 'cerimonario') { await renderViewEquipe(); renderPendentesPublicas(); }
   else renderViewMembro();
 }
@@ -117,12 +119,13 @@ async function renderPendentesPublicas(){
     sub.textContent = partes.join(' · ') || 'sem detalhes';
     info.append(nm,sub);
     const decidir = async (acao)=>{
+      bOk.disabled = true; bNo.disabled = true;
       const { data:r } = await sb.rpc('acolitos_ausencia_pendente_decidir',{ p_ids:[p.id], p_acao:acao });
       if(r && r.ok){ row.remove();
         const restantes = card.querySelectorAll('div[data-pend]').length;
         h.textContent = '📋 Avisos recebidos (' + restantes + ') — confirmar';
         if(!restantes) card.remove();
-      } else { alert('Erro ao processar.'); }
+      } else { bOk.disabled = false; bNo.disabled = false; alert('Erro ao processar.'); }
     };
     const bOk=document.createElement('button'); bOk.textContent='Aprovar';
     bOk.style.cssText='font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;border:1px solid var(--gold-dim);background:var(--surface2);color:var(--gold-light);';

@@ -122,7 +122,6 @@ async function init() {
   if (!ctx) return;
   mergeTiposLabel(TIPO_LABEL); // tipos customizados do Config
   renderHeader(ctx, 'home');
-  renderAvisoAusencias();
   const role = ctx.membership?.role;
   renderBottomNav(ctx, 'home');
   const { data: mod } = await sb.from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
@@ -132,6 +131,8 @@ async function init() {
   if (!ctx.membership || role === 'novo') await renderStatusCrm(ctx);
   else if (mode === 'coordenacao') await renderDashboardEquipe(ctx);
   else await renderDashboardMembro(ctx);
+  // depois do conteúdo montar (cada render limpa #main); senão o banner seria apagado.
+  renderAvisoAusencias();
 }
 
 // Banner na Home: avisos de ausência aguardando confirmação (só p/ aprovadores).
