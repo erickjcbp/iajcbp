@@ -80,7 +80,7 @@ function render(){
 async function renderLogins(b){
   b.textContent='';
   const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 8px;line-height:1.5;';
-  hint.innerHTML='Usuário e senha de cada membro. <b>A senha só aparece se foi definida por aqui</b> — a antiga fica criptografada e não dá pra recuperar (é só redefinir pra registrar). Só superadmin vê esta tela.';
+  hint.innerHTML='Usuário e login de cada membro. <b>A senha não fica guardada</b> — vive só no login seguro (criptografada). Para trocar, use <b>Redefinir senha</b>: a nova é mostrada uma única vez, anote na hora. Só superadmin vê esta tela.';
   b.appendChild(hint);
   const box=document.createElement('div'); box.innerHTML='<span class="loading">Carregando...</span>'; b.appendChild(box);
   const { data } = await sb.rpc('acolitos_logins_listar');
@@ -94,8 +94,7 @@ async function renderLogins(b){
     const s=(prompt('Nova senha para '+m.nome+' (mín. 6 caracteres):')||'').trim(); if(!s) return; if(s.length<6){alert('Senha muito curta.');return;}
     const r=await apiPost('/api/acolito-admin',{action:'password',user_id:m.user_id,password:s});
     if(!r.ok){alert('Erro: '+((r.data&&r.data.error)||'tente de novo'));return;}
-    await sb.rpc('acolitos_login_registrar',{p_membro:m.id,p_usuario:null,p_senha:s});
-    m.senha=s; desenha();
+    alert('Senha de '+m.nome+' redefinida:\n\n'+s+'\n\n⚠️ Anote agora — ela NÃO fica salva e não será mostrada de novo.');
   }
   async function setUser(m){
     const u=(prompt('Novo usuário (login) de '+m.nome+':', m.usuario||'')||'').trim(); if(!u) return;
@@ -109,8 +108,9 @@ async function renderLogins(b){
     const s=(prompt('Senha (mín. 6 caracteres):')||'').trim(); if(!s){return;} if(s.length<6){alert('Senha muito curta.');return;}
     const r=await apiPost('/api/acolito-admin',{action:'create',usuario:u,password:s,nome:m.nome,membro_id:m.id});
     if(!r.ok){alert('Erro: '+((r.data&&r.data.error)||'tente de novo'));return;}
-    await sb.rpc('acolitos_login_registrar',{p_membro:m.id,p_usuario:u,p_senha:s});
-    m.tem_conta=true; if(r.data&&r.data.user_id) m.user_id=r.data.user_id; m.usuario=u; m.senha=s; desenha();
+    await sb.rpc('acolitos_login_registrar',{p_membro:m.id,p_usuario:u,p_senha:null});
+    alert('Conta criada para '+m.nome+'.\nUsuário: '+u+'\nSenha: '+s+'\n\n⚠️ Anote a senha agora — ela NÃO fica salva e não será mostrada de novo.');
+    m.tem_conta=true; if(r.data&&r.data.user_id) m.user_id=r.data.user_id; m.usuario=u; desenha();
   }
   function desenha(){
     list.textContent=''; const q=busca.value.trim().toLowerCase();
@@ -120,10 +120,10 @@ async function renderLogins(b){
       const info=document.createElement('div'); info.style.cssText='flex:1;min-width:0;';
       const nm=document.createElement('div'); nm.style.cssText='font-weight:700;font-size:13px;color:var(--text);'; nm.textContent=m.nome;
       const sub=document.createElement('div'); sub.style.cssText='font-size:11px;color:var(--text-muted);word-break:break-all;';
-      if(m.tem_conta){ sub.innerHTML='usuário: <b style="color:var(--gold-light)">'+escHtml(m.usuario||'—')+'</b> · senha: '+(m.senha?'<b style="color:var(--gold-light)">'+escHtml(m.senha)+'</b>':'<i>não registrada</i>'); }
+      if(m.tem_conta){ sub.innerHTML='usuário: <b style="color:var(--gold-light)">'+escHtml(m.usuario||'—')+'</b>'; }
       else { sub.innerHTML='<i style="color:var(--danger-text)">sem conta</i>'; }
       info.append(nm,sub); row.appendChild(info);
-      if(m.tem_conta){ const bu=mini('Usuário'); bu.onclick=()=>setUser(m); const bs=mini('Senha'); bs.onclick=()=>setSenha(m); row.append(bu,bs); }
+      if(m.tem_conta){ const bu=mini('Usuário'); bu.onclick=()=>setUser(m); const bs=mini('Redefinir senha'); bs.onclick=()=>setSenha(m); row.append(bu,bs); }
       else { const bc=mini('Criar conta'); bc.onclick=()=>criarConta(m); row.append(bc); }
       list.appendChild(row);
     });
