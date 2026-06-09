@@ -216,6 +216,9 @@
 
   // Se já está logado, vai direto para a home do módulo
   sb.auth.getSession().then(({ data:{ session } })=>{ if(session) window.location.href='index.html'; });
+
+  // Deep-link da landing: /login.html#cadastro abre direto a aba "Quero servir"
+  if (location.hash === '#cadastro') showScreen('cadastro');
 </script>
 <script>
 // ── PWA: service worker + banner "Instalar app" (login não usa shared.js) ──

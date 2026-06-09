@@ -9,7 +9,10 @@
   "rewrites": [
     { "source": "/ausencias",
       "has": [{ "type": "host", "value": "coroinhas.jcbplimeira.com.br" }],
-      "destination": "/projetos/acolitos/ausencias-publica.html" }
+      "destination": "/projetos/acolitos/ausencias-publica.html" },
+    { "source": "/pastoral",
+      "has": [{ "type": "host", "value": "coroinhas.jcbplimeira.com.br" }],
+      "destination": "/projetos/acolitos/pastoral.html" }
   ],
   "headers": [
     {
