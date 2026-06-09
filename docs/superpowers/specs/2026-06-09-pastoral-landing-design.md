@@ -28,6 +28,10 @@ crianças/jovens e famílias a participar, com caminhos claros de contato.
   para o ar litúrgico/barroco; sans (Inter) no corpo para legibilidade.
 - Ornamentos: fleurons/cruzes (✠ ✦) como divisores; molduras douradas finas; vinheta
   quente nas fotos; brilhos suaves. **Sem** estética flat/gamer.
+- **Tratamento das fotos (NUNCA "secas"/cruas):** toda imagem entra com moldura dourada
+  fina (1px), cantos levemente arredondados (~10–14px), **sombra suave** (drop-shadow
+  difusa) e vinheta/gradiente quente sutil sobreposto. Sutileza acima de tudo — molduras
+  e sombras discretas, sem exagero. Vale leve realce no hover na galeria.
 - Brasão `midia/logos/brasao-pastoral.png` em destaque no hero e no favicon.
 
 ## Seções (scroll vertical, nesta ordem)
