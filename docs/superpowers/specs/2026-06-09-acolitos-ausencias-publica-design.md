@@ -79,9 +79,10 @@ Separada da `acolitos_ausencias` (que guarda ausências confirmadas).
 
 ### 3. RPCs internas (`SECURITY DEFINER`, guarda de papel, `GRANT` só authenticated)
 
-Guarda: `acolitos_get_role(auth.uid()) in ('coord_admin','subadmin','membro_equipe')`
-(mesmos papéis que já gerem ausências) **ou** cerimoniário, alinhado à RLS atual de
-`acolitos_ausencias`. Reusar o critério exato da tela existente.
+Guarda: **mesmo critério de quem já gere ausências hoje** — equipe/coordenação
+(`coord_admin`,`subadmin`,`membro_equipe`) **e** cerimoniário, alinhado à RLS atual de
+`acolitos_ausencias`. Reusar o critério exato da tela existente (confirmar no código
+do `ausencias.html` na fase de plano).
 
 **`acolitos_ausencia_pendente_listar() RETURNS jsonb`**
 - Retorna as pendências `status='pendente'` agrupadas por envio
@@ -125,9 +126,15 @@ existente vive em `/projetos/acolitos/` e é acessado dentro do app.
 ### 6. Revisão no app (tela existente `ausencias.html`)
 
 Adicionar uma seção **"Avisos recebidos (pendentes)"** visível para equipe/cerimoniário,
-listando a fila (`acolitos_ausencia_pendente_listar`) com botões **Aprovar** / **Rejeitar**
+listando a fila (`acolitos_ausencia_pendente_listar`) agrupada por envio, mostrando
+**membros + datas + informante + contato + motivo**, com botões **Aprovar** / **Rejeitar**
 (em lote por envio ou por linha), chamando `acolitos_ausencia_pendente_decidir`.
-Badge com a contagem de pendentes.
+
+**Aviso de pendências em dois lugares:**
+- Badge com a contagem na própria tela **Ausências**.
+- Badge/aviso na **Home (`index.html`)** ao abrir o app, para o coordenador ver sem
+  precisar entrar na tela. Contagem via uma RPC leve (ex.: `acolitos_ausencia_pendente_listar`
+  retornando também o total, ou um count dedicado) — só para quem tem o papel de aprovar.
 
 ## Fluxo de dados
 
