@@ -18,7 +18,7 @@ as $$
     'id', id, 'data', data, 'horario', horario, 'comunidade', comunidade
   ) order by data, horario), '[]'::jsonb)
   from public.acolitos_celebracoes
-  where data >= current_date and data <= current_date + 120;
+  where data >= current_date and data <= (current_date + interval '3 months')::date;
 $$;
 
 -- 3) enviar passa a receber celebrações; informante/motivo/contato obrigatórios
