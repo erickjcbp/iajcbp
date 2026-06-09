@@ -111,7 +111,8 @@ async function renderPendentesPublicas(){
     row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--border);';
     const info=document.createElement('div'); info.style.cssText='flex:1;min-width:0;';
     const nm=document.createElement('div'); nm.style.cssText='font-weight:700;font-size:13px;color:var(--text);';
-    nm.textContent = p.nome + ' · ' + fmt(p.data);
+    nm.textContent = p.nome + ' · ' + fmt(p.data) + (p.horario ? ' ' + p.horario : '')
+      + (p.comunidade ? ' · ' + (p.comunidade==='matriz'?'Matriz':'Sto. Antônio') : '');
     const sub=document.createElement('div'); sub.style.cssText='font-size:11px;color:var(--text-muted);word-break:break-word;';
     const partes=[]; if(p.informante_nome) partes.push('por '+p.informante_nome);
     if(p.informante_contato) partes.push(p.informante_contato);
