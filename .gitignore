@@ -2,3 +2,10 @@
 node_modules/
 .DS_Store
 .vercel
+
+# Fotos originais pesadas da landing — só as versões web/ vão pro deploy
+midia/landing/*.JPG
+midia/landing/*.jpg
+midia/landing/*.JPEG
+midia/landing/*.jpeg
+!midia/landing/web/
