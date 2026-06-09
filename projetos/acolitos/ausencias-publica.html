@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Informar Ausência — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fttjgsotuosjfrasttds.supabase.co">
+  <style>
+    :root{ --wine:#200d13; --gold:#8a6a24; --gold-light:#ffd97a; --text:#f7ebe7; --muted:#b88a8f; --border:#5a3a3f; --surface:#2a141a; --danger:#e0607a; --ok:#7ad48a; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:linear-gradient(160deg,#160a0e,#200d13); color:var(--text); min-height:100vh; padding:18px; }
+    .wrap{ max-width:520px; margin:0 auto; }
+    h1{ font-size:20px; margin:8px 0 2px; }
+    .sub{ font-size:13px; color:var(--muted); margin:0 0 18px; line-height:1.5; }
+    label{ display:block; font-size:12px; color:var(--gold-light); margin:14px 0 5px; font-weight:700; }
+    input,textarea{ width:100%; padding:11px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:15px; }
+    input::placeholder,textarea::placeholder{ color:#9a6b70; }
+    .results{ margin-top:6px; border:1px solid var(--border); border-radius:10px; overflow:hidden; display:none; }
+    .results.show{ display:block; }
+    .results button{ width:100%; text-align:left; padding:10px 12px; background:var(--surface); color:var(--text); border:none; border-bottom:1px solid var(--border); font-size:14px; cursor:pointer; }
+    .results button:last-child{ border-bottom:none; }
+    .results button:hover{ background:#33181f; }
+    .chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .chip{ display:inline-flex; align-items:center; gap:6px; background:#33181f; border:1px solid var(--gold); border-radius:20px; padding:5px 10px; font-size:13px; }
+    .chip b{ color:var(--gold-light); font-weight:700; }
+    .chip span{ cursor:pointer; color:var(--danger); font-weight:800; }
+    .datas{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .btn{ width:100%; margin-top:20px; padding:13px; border-radius:12px; border:none; background:linear-gradient(160deg,var(--gold-light),var(--gold)); color:#2a1500; font-weight:800; font-size:15px; cursor:pointer; }
+    .btn:disabled{ opacity:.6; cursor:default; }
+    .btn-sm{ background:#33181f; border:1px solid var(--gold-dim,#7a5a1a); color:var(--gold-light); border-radius:8px; padding:8px 11px; font-size:13px; cursor:pointer; }
+    .msg{ margin-top:12px; font-size:13px; padding:10px 12px; border-radius:10px; display:none; }
+    .msg.err{ display:block; background:#3a1018; color:var(--danger); border:1px solid var(--danger); }
+    .ok-screen{ text-align:center; padding:40px 16px; }
+    .ok-screen .big{ font-size:40px; }
+    .footer{ text-align:center; font-size:11px; color:var(--muted); margin-top:26px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="form-screen">
+      <h1>Informar Ausência</h1>
+      <p class="sub">Avise que um ou mais coroinhas não poderão servir em determinadas datas. A coordenação confirma depois.</p>
+
+      <label>Quem vai faltar?</label>
+      <input id="busca" type="text" placeholder="digite o nome (mín. 2 letras)…" autocomplete="off">
+      <div id="results" class="results"></div>
+      <div id="chips" class="chips"></div>
+
+      <label>Em quais datas?</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input id="data-in" type="date">
+        <button type="button" class="btn-sm" id="add-data">Adicionar</button>
+      </div>
+      <div id="datas" class="datas"></div>
+
+      <label>Seu nome (quem está informando)</label>
+      <input id="informante" type="text" placeholder="opcional" autocomplete="off">
+      <label>Motivo</label>
+      <input id="motivo" type="text" placeholder="opcional (ex.: viagem, doença)" autocomplete="off">
+      <label>Contato (telefone)</label>
+      <input id="contato" type="text" placeholder="opcional" autocomplete="off">
+
+      <div id="msg" class="msg"></div>
+      <button id="enviar" class="btn">Enviar aviso</button>
+      <div class="footer">Paróquia Jesus Cristo Bom Pastor — Limeira/SP</div>
+    </div>
+
+    <div id="ok-screen" class="ok-screen" style="display:none;">
+      <div class="big">✅</div>
+      <h1>Aviso recebido!</h1>
+      <p class="sub" id="ok-txt">A coordenação vai confirmar. Obrigado!</p>
+      <button class="btn" onclick="location.reload()">Informar outra ausência</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+  <script>
+    const SUPABASE_URL='https://fttjgsotuosjfrasttds.supabase.co';
+    const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGpnc290dW9zamZyYXN0dGRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MzU3NjUsImV4cCI6MjA5NTExMTc2NX0.BvofcR2cIXP7Bc3r2V0VOgc-JXPefX7JGGwtzv0d_eA';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const selMembros = new Map();  // id -> nome
+    const selDatas = new Set();    // 'YYYY-MM-DD'
+    const $ = id => document.getElementById(id);
+
+    function showErr(t){ const m=$('msg'); m.textContent=t; m.className='msg err'; }
+    function clearErr(){ const m=$('msg'); m.className='msg'; m.textContent=''; }
+
+    // ── BUSCA (debounce) ──
+    let buscaT=null;
+    $('busca').addEventListener('input', e=>{
+      clearTimeout(buscaT);
+      const q=e.target.value.trim();
+      if(q.length<2){ $('results').classList.remove('show'); $('results').innerHTML=''; return; }
+      buscaT=setTimeout(()=>buscar(q), 250);
+    });
+    async function buscar(q){
+      const { data, error } = await sb.rpc('acolitos_ausencia_publica_buscar', { p_q:q });
+      const box=$('results'); box.innerHTML='';
+      if(error || !Array.isArray(data) || !data.length){ box.classList.remove('show'); return; }
+      data.forEach(m=>{
+        const b=document.createElement('button'); b.textContent=m.nome;
+        b.onclick=()=>{ selMembros.set(m.id, m.nome); renderChips(); box.classList.remove('show'); $('busca').value=''; };
+        box.appendChild(b);
+      });
+      box.classList.add('show');
+    }
+    function renderChips(){
+      const c=$('chips'); c.innerHTML='';
+      selMembros.forEach((nome,id)=>{
+        const chip=document.createElement('span'); chip.className='chip';
+        chip.innerHTML='<b></b><span>×</span>';
+        chip.querySelector('b').textContent=nome;
+        chip.querySelector('span').onclick=()=>{ selMembros.delete(id); renderChips(); };
+        c.appendChild(chip);
+      });
+    }
+
+    // ── DATAS ──
+    $('add-data').onclick=()=>{
+      const v=$('data-in').value; if(!v) return;
+      selDatas.add(v); $('data-in').value=''; renderDatas();
+    };
+    function renderDatas(){
+      const c=$('datas'); c.innerHTML='';
+      Array.from(selDatas).sort().forEach(d=>{
+        const [y,mo,da]=d.split('-');
+        const chip=document.createElement('span'); chip.className='chip';
+        chip.innerHTML='<b></b><span>×</span>';
+        chip.querySelector('b').textContent=da+'/'+mo+'/'+y;
+        chip.querySelector('span').onclick=()=>{ selDatas.delete(d); renderDatas(); };
+        c.appendChild(chip);
+      });
+    }
+
+    // ── ENVIO ──
+    $('enviar').onclick=async ()=>{
+      clearErr();
+      if(!selMembros.size){ showErr('Selecione ao menos um coroinha.'); return; }
+      if(!selDatas.size){ showErr('Adicione ao menos uma data.'); return; }
+      const btn=$('enviar'); btn.disabled=true; btn.textContent='Enviando...';
+      const { data, error } = await sb.rpc('acolitos_ausencia_publica_enviar', {
+        p_membros: Array.from(selMembros.keys()),
+        p_datas: Array.from(selDatas),
+        p_motivo: $('motivo').value.trim() || null,
+        p_informante: $('informante').value.trim() || null,
+        p_contato: $('contato').value.trim() || null
+      });
+      if(error || (data && data.erro)){
+        showErr('Não foi possível enviar. Tente de novo.');
+        btn.disabled=false; btn.textContent='Enviar aviso'; return;
+      }
+      $('ok-txt').textContent = (data.criadas||0)+' aviso(s) enviado(s). A coordenação vai confirmar. Obrigado!';
+      $('form-screen').style.display='none';
+      $('ok-screen').style.display='block';
+    };
+  </script>
+</body>
+</html>
