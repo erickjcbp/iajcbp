@@ -86,7 +86,54 @@ async function init() {
   await carregarMotivos(); // motivos do Config (fallback: padrões)
   // equipe E cerimoniários podem registrar ausência de outros (a RLS libera os dois)
   const _r = ctx.membership.role;
-  (EQUIPE_ROLES.includes(_r) || _r === 'cerimonario') ? renderViewEquipe() : renderViewMembro();
+  if (EQUIPE_ROLES.includes(_r) || _r === 'cerimonario') { await renderViewEquipe(); renderPendentesPublicas(); }
+  else renderViewMembro();
+}
+
+// Avisos recebidos pela página pública (/ausencias), aguardando confirmação.
+async function renderPendentesPublicas(){
+  const { data } = await sb.rpc('acolitos_ausencia_pendente_listar');
+  const pend = (data && data.pendentes) || [];
+  if(!pend.length) return;
+  const main = document.getElementById('main-content');
+  const card = document.createElement('div'); card.className='section-card';
+  card.style.cssText = (card.style.cssText||'') + ';border:1px solid var(--gold);';
+  const h = document.createElement('div');
+  h.style.cssText='font-family:Sora,sans-serif;font-weight:700;font-size:14px;color:var(--gold);margin-bottom:8px;';
+  h.textContent = '📋 Avisos recebidos (' + pend.length + ') — confirmar';
+  card.appendChild(h);
+
+  const fmt = d => { const [y,m,da]=String(d).split('-'); return da+'/'+m+'/'+y; };
+  pend.forEach(p=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--border);';
+    const info=document.createElement('div'); info.style.cssText='flex:1;min-width:0;';
+    const nm=document.createElement('div'); nm.style.cssText='font-weight:700;font-size:13px;color:var(--text);';
+    nm.textContent = p.nome + ' · ' + fmt(p.data);
+    const sub=document.createElement('div'); sub.style.cssText='font-size:11px;color:var(--text-muted);word-break:break-word;';
+    const partes=[]; if(p.informante_nome) partes.push('por '+p.informante_nome);
+    if(p.informante_contato) partes.push(p.informante_contato);
+    if(p.motivo) partes.push(p.motivo);
+    sub.textContent = partes.join(' · ') || 'sem detalhes';
+    info.append(nm,sub);
+    const decidir = async (acao)=>{
+      const { data:r } = await sb.rpc('acolitos_ausencia_pendente_decidir',{ p_ids:[p.id], p_acao:acao });
+      if(r && r.ok){ row.remove();
+        const restantes = card.querySelectorAll('div[data-pend]').length;
+        h.textContent = '📋 Avisos recebidos (' + restantes + ') — confirmar';
+        if(!restantes) card.remove();
+      } else { alert('Erro ao processar.'); }
+    };
+    const bOk=document.createElement('button'); bOk.textContent='Aprovar';
+    bOk.style.cssText='font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;border:1px solid var(--gold-dim);background:var(--surface2);color:var(--gold-light);';
+    bOk.onclick=()=>decidir('aprovar');
+    const bNo=document.createElement('button'); bNo.textContent='Rejeitar';
+    bNo.style.cssText='font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;border:1px solid var(--danger);background:var(--surface2);color:var(--danger-text);';
+    bNo.onclick=()=>decidir('rejeitar');
+    row.setAttribute('data-pend','1');
+    row.append(info,bOk,bNo); card.appendChild(row);
+  });
+  main.insertBefore(card, main.firstChild);
 }
 
 // Rótulo amigável de uma celebração (missa)
