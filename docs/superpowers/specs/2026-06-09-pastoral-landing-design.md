@@ -39,7 +39,10 @@ crianças/jovens e famílias a participar, com caminhos claros de contato.
 1. **Hero** — fundo com foto (de `midia/landing/`) + vinheta + ornamento dourado.
    Brasão, nome **"Somos do Altar"**, subtítulo "Pastoral dos Coroinhas · Paróquia Jesus
    Cristo Bom Pastor", **tagline espiritual** (ex.: "Servir ao altar é servir a Cristo"),
-   e dois botões: **[Quero servir]** e **[Conhecer a pastoral]** (âncora pro restante).
+   e botões: **[Quero servir]**, **[Conhecer a pastoral]** (âncora pro restante) e um botão
+   mais discreto **[📷 Álbum de fotos]** → pasta pública do Google Drive
+   (`https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link`),
+   `target="_blank"`. (Também repetido como "Ver todas as fotos" no fim da Galeria.)
 2. **Quem somos** — parágrafo curto de missão/espiritualidade + um versículo (ex.: Sl 84,11).
 3. **O chamado (3 pilares)** — Servir · Formar-se · Fraternidade, cada um com um ícone
    tirado de `midia/elementos/` (ex.: cálice, cruz, sino) e uma frase curta.
