@@ -21,6 +21,7 @@ Na aba **"Quero servir"** do login, oferecer dois caminhos de cadastro:
 | Campos do filho | Nome (obrigatório), data de nascimento, comunidade. Resto fica para o cadastro no app + aprovação. |
 | Escalar x ver | **Escalados juntos por padrão** (`escalar_com_irmao = true`) — reusa o seletor de família como está. Coordenação pode mudar depois. |
 | Aprovação | Cada filho entra no CRM (`etapa='aprovacao_cadastro'`), igual ao fluxo solo. |
+| Pais ministros | Toggles "mãe é ministra"/"pai é ministro" **reaproveitam** `nome_mae`/`nome_pai` (sem redigitar) → preenchem `nome_*_ministro`. Colunas já existem. |
 
 ## Contexto técnico apurado
 
@@ -49,6 +50,9 @@ Quem vai servir ao altar?
   - Nome do pai (texto)
   - Telefone/WhatsApp de contato (texto) + checkbox "é WhatsApp"
   - Contato principal: ( ) mãe ( ) pai
+  - [ ] Mãe é ministra na paróquia?  [ ] Pai é ministro?
+    - **Reaproveitamento de nomes:** ao marcar, NÃO pede o nome de novo — usa o `nome_mae`/`nome_pai` já preenchido acima. Se algum nome ainda estiver vazio, o campo correspondente fica desabilitado com a dica "preencha o nome acima primeiro".
+    - Se qualquer um marcado, mostra um campo opcional **Comunidade dos ministros** (`comunidade_ministro`).
 
   **Passo 2 — Filho(s)**
   - Bloco repetível por filho: Nome completo · Data de nascimento · Comunidade (matriz/santo_antonio/outra)
@@ -79,7 +83,8 @@ Novas colunas em `acolitos_membros`:
 ```json
 {
   "senha": "…",
-  "pais": { "nome_mae": "…", "nome_pai": "…", "celular": "…", "whatsapp": true, "contato_principal": "mae" },
+  "pais": { "nome_mae": "…", "nome_pai": "…", "celular": "…", "whatsapp": true, "contato_principal": "mae",
+            "mae_ministra": false, "pai_ministro": false, "comunidade_ministro": "" },
   "filhos": [
     { "nome": "…", "usuario": "joao.silva", "data_nascimento": "2014-05-01", "comunidade": "matriz" }
   ]
@@ -92,7 +97,7 @@ Fluxo (service role key, `SUPABASE_SERVICE_ROLE_KEY`):
 3. Para cada filho, na ordem:
    a. Resolver usuário final: se `synthEmail(usuario)` já existe no Auth, anexar sufixo numérico (`joao.silva2`, `joao.silva3`…). Retornar o usuário final.
    b. Criar usuário Auth (`email_confirm:true`, metadata `nome`).
-   c. Inserir `acolitos_membros`: `user_id`, `nome`, `data_nascimento`, `comunidade`, `status='ativo'`, `grupo_irmaos`, `escalar_com_irmao=true`, `nome_mae`, `nome_pai`, `celular_responsavel`, `responsavel_whatsapp`, `contato_principal`, `responsavel` (= nome do contato principal).
+   c. Inserir `acolitos_membros`: `user_id`, `nome`, `data_nascimento`, `comunidade`, `status='ativo'`, `grupo_irmaos`, `escalar_com_irmao=true`, `nome_mae`, `nome_pai`, `celular_responsavel`, `responsavel_whatsapp`, `contato_principal`, `responsavel` (= nome do contato principal). **Campos de ministro derivados (sem redigitar):** se `pai_ministro` → `tem_pai_ministro=true`, `nome_pai_ministro = nome_pai`; se `mae_ministra` → `tem_mae_ministro=true`, `nome_mae_ministro = nome_mae`; `comunidade_ministro` quando informado. (Colunas `*_ministro` já existem — sem migration.)
    d. Inserir `acolitos_crm` com `membro_id` e `etapa='aprovacao_cadastro'`.
 4. **Rollback ao falhar:** se qualquer filho falhar no meio, desfazer os já criados nesta chamada (deletar membros + usuários Auth criados) e retornar erro indicando o filho problemático. (Operação não é transação SQL única por envolver Auth + REST; rollback é compensatório no handler.)
 5. Resposta: `{ ok:true, usuarios:["joao.silva","maria.silva"] }`.
