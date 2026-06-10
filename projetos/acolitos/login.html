@@ -100,6 +100,38 @@
     .hint{ font-size:12px; color:var(--text-muted); font-weight:600; margin:-6px 0 16px; line-height:1.5; font-style:italic; }
     .footer{ margin-top:22px; font-size:11px; color:var(--text-muted); letter-spacing:1px; text-align:center; z-index:1; }
     @media(max-width:430px){ .card{ padding:26px 20px; } .crest{ height:88px; } .hero h1{ font-size:18px; } }
+
+    /* Cabeçalho de seção do wizard */
+    .sec-h{ font-family:'Oxanium',sans-serif; font-weight:700; font-size:12px; letter-spacing:1.5px;
+      text-transform:uppercase; color:var(--gold); margin:20px 0 12px; padding-bottom:7px;
+      border-bottom:1px solid var(--border); }
+    /* Controle segmentado (escolha sempre visível) */
+    .seg{ display:flex; gap:6px; margin-bottom:18px; }
+    .seg-opt{ flex:1; position:relative; margin:0; }
+    .seg-opt input{ position:absolute; opacity:0; width:0; height:0; margin:0; }
+    .seg-opt span{ display:block; text-align:center; padding:11px 6px; cursor:pointer;
+      background:var(--surface3); border:1px solid var(--border-wine); color:var(--text-muted);
+      font-family:'Sora',sans-serif; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+      border-radius:2px; transition:all .18s; }
+    .seg-opt span:hover{ color:var(--text); }
+    .seg-opt input:checked + span{ background:linear-gradient(180deg,rgba(255,38,54,.22),rgba(255,38,54,.06));
+      border-color:var(--red-soft); color:var(--gold-light); box-shadow:inset 0 -2px 0 var(--red-soft); }
+    .seg-opt input:focus-visible + span{ box-shadow:0 0 0 1px var(--red-soft); }
+    /* Checkbox customizado */
+    .chk{ display:flex; align-items:center; gap:11px; margin-bottom:14px; cursor:pointer;
+      font-family:'Sora',sans-serif; font-size:13px; font-weight:600; color:var(--text);
+      letter-spacing:.2px; text-transform:none; }
+    .chk input{ position:absolute; opacity:0; width:0; height:0; }
+    .chk .box{ flex:0 0 auto; width:22px; height:22px; border:1px solid var(--border-wine);
+      background:var(--surface3); border-radius:3px; position:relative; transition:all .18s; }
+    .chk input:checked + .box{ background:linear-gradient(180deg,var(--gold),var(--gold-dim)); border-color:var(--gold); }
+    .chk input:checked + .box::after{ content:''; position:absolute; left:7px; top:3px; width:5px; height:10px;
+      border:solid #1a0a0e; border-width:0 2px 2px 0; transform:rotate(45deg); }
+    .chk input:focus-visible + .box{ box-shadow:0 0 0 2px var(--red-glow); }
+    .chk input:disabled + .box{ opacity:.4; }
+    .chk:has(input:disabled){ opacity:.5; cursor:not-allowed; }
+    /* Bloco de filho */
+    .filho-block label{ margin-top:2px; }
   </style>
 </head>
 <body>
@@ -155,31 +187,31 @@
     <div id="screen-cadastro-familia" class="screen">
       <p class="hint">Cadastro dos pais e do(s) filho(s) que vão servir.</p>
 
-      <div style="font-weight:700;margin:10px 0 4px">Dados dos pais</div>
+      <div class="sec-h">Dados dos pais</div>
       <label>Nome da mãe</label>
       <input type="text" id="cf-nome-mae" oninput="syncMinistro()">
       <label>Nome do pai</label>
       <input type="text" id="cf-nome-pai" oninput="syncMinistro()">
       <label>Telefone/WhatsApp de contato</label>
       <input type="text" id="cf-celular" placeholder="(19) 90000-0000">
-      <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="cf-whatsapp" checked style="width:auto"> É WhatsApp</label>
+      <label class="chk"><input type="checkbox" id="cf-whatsapp" checked><span class="box"></span>É WhatsApp</label>
       <label>Contato principal</label>
-      <div style="display:flex;gap:16px;margin-bottom:8px">
-        <label style="display:flex;align-items:center;gap:6px"><input type="radio" name="cf-contato" value="mae" checked style="width:auto"> Mãe</label>
-        <label style="display:flex;align-items:center;gap:6px"><input type="radio" name="cf-contato" value="pai" style="width:auto"> Pai</label>
+      <div class="seg">
+        <label class="seg-opt"><input type="radio" name="cf-contato" value="mae" checked><span>Mãe</span></label>
+        <label class="seg-opt"><input type="radio" name="cf-contato" value="pai"><span>Pai</span></label>
       </div>
-      <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="cf-mae-ministra" onchange="syncMinistro()" style="width:auto"> Mãe é ministra na paróquia</label>
-      <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="cf-pai-ministro" onchange="syncMinistro()" style="width:auto"> Pai é ministro na paróquia</label>
+      <label class="chk"><input type="checkbox" id="cf-mae-ministra" onchange="syncMinistro()"><span class="box"></span>Mãe é ministra na paróquia</label>
+      <label class="chk"><input type="checkbox" id="cf-pai-ministro" onchange="syncMinistro()"><span class="box"></span>Pai é ministro na paróquia</label>
       <div id="cf-ministro-comunidade-wrap" style="display:none">
         <label>Comunidade dos ministros</label>
         <input type="text" id="cf-comunidade-ministro">
       </div>
 
-      <div style="font-weight:700;margin:14px 0 4px">Filho(s) que vão servir</div>
+      <div class="sec-h">Filho(s) que vão servir</div>
       <div id="cf-filhos"></div>
       <button class="btn" type="button" style="background:transparent;border:1px solid var(--gold,#8a6a24)" onclick="addFilho()">+ Adicionar outro filho</button>
 
-      <div style="font-weight:700;margin:14px 0 4px">Senha de acesso</div>
+      <div class="sec-h">Senha de acesso</div>
       <p class="hint">Criaremos uma conta por filho (usuário sugerido do nome). Qualquer uma enxerga todos os irmãos para acompanhar a jornada.</p>
       <label>Senha única (todas as contas)</label>
       <input type="password" id="cf-senha" placeholder="mínimo 6 caracteres">
@@ -276,18 +308,25 @@
     if(userInp.dataset.touched) return;          // não sobrescreve se o usuário editou
     userInp.value = sugereUsuario(inp.value);
   }
+  let _filhoSeq = 0;
   function addFilho(){
     const wrap = document.getElementById('cf-filhos');
     const n = wrap.children.length + 1;
+    const seq = ++_filhoSeq;
     const div = document.createElement('div');
     div.className = 'filho-block';
-    div.style.cssText = 'border:1px solid var(--gold,#8a6a24);border-radius:8px;padding:10px;margin-bottom:10px';
+    div.style.cssText = 'border:1px solid var(--border-wine);border-radius:4px;padding:12px 12px 4px;margin-bottom:12px;background:rgba(255,255,255,.02)';
     div.innerHTML =
-      '<div style="display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:6px">Filho '+n+
-      ' <button type="button" style="background:none;border:none;color:#c66;cursor:pointer;font-size:12px" onclick="removeFilho(this)">remover</button></div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+      '<span style="font-family:Oxanium,sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--gold)">Filho '+n+'</span>'+
+      ' <button type="button" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;letter-spacing:.5px;text-transform:uppercase" onclick="removeFilho(this)">remover</button></div>'+
       '<label>Nome completo</label><input type="text" class="cf-filho-nome" oninput="sugereNoBloco(this)">'+
       '<label>Data de nascimento</label><input type="date" class="cf-filho-nasc">'+
-      '<label>Comunidade</label><select class="cf-filho-com"><option value="matriz">Matriz</option><option value="santo_antonio">Sto. Antônio</option><option value="outra">Outra</option></select>'+
+      '<label>Comunidade</label><div class="seg cf-filho-com">'+
+        '<label class="seg-opt"><input type="radio" name="cf-com-'+seq+'" value="matriz" checked><span>Matriz</span></label>'+
+        '<label class="seg-opt"><input type="radio" name="cf-com-'+seq+'" value="santo_antonio"><span>Sto. Antônio</span></label>'+
+        '<label class="seg-opt"><input type="radio" name="cf-com-'+seq+'" value="outra"><span>Outra</span></label>'+
+      '</div>'+
       '<label>Usuário sugerido</label><input type="text" class="cf-filho-user" placeholder="ex: joao.silva" oninput="this.dataset.touched=1">';
     wrap.appendChild(div);
   }
@@ -295,7 +334,7 @@
     const wrap = document.getElementById('cf-filhos');
     if(wrap.children.length <= 1){ msg('msg-familia','É preciso ao menos um filho.','error'); return; }
     btn.closest('.filho-block').remove();
-    [...wrap.children].forEach((b,i)=>{ b.firstChild.childNodes[0].nodeValue = 'Filho '+(i+1)+' '; });
+    [...wrap.children].forEach((b,i)=>{ b.firstChild.firstElementChild.textContent = 'Filho '+(i+1); });
   }
   function syncMinistro(){
     const mae = document.getElementById('cf-nome-mae').value.trim();
@@ -321,7 +360,7 @@
       if(!nome){ msg('msg-familia','Preencha o nome de todos os filhos.','error'); return; }
       let usuario = b.querySelector('.cf-filho-user').value.trim();
       if(!usuario) usuario = sugereUsuario(nome);
-      filhos.push({ nome, usuario, data_nascimento: b.querySelector('.cf-filho-nasc').value || null, comunidade: b.querySelector('.cf-filho-com').value });
+      filhos.push({ nome, usuario, data_nascimento: b.querySelector('.cf-filho-nasc').value || null, comunidade: b.querySelector('.cf-filho-com input:checked').value });
     }
     const pais = {
       nome_mae: nomeMae, nome_pai: nomePai,
