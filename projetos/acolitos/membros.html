@@ -185,7 +185,7 @@ async function init() {
 
 async function loadMembros() {
   const { data: membros } = await sbAdmin
-    .from('acolitos_membros').select('*').eq('status', verArquivados ? 'inativo' : 'ativo').order('nome');
+    .from('acolitos_membros').select('*').eq('status', verArquivados ? 'afastado' : 'ativo').order('nome');
   const { data: modulo } = await sbAdmin
     .from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
   if (modulo) {
@@ -329,7 +329,7 @@ function abrirNovoMembro() {
 
 async function arquivarMembro(m) {
   if (!confirm('Arquivar ' + (m.apelido || m.nome) + '?\nSai das listas e da escala, mas o cadastro e o histórico são mantidos. Você pode restaurar depois.')) return;
-  const { error } = await sbAdmin.from('acolitos_membros').update({ status: 'inativo' }).eq('id', m.id);
+  const { error } = await sbAdmin.from('acolitos_membros').update({ status: 'afastado' }).eq('id', m.id);
   if (error) { alert('Não foi possível arquivar.'); return; }
   fecharFicha(); await loadMembros();
 }
@@ -589,7 +589,7 @@ async function renderTab(tab) {
 
     // Arquivar / restaurar
     const dz = document.createElement('div'); dz.style.cssText = 'margin-top:22px;padding-top:14px;border-top:1px solid var(--border);';
-    if (m.status === 'inativo') {
+    if (m.status === 'afastado') {
       const b = document.createElement('button'); b.className = 'btn-sm green'; b.textContent = '♻️ Restaurar membro'; b.onclick = () => restaurarMembro(m); dz.appendChild(b);
       const note = document.createElement('div'); note.style.cssText = 'font-size:11px;color:var(--text-muted);margin-top:6px;'; note.textContent = 'Membro arquivado — não aparece nas listas ativas nem na escala.'; dz.appendChild(note);
     } else {

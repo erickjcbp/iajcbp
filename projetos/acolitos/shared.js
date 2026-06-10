@@ -163,7 +163,7 @@ async function initModulo(requiredRoles = null) {
   let grupoIrmaos = [];
   if (conta && conta.grupo_irmaos && conta.escalar_com_irmao) {
     const { data: irmaos } = await sb
-      .from('acolitos_membros').select('*').eq('grupo_irmaos', conta.grupo_irmaos);
+      .from('acolitos_membros').select('*').eq('grupo_irmaos', conta.grupo_irmaos).eq('status', 'ativo');
     const juntos = (irmaos || []).filter(m => m.escalar_com_irmao);
     if (juntos.length >= 2) {
       juntos.sort((a, b) => (a.data_nascimento || '9999').localeCompare(b.data_nascimento || '9999'));
