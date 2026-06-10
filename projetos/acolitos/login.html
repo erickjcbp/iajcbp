@@ -128,8 +128,16 @@
       <div class="msg" id="msg-entrar"></div>
     </div>
 
-    <!-- CADASTRO -->
+    <!-- CADASTRO — escolha do caminho -->
     <div id="screen-cadastro" class="screen">
+      <p class="hint">Quem vai servir ao altar?</p>
+      <button class="btn" onclick="showScreen('cadastro-solo')">Eu vou servir</button>
+      <button class="btn" style="background:transparent;border:1px solid var(--gold,#8a6a24)" onclick="showScreen('cadastro-familia')">Meu filho(a) vai servir</button>
+      <a class="link-action" onclick="showScreen('entrar')">Já tenho conta — entrar</a>
+    </div>
+
+    <!-- CADASTRO — eu vou servir (fluxo atual) -->
+    <div id="screen-cadastro-solo" class="screen">
       <p class="hint">Crie seu acesso para ingressar na pastoral. Depois você preenche seu cadastro e a coordenação aprova.</p>
       <label>Nome completo</label>
       <input type="text" id="ca-nome" placeholder="Seu nome completo">
@@ -139,7 +147,7 @@
       <input type="password" id="ca-senha" placeholder="mínimo 6 caracteres"
              onkeydown="if(event.key==='Enter')criarConta()">
       <button class="btn" id="btn-cadastro" onclick="criarConta()">Criar conta e continuar</button>
-      <a class="link-action" onclick="showScreen('entrar')">Já tenho conta — entrar</a>
+      <a class="link-action" onclick="showScreen('cadastro')">← Voltar</a>
       <div class="msg" id="msg-cadastro"></div>
     </div>
 
@@ -165,7 +173,7 @@
     document.querySelectorAll('.screen').forEach(e=>e.classList.remove('active'));
     document.getElementById('screen-'+s).classList.add('active');
     document.getElementById('t-entrar').classList.toggle('active', s==='entrar');
-    document.getElementById('t-cadastro').classList.toggle('active', s==='cadastro');
+    document.getElementById('t-cadastro').classList.toggle('active', s.indexOf('cadastro')===0);
   }
   function msg(id,text,tipo){ const el=document.getElementById(id); el.className='msg '+tipo; el.textContent=text; }
 
