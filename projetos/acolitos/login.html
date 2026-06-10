@@ -262,6 +262,91 @@
   // Se já está logado, vai direto para a home do módulo
   sb.auth.getSession().then(({ data:{ session } })=>{ if(session) window.location.href='index.html'; });
 
+  // ── Cadastro família ───────────────────────────────────────────
+  function sugereUsuario(nome){
+    const limpo = String(nome||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
+    const toks = limpo.split(/\s+/).filter(Boolean);
+    if(!toks.length) return '';
+    const base = toks.length===1 ? toks[0] : (toks[0]+'.'+toks[toks.length-1]);
+    return base.replace(/[^a-z0-9._-]/g,'');
+  }
+  function sugereNoBloco(inp){
+    const bloco = inp.closest('.filho-block');
+    const userInp = bloco.querySelector('.cf-filho-user');
+    if(userInp.dataset.touched) return;          // não sobrescreve se o usuário editou
+    userInp.value = sugereUsuario(inp.value);
+  }
+  function addFilho(){
+    const wrap = document.getElementById('cf-filhos');
+    const n = wrap.children.length + 1;
+    const div = document.createElement('div');
+    div.className = 'filho-block';
+    div.style.cssText = 'border:1px solid var(--gold,#8a6a24);border-radius:8px;padding:10px;margin-bottom:10px';
+    div.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:6px">Filho '+n+
+      ' <button type="button" style="background:none;border:none;color:#c66;cursor:pointer;font-size:12px" onclick="removeFilho(this)">remover</button></div>'+
+      '<label>Nome completo</label><input type="text" class="cf-filho-nome" oninput="sugereNoBloco(this)">'+
+      '<label>Data de nascimento</label><input type="date" class="cf-filho-nasc">'+
+      '<label>Comunidade</label><select class="cf-filho-com"><option value="matriz">Matriz</option><option value="santo_antonio">Sto. Antônio</option><option value="outra">Outra</option></select>'+
+      '<label>Usuário sugerido</label><input type="text" class="cf-filho-user" placeholder="ex: joao.silva" oninput="this.dataset.touched=1">';
+    wrap.appendChild(div);
+  }
+  function removeFilho(btn){
+    const wrap = document.getElementById('cf-filhos');
+    if(wrap.children.length <= 1){ msg('msg-familia','É preciso ao menos um filho.','error'); return; }
+    btn.closest('.filho-block').remove();
+    [...wrap.children].forEach((b,i)=>{ b.firstChild.childNodes[0].nodeValue = 'Filho '+(i+1)+' '; });
+  }
+  function syncMinistro(){
+    const mae = document.getElementById('cf-nome-mae').value.trim();
+    const pai = document.getElementById('cf-nome-pai').value.trim();
+    const cm = document.getElementById('cf-mae-ministra');
+    const cp = document.getElementById('cf-pai-ministro');
+    cm.disabled = !mae; if(!mae) cm.checked = false;
+    cp.disabled = !pai; if(!pai) cp.checked = false;
+    document.getElementById('cf-ministro-comunidade-wrap').style.display = (cm.checked||cp.checked) ? 'block' : 'none';
+  }
+  async function criarFamilia(){
+    const btn = document.getElementById('btn-cadastro-familia');
+    const senha = document.getElementById('cf-senha').value;
+    const nomeMae = document.getElementById('cf-nome-mae').value.trim();
+    const nomePai = document.getElementById('cf-nome-pai').value.trim();
+    if(!nomeMae && !nomePai){ msg('msg-familia','Informe o nome da mãe ou do pai.','error'); return; }
+    if(senha.length < 6){ msg('msg-familia','A senha deve ter ao menos 6 caracteres.','error'); return; }
+    const blocks = [...document.querySelectorAll('#cf-filhos .filho-block')];
+    if(!blocks.length){ msg('msg-familia','Inclua ao menos um filho.','error'); return; }
+    const filhos = [];
+    for(const b of blocks){
+      const nome = b.querySelector('.cf-filho-nome').value.trim();
+      if(!nome){ msg('msg-familia','Preencha o nome de todos os filhos.','error'); return; }
+      let usuario = b.querySelector('.cf-filho-user').value.trim();
+      if(!usuario) usuario = sugereUsuario(nome);
+      filhos.push({ nome, usuario, data_nascimento: b.querySelector('.cf-filho-nasc').value || null, comunidade: b.querySelector('.cf-filho-com').value });
+    }
+    const pais = {
+      nome_mae: nomeMae, nome_pai: nomePai,
+      celular: document.getElementById('cf-celular').value.trim(),
+      whatsapp: document.getElementById('cf-whatsapp').checked,
+      contato_principal: document.querySelector('input[name=cf-contato]:checked').value,
+      mae_ministra: document.getElementById('cf-mae-ministra').checked,
+      pai_ministro: document.getElementById('cf-pai-ministro').checked,
+      comunidade_ministro: document.getElementById('cf-comunidade-ministro').value.trim()
+    };
+    btn.disabled = true; btn.textContent = 'Criando...';
+    try {
+      const r = await fetch('/api/signup-familia', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ senha, pais, filhos }) });
+      const d = await r.json();
+      if(!r.ok) throw new Error(d.error || 'Erro ao criar cadastro.');
+      msg('msg-familia','Contas criadas! Anote os usuários: '+d.usuarios.join(', ')+'. A senha é a que você definiu. Agora é só entrar.','success');
+      setTimeout(()=>showScreen('entrar'), 5000);
+    } catch(e){
+      msg('msg-familia', e.message || 'Não foi possível concluir o cadastro.','error');
+      btn.disabled = false; btn.textContent = 'Criar contas e continuar';
+    }
+  }
+  // inicializa o wizard com 1 filho e o estado dos toggles de ministro
+  addFilho(); syncMinistro();
+
   // Deep-link da landing: /login.html#cadastro abre direto a aba "Quero servir"
   if (location.hash === '#cadastro') showScreen('cadastro');
 </script>
