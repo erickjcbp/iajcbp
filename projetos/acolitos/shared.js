@@ -174,6 +174,14 @@ async function initModulo(requiredRoles = null) {
     }
   }
 
+  // etapa atual do CRM do membro — gateia "Complete seu cadastro" (só após aprovado)
+  if (membro && membro.id) {
+    const { data: _crm } = await sb.from('acolitos_crm')
+      .select('etapa').eq('membro_id', membro.id)
+      .order('etapa_iniciada_em', { ascending: false }).limit(1).maybeSingle();
+    membro._crmEtapa = _crm ? _crm.etapa : null;
+  }
+
   queueNotificacoes(membro);
 
   return { user: session.user, membership, membro, conta, grupoIrmaos };
@@ -275,7 +283,9 @@ function queueNotificacoes(membro) {
   }
   // 2) Cadastro incompleto — pede pra completar (prioridade alta; 1x por sessão de acesso)
   const faltando = camposIncompletos(membro);
-  if (faltando.length && !sessionStorage.getItem('cadastro-prompt-' + membro.id)) {
+  // pendente de aprovação (etapa inicial do CRM) → não pede dados ainda; sem CRM = membro já estabelecido (mostra normal)
+  const aguardandoAprovacao = membro._crmEtapa === 'aprovacao_cadastro';
+  if (faltando.length && !aguardandoAprovacao && !sessionStorage.getItem('cadastro-prompt-' + membro.id)) {
     sessionStorage.setItem('cadastro-prompt-' + membro.id, '1');
     enqueueNotif(50, (done) => showCompletarCadastroPrompt(membro, faltando, done));
   }
