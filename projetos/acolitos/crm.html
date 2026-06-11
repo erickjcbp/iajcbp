@@ -301,14 +301,15 @@ function abrirModal(entry) {
 async function recusarCadastro() {
   if (!pendingEntry) return;
   const nome = pendingEntry.acolitos_membros?.nome || 'este cadastro';
-  if (!confirm('RECUSAR e APAGAR o cadastro de ' + nome + '?\n\nRemove o membro, o funil e todo o histórico — não dá pra desfazer.\n(Para só tirar do funil sem apagar, use "Tirar do funil".)')) return;
-  const { data: mrow } = await sbAdmin.from('acolitos_membros').select('user_id').eq('id', pendingEntry.membro_id).maybeSingle();
-  if (mrow && mrow.user_id) {
-    const { data: modulo } = await sbAdmin.from('pastoral_modules').select('id').eq('slug', 'acolitos').maybeSingle();
-    if (modulo) await sbAdmin.from('pastoral_members').delete().eq('user_id', mrow.user_id).eq('module_id', modulo.id);
-  }
-  const { error } = await sbAdmin.from('acolitos_membros').delete().eq('id', pendingEntry.membro_id); // cascata remove crm/histórico/etc.
-  if (error) { alert('Não foi possível apagar (o membro pode estar vinculado em escalas). Use "Tirar do funil" ou arquive em Membros.'); return; }
+  if (!confirm('RECUSAR e APAGAR o cadastro de ' + nome + '?\n\nRemove o membro, o funil, o histórico E a conta de acesso — não dá pra desfazer.\n(Para só tirar do funil sem apagar, use "Tirar do funil".)')) return;
+  const { data: { session } } = await sb.auth.getSession();
+  const r = await fetch('/api/acolito-admin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (session ? session.access_token : '') },
+    body: JSON.stringify({ action: 'reject', membro_id: pendingEntry.membro_id })
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { alert(d.error || 'Não foi possível apagar.'); return; }
   fecharModal(); pendingEntry = null; await loadCrm();
 }
 
