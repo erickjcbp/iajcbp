@@ -187,7 +187,7 @@ function abrirAddSetor(slug, label) {
   const list = document.createElement('div'); list.className = 'pick-list'; modal.appendChild(list);
   function pop() {
     const q = busca.value.toLowerCase(); list.textContent = '';
-    membros.filter(m => !(m.setores || []).includes(slug) && (m.nome || '').toLowerCase().includes(q)).slice(0, 60).forEach(m => {
+    membros.filter(m => !(m.setores || []).includes(slug) && semAcento(m.nome).includes(semAcento(q))).slice(0, 60).forEach(m => {
       const row = document.createElement('div'); row.className = 'pick-row';
       row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 30, { nivelSlug: m.nivel||'aspirante' }));
       const info = document.createElement('div'); info.style.flex = '1';
@@ -230,7 +230,7 @@ function abrirAddMembro(casa) {
   function popList() {
     const q = busca.value.toLowerCase();
     list.textContent = '';
-    membros.filter(m => m.casa_id !== casa.id && (m.nome||'').toLowerCase().includes(q)).slice(0, 60).forEach(m => {
+    membros.filter(m => m.casa_id !== casa.id && semAcento(m.nome).includes(semAcento(q))).slice(0, 60).forEach(m => {
       const row = document.createElement('div'); row.className = 'pick-row';
       row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 30, { nivelSlug: m.nivel||'aspirante' }));
       const info = document.createElement('div'); info.style.flex = '1';

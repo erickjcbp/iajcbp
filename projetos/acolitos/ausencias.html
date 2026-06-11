@@ -503,7 +503,7 @@ async function abrirRegistroAusencia() {
   function pintaLista() {
     const termo = buscaM.value.trim().toLowerCase(); listaM.textContent = '';
     if (!termo) return;
-    membros.filter(m => !selecionados.some(s => s.id === m.id) && ((m.apelido || '').toLowerCase().includes(termo) || (m.nome || '').toLowerCase().includes(termo)))
+    membros.filter(m => !selecionados.some(s => s.id === m.id) && (semAcento(m.apelido).includes(semAcento(termo)) || semAcento(m.nome).includes(semAcento(termo))))
       .slice(0, 12).forEach(m => { const it = document.createElement('div'); it.style.cssText = 'padding:8px 6px;font-size:13px;color:var(--text);border-bottom:1px solid var(--border);cursor:pointer;'; it.textContent = m.apelido || m.nome; it.onclick = () => add(m); listaM.appendChild(it); });
   }
   function popMissas() {

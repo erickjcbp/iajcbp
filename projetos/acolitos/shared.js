@@ -1146,6 +1146,11 @@ function waLink(tel) {
   if (d.length < 10) return null;
   return 'https://wa.me/' + (d.startsWith('55') ? d : '55' + d);
 }
+// Normaliza texto para busca: minúsculas, sem acento, sem espaços nas pontas.
+// "João" e "joao" passam a casar; usado em todos os campos de busca de nome.
+function semAcento(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
 // Contato principal por idade: 13+ usa o número do próprio membro; menor usa o do
 // responsável (celular da mãe). Sempre cai num número válido se houver.
 function waMembro(m) {

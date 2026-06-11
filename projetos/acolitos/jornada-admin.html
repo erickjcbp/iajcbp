@@ -348,7 +348,7 @@ async function renderDesenvolvimento(main) {
   function desenha() {
     list.textContent = ''; const q = busca.value.trim().toLowerCase(); const nf = selNivel.value;
     const filtrados = _devMembros.filter(m =>
-      (!q || (m.nome || '').toLowerCase().includes(q) || (m.apelido || '').toLowerCase().includes(q)) &&
+      (!q || semAcento(m.nome).includes(semAcento(q)) || semAcento(m.apelido).includes(semAcento(q))) &&
       (!nf || (m.nivel || 'aspirante') === nf));
     let algum = false;
     LIGAS.forEach(([label, niveis]) => {

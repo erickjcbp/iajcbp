@@ -294,7 +294,7 @@ async function renderAvulsos(main, celebId){
     if(!termo) return;
     const scheduled=new Set(escalasAtuais.map(e=>e.membro_id));
     const added=new Set(avulsos.map(a=>a.membro_id));
-    membrosCh.filter(m=> !scheduled.has(m.id) && !added.has(m.id) && (((m.apelido||'').toLowerCase().includes(termo)) || ((m.nome||'').toLowerCase().includes(termo))))
+    membrosCh.filter(m=> !scheduled.has(m.id) && !added.has(m.id) && (semAcento(m.apelido).includes(semAcento(termo)) || semAcento(m.nome).includes(semAcento(termo))))
       .slice(0,12).forEach(m=>{
         const it=document.createElement('div'); it.style.cssText='padding:8px 6px;font-size:13px;color:var(--text);border-bottom:1px solid var(--border);cursor:pointer;'; it.textContent=m.apelido||m.nome;
         it.onclick=async()=>{ const { data:r }=await sb.rpc('acolitos_avulso_add',{p_celebracao:celebId,p_membro:m.id}); if(r&&r.ok){ avulsos.push({membro_id:m.id,nome:m.apelido||m.nome}); busca.value=''; pintaLista(); pintaDrop(); toast('✅ Adicionado (+10 XP)'); } else toast('Erro: '+(r&&r.erro||'tente de novo'),'error'); };

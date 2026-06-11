@@ -316,7 +316,7 @@ async function abrirClaimModal(q) {
   function pintaLista() {
     const termo = busca.value.trim().toLowerCase(); lista.textContent = '';
     if (!termo) return;
-    roster.filter(p => p.nome.toLowerCase().includes(termo) && !selecionados.some(s => s.id === p.id)).slice(0, 12)
+    roster.filter(p => semAcento(p.nome).includes(semAcento(termo)) && !selecionados.some(s => s.id === p.id)).slice(0, 12)
       .forEach(p => { const it = document.createElement('div'); it.style.cssText = 'padding:8px 6px;font-size:13px;color:var(--text);border-bottom:1px solid var(--border);cursor:pointer;'; it.textContent = p.nome; it.onclick = () => { selecionados.push(p); busca.value = ''; pintaChips(); pintaLista(); }; lista.appendChild(it); });
   }
   busca.oninput = pintaLista;

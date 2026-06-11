@@ -115,7 +115,7 @@ async function renderLogins(b){
   }
   function desenha(){
     list.textContent=''; const q=busca.value.trim().toLowerCase();
-    const arr=membros.filter(m=>!q||(m.nome||'').toLowerCase().includes(q));
+    const arr=membros.filter(m=>!q||semAcento(m.nome).includes(semAcento(q)));
     arr.slice(0,300).forEach(m=>{
       const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--border);';
       const info=document.createElement('div'); info.style.cssText='flex:1;min-width:0;';
@@ -319,7 +319,7 @@ async function renderAdmins(b){
   promo.appendChild(pInp); b.appendChild(promo);
   const res=document.createElement('div'); res.style.cssText='margin-top:6px;'; b.appendChild(res);
   pInp.oninput=()=>{ const q=pInp.value.trim().toLowerCase(); res.textContent=''; if(q.length<2)return;
-    (mems||[]).filter(m=>(m.nome||'').toLowerCase().includes(q)).slice(0,8).forEach(m=>{
+    (mems||[]).filter(m=>semAcento(m.nome).includes(semAcento(q))).slice(0,8).forEach(m=>{
       const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid var(--border);';
       const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=m.nome;
       const bs=document.createElement('button'); bs.className='btn-sm'; bs.textContent='Subadmin'; bs.onclick=()=>setAdmin(m,'subadmin');
@@ -409,7 +409,7 @@ async function renderEquipe(b){
   const setorLabel = s => (typeof SETOR_LABEL!=='undefined' && SETOR_LABEL[s]) || s;
   const desenha=()=>{
     const q=inp.value.trim().toLowerCase(); list.textContent='';
-    const base=(mems||[]).filter(m=> q ? (m.nome||'').toLowerCase().includes(q) : m.eh_equipe);
+    const base=(mems||[]).filter(m=> q ? semAcento(m.nome).includes(semAcento(q)) : m.eh_equipe);
     if(!base.length){ const e=document.createElement('div'); e.style.cssText='font-size:13px;color:var(--text-muted);font-style:italic;padding:8px 0;'; e.textContent=q?'Ninguém encontrado.':'Ninguém é equipe ainda — busque um membro pra incluir.'; list.appendChild(e); }
     base.slice(0,40).forEach(m=>{
       const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--border);cursor:pointer;';
