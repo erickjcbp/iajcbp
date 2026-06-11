@@ -294,6 +294,7 @@ async function enviarCadastro() {
 
     const mData = {
       nome,
+      status: 'em_integracao',
       data_nascimento: nasc || null,
       telefone: document.getElementById('m' + idx + '-cel')?.value.trim() || null,
       comunidade: document.getElementById('m' + idx + '-comunidade')?.value || 'matriz',

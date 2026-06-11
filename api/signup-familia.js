@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     comunidade_ministro: (p.mae_ministra || p.pai_ministro) ? (String(p.comunidade_ministro || '').trim() || null) : null,
     grupo_irmaos: grupo,
     escalar_com_irmao: true,
-    status: 'ativo'
+    status: 'em_integracao'
   };
 
   // módulo acólitos (para o vínculo pastoral_members de cada filho)
