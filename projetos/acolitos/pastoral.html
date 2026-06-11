@@ -131,10 +131,12 @@
     .stage.r .s-card{ grid-column:1; text-align:right; } .stage.r .s-img{ grid-column:3; }
     @media(max-width:780px){
       .path .rail{ left:27px; }
-      .stage{ grid-template-columns:54px 1fr; gap:18px; margin-bottom:34px; }
-      .medal{ grid-column:1!important; width:54px; height:54px; } .medal span{ font-size:1.2rem; }
-      .stage .s-img, .stage .s-card{ grid-column:2!important; text-align:left!important; }
-      .stage .s-img{ margin-bottom:12px; } .s-img .framed{ max-width:300px; margin:0!important; }
+      /* hierarquia no mobile: nível (medalha+nome) → explicação → foto por último */
+      .stage{ grid-template-columns:54px 1fr; gap:6px 18px; margin-bottom:36px; align-items:start; }
+      .medal{ grid-column:1!important; grid-row:1!important; width:54px; height:54px; } .medal span{ font-size:1.2rem; }
+      .stage .s-card{ grid-column:2!important; grid-row:1!important; text-align:left!important; }
+      .stage .s-img{ grid-column:2!important; grid-row:2!important; margin:16px 0 0; }
+      .s-img .framed{ max-width:320px; margin:0!important; }
     }
 
     /* ====== INTERLÚDIO ====== */
