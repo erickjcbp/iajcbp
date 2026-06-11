@@ -116,5 +116,19 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true });
   }
 
+  if (action === 'reject') {
+    if (!membro_id) return res.status(400).json({ error: 'Faltam dados.' });
+    const mr = await fetch(`${URL}/rest/v1/acolitos_membros?id=eq.${membro_id}&select=user_id`, { headers: h });
+    const mrow = (await mr.json())[0];
+    if (!mrow) return res.status(404).json({ error: 'Cadastro não encontrado.' });
+    const targetUid = mrow.user_id || null;
+    if (targetUid && !(await podeMexer(targetUid))) return res.status(403).json({ error: 'Sem permissão sobre este usuário.' });
+    if (targetUid) await fetch(`${URL}/rest/v1/pastoral_members?user_id=eq.${targetUid}&module_id=eq.${mod.id}`, { method: 'DELETE', headers: h }).catch(() => {});
+    const dm = await fetch(`${URL}/rest/v1/acolitos_membros?id=eq.${membro_id}`, { method: 'DELETE', headers: h });
+    if (!dm.ok) { const dd = await dm.json().catch(() => ({})); return res.status(400).json({ error: dd.message || 'Não foi possível apagar (pode estar vinculado em escalas).' }); }
+    if (targetUid) await fetch(`${URL}/auth/v1/admin/users/${targetUid}`, { method: 'DELETE', headers: h }).catch(() => {});
+    return res.status(200).json({ ok: true });
+  }
+
   return res.status(400).json({ error: 'Ação inválida' });
 }
