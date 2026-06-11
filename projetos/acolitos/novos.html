@@ -104,10 +104,7 @@
       <input class="toggle-checkbox" type="checkbox" id="r-ministros" onchange="toggleMinistros()">
     </div>
     <div class="expand-block" id="bloco-ministros">
-      <div class="form-group">
-        <label class="form-label">Nome do Ministro (pai ou mãe)</label>
-        <input class="form-input" id="r-ministro-nome" placeholder="Nome completo">
-      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;font-style:italic">Usaremos os nomes do pai e da mãe informados acima.</div>
       <div class="form-group">
         <label class="form-label">Comunidade onde serve</label>
         <select class="form-select" id="r-ministro-comunidade">
@@ -178,14 +175,16 @@ function addBlocoMembro() {
   const campos = [
     { id: 'nome',   label: 'Nome Completo *',          type: 'text',  placeholder: 'Nome completo', required: true },
     { id: 'nasc',   label: 'Data de Nascimento *',      type: 'date',  placeholder: '',              required: true },
-    { id: 'cel',    label: 'Celular do Membro (opcion.)',type: 'tel',   placeholder: '(99) 99999-9999',required: false },
+    { id: 'cel',    label: 'Celular do Membro (opcional)',type: 'tel',   placeholder: '(99) 99999-9999',required: false },
   ];
   campos.forEach(c => {
     const grp = document.createElement('div'); grp.className = 'form-group';
     const lbl = document.createElement('label'); lbl.className = 'form-label'; lbl.textContent = c.label;
+    lbl.id = 'lbl-m' + n + '-' + c.id;
     const inp = document.createElement('input');
     inp.className = 'form-input'; inp.id = 'm' + n + '-' + c.id;
     inp.type = c.type; inp.placeholder = c.placeholder;
+    if (c.id === 'nasc') inp.addEventListener('change', () => atualizaCelHint(n));
     grp.append(lbl, inp); bloco.appendChild(grp);
   });
 
@@ -222,6 +221,15 @@ function addBlocoMembro() {
   container.appendChild(bloco);
 }
 
+function atualizaCelHint(n) {
+  const nasc = document.getElementById('m' + n + '-nasc') && document.getElementById('m' + n + '-nasc').value;
+  const lbl = document.getElementById('lbl-m' + n + '-cel');
+  if (!lbl) return;
+  const idade = (typeof idadeAnos === 'function') ? idadeAnos(nasc) : null;
+  const obrig = idade !== null && idade > 12;
+  lbl.textContent = 'Celular do Membro ' + (obrig ? '(obrigatório)' : '(opcional)');
+}
+
 function toggleMinistros() {
   const checked = document.getElementById('r-ministros').checked;
   document.getElementById('bloco-ministros').classList.toggle('show', checked);
@@ -244,7 +252,6 @@ async function enviarCadastro() {
     celRecado: document.getElementById('r-cel-recado').value.trim(),
     endereco:  document.getElementById('r-endereco').value.trim(),
     ministros: document.getElementById('r-ministros').checked,
-    ministroNome:      document.getElementById('r-ministro-nome').value.trim(),
     ministroComunidade:document.getElementById('r-ministro-comunidade').value,
   };
 
@@ -261,6 +268,11 @@ async function enviarCadastro() {
     const nasc = document.getElementById('m' + idx + '-nasc')?.value;
     if (!nome || !nasc) {
       showMsg('Nome e data de nascimento são obrigatórios para todos os membros.', 'error');
+      btn.disabled = false; btn.textContent = 'Concluir Cadastro'; return;
+    }
+    const cel = document.getElementById('m' + idx + '-cel')?.value.trim();
+    if (idadeAnos(nasc) > 12 && !cel) {
+      showMsg('Informe o celular do membro com 13 anos ou mais.', 'error');
       btn.disabled = false; btn.textContent = 'Concluir Cadastro'; return;
     }
   }
@@ -295,10 +307,10 @@ async function enviarCadastro() {
       endereco: resp.endereco || null,
       celular_mae: resp.celMae || null,
       celular_recado: resp.celRecado || null,
-      tem_pai_ministro: resp.ministros,
-      nome_pai_ministro: resp.ministros ? resp.ministroNome || null : null,
-      tem_mae_ministro: resp.ministros,
-      nome_mae_ministro: resp.ministros ? resp.ministroNome || null : null,
+      tem_pai_ministro: resp.ministros && !!resp.pai,
+      nome_pai_ministro: resp.ministros ? (resp.pai || null) : null,
+      tem_mae_ministro: resp.ministros && !!resp.mae,
+      nome_mae_ministro: resp.ministros ? (resp.mae || null) : null,
       comunidade_ministro: resp.ministros ? resp.ministroComunidade || null : null,
       escalar_com_pais: resp.ministros,
     };
