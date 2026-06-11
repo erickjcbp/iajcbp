@@ -144,6 +144,8 @@ async function init() {
 
   renderHeader({ user: session.user, membership: null, membro: null }, null);
   addBlocoMembro();
+  attachTelMask(document.getElementById('r-cel-mae'));
+  attachTelMask(document.getElementById('r-cel-recado'));
 }
 
 function addBlocoMembro() {
@@ -185,6 +187,7 @@ function addBlocoMembro() {
     inp.className = 'form-input'; inp.id = 'm' + n + '-' + c.id;
     inp.type = c.type; inp.placeholder = c.placeholder;
     if (c.id === 'nasc') inp.addEventListener('change', () => atualizaCelHint(n));
+    if (c.id === 'cel') attachTelMask(inp);
     grp.append(lbl, inp); bloco.appendChild(grp);
   });
 
@@ -210,7 +213,7 @@ function addBlocoMembro() {
   grpSac.append(lblSac, togGrp); bloco.appendChild(grpSac);
 
   // Toggles sim/não
-  [['tunica','Já possui túnica?'],['telwhats','O telefone é WhatsApp?'],['whatsapp','Já está no grupo de WhatsApp?']].forEach(([id,label]) => {
+  [['tunica','Já possui túnica?'],['telwhats','O telefone é WhatsApp? (obrigatoriamente use um número com WhatsApp)'],['whatsapp','Já está no grupo de WhatsApp?']].forEach(([id,label]) => {
     const row = document.createElement('div'); row.className = 'toggle-row';
     const lbl = document.createElement('label'); lbl.textContent = label;
     const chk = document.createElement('input'); chk.type = 'checkbox'; chk.className = 'toggle-checkbox';

@@ -623,8 +623,8 @@ function showAvisoUnico(aviso, membro, done) {
 // O superadmin liga/desliga cada um no Config → Campos do cadastro (chave cadastro_campos).
 const CAMPOS_OBRIGATORIOS = [
   { key:'data_nascimento', label:'Data de nascimento', tipo:'date', padrao:true },
-  { key:'telefone', label:'Telefone', tipo:'tel', padrao:true },
-  { key:'telefone_whatsapp', label:'Esse telefone é WhatsApp?', tipo:'bool', padrao:true },
+  { key:'telefone', label:'Telefone (use obrigatoriamente um número com WhatsApp)', tipo:'tel', padrao:true },
+  { key:'telefone_whatsapp', label:'Esse número é WhatsApp? (obrigatoriamente use um telefone com WhatsApp)', tipo:'bool', padrao:true },
   { key:'comunidade', label:'Comunidade que frequenta', tipo:'select', opcoes:[['matriz','Matriz'],['santo_antonio','Santo Antônio'],['outra','Outra']], padrao:true },
   { key:'endereco', label:'Endereço', tipo:'text', padrao:true },
   { key:'celular_recado', label:'Telefone de recado (responsável/familiar)', tipo:'tel', padrao:true },
@@ -737,8 +737,8 @@ function showCompletarCadastroForm(membro, done) {
     } else {
       const inp = document.createElement('input'); inp.className = 'form-input';
       inp.type = def.tipo === 'date' ? 'date' : 'text';
-      if (def.tipo === 'tel') inp.inputMode = 'tel';
       inp.value = membro[def.key] || '';
+      if (def.tipo === 'tel') { inp.placeholder = '(00) 00000-0000'; attachTelMask(inp); }
       wrap.appendChild(inp);
       getValue = () => inp.value.trim(); isValid = () => inp.value.trim() !== '';
       markErr = () => { inp.style.borderColor = 'var(--danger,#c0392b)'; };
@@ -1146,17 +1146,32 @@ function waLink(tel) {
   if (d.length < 10) return null;
   return 'https://wa.me/' + (d.startsWith('55') ? d : '55' + d);
 }
-// Melhor número de WhatsApp do membro: o dele (se for whats) ou o do responsável.
-// Crianças geralmente não têm telefone próprio — o contato é o do responsável.
+// Contato principal por idade: 13+ usa o número do próprio membro; menor usa o do
+// responsável (celular da mãe). Sempre cai num número válido se houver.
 function waMembro(m) {
   if (!m) return null;
-  const cands = [
-    m.telefone_whatsapp ? m.telefone : null,
-    m.responsavel_whatsapp ? m.celular_responsavel : null,
-    m.celular_responsavel, m.celular_mae, m.telefone
-  ];
-  for (const c of cands) { const l = waLink(c); if (l) return l; }
+  const idade = (typeof idadeAnos === 'function') ? idadeAnos(m.data_nascimento) : null;
+  const proprio = m.telefone;
+  const resp = m.celular_responsavel || m.celular_mae;
+  const ordem = (idade !== null && idade >= 13)
+    ? [proprio, resp, m.celular_mae]            // 13+ : número do membro como principal
+    : [resp, m.celular_mae, proprio];           // menor: celular da mãe/responsável como principal
+  for (const c of ordem) { const l = waLink(c); if (l) return l; }
   return null;
+}
+// Máscara de telefone brasileiro: (00) 00000-0000 ou (00) 0000-0000
+function mascaraTel(v) {
+  const d = String(v || '').replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 2) return d.replace(/^(\d*)/, '($1');
+  if (d.length <= 6) return d.replace(/^(\d{2})(\d*)/, '($1) $2');
+  if (d.length <= 10) return d.replace(/^(\d{2})(\d{4})(\d*)/, '($1) $2-$3');
+  return d.replace(/^(\d{2})(\d{5})(\d*)/, '($1) $2-$3');
+}
+function attachTelMask(el) {
+  if (!el) return;
+  el.setAttribute('inputmode', 'numeric'); el.maxLength = 16;
+  el.value = mascaraTel(el.value);
+  el.addEventListener('input', () => { el.value = mascaraTel(el.value); });
 }
 // Módulos que o admin pode liberar por pessoa (key, label, href). Hoje só os existentes.
 const MODULOS_LIBERAVEIS = [

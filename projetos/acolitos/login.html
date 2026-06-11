@@ -194,7 +194,7 @@
       <input type="text" id="cf-nome-pai" oninput="syncMinistro()">
       <label>Telefone/WhatsApp de contato</label>
       <input type="text" id="cf-celular" placeholder="(19) 90000-0000">
-      <label class="chk"><input type="checkbox" id="cf-whatsapp" checked><span class="box"></span>É WhatsApp</label>
+      <label class="chk"><input type="checkbox" id="cf-whatsapp" checked><span class="box"></span>É WhatsApp (obrigatoriamente use um número com WhatsApp)</label>
       <label>Contato principal</label>
       <div class="seg">
         <label class="seg-opt"><input type="radio" name="cf-contato" value="mae" checked><span>Mãe</span></label>
@@ -385,6 +385,17 @@
   }
   // inicializa o wizard com 1 filho e o estado dos toggles de ministro
   addFilho(); syncMinistro();
+  // máscara de telefone (00) 00000-0000 no contato do responsável
+  (function(){
+    const el = document.getElementById('cf-celular'); if(!el) return;
+    const fmt = v => { const d=String(v||'').replace(/\D/g,'').slice(0,11);
+      if(d.length<=2) return d.replace(/^(\d*)/,'($1');
+      if(d.length<=6) return d.replace(/^(\d{2})(\d*)/,'($1) $2');
+      if(d.length<=10) return d.replace(/^(\d{2})(\d{4})(\d*)/,'($1) $2-$3');
+      return d.replace(/^(\d{2})(\d{5})(\d*)/,'($1) $2-$3'); };
+    el.setAttribute('inputmode','numeric'); el.maxLength=16;
+    el.addEventListener('input', ()=>{ el.value = fmt(el.value); });
+  })();
 
   // Deep-link da landing: /login.html#cadastro abre direto a aba "Quero servir"
   if (location.hash === '#cadastro') showScreen('cadastro');
