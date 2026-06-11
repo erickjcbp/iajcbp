@@ -360,8 +360,9 @@ async function confirmarAvancar() {
     changed_by: ctx.user.id
   });
 
-  // Se integrado → atualiza role (apenas coord_admin e subadmin)
+  // Se integrado → "sobe" o membro (status ativo) e atualiza role (apenas coord_admin e subadmin)
   if (proximaEtapa === 'integrado') {
+    await sbAdmin.from('acolitos_membros').update({ status: 'ativo' }).eq('id', membroId);
     const podeAtribuirRole = ['coord_admin','subadmin'].includes(ctx.membership.role);
     if (podeAtribuirRole) {
       const { data: membroRow } = await sb
