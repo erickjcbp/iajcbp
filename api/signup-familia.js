@@ -50,10 +50,20 @@ export default async function handler(req, res) {
     status: 'ativo'
   };
 
+  // módulo acólitos (para o vínculo pastoral_members de cada filho)
+  let moduleId = null;
+  {
+    const rmod = await fetch(`${URL}/rest/v1/pastoral_modules?slug=eq.acolitos&select=id`, { headers: auth });
+    const dmod = await rmod.json().catch(() => []);
+    moduleId = Array.isArray(dmod) && dmod[0] ? dmod[0].id : null;
+  }
+  if (!moduleId) return res.status(500).json({ error: 'Módulo acólitos não encontrado.' });
+
   const criados = []; // { authId, membroId, usuario }
 
   async function rollback() {
     for (const c of criados.slice().reverse()) {
+      if (c.authId) await fetch(`${URL}/rest/v1/pastoral_members?user_id=eq.${c.authId}&module_id=eq.${moduleId}`, { method: 'DELETE', headers: auth }).catch(() => {});
       if (c.membroId) await fetch(`${URL}/rest/v1/acolitos_membros?id=eq.${c.membroId}`, { method: 'DELETE', headers: auth }).catch(() => {});
       if (c.authId) await fetch(`${URL}/auth/v1/admin/users/${c.authId}`, { method: 'DELETE', headers: auth }).catch(() => {});
     }
@@ -90,6 +100,14 @@ export default async function handler(req, res) {
       // 3) entrada no CRM para aprovação da coordenação
       const rc = await fetch(`${URL}/rest/v1/acolitos_crm`, { method: 'POST', headers: auth, body: JSON.stringify({ membro_id: dm[0].id, etapa: 'aprovacao_cadastro' }) });
       if (!rc.ok) { const dc = await rc.json().catch(() => ({})); throw new Error(dc.message || ('Erro ao registrar aprovação de ' + nome)); }
+
+      // 4) vínculo do módulo — sem ele o app jogaria o filho pro novos.html
+      const rv = await fetch(`${URL}/rest/v1/pastoral_members`, {
+        method: 'POST',
+        headers: { ...auth, Prefer: 'resolution=merge-duplicates' },
+        body: JSON.stringify({ user_id: authId, module_id: moduleId, role: 'novo' })
+      });
+      if (!rv.ok) { const dv = await rv.json().catch(() => ({})); throw new Error(dv.message || ('Erro ao vincular ' + nome)); }
     }
   } catch (e) {
     await rollback();
