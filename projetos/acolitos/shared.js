@@ -638,6 +638,16 @@ const CAMPOS_OBRIGATORIOS = [
   { key:'tem_tunica', label:'Possui túnica própria?', tipo:'bool', padrao:true },
   { key:'no_grupo_whatsapp', label:'Está no grupo do WhatsApp da pastoral?', tipo:'bool', padrao:true },
 ];
+// idade em anos completos a partir de hoje; null se sem data válida
+function idadeAnos(dataNasc) {
+  if (!dataNasc) return null;
+  const d = new Date(dataNasc); if (isNaN(d.getTime())) return null;
+  const hoje = new Date();
+  let a = hoje.getFullYear() - d.getFullYear();
+  const m = hoje.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && hoje.getDate() < d.getDate())) a--;
+  return a;
+}
 // um campo é exigido se o Config disser; sem config, usa o `padrao` do campo
 function campoExigido(key, padrao) {
   const cc = (typeof cfg === 'function') ? cfg('cadastro_campos', null) : null;
@@ -646,6 +656,7 @@ function campoExigido(key, padrao) {
 function camposIncompletos(membro) {
   const faltam = CAMPOS_OBRIGATORIOS.filter(c => {
     if (!campoExigido(c.key, !!c.padrao)) return false;
+    if (c.key === 'telefone' && !(idadeAnos(membro.data_nascimento) > 12)) return false; // celular só obrigatório p/ 13+
     const v = membro[c.key];
     if (c.tipo === 'bool') return v === null || v === undefined;       // bool: precisa responder sim/não
     return v === null || v === undefined || String(v).trim() === '';    // texto/data/select: não pode vazio
