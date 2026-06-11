@@ -2,1248 +2,551 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Somos do Altar — Pastoral dos Coroinhas | JCBP</title>
-  <meta name="description" content="Pastoral dos Coroinhas da Paróquia Jesus Cristo Bom Pastor — Limeira/SP. Servir ao altar é servir a Cristo.">
-  <meta property="og:title" content="Somos do Altar — Pastoral dos Coroinhas | JCBP">
-  <meta property="og:description" content="Servir ao altar é servir a Cristo. Venha fazer parte da Pastoral dos Coroinhas.">
-  <meta property="og:image" content="../../midia/landing/web/_DSC4547.jpg">
-
-  <link rel="icon" type="image/png" href="../../midia/logos/brasao-pastoral.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Somos do Altar — Pastoral dos Coroinhas e Acólitos | Paróquia JCBP</title>
+  <link rel="icon" href="../../midia/logos/brasao-pastoral.png">
   <link rel="apple-touch-icon" href="../../midia/logos/brasao-pastoral.png">
-
+  <meta name="theme-color" content="#0a0507">
+  <meta name="description" content="Pastoral dos Coroinhas e Acólitos — Paróquia Jesus Cristo Bom Pastor, Limeira/SP. Conheça a caminhada de quem serve ao altar.">
+  <meta property="og:title" content="Somos do Altar — Pastoral dos Coroinhas e Acólitos">
+  <meta property="og:description" content="Ao serviço do altar, sou inteiro. Conheça a caminhada e venha servir.">
+  <meta property="og:image" content="../../midia/landing/web/hero.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600;1,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Sora:wght@200;300;400;500;600&display=swap" rel="stylesheet">
   <style>
-    /* ── TOKENS ─────────────────────────────────────────────── */
-    :root {
-      --wine:       #1a0a0e;
-      --wine2:      #26101a;
-      --gold:       #8a6a24;
-      --gold-light: #ffd97a;
-      --text:       #f7ebe7;
-      --muted:      #c79aa0;
-      --border:     #5a3a3f;
+    :root{
+      --ink:#0a0507; --wine:#160a0e; --oxblood:#250d12;
+      --gold:#c8a24a; --gold-deep:#8c6a2c; --gold-light:#e6cd8f; --gold-bright:#f7e6b4;
+      --text:#e9dcc9; --muted:#c2a98f; --faint:#93795f;
+      --glass-blue:#3f78b0; --glass-emerald:#3c9a72; --glass-ruby:#b04a5e;
+      --line:rgba(200,162,74,.22); --line-soft:rgba(200,162,74,.1);
+      --inscr:'Sora', system-ui, sans-serif;
+      --title:'Fraunces', Georgia, serif;
+      --body:'Sora', system-ui, sans-serif;
+      --black:'Fraunces', Georgia, serif;
+    }
+    *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html{ scroll-behavior:smooth; }
+    body{ margin:0; font-family:var(--body); font-weight:300; background:var(--ink); color:var(--text);
+      font-size:17px; line-height:1.8; letter-spacing:.2px; -webkit-font-smoothing:antialiased; overflow-x:hidden; position:relative; font-optical-sizing:auto; }
+    img{ max-width:100%; display:block; }
+    a{ color:inherit; }
+    ::selection{ background:rgba(200,162,74,.3); color:#fff; }
 
-      --font-display: 'Cormorant Garamond', Georgia, serif;
-      --font-body:    'Inter', system-ui, sans-serif;
+    body::before{ content:''; position:fixed; inset:0; z-index:1; pointer-events:none; opacity:.05; mix-blend-mode:overlay;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+    body::after{ content:''; position:fixed; inset:0; z-index:1; pointer-events:none; background:radial-gradient(120% 90% at 50% 6%, transparent 42%, rgba(8,4,6,.5) 100%); }
 
-      --max-w: 920px;
-      --gap:   clamp(14px, 3vw, 28px);
-      --section-pad: clamp(56px, 9vw, 104px) clamp(20px, 5vw, 48px);
-    }
+    .wrap{ max-width:1100px; margin:0 auto; padding:0 26px; position:relative; z-index:2; }
+    .narrow{ max-width:760px; }
+    section{ padding:clamp(70px,11vw,140px) 0; position:relative; z-index:2; }
 
-    /* ── RESET ──────────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body {
-      background-color: var(--wine);
-      background-image: radial-gradient(1200px 600px at 50% -10%, #3a1320, var(--wine) 55%);
-      color: var(--text);
-      font-family: var(--font-body);
-      font-size: 16px;
-      line-height: 1.65;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
+    .eyebrow{ font-family:var(--inscr); font-weight:600; font-size:11px; letter-spacing:5px; text-transform:uppercase; color:var(--gold); display:inline-block; }
+    .eyebrow::before{ content:'✠'; margin-right:11px; color:var(--gold-deep); }
+    h2.title{ font-family:var(--title); font-weight:500; color:var(--gold-bright); font-size:clamp(2.2rem,6.2vw,3.7rem); line-height:1.06; letter-spacing:.5px; margin:.45rem 0 1.1rem; }
+    h2.title em{ font-style:italic; color:var(--gold-light); }
+    .kicker-q{ font-family:var(--title); font-style:italic; color:var(--gold-light); font-size:clamp(1.35rem,2.9vw,1.75rem); line-height:1.5; }
+    p{ color:var(--muted); }
+    p.soft{ color:var(--muted); font-weight:300; }
+    .dropcap::first-letter{ font-family:var(--black); font-weight:600; float:left; font-size:4.2rem; line-height:.82; margin:6px 14px -4px 0; color:var(--gold-light); text-shadow:0 2px 16px rgba(200,162,74,.4); }
+    blockquote.scripture{ font-family:var(--title); font-style:italic; color:var(--gold-light); font-size:1.5rem; line-height:1.45; border-left:2px solid var(--gold-deep); padding:2px 0 2px 22px; margin:28px 0 0; }
+    blockquote.scripture cite{ display:block; font-family:var(--inscr); font-style:normal; font-size:.72rem; letter-spacing:2px; text-transform:uppercase; color:var(--faint); margin-top:12px; }
 
-    /* ── FAINT BACKGROUND COLLAGE ───────────────────────────── */
-    /* Subtle photo texture behind ALL content — z-index:-2 */
-    .bg-collage {
-      position: fixed;
-      inset: 0;
-      z-index: -2;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      grid-template-rows: repeat(3, 1fr);
-      opacity: 0.07;
-      pointer-events: none;
-      overflow: hidden;
-      filter: blur(2px) saturate(0.4) sepia(0.6);
-    }
-    .bg-collage img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-    /* warm wine tint overlay above collage, below content */
-    .bg-tint {
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      background: linear-gradient(160deg,
-        rgba(26,10,14,.72) 0%,
-        rgba(26,10,14,.55) 50%,
-        rgba(26,10,14,.78) 100%);
-      pointer-events: none;
-    }
+    .divider{ display:flex; align-items:center; justify-content:center; gap:18px; margin:32px auto; max-width:360px; }
+    .divider .r{ flex:1; height:1px; background:linear-gradient(90deg,transparent,var(--gold-deep),var(--gold-light)); }
+    .divider .r.rev{ background:linear-gradient(90deg,var(--gold-light),var(--gold-deep),transparent); }
+    .divider .m{ font-size:18px; color:var(--gold); filter:drop-shadow(0 0 8px rgba(200,162,74,.4)); }
 
-    /* ── LAYOUT HELPERS ─────────────────────────────────────── */
-    .container {
-      max-width: var(--max-w);
-      margin: 0 auto;
-      padding: 0 clamp(20px, 5vw, 48px);
-    }
+    .btn{ font-family:var(--inscr); font-weight:600; font-size:.74rem; letter-spacing:2.5px; text-transform:uppercase; padding:15px 30px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:9px; border:1px solid transparent; transition:transform .2s, box-shadow .25s, background .25s, color .25s; }
+    .btn:active{ transform:translateY(1px); }
+    .btn-gold{ color:#241300; background:linear-gradient(165deg,var(--gold-bright),var(--gold) 55%,var(--gold-deep)); box-shadow:0 14px 34px -12px rgba(200,162,74,.75), inset 0 1px 0 rgba(255,255,255,.45); }
+    .btn-gold:hover{ box-shadow:0 18px 44px -10px rgba(230,205,143,.9), inset 0 1px 0 rgba(255,255,255,.55); transform:translateY(-1px); }
+    .btn-ghost{ color:var(--gold-light); border-color:var(--line); background:rgba(200,162,74,.04); }
+    .btn-ghost:hover{ border-color:var(--gold); background:rgba(200,162,74,.1); color:var(--gold-bright); }
+    .btn-wa{ color:#04210f; background:linear-gradient(165deg,#52d98c,#1f9d57); box-shadow:0 14px 34px -12px rgba(40,190,110,.7), inset 0 1px 0 rgba(255,255,255,.4); }
+    .btn-link{ font-family:var(--inscr); font-weight:600; font-size:.72rem; letter-spacing:2px; text-transform:uppercase; color:var(--gold-light); text-decoration:none; border-bottom:1px solid var(--gold-deep); padding-bottom:4px; transition:color .2s, border-color .2s; }
+    .btn-link:hover{ color:var(--gold-bright); border-color:var(--gold-light); }
 
-    /* ── FLEURON DIVIDER ────────────────────────────────────── */
-    .fleuron {
-      text-align: center;
-      color: var(--gold);
-      opacity: .7;
-      margin: 30px 0;
-      letter-spacing: 8px;
-      font-size: 1.1rem;
-    }
+    /* mídia de fundo — sem espaço cinza: cover (interlúdios) ou tríptico (hero) */
+    .media{ position:absolute; inset:0; z-index:0; overflow:hidden; background:var(--ink); }
+    .media.cover img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+    .media.trip{ display:grid; grid-template-columns:1fr auto 1fr; grid-template-rows:100%; height:100%; }
+    .media.trip img{ height:100%; min-width:0; }
+    .media.trip .main{ width:auto; max-width:100%; object-fit:contain; justify-self:center; }
+    .media.trip .side{ width:100%; object-fit:cover; opacity:.85; }
+    .media .scrim{ position:absolute; inset:0; z-index:1; background:linear-gradient(180deg, rgba(10,5,7,.42) 0%, transparent 16%, transparent 40%, rgba(10,5,7,.5) 60%, rgba(10,5,7,.92) 82%, var(--ink) 97%); }
+    .media .scrim.dark{ background:rgba(8,4,6,.52); box-shadow:inset 0 0 240px 80px rgba(8,4,6,.85); }
+    @media(max-width:760px){ .media.trip{ grid-template-columns:1fr; } .media.trip .side{ display:none; } .media.trip .main{ width:100%; object-fit:cover; } }
 
-    /* ── FRAMED PHOTO TREATMENT ─────────────────────────────── */
-    .framed {
-      position: relative;
-      border-radius: 13px;
-      overflow: hidden;
-      border: 1px solid rgba(255,217,122,.35);
-      box-shadow: 0 14px 40px rgba(0,0,0,.45), inset 0 0 0 1px rgba(0,0,0,.25);
-      display: block;
-      text-decoration: none;
-    }
-    .framed::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      background: radial-gradient(120% 90% at 50% 0%, transparent 55%, rgba(20,6,10,.55) 100%);
-    }
-    .framed img {
-      display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform .5s ease;
-    }
-    .gallery a.framed:hover img { transform: scale(1.05); }
+    /* molduras — proporção casada à foto, então a imagem aparece INTEIRA */
+    .framed{ position:relative; overflow:hidden; background:var(--wine); box-shadow:0 30px 70px -26px rgba(0,0,0,.9), 0 0 0 1px var(--line), 0 0 0 8px rgba(200,162,74,.05); }
+    .framed img{ width:100%; height:100%; object-fit:cover; transition:transform 1.1s cubic-bezier(.2,.6,.2,1); }
+    .framed::after{ content:''; position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg, rgba(10,5,7,.02) 50%, rgba(10,5,7,.42) 100%); }
+    .ar-v{ aspect-ratio:2/3; } .ar-h{ aspect-ratio:3/2; }
+    .arch{ border-radius:34% 34% 6px 6px / 12% 12% 0 0; }
+    .gild::before{ content:''; position:absolute; inset:7px; border:1px solid rgba(230,205,143,.3); border-radius:inherit; pointer-events:none; z-index:3; }
 
-    /* ── SECTION WRAPPER ─────────────────────────────────────── */
-    section {
-      padding: var(--section-pad);
-      position: relative;
-    }
+    /* ====== NAV ====== */
+    .topnav{ position:fixed; top:0; left:0; right:0; z-index:60; display:flex; align-items:center; justify-content:space-between; padding:12px 26px; background:rgba(12,6,8,.78); backdrop-filter:blur(14px) saturate(1.2); -webkit-backdrop-filter:blur(14px) saturate(1.2); border-bottom:1px solid var(--line-soft); transform:translateY(-105%); transition:transform .5s cubic-bezier(.2,.7,.2,1); }
+    .topnav.show{ transform:none; }
+    .topnav .brand{ display:flex; align-items:center; gap:12px; text-decoration:none; }
+    .topnav .brand img{ width:32px; height:32px; object-fit:contain; }
+    .topnav .brand b{ font-family:var(--inscr); font-weight:600; color:var(--gold-light); font-size:.84rem; letter-spacing:2.5px; text-transform:uppercase; }
+    .topnav .btn{ padding:10px 20px; font-size:.66rem; }
+    @media(max-width:540px){ .topnav .brand b{ display:none; } }
 
-    /* ── TYPE SCALE ──────────────────────────────────────────── */
-    .display-xl {
-      font-family: var(--font-display);
-      font-size: clamp(2.8rem, 8vw, 5.5rem);
-      font-weight: 700;
-      line-height: 1.05;
-      letter-spacing: -.01em;
-    }
-    .display-lg {
-      font-family: var(--font-display);
-      font-size: clamp(2rem, 5vw, 3.4rem);
-      font-weight: 700;
-      line-height: 1.1;
-    }
-    .display-md {
-      font-family: var(--font-display);
-      font-size: clamp(1.45rem, 3.5vw, 2rem);
-      font-weight: 600;
-      line-height: 1.2;
-    }
-    .gold-text { color: var(--gold-light); }
-    .muted-text { color: var(--muted); }
-    .section-label {
-      font-family: var(--font-body);
-      font-size: .7rem;
-      font-weight: 600;
-      letter-spacing: .22em;
-      text-transform: uppercase;
-      color: var(--gold);
-      display: block;
-      margin-bottom: 10px;
+    /* ====== HERO ====== */
+    .hero{ position:relative; min-height:112svh; display:flex; align-items:flex-end; overflow:hidden; }
+    .hero-inner{ position:relative; z-index:2; width:100%; max-width:1100px; margin:0 auto; padding:0 26px clamp(46px,6vw,76px); }
+    .hero .crest{ width:86px; height:86px; object-fit:contain; margin-bottom:22px; filter:drop-shadow(0 8px 22px rgba(0,0,0,.7)); opacity:0; animation:rise 1s ease .15s forwards; }
+    .hero h1{ font-family:var(--title); font-weight:600; font-size:clamp(3.2rem,15vw,8rem); line-height:.92; letter-spacing:1px; margin:0; color:transparent; background:linear-gradient(176deg,#fff 8%, var(--gold-bright) 42%, var(--gold) 72%, var(--gold-deep) 100%); -webkit-background-clip:text; background-clip:text; filter:drop-shadow(0 3px 18px rgba(0,0,0,.85)) drop-shadow(0 1px 2px rgba(0,0,0,.6)); opacity:0; animation:rise 1.2s cubic-bezier(.2,.7,.2,1) .45s forwards; }
+    .hero .motto{ font-family:var(--title); font-style:italic; font-weight:500; font-size:clamp(1.45rem,3.6vw,2.15rem); line-height:1.18; color:var(--gold-light); margin:.22em 0 .12em; text-shadow:0 2px 5px rgba(0,0,0,.85), 0 2px 22px rgba(0,0,0,.6); opacity:0; animation:rise 1s ease .75s forwards; }
+    .hero .role{ font-family:var(--inscr); font-weight:500; letter-spacing:3px; text-transform:uppercase; font-size:.78rem; color:var(--muted); text-shadow:0 1px 8px rgba(0,0,0,.9); opacity:0; animation:rise 1s ease .9s forwards; }
+    .hero .btns{ margin-top:30px; display:flex; flex-wrap:wrap; gap:14px; opacity:0; animation:rise 1s ease 1.05s forwards; }
+    @keyframes rise{ from{ opacity:0; transform:translateY(26px) } to{ opacity:1; transform:none } }
+    .scroll-hint{ position:absolute; left:50%; bottom:20px; z-index:2; transform:translateX(-50%); color:var(--gold-light); font-size:22px; opacity:.7; animation:bob 2.4s ease-in-out infinite; }
+    @keyframes bob{ 0%,100%{ transform:translate(-50%,0) } 50%{ transform:translate(-50%,8px) } }
+
+    /* ====== SPLIT ====== */
+    .split{ display:grid; grid-template-columns:1fr; gap:clamp(32px,5vw,60px); align-items:center; }
+    @media(min-width:800px){ .split{ grid-template-columns:1.04fr .96fr; } .split.rev .col-img{ order:-1; } }
+    .col-img .framed{ max-width:440px; margin:0 auto; }
+
+    /* ====== CAMINHADA ====== */
+    .path{ position:relative; margin-top:54px; }
+    .path .rail{ position:absolute; left:50%; top:6px; bottom:6px; width:2px; transform:translateX(-50%); background:linear-gradient(180deg,transparent,var(--gold-deep) 6%,var(--gold) 50%,var(--gold-deep) 94%,transparent); }
+    .stage{ display:grid; grid-template-columns:1fr 76px 1fr; align-items:center; gap:30px; margin-bottom:clamp(40px,6vw,72px); }
+    .stage:last-child{ margin-bottom:0; }
+    .medal{ grid-column:2; justify-self:center; width:70px; height:70px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 50% 34%, #2c1119, #150a0e); border:1px solid var(--gold); position:relative; z-index:2; box-shadow:0 0 0 6px rgba(200,162,74,.07), 0 12px 30px -10px rgba(0,0,0,.85); }
+    .medal::after{ content:''; position:absolute; inset:-6px; border-radius:50%; border:1px solid var(--line-soft); }
+    .medal span{ font-family:var(--black); font-weight:600; font-size:1.5rem; color:var(--gold-light); text-shadow:0 0 12px rgba(200,162,74,.5); }
+    .s-img .framed{ max-width:360px; }
+    .s-img .framed.ar-h{ max-width:460px; }
+    .stage.l .s-img .framed{ margin-left:auto; } .stage.r .s-img .framed{ margin-right:auto; }
+    .s-card .st-name{ font-family:var(--title); font-weight:600; color:var(--gold-bright); font-size:1.7rem; letter-spacing:.4px; margin:0; }
+    .s-card .st-tag{ font-family:var(--inscr); font-size:.66rem; letter-spacing:2.5px; text-transform:uppercase; color:var(--gold); margin:6px 0 10px; }
+    .s-card p{ color:var(--muted); font-size:1rem; margin:0; }
+    .stage.l .s-img{ grid-column:1; } .stage.l .s-card{ grid-column:3; text-align:left; }
+    .stage.r .s-card{ grid-column:1; text-align:right; } .stage.r .s-img{ grid-column:3; }
+    @media(max-width:780px){
+      .path .rail{ left:27px; }
+      .stage{ grid-template-columns:54px 1fr; gap:18px; margin-bottom:34px; }
+      .medal{ grid-column:1!important; width:54px; height:54px; } .medal span{ font-size:1.2rem; }
+      .stage .s-img, .stage .s-card{ grid-column:2!important; text-align:left!important; }
+      .stage .s-img{ margin-bottom:12px; } .s-img .framed{ max-width:300px; margin:0!important; }
     }
 
-    /* ── BUTTONS ─────────────────────────────────────────────── */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 13px 26px;
-      border-radius: 8px;
-      font-family: var(--font-body);
-      font-size: .875rem;
-      font-weight: 600;
-      letter-spacing: .05em;
-      text-decoration: none;
-      cursor: pointer;
-      border: none;
-      transition: all .22s ease;
-      white-space: nowrap;
-    }
-    .btn-gold {
-      background: linear-gradient(135deg, #b8892e 0%, var(--gold-light) 60%, #c49530 100%);
-      color: var(--wine);
-      box-shadow: 0 4px 18px rgba(138,106,36,.45);
-    }
-    .btn-gold:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 28px rgba(255,217,122,.4);
-    }
-    .btn-outline {
-      background: transparent;
-      color: var(--gold-light);
-      border: 1.5px solid rgba(255,217,122,.5);
-    }
-    .btn-outline:hover {
-      background: rgba(255,217,122,.08);
-      border-color: var(--gold-light);
-      transform: translateY(-2px);
-    }
-    .btn-ghost {
-      background: rgba(255,255,255,.06);
-      color: var(--muted);
-      font-size: .78rem;
-      font-weight: 500;
-      border: 1px solid var(--border);
-      padding: 10px 18px;
-    }
-    .btn-ghost:hover {
-      background: rgba(255,255,255,.11);
-      color: var(--text);
-    }
-    .btn-whatsapp {
-      background: linear-gradient(135deg, #1a6b38, #25a059);
-      color: #fff;
-      box-shadow: 0 4px 16px rgba(37,160,89,.3);
-    }
-    .btn-whatsapp:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(37,160,89,.45);
-    }
-    .btn-instagram {
-      background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
-      color: #fff;
-      box-shadow: 0 4px 16px rgba(253,29,29,.25);
-    }
-    .btn-instagram:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(253,29,29,.35);
+    /* ====== INTERLÚDIO ====== */
+    .interlude{ position:relative; min-height:80svh; display:flex; align-items:center; justify-content:center; text-align:center; padding:80px 26px; overflow:hidden; }
+    .interlude .v{ position:relative; z-index:2; max-width:840px; }
+    .interlude .v p{ font-family:var(--title); font-weight:500; font-style:italic; color:#fff; font-size:clamp(1.6rem,5vw,2.9rem); line-height:1.32; text-shadow:0 2px 8px rgba(0,0,0,.95), 0 4px 30px rgba(0,0,0,.7); margin:0; }
+    .interlude .v cite{ display:block; font-family:var(--inscr); font-style:normal; letter-spacing:3px; text-transform:uppercase; color:var(--gold-light); font-size:.76rem; margin-top:22px; text-shadow:0 1px 8px rgba(0,0,0,.95); }
+
+    /* ====== APP ====== */
+    .app{ background:linear-gradient(180deg,#1d0d14,#120710); border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft); overflow:hidden; }
+    .appicon{ width:66px; height:66px; border-radius:16px; border:1px solid var(--line); box-shadow:0 14px 30px -8px rgba(0,0,0,.7); }
+    .feat{ list-style:none; padding:0; margin:24px 0 30px; display:grid; gap:16px; }
+    .feat li{ display:flex; gap:14px; align-items:flex-start; }
+    .feat .fi{ font-family:var(--title); color:var(--gold); font-size:1.35rem; line-height:1.1; flex:none; width:24px; text-align:center; }
+    .feat b{ font-family:var(--title); font-weight:600; font-size:1.18rem; color:var(--gold-bright); letter-spacing:.3px; display:block; margin-bottom:2px; }
+    .feat span{ color:var(--muted); font-size:.95rem; }
+    .stage-app{ position:relative; display:flex; align-items:center; justify-content:center; min-height:560px; }
+    .phone{ width:280px; max-width:84%; aspect-ratio:9/19.3; border-radius:42px; padding:13px; position:relative; z-index:2; background:linear-gradient(160deg,#2c1822,#120710); border:1px solid var(--line); box-shadow:0 56px 100px -30px rgba(0,0,0,.92), inset 0 1px 0 rgba(247,230,180,.12); will-change:transform; }
+    .phone .scr{ width:100%; height:100%; border-radius:30px; overflow:hidden; position:relative; padding:18px 15px; background:radial-gradient(130% 60% at 50% 0%, #34121d, #120710 70%); display:flex; flex-direction:column; gap:11px; }
+    .ph-top{ display:flex; align-items:center; gap:8px; }
+    .ph-top img{ width:22px; height:22px; object-fit:contain; }
+    .ph-top span.nm{ font-family:var(--title); font-weight:600; color:var(--gold-light); font-size:13px; flex:1; letter-spacing:.3px; }
+    .ph-top .bell{ font-size:14px; opacity:.85; }
+    .ph-hi{ font-family:var(--title); font-style:italic; color:var(--text); font-size:14px; margin-top:-2px; }
+    .ph-lvl{ display:flex; align-items:center; gap:13px; background:rgba(247,230,180,.04); border:1px solid var(--line-soft); border-radius:14px; padding:12px; }
+    .ph-ring{ width:62px; height:62px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center; background:conic-gradient(var(--gold-light) 0 64%, rgba(247,230,180,.09) 64% 100%); }
+    .ph-ring i{ width:50px; height:50px; border-radius:50%; background:#170a10; display:flex; flex-direction:column; align-items:center; justify-content:center; font-style:normal; }
+    .ph-ring b{ font-family:var(--title); color:var(--gold-bright); font-size:20px; line-height:1; }
+    .ph-ring small{ color:var(--muted); font-size:7px; letter-spacing:1.5px; }
+    .ph-lvl-info{ flex:1; min-width:0; }
+    .ph-lvl-info b{ font-family:var(--title); font-weight:600; color:var(--gold-bright); font-size:14px; display:block; }
+    .ph-xp{ height:6px; border-radius:4px; background:rgba(247,230,180,.1); margin:6px 0 4px; overflow:hidden; }
+    .ph-xp i{ display:block; height:100%; width:64%; background:linear-gradient(90deg,var(--gold-light),var(--gold)); }
+    .ph-lvl-info small{ color:var(--muted); font-size:8.5px; letter-spacing:.3px; }
+    .ph-label{ font-family:var(--inscr); font-size:8px; letter-spacing:2px; text-transform:uppercase; color:var(--gold); margin:2px 0 -4px; }
+    .ph-card{ display:flex; align-items:center; gap:9px; background:rgba(247,230,180,.04); border:1px solid var(--line-soft); border-radius:12px; padding:9px 11px; }
+    .ph-card .ph-ic{ font-size:16px; flex:none; } .ph-card>div{ flex:1; min-width:0; }
+    .ph-card b{ display:block; font-family:var(--title); font-weight:600; color:var(--gold-bright); font-size:12px; }
+    .ph-card small{ color:var(--muted); font-size:9px; }
+    .ph-card .ph-tag{ font-family:var(--inscr); font-size:7.5px; letter-spacing:1px; text-transform:uppercase; color:var(--gold-light); border:1px solid var(--line); border-radius:20px; padding:3px 7px; }
+    .ph-card .ph-star{ font-family:var(--title); color:var(--gold-bright); font-size:12px; }
+    .ph-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-top:auto; }
+    .ph-tiles span{ display:flex; flex-direction:column; align-items:center; gap:3px; background:rgba(247,230,180,.04); border:1px solid var(--line-soft); border-radius:11px; padding:9px 4px; color:var(--gold-light); font-size:16px; }
+    .ph-tiles small{ color:var(--muted); font-size:7.5px; letter-spacing:.3px; }
+    .float-card{ position:absolute; z-index:3; display:flex; align-items:center; gap:11px; padding:12px 15px; border-radius:14px; background:linear-gradient(160deg, rgba(46,25,36,.96), rgba(20,9,16,.96)); border:1px solid var(--line); box-shadow:0 24px 48px -16px rgba(0,0,0,.85); backdrop-filter:blur(4px); animation:floaty 5s ease-in-out infinite; }
+    .float-card .ic{ width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:19px; flex:none; background:radial-gradient(circle at 50% 30%, rgba(247,230,180,.2), rgba(200,162,74,.06)); border:1px solid var(--line); }
+    .float-card .t b{ display:block; font-family:var(--title); font-weight:600; color:var(--gold-bright); font-size:.95rem; line-height:1.1; }
+    .float-card .t span{ font-size:.72rem; color:var(--muted); }
+    .fc1{ top:6%; left:0; animation-delay:0s; } .fc1 .ic{ box-shadow:0 0 18px -2px var(--glass-emerald); }
+    .fc2{ bottom:10%; left:-2%; animation-delay:1.4s; } .fc2 .ic{ box-shadow:0 0 18px -2px var(--glass-ruby); }
+    .fc3{ top:14%; right:-1%; animation-delay:.7s; } .fc3 .ic{ box-shadow:0 0 18px -2px var(--glass-blue); }
+    @keyframes floaty{ 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-12px) } }
+    @media(max-width:900px){ .float-card{ position:static; animation:none; margin:10px auto 0; max-width:280px; } .stage-app{ flex-direction:column; min-height:0; gap:6px; } }
+
+    /* ====== MISSAS ====== */
+    .missas{ display:grid; grid-template-columns:1fr; gap:22px; margin-top:42px; }
+    @media(min-width:700px){ .missas{ grid-template-columns:1fr 1fr; } }
+    .mass-card{ border:1px solid var(--line); padding:30px 28px; background:linear-gradient(180deg,rgba(200,162,74,.04),transparent); position:relative; overflow:hidden; }
+    .mass-card::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--gold),transparent); }
+    .mass-card h3{ font-family:var(--title); font-weight:600; color:var(--gold-bright); font-size:1.6rem; margin:0 0 4px; }
+    .mass-card .loc{ font-family:var(--inscr); color:var(--faint); font-size:.7rem; letter-spacing:2px; text-transform:uppercase; margin-bottom:18px; }
+    .mass-row{ display:flex; justify-content:space-between; align-items:baseline; padding:11px 0; border-top:1px solid var(--line-soft); }
+    .mass-row .day{ color:var(--muted); }
+    .mass-row .hr{ font-family:var(--title); color:var(--gold-light); font-size:1.3rem; letter-spacing:.5px; }
+
+    /* ====== PASSO A PASSO ====== */
+    .steps{ display:grid; grid-template-columns:1fr; gap:16px; margin-top:46px; }
+    @media(min-width:680px){ .steps{ grid-template-columns:repeat(4,1fr); } }
+    .step{ position:relative; border:1px solid var(--line); padding:26px 22px 24px; background:linear-gradient(180deg,rgba(200,162,74,.05),transparent); overflow:hidden; }
+    .step::before{ content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+    .step-n{ font-family:var(--black); font-weight:600; font-size:2.4rem; line-height:1; margin-bottom:12px; color:transparent; background:linear-gradient(176deg,var(--gold-bright),var(--gold-deep)); -webkit-background-clip:text; background-clip:text; }
+    .step h3{ font-family:var(--title); font-weight:600; color:var(--gold-bright); font-size:1.3rem; margin:0 0 8px; letter-spacing:.3px; }
+    .step p{ color:var(--muted); font-size:.94rem; margin:0; }
+
+    /* ====== GALERIA (masonry — fotos inteiras) ====== */
+    .mosaic{ column-count:2; column-gap:14px; margin-top:40px; }
+    @media(min-width:760px){ .mosaic{ column-count:3; } }
+    .mosaic a{ display:block; break-inside:avoid; margin-bottom:14px; cursor:zoom-in; }
+    .mosaic a img{ width:100%; height:auto; display:block; transition:transform .8s cubic-bezier(.2,.6,.2,1); }
+    .mosaic a:hover img{ transform:scale(1.04); }
+
+    /* ====== CTA ====== */
+    .cta{ text-align:center; position:relative; }
+    .cta::before{ content:''; position:absolute; inset:0; z-index:0; pointer-events:none; background:radial-gradient(60% 60% at 50% 28%, rgba(200,162,74,.1), transparent 70%); }
+    .cta .btns{ display:flex; flex-wrap:wrap; gap:16px; justify-content:center; margin-top:30px; }
+
+    footer{ border-top:1px solid var(--line-soft); padding:54px 26px 66px; text-align:center; color:var(--faint); position:relative; z-index:2; }
+    footer .fcrest{ width:52px; opacity:.85; margin:0 auto 16px; }
+    footer .fname{ font-family:var(--title); font-weight:600; color:var(--gold-light); font-size:1.4rem; letter-spacing:.5px; }
+    footer .fline{ font-size:.86rem; margin-top:4px; color:var(--muted); }
+    footer .flinks{ margin-top:22px; display:flex; gap:12px 26px; flex-wrap:wrap; justify-content:center; font-family:var(--inscr); font-size:.68rem; letter-spacing:1.5px; text-transform:uppercase; }
+    footer a{ color:var(--muted); text-decoration:none; transition:color .2s; }
+    footer a:hover{ color:var(--gold-light); }
+
+    .center{ text-align:center; }
+    .reveal{ opacity:0; transform:translateY(26px); transition:opacity 1s ease, transform 1s cubic-bezier(.2,.7,.2,1); }
+    .reveal.in{ opacity:1; transform:none; }
+    @media(prefers-reduced-motion:reduce){
+      .reveal,.hero .crest,.hero h1,.hero .motto,.hero .role,.hero .btns,.float-card{ opacity:1!important; transform:none!important; animation:none!important; }
+      .scroll-hint{ animation:none; } html{ scroll-behavior:auto; }
     }
 
-    /* ═══════════════════════════════════════════════════════════
-       SECTION 1 — HERO
-    ═══════════════════════════════════════════════════════════ */
-    #hero {
-      min-height: 100svh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      position: relative;
-      overflow: hidden;
-    }
-    .hero-photo {
-      position: absolute;
-      inset: 0;
-      z-index: 0;
-    }
-    .hero-photo.framed {
-      border-radius: 0;
-      border: none;
-      box-shadow: none;
-    }
-    .hero-photo.framed::after {
-      background: linear-gradient(
-        to bottom,
-        rgba(26,10,14,.30) 0%,
-        rgba(26,10,14,.15) 30%,
-        rgba(26,10,14,.50) 70%,
-        rgba(26,10,14,.88) 100%
-      );
-    }
-    /* Extra dramatic vignette from edges */
-    .hero-vignette {
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-      background: radial-gradient(ellipse 90% 80% at 50% 50%, transparent 20%, rgba(26,10,14,.55) 100%);
-      pointer-events: none;
-    }
-    .hero-content {
-      position: relative;
-      z-index: 2;
-      text-align: center;
-      padding: clamp(80px, 14vh, 140px) clamp(20px, 5vw, 48px) clamp(60px, 10vh, 100px);
-      max-width: var(--max-w);
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0;
-    }
-    .hero-brasao {
-      width: 84px;
-      height: 84px;
-      object-fit: contain;
-      filter: drop-shadow(0 4px 20px rgba(0,0,0,.7));
-      margin-bottom: 22px;
-      animation: fadeUp .9s ease both;
-    }
-    .hero-title {
-      animation: fadeUp .9s .15s ease both;
-      text-shadow: 0 3px 24px rgba(0,0,0,.7), 0 1px 0 rgba(0,0,0,.5);
-      margin-bottom: 12px;
-    }
-    .hero-subtitle {
-      font-family: var(--font-body);
-      font-size: clamp(.8rem, 2vw, .95rem);
-      font-weight: 500;
-      letter-spacing: .14em;
-      text-transform: uppercase;
-      color: var(--muted);
-      animation: fadeUp .9s .28s ease both;
-      margin-bottom: 20px;
-    }
-    .hero-tagline {
-      font-family: var(--font-display);
-      font-size: clamp(1.1rem, 2.8vw, 1.5rem);
-      font-style: italic;
-      font-weight: 600;
-      color: var(--gold-light);
-      opacity: .9;
-      animation: fadeUp .9s .4s ease both;
-      margin-bottom: 36px;
-    }
-
-    /* Ornamental rule under tagline */
-    .hero-rule {
-      width: 160px;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--gold) 30%, var(--gold-light) 50%, var(--gold) 70%, transparent);
-      margin: 0 auto 36px;
-      animation: fadeUp .9s .5s ease both;
-    }
-
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      justify-content: center;
-      align-items: center;
-      animation: fadeUp .9s .58s ease both;
-    }
-
-    /* ═══════════════════════════════════════════════════════════
-       SECTION 2 — QUEM SOMOS
-    ═══════════════════════════════════════════════════════════ */
-    #quem-somos { background: transparent; }
-    .quem-somos-inner {
-      max-width: 680px;
-      margin: 0 auto;
-      text-align: center;
-    }
-    .quem-somos-inner p {
-      font-size: clamp(1rem, 2.2vw, 1.12rem);
-      color: var(--text);
-      opacity: .9;
-      margin-bottom: 28px;
-    }
-    .scripture {
-      font-family: var(--font-display);
-      font-style: italic;
-      font-size: clamp(1.1rem, 2.5vw, 1.35rem);
-      font-weight: 600;
-      color: var(--gold-light);
-      border-left: 2px solid var(--gold);
-      padding: 12px 24px;
-      text-align: left;
-      display: inline-block;
-      background: rgba(138,106,36,.07);
-      border-radius: 0 8px 8px 0;
-    }
-    .scripture cite {
-      display: block;
-      font-style: normal;
-      font-family: var(--font-body);
-      font-size: .78rem;
-      font-weight: 500;
-      letter-spacing: .08em;
-      color: var(--gold);
-      margin-top: 8px;
-    }
-
-    /* ═══════════════════════════════════════════════════════════
-       SECTION 3 — O CHAMADO (CARDS)
-    ═══════════════════════════════════════════════════════════ */
-    #o-chamado { background: rgba(255,255,255,.025); }
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: var(--gap);
-      margin-top: 36px;
-    }
-    .card {
-      background: rgba(255,255,255,.04);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 36px 28px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-      transition: transform .25s ease, box-shadow .25s ease;
-    }
-    .card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(138,106,36,.06) 0%, transparent 60%);
-      opacity: 0;
-      transition: opacity .3s;
-    }
-    .card:hover { transform: translateY(-4px); box-shadow: 0 20px 50px rgba(0,0,0,.35); }
-    .card:hover::before { opacity: 1; }
-    .card-icon {
-      width: 56px;
-      height: 56px;
-      object-fit: contain;
-      margin: 0 auto 18px;
-      filter: drop-shadow(0 2px 8px rgba(0,0,0,.5)) sepia(0.2) saturate(0.8);
-      display: block;
-    }
-    .card h3 {
-      font-family: var(--font-display);
-      font-size: 1.45rem;
-      font-weight: 700;
-      color: var(--gold-light);
-      margin-bottom: 10px;
-    }
-    .card p {
-      font-size: .875rem;
-      color: var(--muted);
-      line-height: 1.55;
-    }
-    /* Gold accent bar at top */
-    .card::after {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--gold), transparent);
-      opacity: .5;
-    }
-
-    /* ═══════════════════════════════════════════════════════════
-       SECTION 4 — GALERIA
-    ═══════════════════════════════════════════════════════════ */
-    #galeria { background: transparent; }
-    .gallery {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 10px;
-      margin-top: 36px;
-    }
-    .gallery a.framed {
-      aspect-ratio: 1 / 1;
-    }
-    .gallery-cta {
-      text-align: center;
-      margin-top: 28px;
-    }
-
-    /* ═══════════════════════════════════════════════════════════
-       SECTION 5 — NOSSO APP
-    ═══════════════════════════════════════════════════════════ */
-    #nosso-app {
-      background: rgba(255,255,255,.025);
-    }
-    .app-card {
-      background: linear-gradient(135deg,
-        rgba(138,106,36,.12) 0%,
-        rgba(90,58,63,.18) 50%,
-        rgba(26,10,14,.25) 100%);
-      border: 1px solid rgba(255,217,122,.2);
-      border-radius: 18px;
-      padding: clamp(32px, 5vw, 52px);
-      max-width: 720px;
-      margin: 0 auto;
-      position: relative;
-      overflow: hidden;
-    }
-    .app-card::before {
-      content: '';
-      position: absolute;
-      top: -40px; right: -40px;
-      width: 200px;
-      height: 200px;
-      background: radial-gradient(circle, rgba(138,106,36,.18) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .app-header {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      margin-bottom: 20px;
-    }
-    .app-icon {
-      width: 72px;
-      height: 72px;
-      border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(0,0,0,.45);
-      flex-shrink: 0;
-      object-fit: cover;
-    }
-    .app-header-text h2 {
-      font-family: var(--font-display);
-      font-size: clamp(1.35rem, 3vw, 1.85rem);
-      font-weight: 700;
-      color: var(--gold-light);
-      margin-bottom: 4px;
-    }
-    .app-header-text p {
-      font-size: .85rem;
-      color: var(--muted);
-    }
-    .app-desc {
-      font-size: .95rem;
-      color: var(--text);
-      opacity: .85;
-      margin-bottom: 28px;
-      max-width: 560px;
-    }
-    .app-highlights {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 12px;
-      margin-bottom: 32px;
-    }
-    .highlight-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(90,58,63,.6);
-      border-radius: 10px;
-      padding: 12px 14px;
-    }
-    .highlight-icon {
-      font-size: 1.1rem;
-      flex-shrink: 0;
-      margin-top: 1px;
-    }
-    .highlight-item span {
-      font-size: .82rem;
-      font-weight: 500;
-      color: var(--text);
-      opacity: .85;
-      line-height: 1.4;
-    }
-
-    /* ═══════════════════════════════════════════════════════════
-       SECTION 6 — NOSSAS MISSAS
-    ═══════════════════════════════════════════════════════════ */
-    #nossas-missas { background: transparent; }
-    .missas-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: var(--gap);
-      margin-top: 36px;
-    }
-    .missa-block {
-      background: rgba(255,255,255,.04);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 32px 28px;
-      position: relative;
-    }
-    .missa-block::after {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--gold), transparent);
-      opacity: .45;
-    }
-    .missa-block h3 {
-      font-family: var(--font-display);
-      font-size: 1.35rem;
-      font-weight: 700;
-      color: var(--gold-light);
-      margin-bottom: 14px;
-    }
-    .missa-block .horarios {
-      list-style: none;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-    .missa-block .horarios li {
-      background: rgba(138,106,36,.15);
-      border: 1px solid rgba(138,106,36,.3);
-      border-radius: 6px;
-      padding: 5px 14px;
-      font-family: var(--font-display);
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: var(--gold-light);
-      letter-spacing: .04em;
-    }
-    .missa-block .missa-note {
-      font-size: .82rem;
-      color: var(--muted);
-      font-style: italic;
-    }
-    .missas-cta {
-      text-align: center;
-      margin-top: 36px;
-    }
-    .missas-cta p {
-      font-family: var(--font-display);
-      font-size: clamp(1.2rem, 3vw, 1.7rem);
-      font-weight: 600;
-      font-style: italic;
-      color: var(--gold-light);
-      margin-bottom: 16px;
-    }
-
-    /* ═══════════════════════════════════════════════════════════
-       SECTION 7 — COMO PARTICIPAR (CTA)
-    ═══════════════════════════════════════════════════════════ */
-    #como-participar {
-      background: linear-gradient(180deg, transparent, rgba(138,106,36,.06) 50%, transparent);
-    }
-    .cta-inner {
-      text-align: center;
-      max-width: 680px;
-      margin: 0 auto;
-    }
-    .cta-inner .display-md { margin-bottom: 12px; }
-    .cta-inner > p {
-      font-size: 1rem;
-      color: var(--muted);
-      margin-bottom: 36px;
-    }
-    .cta-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      justify-content: center;
-    }
-    .cta-actions .btn { padding: 15px 28px; font-size: .9rem; }
-
-    /* ═══════════════════════════════════════════════════════════
-       SECTION 8 — RODAPÉ
-    ═══════════════════════════════════════════════════════════ */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 40px clamp(20px, 5vw, 48px);
-      background: var(--wine2);
-    }
-    .footer-inner {
-      max-width: var(--max-w);
-      margin: 0 auto;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-    }
-    .footer-brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .footer-logo {
-      width: 36px;
-      height: 36px;
-      object-fit: contain;
-      opacity: .8;
-    }
-    .footer-text p {
-      font-size: .82rem;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-    .footer-text a {
-      color: var(--gold);
-      text-decoration: none;
-    }
-    .footer-text a:hover { color: var(--gold-light); }
-    .footer-links {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      align-items: center;
-    }
-    .footer-links a {
-      font-size: .8rem;
-      color: var(--muted);
-      text-decoration: none;
-      opacity: .75;
-      transition: opacity .2s;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .footer-links a:hover { opacity: 1; color: var(--text); }
-    .footer-sep {
-      color: var(--border);
-      font-size: .75rem;
-    }
-
-    /* ── ORNAMENTAL BORDER AROUND SECTIONS ─────────────────── */
-    .ornament-section {
-      position: relative;
-    }
-    .ornament-section > .container::before,
-    .ornament-section > .container::after {
-      content: '';
-      display: block;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
-      margin: 0 0 clamp(32px, 5vw, 52px);
-      opacity: .5;
-    }
-    .ornament-section > .container::before { margin-top: 0; margin-bottom: clamp(32px, 5vw, 52px); }
-
-    /* ── KEYFRAMES ──────────────────────────────────────────── */
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(22px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ── SECTION ENTRY ANIMATIONS ───────────────────────────── */
-    .reveal {
-      opacity: 0;
-      transform: translateY(24px);
-      transition: opacity .7s ease, transform .7s ease;
-    }
-    .reveal.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    /* ── RESPONSIVE ─────────────────────────────────────────── */
-    @media (max-width: 600px) {
-      .hero-actions { flex-direction: column; align-items: stretch; }
-      .hero-actions .btn { justify-content: center; }
-      .app-header { flex-direction: column; text-align: center; }
-      .footer-inner { flex-direction: column; align-items: flex-start; }
-    }
-
-    /* ── SCROLLBAR (subtle wine/gold) ───────────────────────── */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--wine); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
-
-    /* ── SVG ICONS INLINE ───────────────────────────────────── */
-    .ico { display: inline-block; vertical-align: middle; fill: currentColor; }
-
-    /* highlight-icon fallback when img fails */
-    .highlight-icon-img {
-      width: 20px;
-      height: 20px;
-      object-fit: contain;
-      flex-shrink: 0;
-    }
+    /* ====== LIGHTBOX ====== */
+    .lb{ position:fixed; inset:0; z-index:90; background:rgba(6,3,4,.95); backdrop-filter:blur(7px); display:none; align-items:center; justify-content:center; padding:26px; opacity:0; transition:opacity .35s ease; }
+    .lb.open{ display:flex; opacity:1; }
+    .lb img{ max-width:min(94vw,1140px); max-height:86vh; width:auto; box-shadow:0 40px 90px -22px rgba(0,0,0,.95), 0 0 0 1px var(--line), 0 0 0 7px rgba(200,162,74,.06); }
+    .lb .x, .lb .nav{ position:absolute; width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:rgba(200,162,74,.08); border:1px solid var(--line); color:var(--gold-light); cursor:pointer; font-size:24px; transition:background .2s; }
+    .lb .x:hover, .lb .nav:hover{ background:rgba(200,162,74,.22); }
+    .lb .x{ top:20px; right:20px; } .lb .nav.prev{ left:16px; top:50%; transform:translateY(-50%); } .lb .nav.next{ right:16px; top:50%; transform:translateY(-50%); }
   </style>
 </head>
 <body>
 
-  <!-- ╔══════════════════════════════════════════════════════╗
-       ║  FAINT BACKGROUND COLLAGE  (atmosphere layer)        ║
-       ╚══════════════════════════════════════════════════════╝ -->
-  <div class="bg-collage" aria-hidden="true">
-    <img src="../../midia/landing/web/_DSC6629.jpg"   alt="" loading="lazy" onerror="this.style.display='none'">
-    <img src="../../midia/landing/web/_DSC7134.jpg"   alt="" loading="lazy" onerror="this.style.display='none'">
-    <img src="../../midia/landing/web/_DSC7295.jpg"   alt="" loading="lazy" onerror="this.style.display='none'">
-    <img src="../../midia/landing/web/_DSC7985.jpg"   alt="" loading="lazy" onerror="this.style.display='none'">
-    <img src="../../midia/landing/web/_DSC8091.jpg"   alt="" loading="lazy" onerror="this.style.display='none'">
-    <img src="../../midia/landing/web/IMG_0249.jpg"   alt="" loading="lazy" onerror="this.style.display='none'">
-    <img src="../../midia/landing/web/IMG_0565.jpg"   alt="" loading="lazy" onerror="this.style.display='none'">
-    <img src="../../midia/landing/web/IMG_6553.jpg"   alt="" loading="lazy" onerror="this.style.display='none'">
-    <img src="../../midia/landing/web/IMG_6572.jpg"   alt="" loading="lazy" onerror="this.style.display='none'">
-    <img src="../../midia/landing/web/47CD0B44-603F-4AE5-A126-6CAF579E35CF.jpg" alt="" loading="lazy" onerror="this.style.display='none'">
-    <!-- fill remaining cells for visual balance -->
-    <img src="../../midia/landing/web/_DSC6629.jpg"   alt="" loading="lazy" onerror="this.style.display='none'">
-    <img src="../../midia/landing/web/_DSC7985.jpg"   alt="" loading="lazy" onerror="this.style.display='none'">
-  </div>
-  <div class="bg-tint" aria-hidden="true"></div>
+  <nav class="topnav" id="topnav" aria-label="Navegação">
+    <a class="brand" href="#top"><img src="../../midia/logos/brasao-pastoral.png" alt="" onerror="this.style.display='none'"><b>Somos do Altar</b></a>
+    <a class="btn btn-gold" href="login.html#cadastro">Quero servir</a>
+  </nav>
 
-
-  <!-- ╔══════════════════════════════════════════════════════╗
-       ║  SECTION 1 — HERO                                    ║
-       ╚══════════════════════════════════════════════════════╝ -->
-  <section id="hero">
-    <!-- Background photo -->
-    <div class="framed hero-photo" aria-hidden="true">
-      <img
-        src="../../midia/landing/web/_DSC4547.jpg"
-        alt="Procissão com incenso — Pastoral dos Coroinhas"
-        loading="eager"
-        onerror="this.closest('.hero-photo').style.background='linear-gradient(180deg,#26101a,#1a0a0e)'"
-      >
+  <!-- ===== I · ENCANTAMENTO ===== -->
+  <header class="hero" id="top">
+    <div class="media cover">
+      <img src="../../midia/landing/web/hero.jpg" alt="Coroinhas e acólitos reunidos diante do altar" style="object-position:50% 32%" onerror="this.style.display='none'">
+      <div class="scrim"></div>
     </div>
-    <div class="hero-vignette" aria-hidden="true"></div>
+    <div class="hero-inner">
+      <img class="crest" src="../../midia/logos/brasao-pastoral.png" alt="Brasão da Pastoral" onerror="this.style.display='none'">
+      <h1>Somos do Altar</h1>
+      <p class="motto">Ao serviço do altar, sou inteiro</p>
+      <p class="role">Pastoral dos Coroinhas e Acólitos</p>
+      <div class="btns">
+        <a class="btn btn-gold" href="login.html#cadastro">Quero servir</a>
+        <a class="btn btn-ghost" href="#caminhada">Conhecer a caminhada</a>
+        <a class="btn btn-ghost" href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link" target="_blank" rel="noopener">✛ Álbum</a>
+      </div>
+    </div>
+    <div class="scroll-hint">❧</div>
+  </header>
 
-    <div class="hero-content">
-      <img
-        class="hero-brasao"
-        src="../../midia/logos/brasao-pastoral.png"
-        alt="Brasão da Pastoral dos Coroinhas"
-        width="84" height="84"
-        onerror="this.style.display='none'"
-      >
-
-      <h1 class="display-xl gold-text hero-title">Somos do Altar</h1>
-
-      <p class="hero-subtitle">
-        Pastoral dos Coroinhas · Paróquia Jesus Cristo Bom Pastor — Limeira/SP
-      </p>
-
-      <div class="hero-rule" aria-hidden="true"></div>
-
-      <p class="hero-tagline">"Servir ao altar é servir a Cristo"</p>
-
-      <div class="hero-actions">
-        <a class="btn btn-gold" href="login.html#cadastro">
-          <!-- cross icon -->
-          <svg class="ico" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 2v20M2 12h20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-          </svg>
-          Quero servir
-        </a>
-        <a class="btn btn-outline" href="#quem-somos">
-          Conhecer a pastoral
-        </a>
-        <a class="btn btn-ghost"
-           href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link"
-           target="_blank" rel="noopener noreferrer">
-          📷 Álbum de fotos
-        </a>
+  <!-- ===== II · SÃO TARCÍSIO ===== -->
+  <section id="tarcisio">
+    <div class="wrap">
+      <div class="split rev">
+        <div class="col-img reveal">
+          <div class="framed ar-v arch gild"><img src="../../midia/landing/web/saotarcisio.jpg" alt="São Tarcísio, padroeiro dos coroinhas e acólitos" onerror="this.closest('.framed').style.display='none'"></div>
+        </div>
+        <div class="col-text reveal">
+          <div class="eyebrow">Nosso padroeiro</div>
+          <h2 class="title">São Tarcísio</h2>
+          <p class="kicker-q">O jovem que abraçou Jesus até o fim.</p>
+          <p class="soft" style="margin-top:18px">Tarcísio era um jovem como você. Lá no ano 257, em Roma, ele levava escondida a Eucaristia para os cristãos que estavam presos. Um dia foi cercado por um grupo que queria profanar o Santíssimo, e ele simplesmente não entregou. Abraçou Jesus contra o peito e deu a própria vida sem soltar o que era sagrado.</p>
+          <p class="soft">É por isso que ele é o <b style="color:var(--gold-light);font-weight:400">padroeiro dos coroinhas e acólitos</b>. Toda vez que a gente serve ao altar, é o exemplo dele que segue vivo: guardar o sagrado de coração inteiro.</p>
+        </div>
       </div>
     </div>
   </section>
 
-
-  <!-- ╔══════════════════════════════════════════════════════╗
-       ║  SECTION 2 — QUEM SOMOS                              ║
-       ╚══════════════════════════════════════════════════════╝ -->
+  <!-- ===== III · POR QUE SERVIR ===== -->
   <section id="quem-somos">
-    <div class="container">
-      <div class="fleuron" aria-hidden="true">✦ ✠ ✦</div>
-
-      <div class="quem-somos-inner reveal">
-        <span class="section-label">Nossa identidade</span>
-        <h2 class="display-lg gold-text" style="margin-bottom:24px">Quem somos</h2>
-
-        <p>
-          A Pastoral dos Coroinhas da Paróquia Jesus Cristo Bom Pastor reúne jovens
-          chamados a servir ao altar com fé, dedicação e fraternidade. Aqui, o serviço
-          litúrgico não é apenas uma função — é uma vocação: uma resposta ao chamado de
-          Cristo que nos convida a estar perto d'Ele na celebração da Santa Missa.
-        </p>
-        <p>
-          Formamos coroinhas não só para o altar, mas para a vida. Cultivamos valores
-          como responsabilidade, piedade, pertencimento e amor à Igreja, acompanhando
-          cada jovem em sua jornada de fé.
-        </p>
-
-        <blockquote class="scripture">
-          "Prefiro um dia nos teus átrios a mil em qualquer outro lugar."
-          <cite>— Salmo 84,11</cite>
-        </blockquote>
-      </div>
-
-      <div class="fleuron" aria-hidden="true">✦ ✠ ✦</div>
-    </div>
-  </section>
-
-
-  <!-- ╔══════════════════════════════════════════════════════╗
-       ║  SECTION 3 — O CHAMADO                               ║
-       ╚══════════════════════════════════════════════════════╝ -->
-  <section id="o-chamado">
-    <div class="container">
-      <div class="reveal" style="text-align:center; margin-bottom:8px">
-        <span class="section-label">Por que servir</span>
-        <h2 class="display-lg gold-text">O chamado</h2>
-      </div>
-
-      <div class="cards-grid">
-        <!-- Card 1: Servir -->
-        <div class="card reveal">
-          <img
-            class="card-icon"
-            src="../../midia/elementos/calice.png"
-            alt="Cálice"
-            width="56" height="56"
-            onerror="this.style.display='none'"
-          >
-          <h3>Servir</h3>
-          <p>Cada missa é uma oportunidade de oferecer seu tempo e seu coração a Cristo presente no altar.</p>
+    <div class="wrap">
+      <div class="split">
+        <div class="col-text reveal">
+          <div class="eyebrow">Por que servir</div>
+          <h2 class="title">Há um lugar <em>junto ao altar</em></h2>
+          <p class="kicker-q">Onde o tempo se aquieta e o coração aprende a adorar.</p>
+          <p class="soft dropcap" style="margin-top:20px">Servir à Mesa do Senhor é o jeito mais bonito de dizer “sim” pra Deus. Cada vela que você acende, cada sino que toca, cada passo na procissão vira uma oração feita com o corpo inteiro. São gestos pequenos que tocam o Céu. Aqui você não só assiste à missa, você se deixa transformar por ela.</p>
+          <blockquote class="scripture">“Eis-me aqui, envia-me.”<cite>Isaías 6, 8</cite></blockquote>
         </div>
-
-        <!-- Card 2: Formar-se -->
-        <div class="card reveal">
-          <img
-            class="card-icon"
-            src="../../midia/elementos/biblia.png"
-            alt="Bíblia"
-            width="56" height="56"
-            onerror="this.style.display='none'"
-          >
-          <h3>Formar-se</h3>
-          <p>Crescemos na fé, na liturgia e na vida — a pastoral é escola de discípulos que não se contêm.</p>
-        </div>
-
-        <!-- Card 3: Fraternidade -->
-        <div class="card reveal">
-          <img
-            class="card-icon"
-            src="../../midia/elementos/sino.png"
-            alt="Sino"
-            width="56" height="56"
-            onerror="this.style.display='none'"
-          >
-          <h3>Fraternidade</h3>
-          <p>Aqui você não serve sozinho — somos família, casas, amigos que partilham a mesma missão.</p>
+        <div class="col-img reveal">
+          <div class="framed ar-v arch gild"><img src="../../midia/landing/web/porqueservir.jpg" alt="Jovem servidor em oração" onerror="this.closest('.framed').style.display='none'"></div>
         </div>
       </div>
     </div>
   </section>
 
-
-  <!-- ╔══════════════════════════════════════════════════════╗
-       ║  SECTION 4 — GALERIA                                 ║
-       ╚══════════════════════════════════════════════════════╝ -->
-  <section id="galeria">
-    <div class="container">
-      <div class="fleuron" aria-hidden="true">✦ ✠ ✦</div>
-
-      <div class="reveal" style="text-align:center; margin-bottom:8px">
-        <span class="section-label">Momentos</span>
-        <h2 class="display-lg gold-text">Galeria</h2>
-      </div>
-
-      <div class="gallery reveal">
-        <a class="framed"
-           href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link"
-           target="_blank" rel="noopener noreferrer"
-           title="Ver álbum completo">
-          <img
-            src="../../midia/landing/web/_DSC7293.jpg"
-            alt="Coroinha em celebração"
-            loading="lazy"
-            onerror="this.closest('.framed').style.display='none'"
-          >
-        </a>
-        <a class="framed"
-           href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link"
-           target="_blank" rel="noopener noreferrer"
-           title="Ver álbum completo">
-          <img
-            src="../../midia/landing/web/_DSC7307.jpg"
-            alt="Momento de oração"
-            loading="lazy"
-            onerror="this.closest('.framed').style.display='none'"
-          >
-        </a>
-        <a class="framed"
-           href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link"
-           target="_blank" rel="noopener noreferrer"
-           title="Ver álbum completo">
-          <img
-            src="../../midia/landing/web/_DSC7296.jpg"
-            alt="Liturgia"
-            loading="lazy"
-            onerror="this.closest('.framed').style.display='none'"
-          >
-        </a>
-        <a class="framed"
-           href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link"
-           target="_blank" rel="noopener noreferrer"
-           title="Ver álbum completo">
-          <img
-            src="../../midia/landing/web/_DSC6887.jpg"
-            alt="Comunidade"
-            loading="lazy"
-            onerror="this.closest('.framed').style.display='none'"
-          >
-        </a>
-        <a class="framed"
-           href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link"
-           target="_blank" rel="noopener noreferrer"
-           title="Ver álbum completo">
-          <img
-            src="../../midia/landing/web/_DSC7108.jpg"
-            alt="Servindo ao altar"
-            loading="lazy"
-            onerror="this.closest('.framed').style.display='none'"
-          >
-        </a>
-        <a class="framed"
-           href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link"
-           target="_blank" rel="noopener noreferrer"
-           title="Ver álbum completo">
-          <img
-            src="../../midia/landing/web/_DSC7182.jpg"
-            alt="Procissão"
-            loading="lazy"
-            onerror="this.closest('.framed').style.display='none'"
-          >
-        </a>
-        <a class="framed"
-           href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link"
-           target="_blank" rel="noopener noreferrer"
-           title="Ver álbum completo">
-          <img
-            src="../../midia/landing/web/_DSC7257.jpg"
-            alt="Coroinhas juntos"
-            loading="lazy"
-            onerror="this.closest('.framed').style.display='none'"
-          >
-        </a>
-        <a class="framed"
-           href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link"
-           target="_blank" rel="noopener noreferrer"
-           title="Ver álbum completo">
-          <img
-            src="../../midia/landing/web/_DSC8075.jpg"
-            alt="Celebração eucarística"
-            loading="lazy"
-            onerror="this.closest('.framed').style.display='none'"
-          >
-        </a>
-      </div>
-
-      <div class="gallery-cta reveal">
-        <a class="btn btn-outline"
-           href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link"
-           target="_blank" rel="noopener noreferrer">
-          📷 Ver todas as fotos
-        </a>
-      </div>
-
-      <div class="fleuron" aria-hidden="true">✦ ✠ ✦</div>
+  <!-- ===== interlúdio ===== -->
+  <section class="interlude">
+    <div class="media cover">
+      <img src="../../midia/landing/web/fraseefeito.jpg" alt="Servidores em procissão" onerror="this.style.display='none'">
+      <div class="scrim dark"></div>
+    </div>
+    <div class="v">
+      <p>“Entrarei junto ao altar de Deus,<br>do Deus que é a alegria da minha juventude.”</p>
+      <cite>Salmo 43, 4</cite>
     </div>
   </section>
 
-
-  <!-- ╔══════════════════════════════════════════════════════╗
-       ║  SECTION 5 — NOSSO APP                               ║
-       ╚══════════════════════════════════════════════════════╝ -->
-  <section id="nosso-app">
-    <div class="container">
-      <div class="reveal" style="text-align:center; margin-bottom:36px">
-        <span class="section-label">Tecnologia a serviço da fé</span>
-        <h2 class="display-lg gold-text">Nosso app</h2>
+  <!-- ===== IV · A CAMINHADA ===== -->
+  <section id="caminhada">
+    <div class="wrap">
+      <div class="center narrow" style="margin:0 auto">
+        <div class="eyebrow reveal">A caminhada</div>
+        <h2 class="title reveal">De onde você começa, <em>até onde pode chegar</em></h2>
+        <p class="soft reveal">Ninguém começa pronto, e ninguém serve sozinho. A vida no altar é uma caminhada de degraus, cada um com a sua beleza e a sua missão. Olha só por onde ela passa.</p>
       </div>
+      <div class="path">
+        <div class="rail" aria-hidden="true"></div>
 
-      <div class="app-card reveal">
-        <div class="app-header">
-          <img
-            class="app-icon"
-            src="icon-192.png"
-            alt="Ícone do app Somos do Altar"
-            width="72" height="72"
-            onerror="this.style.background='var(--wine2)'"
-          >
-          <div class="app-header-text">
-            <h2>O altar também no seu bolso</h2>
-            <p>Para coroinhas e coordenadores</p>
+        <div class="stage l reveal">
+          <div class="s-img"><div class="framed ar-v arch gild"><img src="../../midia/landing/web/aspirante.jpg" alt="Aspirante da pastoral" onerror="this.closest('.framed').style.display='none'"></div></div>
+          <div class="medal"><span>I</span></div>
+          <div class="s-card">
+            <p class="st-name">Aspirante</p>
+            <div class="st-tag">O primeiro passo</div>
+            <p>Você chega, observa e se encanta. Aprende os primeiros gestos, faz novos amigos e descobre como é bom estar pertinho do altar. É aqui que tudo começa.</p>
           </div>
         </div>
 
-        <p class="app-desc">
-          O aplicativo da pastoral centraliza tudo: sua jornada de fé, missões,
-          escalas, agenda e muito mais. Uma ferramenta pensada para fortalecer
-          o vínculo entre os coroinhas e a missão de servir.
-        </p>
+        <div class="stage r reveal">
+          <div class="s-card">
+            <p class="st-name">Coroinha</p>
+            <div class="st-tag">Servir com alegria</div>
+            <p>Agora você veste a túnica, conduz a luz, toca o sino e acompanha o padre. Você deixou de assistir à missa pra servir nela, de corpo e alma.</p>
+          </div>
+          <div class="medal"><span>II</span></div>
+          <div class="s-img"><div class="framed ar-v arch gild"><img src="../../midia/landing/web/coroinha.jpg" alt="Coroinha servindo no altar" onerror="this.closest('.framed').style.display='none'"></div></div>
+        </div>
 
-        <div class="app-highlights">
-          <div class="highlight-item">
-            <span class="highlight-icon">⭐</span>
-            <span>Jornada &amp; níveis — evolua como coroinha</span>
-          </div>
-          <div class="highlight-item">
-            <span class="highlight-icon">🏆</span>
-            <span>Missões e conquistas — desafios para crescer</span>
-          </div>
-          <div class="highlight-item">
-            <span class="highlight-icon">📅</span>
-            <span>Escalas e agenda — sempre informado</span>
-          </div>
-          <div class="highlight-item">
-            <span class="highlight-icon">🏰</span>
-            <span>Casas e fraternidade — sua família no altar</span>
+        <div class="stage l reveal">
+          <div class="s-img"><div class="framed ar-v arch gild"><img src="../../midia/landing/web/acolito.jpg" alt="Acólito diante do altar" style="object-position:50% 35%" onerror="this.closest('.framed').style.display='none'"></div></div>
+          <div class="medal"><span>III</span></div>
+          <div class="s-card">
+            <p class="st-name">Acólito</p>
+            <div class="st-tag">Maior proximidade</div>
+            <p>A responsabilidade junto ao altar cresce com você. A formação fica mais profunda, a oração mais firme, e cada detalhe da liturgia passa a importar. Servir vira entrega de verdade.</p>
           </div>
         </div>
 
-        <a class="btn btn-gold" href="login.html">
-          Acessar o app
-          <svg class="ico" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-          </svg>
-        </a>
+        <div class="stage r reveal">
+          <div class="s-card">
+            <p class="st-name">Cerimoniário</p>
+            <div class="st-tag">Conduzir e ensinar</div>
+            <p>Você já tem traquejo: coordena a equipe, ensina os mais novos e cuida pra que cada celebração fique linda. Aqui servir também é ajudar os outros a servir.</p>
+          </div>
+          <div class="medal"><span>IV</span></div>
+          <div class="s-img"><div class="framed ar-v arch gild"><img src="../../midia/landing/web/cerimoniario.jpg" alt="Cerimoniário conduzindo a celebração" onerror="this.closest('.framed').style.display='none'"></div></div>
+        </div>
       </div>
     </div>
   </section>
 
-
-  <!-- ╔══════════════════════════════════════════════════════╗
-       ║  SECTION 6 — NOSSAS MISSAS                           ║
-       ╚══════════════════════════════════════════════════════╝ -->
-  <section id="nossas-missas">
-    <div class="container">
-      <div class="fleuron" aria-hidden="true">✦ ✠ ✦</div>
-
-      <div class="reveal" style="text-align:center; margin-bottom:8px">
-        <span class="section-label">Venha participar</span>
-        <h2 class="display-lg gold-text">Nossas missas</h2>
-        <p class="muted-text" style="margin-top:8px; font-size:.9rem">Aos finais de semana</p>
+  <!-- ===== V · O APP ===== -->
+  <section class="app">
+    <div class="wrap">
+      <div class="split">
+        <div class="col-text reveal">
+          <img class="appicon" src="icon-192.png" alt="Ícone do app" onerror="this.style.display='none'">
+          <div class="eyebrow" style="margin-top:18px">A jornada não para na missa</div>
+          <h2 class="title">Cada coroinha tem <em>o seu app</em></h2>
+          <p class="soft">A caminhada não para quando a missa acaba. Durante a semana ela continua na palma da sua mão. O app transforma o serviço numa aventura espiritual, cheia de metas, conquistas e uma turma que cresce junto.</p>
+          <ul class="feat">
+            <li><span class="fi">✦</span><div><b>Jornada e níveis</b> <span>você evolui a cada missa servida e acompanha seu caminho de Aspirante a Cerimoniário.</span></div></li>
+            <li><span class="fi">✠</span><div><b>Missões e medalhas</b> <span>desafios de fé e formação que viram conquistas e mostram o quanto você cresceu.</span></div></li>
+            <li><span class="fi">❧</span><div><b>Escalas e agenda</b> <span>saiba quando servir, confirme presença e nunca perca uma celebração.</span></div></li>
+            <li><span class="fi">✛</span><div><b>Casas e fraternidade</b> <span>você entra pra uma casa, disputa com alegria e cresce junto com os irmãos.</span></div></li>
+          </ul>
+          <a class="btn btn-gold" href="login.html">Acessar o app</a>
+        </div>
+        <div class="col-img reveal">
+          <div class="stage-app">
+            <div class="float-card fc1"><div class="ic">🎖️</div><div class="t"><b>Nova medalha</b><span>Luz do Altar</span></div></div>
+            <div class="float-card fc2"><div class="ic">⬆️</div><div class="t"><b>Subiu de nível!</b><span>Acólito Sentinela · Nível 7</span></div></div>
+            <div class="float-card fc3"><div class="ic">🔥</div><div class="t"><b>Missão concluída</b><span>+20 ✦ de Luz</span></div></div>
+            <div class="phone">
+              <div class="scr">
+                <div class="ph-top"><img src="../../midia/logos/brasao-pastoral.png" alt="" onerror="this.style.display='none'"><span class="nm">Somos do Altar</span><span class="bell">🔔</span></div>
+                <div class="ph-hi">Olá, João ✦</div>
+                <div class="ph-lvl">
+                  <div class="ph-ring"><i><b>7</b><small>NÍVEL</small></i></div>
+                  <div class="ph-lvl-info"><b>Acólito Sentinela</b><div class="ph-xp"><i></i></div><small>320 / 500 ✦ para o próximo nível</small></div>
+                </div>
+                <div class="ph-label">Próxima escala</div>
+                <div class="ph-card"><span class="ph-ic">🗓️</span><div><b>Domingo · 9h</b><small>Missa · Igreja Matriz</small></div><span class="ph-tag">Acólito</span></div>
+                <div class="ph-label">Missão da semana</div>
+                <div class="ph-card"><span class="ph-ic">🕯️</span><div><b>Servir na missa de domingo</b><small>Capítulo da Luz</small></div><span class="ph-star">+20 ✦</span></div>
+                <div class="ph-tiles"><span>✦<small>Jornada</small></span><span>✠<small>Missões</small></span><span>✛<small>Casas</small></span><span>❧<small>Escalas</small></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+    </div>
+  </section>
 
-      <div class="missas-grid">
-        <!-- Matriz -->
-        <div class="missa-block reveal">
+  <!-- ===== VI · FRATERNIDADE ===== -->
+  <section>
+    <div class="wrap">
+      <div class="center"><div class="eyebrow reveal">A vida em fraternidade</div>
+      <h2 class="title reveal">Antes e depois do altar, <em>somos amigos</em></h2>
+      <p class="soft reveal narrow" style="margin:0 auto">Encontros, brincadeiras, partilha e oração. A gente reza junto, ri junto e cresce unido no mesmo amor.</p></div>
+      <div class="mosaic reveal">
+        <a class="lb-item" href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link" target="_blank" rel="noopener" onclick="return lbOpen(event,this)"><img src="../../midia/landing/web/momentos.jpg" alt="Momentos da pastoral" onerror="this.closest('a').style.display='none'"></a>
+        <a class="lb-item" href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link" target="_blank" rel="noopener" onclick="return lbOpen(event,this)"><img src="../../midia/landing/web/momentos4.jpg" alt="Momentos da pastoral" onerror="this.closest('a').style.display='none'"></a>
+        <a class="lb-item" href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link" target="_blank" rel="noopener" onclick="return lbOpen(event,this)"><img src="../../midia/landing/web/momentos2.jpg" alt="Momentos da pastoral" onerror="this.closest('a').style.display='none'"></a>
+        <a class="lb-item" href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link" target="_blank" rel="noopener" onclick="return lbOpen(event,this)"><img src="../../midia/landing/web/momentos5.jpg" alt="Momentos da pastoral" onerror="this.closest('a').style.display='none'"></a>
+        <a class="lb-item" href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link" target="_blank" rel="noopener" onclick="return lbOpen(event,this)"><img src="../../midia/landing/web/cerimoniario2.jpg" alt="Momentos da pastoral" onerror="this.closest('a').style.display='none'"></a>
+        <a class="lb-item" href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link" target="_blank" rel="noopener" onclick="return lbOpen(event,this)"><img src="../../midia/landing/web/momentos3.jpg" alt="Momentos da pastoral" onerror="this.closest('a').style.display='none'"></a>
+      </div>
+      <p class="center" style="margin-top:28px"><a class="btn-link" href="https://drive.google.com/drive/folders/1smBE0XjdZMJ0W8qwBK9Sjdz851e-GcGD?usp=drive_link" target="_blank" rel="noopener">Ver o álbum completo →</a></p>
+    </div>
+  </section>
+
+  <!-- ===== interlúdio 2 ===== -->
+  <section class="interlude">
+    <div class="media cover">
+      <img src="../../midia/landing/web/fim.jpg" alt="Comunidade reunida" onerror="this.style.display='none'">
+      <div class="scrim dark"></div>
+    </div>
+    <div class="v">
+      <p>“Ao serviço do altar, sou inteiro.”</p>
+      <cite>Lema da nossa pastoral</cite>
+    </div>
+  </section>
+
+  <!-- ===== VII · PASSO A PASSO ===== -->
+  <section id="passos">
+    <div class="wrap">
+      <div class="center narrow" style="margin:0 auto">
+        <div class="eyebrow reveal">Como entrar</div>
+        <h2 class="title reveal">Quatro passos <em>para começar</em></h2>
+        <p class="soft reveal">Entrar na pastoral é fácil. Veja como dar o seu primeiro passo hoje mesmo.</p>
+      </div>
+      <div class="steps">
+        <div class="step reveal"><div class="step-n">I</div><h3>Crie seu acesso</h3><p>Toque em “Quero servir” e crie sua conta em poucos segundos.</p></div>
+        <div class="step reveal"><div class="step-n">II</div><h3>Complete o cadastro</h3><p>Preencha seus dados no app. Se você for menor, os pais dão uma mãozinha.</p></div>
+        <div class="step reveal"><div class="step-n">III</div><h3>Receba as boas-vindas</h3><p>A coordenação dá uma olhada no seu cadastro e logo entra em contato.</p></div>
+        <div class="step reveal"><div class="step-n">IV</div><h3>Comece a servir</h3><p>Venha aos encontros e dê seus primeiros passos juntinho do altar.</p></div>
+      </div>
+      <p class="center reveal" style="margin-top:36px"><a class="btn btn-gold" href="login.html#cadastro">Quero servir</a></p>
+    </div>
+  </section>
+
+  <!-- ===== VIII · PRIMEIRO PASSO ===== -->
+  <section>
+    <div class="wrap">
+      <div class="eyebrow reveal">Onde nos encontrar</div>
+      <h2 class="title reveal">Venha servir <em>conosco</em></h2>
+      <p class="soft reveal narrow">As portas estão sempre abertas. Apareça numa das nossas celebrações e, se sentir o chamado, fica com a gente.</p>
+      <div class="missas">
+        <div class="mass-card reveal">
           <h3>Igreja Matriz</h3>
-          <ul class="horarios">
-            <li>7h</li>
-            <li>9h</li>
-            <li>17h</li>
-            <li>19h</li>
-          </ul>
-          <p class="missa-note">Paróquia Jesus Cristo Bom Pastor — Limeira/SP</p>
+          <div class="loc">Jesus Cristo Bom Pastor</div>
+          <div class="mass-row"><span class="day">Sábado</span><span class="hr">17h</span></div>
+          <div class="mass-row"><span class="day">Domingo</span><span class="hr">7h · 9h · 19h</span></div>
         </div>
-
-        <!-- Santo Antônio -->
-        <div class="missa-block reveal">
-          <h3>Santo Antônio</h3>
-          <ul class="horarios">
-            <li>18h30</li>
-          </ul>
-          <p class="missa-note">Comunidade de Santo Antônio — sábados e domingos</p>
-        </div>
-      </div>
-
-      <div class="missas-cta reveal">
-        <p>Venha servir conosco.</p>
-        <a class="btn btn-outline" href="login.html#cadastro">Quero ser coroinha</a>
-      </div>
-
-      <div class="fleuron" aria-hidden="true">✦ ✠ ✦</div>
-    </div>
-  </section>
-
-
-  <!-- ╔══════════════════════════════════════════════════════╗
-       ║  SECTION 7 — COMO PARTICIPAR (CTA)                   ║
-       ╚══════════════════════════════════════════════════════╝ -->
-  <section id="como-participar">
-    <div class="container">
-      <div class="cta-inner reveal">
-        <span class="section-label">Dê o primeiro passo</span>
-        <h2 class="display-md gold-text">Como participar</h2>
-        <p>Entre em contato, siga nossas redes ou já faça seu cadastro no app — é simples.</p>
-
-        <div class="cta-actions">
-          <!-- TROCAR pelo número real -->
-          <a class="btn btn-whatsapp"
-             href="https://wa.me/5519999999999"
-             target="_blank" rel="noopener noreferrer">
-            <!-- whatsapp icon -->
-            <svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-              <path fill="currentColor" d="M12 0C5.373 0 0 5.373 0 12c0 2.09.538 4.05 1.477 5.757L0 24l6.395-1.677A11.952 11.952 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm.029 21.818a9.889 9.889 0 0 1-5.042-1.377l-.361-.215-3.742.981.998-3.648-.235-.374A9.869 9.869 0 0 1 2.18 12C2.18 6.57 6.598 2.182 12.03 2.182c5.434 0 9.85 4.388 9.85 9.818s-4.416 9.818-9.851 9.818z"/>
-            </svg>
-            WhatsApp
-          </a>
-
-          <a class="btn btn-instagram"
-             href="https://instagram.com/somosdoaltar"
-             target="_blank" rel="noopener noreferrer">
-            <!-- instagram icon -->
-            <svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="currentColor" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/>
-            </svg>
-            Instagram
-          </a>
-
-          <a class="btn btn-gold" href="login.html#cadastro">
-            <svg class="ico" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 2v20M2 12h20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-            </svg>
-            Quero servir
-          </a>
+        <div class="mass-card reveal">
+          <h3>Comunidade Santo Antônio</h3>
+          <div class="loc">Santo Antônio</div>
+          <div class="mass-row"><span class="day">Sábado</span><span class="hr">18h30</span></div>
         </div>
       </div>
     </div>
   </section>
 
+  <!-- ===== CTA ===== -->
+  <section class="cta">
+    <div class="wrap">
+      <div class="divider reveal"><span class="r"></span><span class="m">✠</span><span class="r rev"></span></div>
+      <div class="eyebrow reveal">Responda ao chamado</div>
+      <h2 class="title reveal" style="max-width:16ch;margin:.45rem auto 1.1rem">Você também é <em>chamado a servir</em></h2>
+      <p class="soft reveal narrow" style="margin:0 auto">Dá o primeiro passo. Crie seu acesso, chama a gente no WhatsApp ou venha nos conhecer. O altar está te esperando.</p>
+      <div class="btns reveal">
+        <a class="btn btn-gold" href="login.html#cadastro">Quero servir</a>
+        <a class="btn btn-wa" href="https://wa.me/5519999071702" target="_blank" rel="noopener">Falar no WhatsApp</a>
+        <a class="btn btn-ghost" href="https://instagram.com/somosdoaltar" target="_blank" rel="noopener">Instagram</a>
+      </div>
+    </div>
+  </section>
 
-  <!-- ╔══════════════════════════════════════════════════════╗
-       ║  SECTION 8 — RODAPÉ                                  ║
-       ╚══════════════════════════════════════════════════════╝ -->
   <footer>
-    <div class="footer-inner">
-      <div class="footer-brand">
-        <img
-          class="footer-logo"
-          src="../../midia/logos/brasao-pastoral.png"
-          alt="Brasão da Pastoral"
-          width="36" height="36"
-          onerror="this.style.display='none'"
-        >
-        <div class="footer-text">
-          <p>Paróquia Jesus Cristo Bom Pastor — Limeira/SP</p>
-          <p>
-            <a href="https://instagram.com/somosdoaltar" target="_blank" rel="noopener noreferrer">
-              @somosdoaltar
-            </a>
-          </p>
-        </div>
-      </div>
-
-      <div class="footer-links">
-        <a href="login.html">
-          <!-- key icon -->
-          <svg class="ico" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <circle cx="7" cy="17" r="5"/><path d="M11.5 13.5L21 4"/>
-          </svg>
-          Acesso dos coroinhas
-        </a>
-        <span class="footer-sep" aria-hidden="true">·</span>
-        <a href="/ausencias">
-          <svg class="ico" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
-          </svg>
-          Informar ausência
-        </a>
-      </div>
+    <img class="fcrest" src="../../midia/logos/brasao-pastoral.png" alt="" onerror="this.style.display='none'">
+    <div class="fname">Somos do Altar</div>
+    <div class="fline">Paróquia Jesus Cristo Bom Pastor, Limeira/SP</div>
+    <div class="flinks">
+      <a href="https://instagram.com/somosdoaltar" target="_blank" rel="noopener">@somosdoaltar</a>
+      <a href="login.html">Acesso dos coroinhas</a>
     </div>
   </footer>
 
+  <div class="lb" id="lb" aria-hidden="true">
+    <button class="x" type="button" aria-label="Fechar" onclick="lbClose()">✕</button>
+    <button class="nav prev" type="button" aria-label="Foto anterior" onclick="lbStep(-1)">‹</button>
+    <img id="lb-img" src="" alt="Foto da pastoral">
+    <button class="nav next" type="button" aria-label="Próxima foto" onclick="lbStep(1)">›</button>
+  </div>
 
-  <!-- ── REVEAL SCROLL ANIMATION ──────────────────────────── -->
   <script>
-    (function () {
-      'use strict';
-      var io = new IntersectionObserver(function (entries) {
-        entries.forEach(function (e) {
-          if (e.isIntersecting) {
-            e.target.classList.add('visible');
-            io.unobserve(e.target);
-          }
-        });
-      }, { threshold: 0.12 });
+    const io = new IntersectionObserver((entries)=>{ entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }); }, { threshold:.12 });
+    document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
-      document.querySelectorAll('.reveal').forEach(function (el) {
-        io.observe(el);
-      });
-    })();
+    const _nav = document.getElementById('topnav');
+    const _navScroll = () => _nav.classList.toggle('show', window.scrollY > window.innerHeight * .72);
+    _navScroll(); window.addEventListener('scroll', _navScroll, { passive:true });
+
+    const lbItems = [...document.querySelectorAll('.mosaic a.lb-item')];
+    const lb = document.getElementById('lb'), lbImg = document.getElementById('lb-img');
+    let lbIdx = 0;
+    function lbShow(){ const im = lbItems[lbIdx].querySelector('img'); lbImg.src = im.currentSrc || im.src; }
+    function lbOpen(ev, node){ ev.preventDefault(); lbIdx = lbItems.indexOf(node); lbShow(); lb.classList.add('open'); lb.setAttribute('aria-hidden','false'); return false; }
+    function lbClose(){ lb.classList.remove('open'); lb.setAttribute('aria-hidden','true'); }
+    function lbStep(d){ lbIdx = (lbIdx + d + lbItems.length) % lbItems.length; lbShow(); }
+    lb.addEventListener('click', e => { if(e.target === lb) lbClose(); });
+    window.addEventListener('keydown', e => { if(!lb.classList.contains('open')) return; if(e.key==='Escape') lbClose(); else if(e.key==='ArrowRight') lbStep(1); else if(e.key==='ArrowLeft') lbStep(-1); });
+
+    if(!matchMedia('(prefers-reduced-motion:reduce)').matches){
+      const phone = document.querySelector('.phone');
+      if(phone && matchMedia('(pointer:fine)').matches){
+        const wrap = phone.parentElement;
+        phone.style.transition = 'transform .25s ease';
+        wrap.addEventListener('pointermove', e => { const r = wrap.getBoundingClientRect(); const x = (e.clientX-r.left)/r.width-.5, y = (e.clientY-r.top)/r.height-.5; phone.style.transform = 'perspective(1000px) rotateY('+(x*8).toFixed(2)+'deg) rotateX('+(-y*8).toFixed(2)+'deg)'; });
+        wrap.addEventListener('pointerleave', () => { phone.style.transform = ''; });
+      }
+    }
   </script>
-
 </body>
 </html>
