@@ -145,7 +145,7 @@ async function init() {
 async function loadCrm() {
   const { data } = await sbAdmin
     .from('acolitos_crm')
-    .select('*, acolitos_membros(id,nome,data_nascimento,foto_url,telefone,telefone_whatsapp)')
+    .select('*, acolitos_membros(id,nome,data_nascimento,foto_url,telefone,telefone_whatsapp,celular_responsavel,responsavel_whatsapp,celular_mae)')
     .neq('etapa','integrado')
     .order('etapa_iniciada_em', { ascending: true });
   crmData = data || [];
@@ -215,7 +215,7 @@ function renderPipeline() {
       daysEl.textContent = dias + ' dias nesta etapa';
 
       card.append(name, meta, daysEl);
-      const wlink = m && m.telefone_whatsapp ? waLink(m.telefone) : null;
+      const wlink = waMembro(m);
       if (wlink) {
         const wa = document.createElement('a'); wa.className = 'crm-wa'; wa.href = wlink; wa.target = '_blank'; wa.rel = 'noopener';
         wa.textContent = '💬 WhatsApp'; wa.onclick = (e) => e.stopPropagation(); // não abre o modal da etapa
@@ -260,7 +260,7 @@ function renderLista() {
 
     const tdAcao = document.createElement('td');
     tdAcao.style.cssText = 'display:flex;gap:6px;align-items:center;';
-    const wlink = m && m.telefone_whatsapp ? waLink(m.telefone) : null;
+    const wlink = waMembro(m);
     if (wlink) { const wa = document.createElement('a'); wa.className = 'crm-wa sm'; wa.href = wlink; wa.target = '_blank'; wa.rel = 'noopener'; wa.title = 'WhatsApp'; wa.textContent = '💬'; tdAcao.appendChild(wa); }
     const btn = document.createElement('button'); btn.className = 'btn-sm gold';
     btn.textContent = 'Avançar'; btn.onclick = () => abrirModal(c);

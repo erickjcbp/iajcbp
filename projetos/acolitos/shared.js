@@ -1146,6 +1146,18 @@ function waLink(tel) {
   if (d.length < 10) return null;
   return 'https://wa.me/' + (d.startsWith('55') ? d : '55' + d);
 }
+// Melhor número de WhatsApp do membro: o dele (se for whats) ou o do responsável.
+// Crianças geralmente não têm telefone próprio — o contato é o do responsável.
+function waMembro(m) {
+  if (!m) return null;
+  const cands = [
+    m.telefone_whatsapp ? m.telefone : null,
+    m.responsavel_whatsapp ? m.celular_responsavel : null,
+    m.celular_responsavel, m.celular_mae, m.telefone
+  ];
+  for (const c of cands) { const l = waLink(c); if (l) return l; }
+  return null;
+}
 // Módulos que o admin pode liberar por pessoa (key, label, href). Hoje só os existentes.
 const MODULOS_LIBERAVEIS = [
   ['escala','Escala','escala.html'], ['membros','Membros','membros.html'],
