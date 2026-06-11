@@ -27,7 +27,7 @@
       --black:'Fraunces', Georgia, serif;
     }
     *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-    html{ scroll-behavior:smooth; }
+    html{ scroll-behavior:smooth; scroll-padding-top:72px; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
     body{ margin:0; font-family:var(--body); font-weight:300; background:var(--ink); color:var(--text);
       font-size:17px; line-height:1.8; letter-spacing:.2px; -webkit-font-smoothing:antialiased; overflow-x:hidden; position:relative; font-optical-sizing:auto; }
     img{ max-width:100%; display:block; }
@@ -235,6 +235,25 @@
     @media(prefers-reduced-motion:reduce){
       .reveal,.hero .crest,.hero h1,.hero .motto,.hero .role,.hero .btns,.float-card{ opacity:1!important; transform:none!important; animation:none!important; }
       .scroll-hint{ animation:none; } html{ scroll-behavior:auto; }
+    }
+
+    /* ====== MOBILE ====== */
+    @media(max-width:600px){
+      body{ font-size:16px; }
+      .wrap{ padding:0 20px; }
+      section{ padding:clamp(48px,12vw,84px) 0; }
+      .hero{ min-height:100svh; }
+      .hero-inner{ padding-bottom:clamp(36px,8vw,56px); }
+      .hero .btns{ gap:10px; }
+      .hero .btns .btn, .cta .btns .btn{ flex:1 1 100%; justify-content:center; }
+      .btn{ padding:14px 22px; letter-spacing:1.8px; }
+      .interlude{ min-height:62svh; padding:56px 22px; }
+      .interlude .v p{ font-size:clamp(1.45rem,7vw,2rem); }
+      .split{ gap:30px; }
+      .stage-app{ min-height:0; gap:8px; }
+      .float-card{ width:100%; max-width:330px; padding:11px 14px; }
+      .step{ padding:22px 20px; }
+      .divider{ max-width:280px; }
     }
 
     /* ====== LIGHTBOX ====== */
