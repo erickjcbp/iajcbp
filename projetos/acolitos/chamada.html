@@ -176,15 +176,18 @@ async function abrirChamada(celeb) {
     const av=document.createElement('div');av.className='msg warn';av.textContent='Chamada já realizada. Você pode editá-la.';main.appendChild(av);
     const { data: itens } = await sb.from('acolitos_chamadas_itens').select('escala_id,resultado,substituto_id').eq('chamada_id', chExist.id);
     (itens||[]).forEach(it => { savedItens[it.escala_id] = it; });
+    const { data: resp } = await sb.rpc('acolitos_chamada_responsavel',{p_celebracao:celeb.id});
+    mostrarResponsavel(resp);
   }
 
-  // Inicializa resultados — prioriza o que foi salvo na chamada (não o status derivado da escala)
+  // Inicializa resultados — prioriza o que foi salvo na chamada (não o status derivado da escala).
+  // Quem ainda não tem nada (status 'escalado') começa SEM marcação — o cerimoniário marca na hora.
   escalasAtuais.forEach(e=>{
     const sv = savedItens[e.id];
     if (sv) { resultados[e.id] = sv.resultado; if (sv.substituto_id) substitutos[e.id] = sv.substituto_id; }
     else if(['presente','ausente','atrasado'].includes(e.status)) resultados[e.id]=e.status;
     else if(e.status==='ausente_justificado' || e.status==='substituido') resultados[e.id]='ausente';
-    else resultados[e.id]='presente';
+    // status 'escalado' (sem chamada feita) → deixa indefinido = botões desmarcados
   });
 
   // Barra de resumo dinâmica
@@ -347,8 +350,33 @@ function updateSummary(){
   });
 }
 
+// Banner no topo com quem registrou a chamada (e quando)
+function mostrarResponsavel(info){
+  if(!info || !info.nome) return;
+  const main=document.getElementById('main-content');
+  let b=document.getElementById('resp-banner');
+  if(!b){
+    b=document.createElement('div'); b.id='resp-banner'; b.className='msg';
+    b.style.cssText='background:var(--surface);border:1px solid var(--gold-dim);color:var(--gold-light);font-size:12px;';
+    const title=main.querySelector('.page-title');
+    if(title && title.nextSibling) main.insertBefore(b, title.nextSibling); else main.insertBefore(b, main.firstChild);
+  }
+  let quando='';
+  if(info.realizada_em){ const d=new Date(info.realizada_em); quando=' em '+d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+  b.textContent='🖊️ Chamada registrada por '+info.nome+quando;
+}
+
 async function confirmarChamada(){
   const btn=document.getElementById('btn-conf-ch');
+
+  // Bloqueia o registro enquanto houver alguém escalado sem marcação
+  const pendentes=escalasAtuais.filter(e=>!['presente','atrasado','ausente'].includes(resultados[e.id]));
+  if(pendentes.length){
+    const nomes=pendentes.map(e=>{const r=rosterMap[e.membro_id]||{};const m=e.acolitos_membros;return r.apelido||r.nome||m?.nome||'—';});
+    toast('Marque todos antes de registrar. Faltam: '+nomes.join(', '),'error');
+    return;
+  }
+
   btn.disabled=true;btn.textContent='Salvando...';
 
   // Cria ou reutiliza chamada
@@ -380,8 +408,17 @@ async function confirmarChamada(){
     await sb.from('acolitos_escalas').update(upd).eq('id',escalaId);
   }
 
+  // Credita o substituto: conta como missa servida (via referência) + ganha +10 XP (estilo avulso)
+  for(const[escalaId,resultado]of Object.entries(resultados)){
+    const sub = resultado==='ausente' ? (substitutos[escalaId]||null) : null;
+    if(sub) await sb.rpc('acolitos_substituto_creditar',{p_celebracao:celebAtual.id, p_substituto:sub});
+  }
+
   btn.textContent='Chamada Confirmada ✓';
-  setTimeout(()=>renderSelecao(),1500);
+  const { data: resp } = await sb.rpc('acolitos_chamada_responsavel',{p_celebracao:celebAtual.id});
+  mostrarResponsavel(resp);
+  window.scrollTo({top:0,behavior:'smooth'});
+  setTimeout(()=>{ btn.disabled=false; btn.textContent='Atualizar Chamada'; }, 1500);
 }
 
 init();

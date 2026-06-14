@@ -301,6 +301,44 @@ function queueNotificacoes(membro) {
     naoVistos.forEach(a => enqueueNotif(a && a.logout ? -10 : (a && _celebTipos[a.tipo] ? 10 : 0), (done) => showAvisoUnico(a, membro, done)));
   }
   _notifStart();
+  // 4) Lembrete diário de XP (assíncrono; só se ainda não pontuou hoje)
+  _checkXpDiario(membro);
+}
+
+// Notificação diária de engajamento: aparece 1x/dia, só na home, e SÓ se o membro
+// ainda não ganhou nenhum XP hoje. Convida a fazer uma missão bônus.
+async function _checkXpDiario(membro) {
+  try {
+    if (!membro || typeof window.showLevelUp !== 'function') return;     // só na home
+    if (membro._crmEtapa === 'aprovacao_cadastro') return;               // aguardando aprovação: não incomoda
+    const hojeKey = new Date().toLocaleDateString('sv');                 // YYYY-MM-DD (data local)
+    const lsKey = 'xp-diario-' + membro.id + '-' + hojeKey;
+    if (localStorage.getItem(lsKey)) return;                             // já mostrado hoje
+    const { data: xpHoje, error } = await sb.rpc('acolitos_xp_hoje', { p_membro: membro.id });
+    if (error) return;
+    if ((xpHoje || 0) > 0) return;                                       // já pontuou hoje → não cobra
+    localStorage.setItem(lsKey, '1');
+    enqueueNotif(40, (done) => showXpDiarioPrompt(done));
+    _notifStart();
+  } catch (e) {}
+}
+
+// Pop-up do lembrete diário de XP
+function showXpDiarioPrompt(done) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '505';
+  const modal = document.createElement('div'); modal.className = 'modal';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Vai ficar sem XP hoje? 👀';
+  const p = document.createElement('p'); p.style.cssText = 'font-size:14px;line-height:1.6;color:var(--text);margin:4px 0 14px;';
+  p.textContent = 'Você ainda não ganhou XP hoje. Complete uma missão bônus para manter o engajamento e seguir evoluindo na sua jornada!';
+  modal.append(handle, tt, p);
+  const btn = document.createElement('button'); btn.className = 'btn gold'; btn.style.width = '100%'; btn.textContent = 'Ver missões bônus';
+  btn.onclick = () => { ov.remove(); window.location.href = 'missoes.html'; };
+  const skip = document.createElement('button'); skip.className = 'btn'; skip.style.cssText = 'width:100%;margin-top:8px;background:transparent;border:none;color:var(--text-muted);box-shadow:none;font-size:13px;';
+  skip.textContent = 'Agora não';
+  skip.onclick = () => { ov.remove(); if (typeof done === 'function') done(); };
+  modal.append(btn, skip);
+  ov.appendChild(modal); document.body.appendChild(ov);
 }
 
 // Pop-up especial e bonito de Quest Exclusiva

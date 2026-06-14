@@ -135,6 +135,7 @@
       <button class="btn-sm gray" onclick="abrirModelos()" title="Modelos de celebração">⚙️ Modelos</button>
       <button class="btn-sm gray" onclick="abrirAusencias()" title="Últimas ausências">🚫 Ausências</button>
       <button class="btn-sm gray" onclick="abrirFaltas()" title="Quem faltou na chamada">❌ Faltas</button>
+      <button class="btn-sm gray" id="btn-hist-escala" onclick="toggleHistorico()" title="Incluir celebrações passadas (últimos 90 dias)">🕓 Histórico</button>
     </div>
   </div>
   <div class="aba-toggle">
@@ -427,11 +428,20 @@ function popHorarios() {
   }
 }
 
+let verHistorico = false;
+function toggleHistorico(){
+  verHistorico = !verHistorico;
+  const b = document.getElementById('btn-hist-escala');
+  if(b){ b.classList.toggle('gold',verHistorico); b.classList.toggle('gray',!verHistorico); b.textContent = verHistorico?'🕓 Histórico ✓':'🕓 Histórico'; }
+  loadDados();
+}
+
 async function loadDados() {
   const com = document.getElementById('filtro-com').value;
   const hoje = new Date(); const fim = new Date(hoje); fim.setDate(hoje.getDate()+56);
+  const ini = new Date(hoje); if(verHistorico) ini.setDate(hoje.getDate()-90);
   let q = sb.from('acolitos_celebracoes').select('*')
-    .gte('data', hoje.toISOString().slice(0,10))
+    .gte('data', ini.toISOString().slice(0,10))
     .lte('data', fim.toISOString().slice(0,10))
     .order('data').order('horario');
   if (com) q = q.eq('comunidade', com);
@@ -627,13 +637,16 @@ function abrirMontagem(celeb) {
     const sel=document.createElement('select');sel.className='pos-select'+(exist?' filled':'');
     sel.setAttribute('data-funcao',pos.funcao);
     const optV=document.createElement('option');optV.value='';optV.textContent='— vazio —';sel.appendChild(optV);
-    membros.filter(m=>elegivelFuncao(m,pos.funcao,celeb.comunidade))
+    // "Em formação" entra SÓ na escolha manual (o gerador automático nunca usa — elegivelFuncao não os inclui)
+    const emFormacaoNesta = m => ((habMap[m.id]||{})[pos.funcao])==='em_formacao';
+    membros.filter(m=>elegivelFuncao(m,pos.funcao,celeb.comunidade) || emFormacaoNesta(m))
       .forEach(m=>{
         const opt=document.createElement('option');opt.value=m.id;
         const disp=!horKey||(dispMap[m.id]||[]).includes(horKey);
         const ausente=ausNesta.has(m.id);
         const jaSem=dupSemana[m.id];
-        opt.textContent=(ausente?'🚫 ':(disp?'':'⚠ '))+(m.apelido||m.nome)+(ausente?' — ausência':'')+(jaSem?' 🔁 já: '+[...jaSem].join(', '):'');
+        const emForm=emFormacaoNesta(m) && !elegivelFuncao(m,pos.funcao,celeb.comunidade);
+        opt.textContent=(ausente?'🚫 ':(disp?'':'⚠ '))+(m.apelido||m.nome)+(emForm?' 🎓 em formação':'')+(ausente?' — ausência':'')+(jaSem?' 🔁 já: '+[...jaSem].join(', '):'');
         if(ausente && exist?.membro_id!==m.id) opt.disabled=true; // bloqueado: declarou ausência
         if(exist?.membro_id===m.id)opt.selected=true;
         sel.appendChild(opt);
