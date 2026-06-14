@@ -1,0 +1,49 @@
+==================================================================
+ PASTA: projetos/   —  OS APLICATIVOS (o que o usuário vê e usa)
+==================================================================
+
+O que é esta pasta?
+-------------------
+Aqui ficam os APPS de verdade — as telas que abrem no navegador.
+Cada projeto GRANDE tem a sua própria subpasta, bem separadinho.
+
+Hoje existem 2 projetos:
+
+  acolitos/  -> App da Pastoral dos Acólitos e Coroinhas.
+                É o maior: cadastro de membros, escalas, chamada,
+                ausências, casas, missões/gamificação, financeiro,
+                landing pública, etc.
+                (veja projetos/acolitos/LEIA-ME.txt)
+
+  central/   -> Portal/hub da paróquia. É a "porta de entrada":
+                tela de login que leva para as pastorais.
+                (veja projetos/central/LEIA-ME.txt)
+
+
+Como o usuário chega em cada um? (o "mapa de rotas")
+----------------------------------------------------
+Isso é definido no arquivo  vercel.json  lá na raiz. Resumo:
+
+  - Site geral, ao abrir "/"      -> central (login)
+  - "/central"                    -> central/central.html
+  - "/pastorais"                  -> central/pastorais.html
+  - "/acolitos"                   -> acolitos/index.html
+  - No domínio coroinhas.jcbplimeira.com.br, "/" -> direto no login
+    dos acólitos (e "/ausencias" e "/pastoral" também vão pro app
+    dos acólitos).
+
+POR ISSO mover/renomear essas subpastas exige editar o vercel.json.
+
+
+Para iniciante: por que cada projeto é uma pasta?
+-------------------------------------------------
+Para organizar. Assim o código de um app não se mistura com o do
+outro. Eles só compartilham as coisas comuns que ficam FORA daqui:
+  - api/   (back-end compartilhado)
+  - midia/ (imagens/sons compartilhados)
+
+Dentro de cada app, repare que existem arquivos "shared" (shared.js
+e shared.css) — esses são compartilhados ENTRE AS TELAS daquele
+mesmo app (cabeçalho, cores, funções comuns).
+
+==================================================================

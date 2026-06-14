@@ -1,0 +1,83 @@
+==================================================================
+ LEIA-ME  —  REPOSITÓRIO "iajcbp"  (Igreja / Paróquia JCBP)
+==================================================================
+
+O que é este repositório?
+-------------------------
+É a "pasta-mãe" que guarda TODO o código dos sistemas web da
+paróquia JCBP. Tudo aqui é publicado JUNTO como UM ÚNICO SITE na
+Vercel (a empresa que hospeda o site na internet).
+
+O endereço principal no ar é:
+   coroinhas.jcbplimeira.com.br
+
+IMPORTANTE (regra de ouro do deploy):
+   Sempre publique (deploy) a partir DA RAIZ deste repositório,
+   nunca de dentro de uma subpasta. Se publicar de dentro de
+   "projetos/acolitos", o domínio não atualiza.
+
+
+O que é cada pasta da raiz?
+---------------------------
+(cada uma também tem o seu próprio LEIA-ME.txt com mais detalhes)
+
+  projetos/   -> Os APLICATIVOS em si (as telas que as pessoas
+                 usam no navegador). Hoje há 2 projetos grandes:
+                   - acolitos : app da Pastoral dos Acólitos
+                   - central  : portal/hub de login das pastorais
+
+  api/        -> O "back-end" (código que roda no servidor, não no
+                 navegador). São funções da Vercel. Cuidam de
+                 coisas sensíveis, tipo criar usuário e senha.
+                 ATENÇÃO: esta pasta TEM que se chamar "api" e
+                 ficar na raiz — é assim que a Vercel a reconhece.
+
+  midia/      -> Imagens, logos, ícones e sons usados pelos apps.
+                 O código chama esses arquivos pelo caminho fixo
+                 "/midia/...". Por isso esta pasta também não deve
+                 ser renomeada nem movida.
+
+  db/         -> Scripts de SEGURANÇA do banco de dados (SQL).
+
+  docs/       -> Documentação: o histórico de "migrations" (mudanças
+                 no banco) e os planos/projetos de cada funcionalidade.
+
+  coletor/    -> Espaço dos "robôs" (tarefas automáticas). Hoje está
+                 praticamente vazio aqui no seu computador.
+
+
+O que são os arquivos soltos na raiz?
+-------------------------------------
+  vercel.json -> O "mapa de rotas" do site. Diz para a Vercel, por
+                 exemplo, que quem acessar "/acolitos" deve cair em
+                 "projetos/acolitos/index.html". Se você mover uma
+                 pasta de projeto, precisa editar este arquivo.
+
+  .gitignore  -> Lista do que o Git deve IGNORAR (não enviar pro
+                 GitHub). Ex.: o arquivo .env (segredos) e as fotos
+                 originais pesadas da landing.
+
+  .env        -> Segredos/senhas do projeto (chaves de acesso).
+                 NUNCA vai para o GitHub. Fica só no seu computador.
+
+  .vercel/    -> Configuração local de ligação com a Vercel
+                 (criada automaticamente). Não precisa mexer.
+
+  .git/       -> O "cérebro" do Git: guarda todo o histórico de
+                 versões. Não mexa nesta pasta na mão.
+
+  .DS_Store   -> Arquivo lixo que o Mac cria sozinho. Pode ignorar.
+
+
+Conceitos rápidos (pra quem está aprendendo)
+--------------------------------------------
+  - Git    : programa que salva o histórico do código (como um
+             "Ctrl+Z infinito" e um backup com data).
+  - GitHub : site onde esse histórico fica guardado na nuvem.
+  - Vercel : serviço que pega o código e publica como site.
+  - Supabase: o banco de dados na nuvem (onde ficam os membros,
+             escalas, etc.) + login dos usuários.
+  - Front-end: o que roda no navegador (as telas, pastas projetos/).
+  - Back-end : o que roda no servidor (a pasta api/).
+
+==================================================================

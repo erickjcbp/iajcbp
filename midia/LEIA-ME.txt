@@ -1,0 +1,51 @@
+==================================================================
+ PASTA: midia/   —  IMAGENS, LOGOS, ÍCONES E SONS
+==================================================================
+
+O que é esta pasta?
+-------------------
+Guarda os arquivos visuais e de áudio usados pelos apps (fotos,
+logos, ícones, sons). É compartilhada por todos os projetos.
+
+IMPORTANTE: o código chama esses arquivos por um caminho FIXO que
+começa com "/midia/...". Por isso NÃO renomeie nem mova esta pasta,
+senão as imagens e sons param de aparecer no site.
+
+
+Subpastas
+---------
+  elementos/  -> Ícones/ilustrações "chapados" (estilo flat colorido)
+                 usados como ícones e medalhas no app dos acólitos.
+                 Use estes em vez de emoji. Hoje tem 8 imagens, ex.:
+                 biblia.png, calice.png, cruz.png, rosario.png, sino.png.
+
+  logos/      -> Logos oficiais (igreja e Pascom) em versões
+                 colorida, branca e preta, mais o brasão da pastoral.
+                 7 arquivos no total.
+
+  landing/    -> Fotos da página pública "Somos do Altar" (a landing
+                 da pastoral). 22 fotos (acólitos, coroinhas, momentos...).
+                 -> landing/web/ : versões LEVES (otimizadas) dessas
+                    fotos. SÃO ESSAS que vão para o site/deploy.
+                 -> As fotos ORIGINAIS pesadas (.JPG grandões) ficam
+                    só no seu computador: o .gitignore impede que elas
+                    subam para o GitHub (para o site não ficar lento).
+
+
+Arquivos de som (na raiz da pasta)
+----------------------------------
+  som-estrela.wav  -> Som tocado ao ganhar uma estrela (gamificação).
+  som-levelup.wav  -> Som tocado ao subir de nível.
+  silent.wav       -> Som "mudo". Truque para "destravar" o áudio no
+                      iPhone/PWA, que não deixa tocar som sem uma
+                      primeira interação do usuário.
+
+
+Para iniciante: por que ter foto "original" e foto "web"?
+---------------------------------------------------------
+Foto de celular é enorme (vários MB). Se subir assim, o site fica
+lento para carregar. Então guardamos uma cópia LEVE em landing/web/
+para o site, e deixamos a original pesada só no computador (fora do
+GitHub). É por isso que o .gitignore ignora os .JPG grandes.
+
+==================================================================

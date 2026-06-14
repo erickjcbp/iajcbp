@@ -1,0 +1,56 @@
+==================================================================
+ PASTA: db/   —  SCRIPTS DE SEGURANÇA DO BANCO DE DADOS (SQL)
+==================================================================
+
+O que é esta pasta?
+-------------------
+Guarda arquivos ".sql" — comandos escritos na linguagem SQL, que é
+a língua que o banco de dados (Supabase / PostgreSQL) entende.
+
+Estes aqui, em especial, são focados em SEGURANÇA: travar quem pode
+ler/escrever o quê, evitar senhas em texto puro, etc.
+
+Eles ficam numa subpasta:  db/seguranca/
+
+O que é cada arquivo?
+---------------------
+(os números no início dão a ORDEM em que foram aplicados)
+
+  001_p0_rpc_lockdown.sql            -> "P0" = prioridade máxima.
+                                        Tranca as funções do banco
+                                        (RPC) para não rodarem soltas.
+
+  002_p1_storage_searchpath.sql      -> Ajuste de segurança no
+                                        armazenamento de arquivos.
+
+  003_p2_sem_senha_plaintext.sql     -> Garante que senhas NÃO fiquem
+                                        salvas em texto puro.
+
+  004_ausencias_publica.sql          -> Base para a página pública de
+                                        "informar ausência" (sem login).
+
+  005_ausencias_publica_fix.sql      -> Correção do item acima.
+
+  006_ausencias_publica_celebracoes.sql -> Liga as ausências públicas
+                                        às celebrações.
+
+  007_busca_sem_acento.sql           -> Faz a busca funcionar mesmo
+                                        ignorando acentos (ex.: achar
+                                        "joao" buscando "joão").
+
+
+Para iniciante: o que é SQL e "RLS"?
+------------------------------------
+  - SQL : a linguagem para conversar com o banco de dados
+          (criar tabelas, buscar, inserir, dar permissões...).
+  - RLS : "Row Level Security" (segurança por linha). É uma trava do
+          banco que define, linha por linha, quem pode ver/editar
+          aquele dado. Ex.: cada família só vê os próprios filhos.
+
+ATENÇÃO: rodar SQL altera o banco DE VERDADE. Tenha cuidado e nunca
+mexa em dados reais de pessoas só para testar.
+
+Observação: existe TAMBÉM a pasta docs/migrations/ com outros .sql
+(as mudanças de estrutura ao longo do tempo). Veja docs/LEIA-ME.txt.
+
+==================================================================

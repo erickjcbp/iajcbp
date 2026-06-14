@@ -1,0 +1,23 @@
+==================================================================
+ PASTA: coletor/   —  ESPAÇO DOS "ROBÔS" (tarefas automáticas)
+==================================================================
+
+O que é esta pasta?
+-------------------
+É o lugar reservado para "coletores": pequenos robôs que rodam
+sozinhos, em horários programados, para buscar/processar informação
+(por exemplo, um coletor de notícias ou um briefing automático).
+
+Estado atual
+------------
+No seu computador esta pasta está praticamente VAZIA — só existe a
+subpasta "logs/" (onde ficariam os registros de execução do robô).
+Nada do coletor está enviado para o GitHub no momento.
+
+Para iniciante: o que é um "log"?
+---------------------------------
+"Log" é um diário de execução: o robô vai anotando ali o que fez e
+se deu algum erro. Serve para você descobrir o que aconteceu quando
+algo roda automaticamente, sem você estar olhando.
+
+==================================================================

@@ -1,0 +1,36 @@
+==================================================================
+ PROJETO: central/   —  PORTAL / HUB DA PARÓQUIA (Central JCBP)
+==================================================================
+
+O que é este app?
+-----------------
+É a "porta de entrada" da paróquia na web: a parte mais simples,
+que faz o login e leva o usuário até as pastorais (sendo a dos
+Acólitos a primeira). Pense nele como o "saguão" do prédio, de onde
+você escolhe para qual sala (pastoral) ir.
+
+São só 3 telas:
+
+  login.html      -> Tela de login da Central (entrar).
+  central.html    -> Tela principal depois de entrar (o painel/menu
+                     central, de onde se navega para as pastorais).
+  pastorais.html  -> Lista/seleção das pastorais disponíveis.
+
+
+Como o usuário chega aqui? (rotas no vercel.json da raiz)
+---------------------------------------------------------
+  - Abrir "/" (site geral) -> cai no login da Central.
+  - "/central"             -> central.html
+  - "/pastorais"           -> pastorais.html
+
+(No domínio específico dos coroinhas, coroinhas.jcbplimeira.com.br,
+o "/" pula direto para o app dos acólitos — veja o vercel.json.)
+
+
+Observação para iniciante
+-------------------------
+Este projeto NÃO tem shared.js/shared.css próprios como o de
+acólitos — ele é enxuto, com poucas telas. As imagens/logos que ele
+usa vêm da pasta compartilhada /midia/ (na raiz), igual aos outros.
+
+==================================================================

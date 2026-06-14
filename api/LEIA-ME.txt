@@ -1,0 +1,54 @@
+==================================================================
+ PASTA: api/   —  O "BACK-END" (código que roda no servidor)
+==================================================================
+
+O que é esta pasta?
+-------------------
+São "funções serverless" da Vercel. Traduzindo: pequenos programas
+que rodam no SERVIDOR (não no navegador do usuário), cada um num
+arquivo .js separado.
+
+Por que existir? Porque algumas coisas são SECRETAS e PERIGOSAS
+demais para ficar no navegador — principalmente a "service key"
+(uma chave-mestra que pode fazer qualquer coisa no banco). Essa
+chave fica guardada só aqui no servidor (numa variável de ambiente
+na Vercel), nunca no código que o usuário baixa.
+
+REGRA: esta pasta PRECISA se chamar "api" e ficar na raiz do
+repositório. É assim que a Vercel sabe que são funções de servidor
+(viram endereços tipo  /api/create-user ).
+
+
+O que é cada arquivo?
+---------------------
+  create-user.js    -> Cria um novo usuário no login (Supabase Auth).
+                       Antes de criar, confere se quem pediu é admin.
+
+  delete-user.js    -> Remove um usuário do login. Também só admin.
+
+  me-update.js      -> "Autosserviço": deixa o próprio usuário trocar
+                       o SEU usuário/senha. Sempre age sobre a conta
+                       de quem chamou (ninguém mexe na conta do outro).
+
+  acolito-admin.js  -> Gestão de acessos do módulo Acólitos
+                       (criar conta + vincular ao membro, resetar
+                       senha, trocar usuário). Exige ser coordenador/
+                       admin do módulo.
+
+  signup-acolito.js -> Auto-cadastro do acólito (a própria pessoa se
+                       inscreve). É público; a "trava" é a aprovação
+                       do admin depois, lá no CRM.
+
+  signup-familia.js -> Cadastro por FAMÍLIA: um responsável inscreve
+                       um ou mais filhos de uma vez. Cria as contas e
+                       os membros já no servidor. Também aprovado no CRM.
+
+
+Para iniciante: o que é "serverless"?
+-------------------------------------
+É código que só "acorda" quando alguém chama, roda a tarefa e
+"dorme" de novo. Você não precisa cuidar de um servidor ligado o
+tempo todo — a Vercel cuida disso. Cada arquivo .js aqui vira
+automaticamente um endereço /api/nome-do-arquivo.
+
+==================================================================

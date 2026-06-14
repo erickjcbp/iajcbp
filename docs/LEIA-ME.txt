@@ -1,0 +1,60 @@
+==================================================================
+ PASTA: docs/   —  DOCUMENTAÇÃO DO PROJETO
+==================================================================
+
+O que é esta pasta?
+-------------------
+É a "memória escrita" do projeto: o histórico de mudanças no banco
+e os planos/projetos de cada funcionalidade que foi construída.
+Aqui NÃO roda nada — é só leitura, para entender decisões.
+
+Tem duas subpastas:
+
+1) docs/migrations/   —  HISTÓRICO DO BANCO DE DADOS
+-----------------------------------------------------
+Cada arquivo .sql é uma "migration": uma mudança na ESTRUTURA do
+banco (criar tabela, adicionar coluna, etc.), na ordem em que foram
+aplicadas. Os números no início dão a sequência.
+
+  001_base_schema.sql           -> A estrutura inicial (tabelas base).
+  002_acolitos_fase1.sql        -> Primeira fase do app dos acólitos.
+  002b_acolitos_rls_patch.sql   -> Correção de permissões (RLS).
+  003_acolitos_fase2.sql        -> Segunda fase (escalas/chamada...).
+  004_indicadores_foto.sql      -> Indicadores e foto de perfil.
+  004b_hardening.sql            -> Reforço de segurança.
+  005_fix_central_admin_rls.sql -> Correção de permissão do admin Central.
+  006_membros_campos_cadastro.sql -> Novos campos no cadastro de membro.
+  007_fix_review_member_update.sql -> Correção na revisão/edição de membro.
+  008_crm_etapa_aprovacao.sql   -> Etapa de aprovação no CRM.
+  009_fix_avatars_upload.sql    -> Correção do envio de fotos (avatar).
+  010_nivel_visto.sql           -> Controle de "nível já visto".
+  011_nivel_jornada.sql         -> Níveis da "jornada" do membro.
+
+REGRA DE OURO das migrations: nunca edite uma antiga já aplicada.
+Para mudar algo, crie um arquivo NOVO com o próximo número.
+
+
+2) docs/superpowers/   —  PLANOS E ESPECIFICAÇÕES
+--------------------------------------------------
+São textos (.md = Markdown, texto simples formatado) que descrevem
+O QUE e COMO cada funcionalidade foi pensada antes de programar.
+
+  plans/  -> "planos de execução": o passo a passo de cada entrega
+             (ex.: cadastro de família, landing da pastoral, missões).
+  specs/  -> "especificações de design": a ideia/decisão por trás de
+             cada funcionalidade (o porquê e o desenho da solução).
+
+O nome de cada arquivo começa com a data (ano-mês-dia), então dá pra
+ler na ordem do tempo e acompanhar a evolução do projeto.
+
+
+Para iniciante: o que é "migration" e "Markdown"?
+-------------------------------------------------
+  - Migration : uma mudança no banco salva como arquivo, em ordem.
+                Serve para qualquer pessoa montar o mesmo banco do
+                zero, só rodando os arquivos na sequência.
+  - Markdown (.md) : jeito simples de escrever texto com títulos,
+                listas e negrito usando símbolos (#, -, **). Os
+                arquivos de plano/spec usam isso.
+
+==================================================================

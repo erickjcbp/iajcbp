@@ -1,0 +1,90 @@
+==================================================================
+ PROJETO: acolitos/   —  APP DA PASTORAL DOS ACÓLITOS E COROINHAS
+==================================================================
+
+O que é este app?
+-----------------
+O sistema de gestão da Pastoral dos Acólitos/Coroinhas da JCBP.
+É um PWA (um site que também pode ser "instalado" no celular como
+se fosse um aplicativo). Cada TELA é um arquivo .html separado.
+
+Por baixo usa o Supabase (banco de dados + login na nuvem).
+
+
+-------------------- ARQUIVOS QUE NÃO SÃO TELAS --------------------
+(são a "base" usada por todas as telas — comece entendendo estes)
+
+  shared.js     -> O "cérebro" compartilhado: funções comuns usadas
+                   por todas as telas (login, cabeçalho/topo, ler e
+                   gravar no banco, ícones, etc.).
+  shared.css    -> A "aparência" compartilhada: cores, fontes,
+                   espaçamentos e estilos usados em todas as telas.
+
+  manifest.json -> Ficha do PWA: nome do app, cor, ícone. É o que
+                   permite "instalar" no celular.
+  sw.js         -> "Service Worker": funciona como ajudante em
+                   segundo plano (cache/offline do PWA).
+  icon-192.png  -> Ícone do app (tamanho pequeno).
+  icon-512.png  -> Ícone do app (tamanho grande).
+
+
+----------------------- TELAS (.html) -----------------------------
+ENTRADA / ACESSO
+  login.html         -> Tela de login (entrar no app).
+  index.html         -> Painel inicial depois de entrar (home/menu).
+
+MEMBROS E CAPTAÇÃO
+  membros.html       -> Cadastro e gestão dos membros (acólitos).
+  novos.html         -> Formulário para cadastrar um novo membro.
+  crm.html           -> Acompanhamento/aprovação dos novos cadastros
+                        (quem entrou, em que etapa está).
+
+ESCALAS E PRESENÇA
+  escala.html        -> Monta as escalas das celebrações (visão do
+                        coordenador), com o gerador automático.
+  escalas-membro.html-> Onde o próprio membro vê as escalas dele.
+  chamada.html       -> Faz a chamada/presença na celebração
+                        (e troca por substituto, se faltar alguém).
+  agenda.html        -> Calendário: celebrações + eventos próprios
+                        com confirmação de presença (RSVP).
+
+AUSÊNCIAS
+  ausencias.html         -> A equipe vê/aprova as ausências.
+  ausencias-publica.html -> Página PÚBLICA (sem login) para a pessoa
+                            informar que vai faltar; cai numa fila
+                            que a equipe aprova depois.
+
+CASAS (estilo "casas" de colégio)
+  casas.html         -> Gestão das casas (visão do coordenador).
+  minha-casa.html    -> A casa do próprio membro (visão dele).
+
+GAMIFICAÇÃO (jornada / missões / conquistas)
+  missoes.html       -> "Minha Jornada": missões, XP e ligas do membro.
+  missoes-lab.html   -> Versão de TESTES das missões (laboratório,
+                        para experimentar sem mexer no app de verdade).
+  conquistas.html    -> As conquistas/medalhas do membro.
+  destaques.html     -> Destaques/ranking.
+  jornada-admin.html -> Administração da jornada (visão do coordenador).
+
+ADMINISTRAÇÃO
+  config.html        -> Painel de configuração (superadmin): ajustes
+                        gerais e listas personalizáveis do app.
+  tesouraria.html    -> Financeiro/tesouraria da pastoral.
+
+PÁGINA PÚBLICA
+  pastoral.html      -> Landing "Somos do Altar": página de
+                        divulgação/convite, aberta a qualquer pessoa.
+
+
+Por onde começar a estudar?
+---------------------------
+1) Abra shared.css e shared.js (a base que tudo usa).
+2) Depois login.html e index.html (a entrada do app).
+3) Daí escolha um módulo simples, tipo membros.html, e leia ele
+   junto com o shared.js para ver como a tela conversa com o banco.
+
+Dica de aprendiz: para experimentar mudanças arriscadas, use uma
+tela "-lab" (como missoes-lab.html) ou crie uma cópia temporária,
+em vez de mexer direto na tela que está no ar.
+
+==================================================================
