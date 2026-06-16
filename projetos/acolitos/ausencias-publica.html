@@ -137,10 +137,19 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
+  <!-- supabase-js auto-hospedado (mesmo domínio) para não depender de CDN externo,
+       que algumas redes de operadora bloqueiam e deixavam a página travada em "Carregando".
+       onerror: se nem a cópia local carregar, avisa o pai em vez de tela morta. -->
+  <script src="vendor/supabase-js-2.106.2.min.js" onerror="window.__sbLoadFail=true"></script>
   <script>
     const SUPABASE_URL='https://fttjgsotuosjfrasttds.supabase.co';
     const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGpnc290dW9zamZyYXN0dGRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MzU3NjUsImV4cCI6MjA5NTExMTc2NX0.BvofcR2cIXP7Bc3r2V0VOgc-JXPefX7JGGwtzv0d_eA';
+    // Se a biblioteca não carregou (rede bloqueou / arquivo falhou), avisa em vez de morrer em silêncio.
+    if (window.__sbLoadFail || !window.supabase || !window.supabase.createClient) {
+      var _box = document.getElementById('cels');
+      if (_box) _box.innerHTML = '<div class="cels-empty">Não foi possível carregar o aplicativo. Verifique sua conexão e <a href="" onclick="location.reload();return false;" style="color:var(--gold);text-decoration:underline;">toque para tentar de novo</a>.</div>';
+      throw new Error('supabase-js não carregou');
+    }
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const DIAS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
@@ -188,9 +197,28 @@
 
     // ── CELEBRAÇÕES ──
     async function carregarCelebracoes(){
-      const { data, error } = await sb.rpc('acolitos_ausencia_publica_celebracoes');
-      const box=$('cels'); box.innerHTML='';
-      if(error || !Array.isArray(data) || !data.length){
+      const box=$('cels');
+      box.innerHTML='<div class="cels-empty">Carregando celebrações…</div>';
+      let data, error;
+      try {
+        // timeout p/ não congelar a tela se a rede pendurar (4G instável)
+        const resp = await Promise.race([
+          sb.rpc('acolitos_ausencia_publica_celebracoes'),
+          new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')), 12000))
+        ]);
+        data = resp.data; error = resp.error;
+      } catch(e){ error = e; }
+      box.innerHTML='';
+      if(error){
+        // falha de conexão/RPC — NÃO é o mesmo que "não há missas"; oferece tentar de novo
+        const w=document.createElement('div'); w.className='cels-empty';
+        w.appendChild(document.createTextNode('Não foi possível carregar as celebrações (falha de conexão). '));
+        const a=document.createElement('a'); a.href=''; a.textContent='Tentar de novo';
+        a.style.cssText='color:var(--gold);text-decoration:underline;';
+        a.onclick=(ev)=>{ ev.preventDefault(); carregarCelebracoes(); };
+        w.appendChild(a); box.appendChild(w); return;
+      }
+      if(!Array.isArray(data) || !data.length){
         box.innerHTML='<div class="cels-empty">Nenhuma celebração futura cadastrada.</div>'; return;
       }
       data.forEach(c=>{
