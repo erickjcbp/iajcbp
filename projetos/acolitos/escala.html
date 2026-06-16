@@ -105,9 +105,9 @@
     .pos-item:last-child { border-bottom:none; }
     .pos-label { font-family:'Sora',sans-serif; font-size:11px; color:var(--text); flex:1; }
     .pos-select {
-      flex:0 0 150px; padding:6px 8px; min-height:34px;
+      flex:0 0 230px; padding:6px 8px; min-height:34px;
       background:var(--surface2); border:1px solid var(--border-wine);
-      border-radius:2px; color:var(--text); font-size:11px; outline:none; max-width:150px;
+      border-radius:2px; color:var(--text); font-size:11px; outline:none;
     }
     .pos-select.filled { border-color:var(--gold); }
     .mems-list { max-height:300px; overflow-y:auto; }
@@ -148,7 +148,7 @@
 
 <!-- Modal montagem -->
 <div class="modal-overlay" id="modal-montagem">
-  <div class="modal" style="max-width:720px;">
+  <div class="modal" style="max-width:min(1040px,96vw);">
     <div class="modal-handle"></div>
     <div class="modal-title" id="mt-titulo">Montar Escala</div>
     <p id="mt-sub" style="color:var(--text-muted);font-size:11px;margin-bottom:14px;"></p>
