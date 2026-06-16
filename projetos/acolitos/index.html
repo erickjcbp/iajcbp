@@ -93,12 +93,14 @@
     #splash .turibulo-wrap{position:relative;width:160px;height:230px;}
     #splash .turibulo{transform-box:fill-box;transform-origin:50% 4%;animation:turSwing 3.2s ease-in-out infinite;}
     @keyframes turSwing{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
-    #splash .smoke{position:absolute;left:50%;bottom:96px;width:16px;height:60px;border-radius:50%;
-      background:radial-gradient(circle,rgba(232,185,74,.5),rgba(232,185,74,0) 70%);filter:blur(5px);opacity:0;transform:translateX(-50%);}
-    #splash .smoke.s1{animation:smokeRise 4s ease-out infinite}
-    #splash .smoke.s2{left:44%;animation:smokeRise 4.6s ease-out .8s infinite}
-    #splash .smoke.s3{left:56%;animation:smokeRise 5.2s ease-out 1.6s infinite}
-    @keyframes smokeRise{0%{opacity:0;transform:translate(-50%,0) scale(.6)}30%{opacity:.45}100%{opacity:0;transform:translate(-50%,-130px) scale(1.5)}}
+    #splash .smoke{position:absolute;left:50%;bottom:98px;width:24px;height:90px;border-radius:50%;
+      background:radial-gradient(circle,rgba(232,185,74,.6),rgba(232,185,74,0) 70%);filter:blur(6px);opacity:0;transform:translateX(-50%);}
+    #splash .smoke.s1{animation:smokeRise 4.2s ease-out infinite}
+    #splash .smoke.s2{left:43%;animation:smokeRise 5s ease-out .6s infinite}
+    #splash .smoke.s3{left:57%;animation:smokeRise 5.6s ease-out 1.2s infinite}
+    #splash .smoke.s4{left:48%;animation:smokeRise 4.8s ease-out 1.8s infinite}
+    #splash .smoke.s5{left:53%;animation:smokeRise 6s ease-out 2.6s infinite}
+    @keyframes smokeRise{0%{opacity:0;transform:translate(-50%,0) scale(.55)}25%{opacity:.7}60%{opacity:.45}100%{opacity:0;transform:translate(-50%,-230px) scale(2)}}
     #splash .dust{position:absolute;bottom:92px;width:4px;height:4px;border-radius:50%;background:var(--gold-light,#ffd97a);box-shadow:0 0 6px var(--gold,#e8b94a);opacity:0;}
     @keyframes dustRise{0%{opacity:0;transform:translateY(0)}12%{opacity:.9}100%{opacity:0;transform:translateY(-170px)}}
     #splash .splash-title{font-family:'Oxanium','Sora',sans-serif;font-weight:800;font-size:22px;letter-spacing:6px;
@@ -127,7 +129,7 @@
       </defs>
       <g filter="url(#tglow)" stroke="url(#tgold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="80" cy="10" r="5"/>
-        <path d="M80 14 L58 132"/><path d="M80 14 L102 132"/><path d="M80 14 L80 120"/>
+        <path d="M80 15 L52 134"/><path d="M80 15 L80 134"/><path d="M80 15 L108 134"/>
         <path d="M52 134 Q80 96 108 134 Z" fill="rgba(232,185,74,.08)"/>
         <line x1="66" y1="120" x2="66" y2="128"/><line x1="80" y1="112" x2="80" y2="122"/><line x1="94" y1="120" x2="94" y2="128"/>
         <path d="M80 92 L80 104 M75 97 L85 97"/>
@@ -135,7 +137,7 @@
         <ellipse cx="80" cy="160" rx="14" ry="6" fill="rgba(255,120,40,.35)" stroke="none"/>
       </g>
     </svg>
-    <div class="smoke s1"></div><div class="smoke s2"></div><div class="smoke s3"></div>
+    <div class="smoke s1"></div><div class="smoke s2"></div><div class="smoke s3"></div><div class="smoke s4"></div><div class="smoke s5"></div>
     <div class="dust" style="left:46%;animation:dustRise 5s linear infinite"></div>
     <div class="dust" style="left:54%;animation:dustRise 5.6s linear .6s infinite"></div>
     <div class="dust" style="left:50%;animation:dustRise 4.6s linear 1s infinite"></div>
