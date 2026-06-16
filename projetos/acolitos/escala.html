@@ -706,7 +706,22 @@ function abrirMontagem(celeb) {
   }
   // dispensados nesta sessão do modal (par membro|irmão) — usado no alerta de irmão
   const _irmaoDispensado=new Set();
-  function checarIrmao(pe){ /* implementado adiante */ }
+  function checarIrmao(pe){
+    const id=pe.sel.value; if(!id) return;
+    const m=membros.find(x=>x.id===id); if(!m||!m.escalar_com_irmao||!m.grupo_irmaos) return;
+    const irmaos=membros.filter(x=>x.grupo_irmaos===m.grupo_irmaos && x.escalar_com_irmao && x.id!==m.id);
+    irmaos.forEach(irmao=>{
+      const jaEsta=pendingEdicao.some(p=>p.sel.value===irmao.id);
+      const chave=m.id+'|'+irmao.id;
+      if(jaEsta || _irmaoDispensado.has(chave)) return;
+      const aus=ausNesta.has(irmao.id)?' (atenção: ele declarou ausência nesta missa)':'';
+      if(confirm('Você escalou '+(m.apelido||m.nome)+' e o irmão '+(irmao.apelido||irmao.nome)+' ainda não está na escala.'+aus+'\n\nAdicionar '+(irmao.apelido||irmao.nome)+' como Apoio?')){
+        adicionarSlotExtra('apoio', irmao.id);
+      } else {
+        _irmaoDispensado.add(chave);
+      }
+    });
+  }
 
   // posições do MODELO
   tmpl.forEach((pos,idx)=>{
