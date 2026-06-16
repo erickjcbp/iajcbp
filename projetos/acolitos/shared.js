@@ -205,10 +205,28 @@ function buildEngajamentoEl(membro) {
     vals.forEach(v => { const c = document.createElement('span'); c.style.cssText = css; c.textContent = (done ? '✓ ' : '') + (map[v] || v); w.appendChild(c); });
     box.appendChild(w);
   };
-  chips('Habilidades a desenvolver', membro.desenvolvimento_habilidades, HABILIDADE_LABEL);
-  chips('Habilidades desenvolvidas', membro.habilidades_desenvolvidas, HABILIDADE_LABEL, true);
-  chips('Competências a desenvolver', membro.desenvolvimento_competencias, COMPETENCIA_LABEL);
-  chips('Competências desenvolvidas', membro.competencias_desenvolvidas, COMPETENCIA_LABEL, true);
+  chips('✨ Virtudes formadas', membro.competencias_desenvolvidas, COMPETENCIA_LABEL, true);
+  // Em formação: progresso vindo das quests (assíncrono; degrada se indisponível)
+  if (membro && membro.id && typeof sb !== 'undefined') {
+    (async () => {
+      try {
+        const { data } = await sb.rpc('acolitos_competencias_progresso', { p_membro: membro.id });
+        const emForm = (data || []).filter(c => c.status === 'em_formacao' || c.status === 'candidata');
+        if (!emForm.length) return;
+        sec('Em formação');
+        const w = document.createElement('div'); w.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+        emForm.forEach(c => {
+          const line = document.createElement('div'); line.style.cssText = 'display:flex;align-items:center;gap:8px;';
+          const lab = document.createElement('span'); lab.style.cssText = 'font-size:11px;color:var(--gold);min-width:110px;'; lab.textContent = c.label + (c.status === 'candidata' ? ' 🟡' : '');
+          const bwp = document.createElement('div'); bwp.style.cssText = 'flex:1;height:6px;border-radius:3px;background:var(--surface2);overflow:hidden;';
+          const bb = document.createElement('div'); const pct = Math.min(100, Math.round(100 * c.progresso / Math.max(1, c.limiar))); bb.style.cssText = 'height:100%;background:var(--gold);width:' + pct + '%;'; bwp.appendChild(bb);
+          const n = document.createElement('span'); n.style.cssText = 'font-size:10px;color:var(--text-muted);'; n.textContent = c.progresso + '/' + c.limiar;
+          line.append(lab, bwp, n); w.appendChild(line);
+        });
+        box.appendChild(w);
+      } catch (e) {}
+    })();
+  }
   return box;
 }
 
