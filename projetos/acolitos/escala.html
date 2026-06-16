@@ -135,6 +135,7 @@
       <button class="btn-sm gray" onclick="abrirModelos()" title="Modelos de celebração">⚙️ Modelos</button>
       <button class="btn-sm gray" onclick="abrirAusencias()" title="Últimas ausências">🚫 Ausências</button>
       <button class="btn-sm gray" onclick="abrirFaltas()" title="Quem faltou na chamada">❌ Faltas</button>
+      <button class="btn-sm gray" onclick="abrirRegistrarAusenciaCoord()" title="Registrar ausência de um membro">📅 Registrar ausência</button>
       <button class="btn-sm gray" id="btn-hist-escala" onclick="toggleHistorico()" title="Incluir celebrações passadas (últimos 90 dias)">🕓 Histórico</button>
     </div>
   </div>
@@ -1283,6 +1284,63 @@ async function salvarNovaCeleb(){
   }, 1100);
 }
 function dataCurta(d){ const x=new Date(d+'T00:00:00'); return DIAS[x.getDay()]+' '+x.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}); }
+// Registrar ausência de um membro pela coordenação (self-contained na escala)
+async function abrirRegistrarAusenciaCoord(){
+  let motivos=[['doenca','🤒 Doença'],['viagem','✈️ Viagem'],['familia','👨‍👩‍👧 Família'],['outro','📌 Outro']];
+  try{ const {data}=await sb.from('acolitos_listas').select('valor,label').eq('tipo','motivo').order('label'); if(data&&data.length) motivos=data.map(r=>[r.valor,r.label]); }catch(e){}
+  const hoje=new Date().toISOString().slice(0,10);
+  const futuras=(celebracoes||[]).filter(c=>c.data>=hoje).sort((a,b)=>(a.data+a.horario).localeCompare(b.data+b.horario));
+  const ov=document.createElement('div');ov.className='modal-overlay open';ov.onclick=e=>{if(e.target===ov)ov.remove();};
+  const md=document.createElement('div');md.className='modal';md.style.maxWidth='460px';
+  const tt=document.createElement('div');tt.className='modal-title';tt.textContent='Registrar Ausência';md.appendChild(tt);
+  const lM=document.createElement('label');lM.style.cssText='font-size:12px;color:var(--text-muted);display:block;margin:8px 0 4px;';lM.textContent='Membro';md.appendChild(lM);
+  const selMembro=document.createElement('select');selMembro.className='form-select';selMembro.style.width='100%';
+  const o0=document.createElement('option');o0.value='';o0.textContent='— escolha —';selMembro.appendChild(o0);
+  (membros||[]).slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.apelido||m.nome;selMembro.appendChild(o);});
+  md.appendChild(selMembro);
+  const lC=document.createElement('label');lC.style.cssText='font-size:12px;color:var(--text-muted);display:block;margin:12px 0 4px;';lC.textContent='Missas (marque uma ou mais)';md.appendChild(lC);
+  const box=document.createElement('div');box.style.cssText='max-height:30vh;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:6px;';
+  if(!futuras.length){const e=document.createElement('div');e.style.cssText='font-size:12px;color:var(--text-muted);';e.textContent='Nenhuma missa futura cadastrada.';box.appendChild(e);}
+  futuras.forEach(c=>{
+    const r=document.createElement('label');r.style.cssText='display:flex;align-items:center;gap:8px;padding:5px 2px;font-size:12px;color:var(--text);cursor:pointer;';
+    const chk=document.createElement('input');chk.type='checkbox';chk.className='aus-cel';chk.value=c.id;
+    const sp=document.createElement('span');sp.textContent=dataCurta(c.data)+' '+c.horario+' · '+(c.comunidade==='matriz'?'Matriz':'Sto. Antônio');
+    r.append(chk,sp);box.appendChild(r);
+  });
+  md.appendChild(box);
+  const lAv=document.createElement('label');lAv.style.cssText='font-size:12px;color:var(--text-muted);display:block;margin:12px 0 4px;';lAv.textContent='Ou uma data avulsa (sem missa cadastrada)';md.appendChild(lAv);
+  const avInp=document.createElement('input');avInp.type='date';avInp.className='form-input';avInp.min=hoje;avInp.style.width='100%';md.appendChild(avInp);
+  const lMo=document.createElement('label');lMo.style.cssText='font-size:12px;color:var(--text-muted);display:block;margin:12px 0 4px;';lMo.textContent='Motivo';md.appendChild(lMo);
+  const selMotivo=document.createElement('select');selMotivo.className='form-select';selMotivo.style.width='100%';
+  motivos.forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;selMotivo.appendChild(o);});
+  md.appendChild(selMotivo);
+  const obsInp=document.createElement('input');obsInp.className='form-input';obsInp.placeholder='Observação (opcional)';obsInp.style.cssText='width:100%;margin-top:10px;';md.appendChild(obsInp);
+  const msg=document.createElement('div');msg.style.cssText='font-size:12px;color:var(--danger-text);margin-top:8px;min-height:16px;';md.appendChild(msg);
+  const acts=document.createElement('div');acts.style.cssText='display:flex;gap:8px;margin-top:8px;';
+  const cancel=document.createElement('button');cancel.className='btn-sm gray';cancel.style.flex='1';cancel.textContent='Cancelar';cancel.onclick=()=>ov.remove();
+  const salvar=document.createElement('button');salvar.className='btn-sm gold';salvar.style.flex='1';salvar.textContent='Salvar';
+  salvar.onclick=async()=>{
+    const mid=selMembro.value; if(!mid){msg.textContent='Escolha um membro.';return;}
+    const ids=[...box.querySelectorAll('.aus-cel:checked')].map(c=>c.value);
+    const dataAvulsa=avInp.value;
+    if(!ids.length && !dataAvulsa){msg.textContent='Escolha ao menos uma missa ou uma data.';return;}
+    const motivo=selMotivo.value; const obs=obsInp.value.trim()||null;
+    salvar.disabled=true; salvar.textContent='Salvando...';
+    if(ids.length){
+      const { error }=await sb.from('acolitos_ausencias').upsert(ids.map(cid=>({membro_id:mid,celebracao_id:cid,motivo,observacao:obs})),{onConflict:'membro_id,celebracao_id'});
+      if(error){msg.textContent='Erro ao salvar (missas).';salvar.disabled=false;salvar.textContent='Salvar';return;}
+      ids.forEach(cid=>{ (ausMap[cid]=ausMap[cid]||new Set()).add(mid); });
+    }
+    if(dataAvulsa){
+      await sb.from('acolitos_ausencias').delete().eq('membro_id',mid).eq('data',dataAvulsa).is('celebracao_id',null);
+      const { error }=await sb.from('acolitos_ausencias').insert([{membro_id:mid,data:dataAvulsa,celebracao_id:null,motivo,observacao:obs}]);
+      if(error){msg.textContent='Erro ao salvar (data avulsa).';salvar.disabled=false;salvar.textContent='Salvar';return;}
+    }
+    toast('✓ Ausência registrada'); ov.remove();
+  };
+  acts.append(cancel,salvar);md.appendChild(acts);
+  ov.appendChild(md);document.body.appendChild(ov);
+}
 async function abrirAusencias(){
   document.getElementById('modal-ausencias').classList.add('open');
   const body=document.getElementById('aus-body'); body.textContent=''; const ld=document.createElement('span'); ld.className='loading'; ld.textContent='Carregando...'; body.appendChild(ld);
