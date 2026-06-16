@@ -299,6 +299,116 @@ async function renderTemporadaAdmin(main) {
 const FUNCOES_DEFAULT_DEV = [['apoio','Apoio'],['cruz','Cruz'],['vela','Vela'],['sineta','Sineta'],['sinao','Sinão'],['altar','Altar'],['turibulo','Turíbulo'],['naveta','Naveta'],['missal','Missal'],['cred_altar','Cerimoniário Altar'],['cred_credencia','Cerimoniário Credência'],['mitra','Mitra'],['baculo','Báculo']];
 const PROF_NIVEIS = ['nao_treinado', 'em_formacao', 'apto', 'experiente', 'referencia'];
 const PROF_LABEL = { nao_treinado: 'Não Treinado', em_formacao: 'Em Formação', apto: 'Apto', experiente: 'Experiente', referencia: 'Referência' };
+// ── MAPA DE COBERTURA (resumo por função + matriz membros×funções, com edição rápida) ──
+const PROF_COR = { nao_treinado:'transparent', em_formacao:'#d4a060', apto:'var(--success)', experiente:'#4a90c4', referencia:'#9b59d4' };
+const LIGAS_DEV = [
+  ['🟢 Iniciantes', ['aspirante','coroinha','acolito_aspirante']],
+  ['🔵 Acólitos', ['acolito_guardiao','acolito_sentinela']],
+  ['🟣 Cerimoniários', ['aspirante_cerimoniario','cerimoniario_aspirante','cerimoniario_guardiao','cerimoniario_magistral','cerimoniario_mor']]
+];
+let habAll = {}, _redrawCobertura = null, _redrawMatriz = null;
+async function carregarHabAll(){
+  const { data:habs } = await sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia');
+  habAll = {}; (habs||[]).forEach(h=>{ (habAll[h.membro_id]=habAll[h.membro_id]||{})[h.funcao]=h.proficiencia; });
+}
+function bucketsFuncao(funcao){
+  let prontos=0,form=0;
+  _devMembros.forEach(m=>{ const p=(habAll[m.id]||{})[funcao];
+    if(p==='apto'||p==='experiente'||p==='referencia') prontos++;
+    else if(p==='em_formacao') form++; });
+  return { prontos, form, zero:_devMembros.length-prontos-form };
+}
+async function salvarProficiencia(membroId, funcao, nivel){
+  const { error } = await sb.from('acolitos_habilitacoes')
+    .upsert([{ membro_id:membroId, funcao, proficiencia:nivel, updated_at:new Date().toISOString() }], { onConflict:'membro_id,funcao' });
+  if(error){ toast('Erro ao salvar.','error'); return false; }
+  (habAll[membroId]=habAll[membroId]||{})[funcao]=nivel;
+  toast('✓ Salvo'); if(_redrawCobertura) _redrawCobertura(); return true;
+}
+function renderCobertura(container, onClickFuncao){
+  container.textContent='';
+  const ordenadas = _devFuncoes.slice().sort((a,b)=> bucketsFuncao(a[0]).prontos - bucketsFuncao(b[0]).prontos);
+  ordenadas.forEach(([val,label])=>{
+    const b=bucketsFuncao(val);
+    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid var(--border);cursor:pointer;';
+    row.onclick=()=>onClickFuncao(val,label);
+    const nm=document.createElement('div'); nm.style.cssText='flex:1.4;min-width:0;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    nm.textContent=(b.prontos<3?'⚠ ':'')+label;
+    if(b.prontos<3) nm.style.color='var(--danger-text)';
+    const bar=document.createElement('div'); bar.style.cssText='flex:2;display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--surface2);';
+    const seg=(n,cor)=>{ if(!n) return; const s=document.createElement('div'); s.style.cssText='height:100%;background:'+cor+';flex:'+n+' 0 0;'; bar.appendChild(s); };
+    seg(b.prontos, PROF_COR.apto); seg(b.form, PROF_COR.em_formacao); seg(b.zero, 'var(--border)');
+    const cnt=document.createElement('div'); cnt.style.cssText='flex:1;text-align:right;font-size:11px;color:var(--text-muted);white-space:nowrap;';
+    cnt.innerHTML='<b style="color:var(--success-text)">'+b.prontos+'</b> · '+b.form+' · '+b.zero;
+    row.append(nm,bar,cnt); container.appendChild(row);
+  });
+}
+function abrirCoberturaFuncao(funcao, label){
+  const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov){ ov.remove(); if(_redrawMatriz) _redrawMatriz(); } };
+  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='460px';
+  const tt=document.createElement('div'); tt.className='modal-title'; tt.textContent='Cobertura — '+label; md.appendChild(tt);
+  const sub=document.createElement('p'); sub.style.cssText='font-size:12px;color:var(--text-muted);margin:-6px 0 10px;'; sub.textContent='Ajuste a proficiência. Apto ou mais = pronto para a função.'; md.appendChild(sub);
+  const box=document.createElement('div'); box.style.cssText='max-height:60vh;overflow-y:auto;'; md.appendChild(box);
+  const rank=p=>({nao_treinado:0,em_formacao:1,apto:2,experiente:3,referencia:4})[p||'nao_treinado'];
+  const ordenados=_devMembros.slice().sort((a,b)=> rank((habAll[a.id]||{})[funcao]) - rank((habAll[b.id]||{})[funcao]));
+  ordenados.forEach(m=>{
+    const cur=(habAll[m.id]||{})[funcao]||'nao_treinado';
+    const r=document.createElement('div'); r.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--border);';
+    const dot=document.createElement('span'); dot.style.cssText='width:10px;height:10px;border-radius:50%;flex:none;background:'+(PROF_COR[cur]==='transparent'?'var(--border)':PROF_COR[cur])+';';
+    const nm=document.createElement('span'); nm.style.cssText='flex:1;min-width:0;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'; nm.textContent=m.apelido||m.nome;
+    const sel=document.createElement('select'); sel.className='hab-sel'; sel.style.width='auto';
+    PROF_NIVEIS.forEach(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=PROF_LABEL[n]; if(n===cur)o.selected=true; sel.appendChild(o); });
+    sel.onchange=async()=>{ const ok=await salvarProficiencia(m.id,funcao,sel.value); if(ok){ dot.style.background=(PROF_COR[sel.value]==='transparent'?'var(--border)':PROF_COR[sel.value]); } };
+    r.append(dot,nm,sel); box.appendChild(r);
+  });
+  const close=document.createElement('button'); close.className='btn-sm gray'; close.style.cssText='width:100%;margin-top:14px;'; close.textContent='Fechar'; close.onclick=()=>{ ov.remove(); if(_redrawMatriz) _redrawMatriz(); };
+  md.appendChild(close); ov.appendChild(md); document.body.appendChild(ov);
+}
+function renderMatriz(container){
+  container.textContent='';
+  const wrap=document.createElement('div'); wrap.style.cssText='overflow-x:auto;border:1px solid var(--border);border-radius:8px;';
+  const tbl=document.createElement('table'); tbl.style.cssText='border-collapse:collapse;font-size:11px;min-width:100%;';
+  const thead=document.createElement('thead'); const htr=document.createElement('tr');
+  const corner=document.createElement('th'); corner.textContent='Membro';
+  corner.style.cssText='position:sticky;left:0;z-index:2;background:var(--surface2);color:var(--gold);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);min-width:120px;';
+  htr.appendChild(corner);
+  _devFuncoes.forEach(([val,label])=>{ const th=document.createElement('th'); th.textContent=label.length>4?label.slice(0,4):label; th.title=label; th.style.cssText='padding:6px 4px;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap;'; htr.appendChild(th); });
+  thead.appendChild(htr); tbl.appendChild(thead);
+  const tbody=document.createElement('tbody');
+  LIGAS_DEV.forEach(([lglabel,slugs])=>{
+    const membros=_devMembros.filter(m=>slugs.includes(m.nivel||'aspirante'));
+    if(!membros.length) return;
+    const sep=document.createElement('tr'); const sc=document.createElement('td'); sc.colSpan=_devFuncoes.length+1;
+    sc.textContent=lglabel+' · '+membros.length; sc.style.cssText='position:sticky;left:0;background:var(--surface);color:var(--gold);font-family:Sora,sans-serif;font-weight:700;padding:6px 8px;border-bottom:1px solid var(--border-wine);';
+    sep.appendChild(sc); tbody.appendChild(sep);
+    membros.forEach(m=>{
+      const tr=document.createElement('tr');
+      const nmtd=document.createElement('td'); nmtd.textContent=m.apelido||m.nome;
+      nmtd.style.cssText='position:sticky;left:0;z-index:1;background:var(--surface2);color:var(--text);padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;';
+      tr.appendChild(nmtd);
+      _devFuncoes.forEach(([val])=>{
+        const cur=(habAll[m.id]||{})[val]||'nao_treinado';
+        const td=document.createElement('td'); td.style.cssText='text-align:center;border-bottom:1px solid var(--border);padding:0;';
+        const cell=document.createElement('div'); cell.style.cssText='width:24px;height:22px;margin:2px auto;border-radius:4px;cursor:pointer;background:'+(PROF_COR[cur]==='transparent'?'transparent':PROF_COR[cur])+';border:1px solid var(--border);';
+        cell.title=(m.apelido||m.nome)+' — '+PROF_LABEL[cur];
+        cell.onclick=()=>editarCelula(td, cell, m, val);
+        td.appendChild(cell); tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  });
+  tbl.appendChild(tbody); wrap.appendChild(tbl); container.appendChild(wrap);
+}
+function editarCelula(td, cell, m, funcao){
+  if(td.querySelector('select')) return;
+  const cur=(habAll[m.id]||{})[funcao]||'nao_treinado';
+  const sel=document.createElement('select'); sel.className='hab-sel'; sel.style.cssText='font-size:10px;width:auto;';
+  PROF_NIVEIS.forEach(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=PROF_LABEL[n]; if(n===cur)o.selected=true; sel.appendChild(o); });
+  cell.style.display='none'; td.appendChild(sel); sel.focus();
+  const fechar=()=>{ if(sel.parentNode) sel.remove(); cell.style.display=''; };
+  sel.onchange=async()=>{ const ok=await salvarProficiencia(m.id,funcao,sel.value); if(ok){ const c=PROF_COR[sel.value]; cell.style.background=(c==='transparent'?'transparent':c); cell.title=(m.apelido||m.nome)+' — '+PROF_LABEL[sel.value]; } fechar(); };
+  sel.onblur=fechar;
+}
 let _devMembros = [], _devFuncoes = [], _devComps = [];
 async function carregarDev() {
   const [{ data: mems }, { data: listas }] = await Promise.all([
@@ -314,6 +424,20 @@ async function renderDesenvolvimento(main) {
   await carregarDev();
   const head = document.createElement('h2'); head.style.cssText = 'font-family:Sora,sans-serif;font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 4px;'; head.textContent = '📈 Desenvolvimento'; main.appendChild(head);
   const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0 0 12px;'; sub.textContent = 'Funções = proficiência real de cada um (a desenvolver = abaixo de Apto). Competências = plano de desenvolvimento.'; main.appendChild(sub);
+  // 🗺 Mapa de Cobertura — resumo por função (escassez) + matriz colapsável, com edição rápida
+  await carregarHabAll();
+  const mapaSec = document.createElement('div'); mapaSec.className = 'mx-card'; mapaSec.style.marginBottom = '14px';
+  const mh = document.createElement('div'); mh.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; mh.textContent = '🗺 Mapa de Cobertura'; mapaSec.appendChild(mh);
+  const resumoBox = document.createElement('div'); mapaSec.appendChild(resumoBox);
+  const toggle = document.createElement('div'); toggle.style.cssText = 'cursor:pointer;font-family:Sora,sans-serif;font-weight:700;font-size:12px;color:var(--gold-light);margin-top:12px;';
+  const matrizBox = document.createElement('div'); matrizBox.style.cssText = 'display:none;margin-top:10px;';
+  let matrizAberta = false, matrizDesenhada = false;
+  const setToggle = () => { toggle.textContent = (matrizAberta ? '▾' : '▸') + ' Matriz completa'; };
+  _redrawCobertura = () => renderCobertura(resumoBox, abrirCoberturaFuncao);
+  _redrawMatriz = () => { if (matrizDesenhada) renderMatriz(matrizBox); };
+  toggle.onclick = () => { matrizAberta = !matrizAberta; matrizBox.style.display = matrizAberta ? '' : 'none'; if (matrizAberta && !matrizDesenhada) { renderMatriz(matrizBox); matrizDesenhada = true; } setToggle(); };
+  setToggle(); _redrawCobertura();
+  mapaSec.append(toggle, matrizBox); main.appendChild(mapaSec);
   const card = document.createElement('div'); card.className = 'mx-card';
   const filtros = document.createElement('div'); filtros.style.cssText = 'display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;';
   const busca = document.createElement('input'); busca.className = 'form-input'; busca.placeholder = 'buscar membro…'; busca.style.cssText = 'flex:2;min-width:140px;';
@@ -322,11 +446,7 @@ async function renderDesenvolvimento(main) {
   (typeof NIVEIS !== 'undefined' ? NIVEIS : []).forEach(n => { const o = document.createElement('option'); o.value = n.slug; o.textContent = n.label; selNivel.appendChild(o); });
   filtros.append(busca, selNivel); card.appendChild(filtros);
   const list = document.createElement('div'); card.appendChild(list);
-  const LIGAS = [
-    ['🟢 Iniciantes', ['aspirante', 'coroinha', 'acolito_aspirante']],
-    ['🔵 Acólitos', ['acolito_guardiao', 'acolito_sentinela']],
-    ['🟣 Cerimoniários', ['aspirante_cerimoniario', 'cerimoniario_aspirante', 'cerimoniario_guardiao', 'cerimoniario_magistral', 'cerimoniario_mor']]
-  ];
+  const LIGAS = LIGAS_DEV;
   const mk = (txt, primary, onClick) => {
     const b = document.createElement('button'); b.textContent = txt;
     b.style.cssText = 'flex:1;font-family:Oxanium,sans-serif;font-weight:700;font-size:12px;letter-spacing:.3px;padding:9px 6px;border-radius:8px;cursor:pointer;white-space:nowrap;' +
