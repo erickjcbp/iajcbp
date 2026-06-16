@@ -651,31 +651,29 @@ function abrirMontagem(celeb) {
         if(exist?.membro_id===m.id)opt.selected=true;
         sel.appendChild(opt);
       });
-    sel.onchange=()=>sel.classList.toggle('filled',!!sel.value);
     const pe={sel,funcao:pos.funcao};
     pendingEdicao.push(pe);
     const trc=document.createElement('button');trc.type='button';trc.className='mini-del';trc.textContent='🔄';trc.title='Trocar por outra opção';trc.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';
     trc.onclick=()=>trocarPosicao(pe);
     const clr=document.createElement('button');clr.type='button';clr.className='mini-del';clr.textContent='✕';clr.title='Limpar esta função';clr.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';
-    clr.onclick=()=>{sel.value='';sel.classList.remove('filled');};
+    clr.onclick=()=>{sel.value='';sel.classList.remove('filled');pe.atualizarAvisos();};
     row.append(lbl,sel,trc,clr);colPos.appendChild(row);
-    // ⚠️ já escalado em outra missa NESTA semana — embaixo do nome
-    const dup=exist&&dupSemana[exist.membro_id];
-    if(dup&&dup.size){
-      const dp=document.createElement('div');
-      dp.style.cssText='font-size:10px;margin:-4px 0 4px;padding-left:2px;font-weight:700;color:var(--danger-text);';
-      dp.textContent='⚠️ Já escalado(a) esta semana: '+[...dup].join(', ');
-      colPos.appendChild(dp);
-    }
-    // 🔁 escalado semana passada? (presença ou falta) — embaixo do nome já escalado
-    const stp=exist&&semanaPassada[exist.membro_id];
-    if(stp){
-      const pres=(stp==='presente'||stp==='atrasado'), falt=(stp==='ausente'||stp==='ausente_justificado'||stp==='substituido');
-      const sp=document.createElement('div');
-      sp.style.cssText='font-size:10px;margin:-4px 0 4px;padding-left:2px;font-weight:600;color:'+(pres?'var(--success-text)':falt?'var(--danger-text)':'var(--text-muted)')+';';
-      sp.textContent='🔁 Semana passada: '+(pres?'presença marcada ✓':falt?'faltou ✗':'escalado •');
-      colPos.appendChild(sp);
-    }
+    // avisos embaixo do nome — recalculados AO VIVO conforme o membro selecionado no dropdown
+    const dp=document.createElement('div');dp.style.cssText='font-size:10px;margin:-4px 0 4px;padding-left:2px;font-weight:700;color:var(--danger-text);display:none;';colPos.appendChild(dp);
+    const sp=document.createElement('div');sp.style.cssText='font-size:10px;margin:-4px 0 4px;padding-left:2px;font-weight:600;display:none;';colPos.appendChild(sp);
+    pe.atualizarAvisos=()=>{
+      const mid=sel.value;
+      // ⚠️ já escalado em outra missa NESTA semana
+      const dup=mid&&dupSemana[mid];
+      if(dup&&dup.size){dp.style.display='';dp.textContent='⚠️ Já escalado(a) esta semana: '+[...dup].join(', ');}
+      else{dp.style.display='none';dp.textContent='';}
+      // 🔁 escalado semana passada? (presença ou falta)
+      const stp=mid&&semanaPassada[mid];
+      if(stp){const pres=(stp==='presente'||stp==='atrasado'),falt=(stp==='ausente'||stp==='ausente_justificado'||stp==='substituido');sp.style.display='';sp.style.color=pres?'var(--success-text)':falt?'var(--danger-text)':'var(--text-muted)';sp.textContent='🔁 Semana passada: '+(pres?'presença marcada ✓':falt?'faltou ✗':'escalado •');}
+      else{sp.style.display='none';sp.textContent='';}
+    };
+    sel.onchange=()=>{sel.classList.toggle('filled',!!sel.value);pe.atualizarAvisos();};
+    pe.atualizarAvisos();
   });
 
   // Coluna membros
@@ -892,6 +890,7 @@ function trocarPosicao(pe) {
   const grupo = tiers.find(t => t.length);
   const escolhido = grupo[Math.floor(Math.random()*grupo.length)];
   pe.sel.value = escolhido.id; pe.sel.classList.add('filled');
+  if (pe.atualizarAvisos) pe.atualizarAvisos();
   toast('🔄 ' + (escolhido.apelido || (escolhido.nome||'').split(' ')[0]));
 }
 
