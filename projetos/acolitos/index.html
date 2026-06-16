@@ -83,10 +83,70 @@
     @keyframes rnNext { 0%,44%{opacity:0} 52%,94%{opacity:1} 100%{opacity:0} }
     @media (prefers-reduced-motion: reduce) { .rank-flip-inner, .rank-face, .rn-cur, .rn-next { animation:none; } .rn-next, .rank-face.back { opacity:0; } }
     .rank-fill { transition:width .5s ease; }
+    /* ── Splash litúrgico (turíbulo) ── */
+    #splash{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+      background:radial-gradient(circle at 50% 38%, #2a0e16 0%, #1a0a0f 55%, #0c0608 100%);overflow:hidden;transition:opacity .6s ease;}
+    #splash.splash-out{opacity:0;pointer-events:none;}
+    #splash .vignette{position:absolute;inset:0;box-shadow:inset 0 0 160px 40px rgba(0,0,0,.7);pointer-events:none;}
+    #splash .glow{position:absolute;top:34%;left:50%;width:340px;height:340px;transform:translate(-50%,-50%);
+      background:radial-gradient(circle,rgba(232,185,74,.22),rgba(232,185,74,0) 70%);filter:blur(6px);pointer-events:none;}
+    #splash .turibulo-wrap{position:relative;width:160px;height:230px;}
+    #splash .turibulo{transform-box:fill-box;transform-origin:50% 4%;animation:turSwing 3.2s ease-in-out infinite;}
+    @keyframes turSwing{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+    #splash .smoke{position:absolute;left:50%;bottom:96px;width:16px;height:60px;border-radius:50%;
+      background:radial-gradient(circle,rgba(232,185,74,.5),rgba(232,185,74,0) 70%);filter:blur(5px);opacity:0;transform:translateX(-50%);}
+    #splash .smoke.s1{animation:smokeRise 4s ease-out infinite}
+    #splash .smoke.s2{left:44%;animation:smokeRise 4.6s ease-out .8s infinite}
+    #splash .smoke.s3{left:56%;animation:smokeRise 5.2s ease-out 1.6s infinite}
+    @keyframes smokeRise{0%{opacity:0;transform:translate(-50%,0) scale(.6)}30%{opacity:.45}100%{opacity:0;transform:translate(-50%,-130px) scale(1.5)}}
+    #splash .dust{position:absolute;bottom:92px;width:4px;height:4px;border-radius:50%;background:var(--gold-light,#ffd97a);box-shadow:0 0 6px var(--gold,#e8b94a);opacity:0;}
+    @keyframes dustRise{0%{opacity:0;transform:translateY(0)}12%{opacity:.9}100%{opacity:0;transform:translateY(-170px)}}
+    #splash .splash-title{font-family:'Oxanium','Sora',sans-serif;font-weight:800;font-size:22px;letter-spacing:6px;
+      background:linear-gradient(90deg,#8a6a24,#ffd97a,#8a6a24);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:goldShimmer 3s linear infinite;}
+    @keyframes goldShimmer{to{background-position:200% 0}}
+    #splash .splash-sub{font-family:'Sora',sans-serif;font-size:11px;color:var(--text-muted,#9a8a8e);letter-spacing:2px;}
+    #splash .splash-dots span{animation:dotPulse 1.4s infinite}
+    #splash .splash-dots span:nth-child(2){animation-delay:.2s}
+    #splash .splash-dots span:nth-child(3){animation-delay:.4s}
+    @keyframes dotPulse{0%,100%{opacity:.2}50%{opacity:1}}
+    @media (prefers-reduced-motion:reduce){
+      #splash .turibulo,#splash .smoke,#splash .dust,#splash .splash-title,#splash .splash-dots span{animation:none!important}
+      #splash .smoke,#splash .dust{opacity:.25}
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
 </head>
 <body>
+<div id="splash" aria-hidden="true">
+  <div class="glow"></div>
+  <div class="turibulo-wrap">
+    <svg class="turibulo" viewBox="0 0 160 230" width="160" height="230" fill="none" aria-hidden="true">
+      <defs>
+        <filter id="tglow"><feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <linearGradient id="tgold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd97a"/><stop offset="1" stop-color="#8a6a24"/></linearGradient>
+      </defs>
+      <g filter="url(#tglow)" stroke="url(#tgold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="80" cy="10" r="5"/>
+        <path d="M80 14 L58 132"/><path d="M80 14 L102 132"/><path d="M80 14 L80 120"/>
+        <path d="M52 134 Q80 96 108 134 Z" fill="rgba(232,185,74,.08)"/>
+        <line x1="66" y1="120" x2="66" y2="128"/><line x1="80" y1="112" x2="80" y2="122"/><line x1="94" y1="120" x2="94" y2="128"/>
+        <path d="M80 92 L80 104 M75 97 L85 97"/>
+        <path d="M50 136 Q80 132 110 136 L104 168 Q80 184 56 168 Z" fill="rgba(232,185,74,.10)"/>
+        <ellipse cx="80" cy="160" rx="14" ry="6" fill="rgba(255,120,40,.35)" stroke="none"/>
+      </g>
+    </svg>
+    <div class="smoke s1"></div><div class="smoke s2"></div><div class="smoke s3"></div>
+    <div class="dust" style="left:46%;animation:dustRise 5s linear infinite"></div>
+    <div class="dust" style="left:54%;animation:dustRise 5.6s linear .6s infinite"></div>
+    <div class="dust" style="left:50%;animation:dustRise 4.6s linear 1s infinite"></div>
+    <div class="dust" style="left:42%;animation:dustRise 6s linear 1.4s infinite"></div>
+    <div class="dust" style="left:58%;animation:dustRise 5.2s linear 2s infinite"></div>
+    <div class="dust" style="left:48%;animation:dustRise 6.4s linear 2.6s infinite"></div>
+  </div>
+  <div class="splash-title">SOMOS DO ALTAR</div>
+  <div class="splash-sub">preparando a celebração<span class="splash-dots"><span>.</span><span>.</span><span>.</span></span></div>
+  <div class="vignette"></div>
+</div>
 <div id="app-header"></div>
 <div id="app-nav"></div>
 <div class="main" id="main">
