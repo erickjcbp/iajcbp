@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lab — Mapa de Cobertura</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    body{padding:16px;font-family:Inter,sans-serif;color:var(--text);background:var(--bg);}
+    .lab-h{font-family:Sora,sans-serif;color:var(--gold);}
+    .hab-sel{padding:4px 6px;background:var(--surface);border:1px solid var(--border-wine);border-radius:4px;color:var(--text);font-size:11px;outline:none;}
+  </style>
+</head>
+<body>
+  <h1 class="lab-h" style="font-size:16px;">Lab — Mapa de Cobertura</h1>
+  <p style="font-size:12px;color:var(--text-muted);">Staging. Resumo por função (escassez) + matriz. Edição salva direto — usar membro de teste.</p>
+
+  <h2 class="lab-h" style="font-size:14px;margin-top:16px;">Resumo por função</h2>
+  <div id="out"><span class="loading">Carregando…</span></div>
+
+  <h2 class="lab-h" style="font-size:14px;margin-top:20px;">Matriz completa</h2>
+  <div id="mtz"></div>
+
+  <script src="shared.js"></script>
+  <script>
+    const PROF_NIVEIS = ['nao_treinado','em_formacao','apto','experiente','referencia'];
+    const PROF_LABEL = { nao_treinado:'Não Treinado', em_formacao:'Em Formação', apto:'Apto', experiente:'Experiente', referencia:'Referência' };
+    const PROF_COR = { nao_treinado:'transparent', em_formacao:'#d4a060', apto:'var(--success)', experiente:'#4a90c4', referencia:'#9b59d4' };
+    const FUNCOES_DEFAULT_DEV = [['apoio','Apoio'],['cruz','Cruz'],['vela','Vela'],['sineta','Sineta'],['sinao','Sinão'],['altar','Altar'],['turibulo','Turíbulo'],['naveta','Naveta'],['missal','Missal'],['cred_altar','Cerimoniário Altar'],['cred_credencia','Cerimoniário Credência'],['mitra','Mitra'],['baculo','Báculo']];
+    const LIGAS = [
+      ['🟢 Iniciantes', ['aspirante','coroinha','acolito_aspirante']],
+      ['🔵 Acólitos', ['acolito_guardiao','acolito_sentinela']],
+      ['🟣 Cerimoniários', ['aspirante_cerimoniario','cerimoniario_aspirante','cerimoniario_guardiao','cerimoniario_magistral','cerimoniario_mor']]
+    ];
+    let _devMembros=[], _devFuncoes=[], habAll={};
+
+    async function carregar(){
+      await initModulo(); // sessão/contexto da coordenação
+      const [{data:mems},{data:listas},{data:habs}] = await Promise.all([
+        sb.from('acolitos_membros').select('id,nome,apelido,nivel,foto_url').eq('status','ativo').order('nome'),
+        sb.from('acolitos_listas').select('valor,label,tipo').eq('tipo','funcao'),
+        sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia')
+      ]);
+      _devMembros = mems||[];
+      _devFuncoes = FUNCOES_DEFAULT_DEV.concat((listas||[]).map(l=>[l.valor,l.label||l.valor]));
+      habAll = {}; (habs||[]).forEach(h=>{ (habAll[h.membro_id]=habAll[h.membro_id]||{})[h.funcao]=h.proficiencia; });
+    }
+
+    function bucketsFuncao(funcao){
+      let prontos=0,form=0;
+      _devMembros.forEach(m=>{ const p=(habAll[m.id]||{})[funcao];
+        if(p==='apto'||p==='experiente'||p==='referencia') prontos++;
+        else if(p==='em_formacao') form++; });
+      return { prontos, form, zero:_devMembros.length-prontos-form };
+    }
+
+    // grava 1 proficiência, atualiza estado em memória e (callback) redesenha
+    async function salvarProficiencia(membroId, funcao, nivel){
+      const { error } = await sb.from('acolitos_habilitacoes')
+        .upsert([{ membro_id:membroId, funcao, proficiencia:nivel, updated_at:new Date().toISOString() }], { onConflict:'membro_id,funcao' });
+      if(error){ toast('Erro ao salvar.','error'); return false; }
+      (habAll[membroId]=habAll[membroId]||{})[funcao]=nivel;
+      toast('✓ Salvo'); if(_redrawCobertura) _redrawCobertura(); return true;
+    }
+
+    let _redrawCobertura=null;
+
+    // resumo: uma linha por função, ordenado por escassez (menos prontos primeiro)
+    function renderCobertura(container, onClickFuncao){
+      container.textContent='';
+      const ordenadas = _devFuncoes.slice().sort((a,b)=> bucketsFuncao(a[0]).prontos - bucketsFuncao(b[0]).prontos);
+      ordenadas.forEach(([val,label])=>{
+        const b=bucketsFuncao(val);
+        const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid var(--border);cursor:pointer;';
+        row.onclick=()=>onClickFuncao(val,label);
+        const nm=document.createElement('div'); nm.style.cssText='flex:1.4;min-width:0;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+        nm.textContent=(b.prontos<3?'⚠ ':'')+label;
+        if(b.prontos<3) nm.style.color='var(--danger-text)';
+        const bar=document.createElement('div'); bar.style.cssText='flex:2;display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--surface2);';
+        const seg=(n,cor)=>{ if(!n) return; const s=document.createElement('div'); s.style.cssText='height:100%;background:'+cor+';flex:'+n+' 0 0;'; bar.appendChild(s); };
+        seg(b.prontos, PROF_COR.apto); seg(b.form, PROF_COR.em_formacao); seg(b.zero, 'var(--border)');
+        const cnt=document.createElement('div'); cnt.style.cssText='flex:1;text-align:right;font-size:11px;color:var(--text-muted);white-space:nowrap;';
+        cnt.innerHTML='<b style="color:var(--success-text)">'+b.prontos+'</b> · '+b.form+' · '+b.zero;
+        row.append(nm,bar,cnt); container.appendChild(row);
+      });
+    }
+
+    // drill-down: lista membros da função (menos aptos primeiro) com edição inline
+    function abrirCoberturaFuncao(funcao, label){
+      const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+      const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='460px';
+      const tt=document.createElement('div'); tt.className='modal-title'; tt.textContent='Cobertura — '+label; md.appendChild(tt);
+      const sub=document.createElement('p'); sub.style.cssText='font-size:12px;color:var(--text-muted);margin:-6px 0 10px;'; sub.textContent='Ajuste a proficiência. Apto ou mais = pronto para a função.'; md.appendChild(sub);
+      const box=document.createElement('div'); box.style.cssText='max-height:60vh;overflow-y:auto;'; md.appendChild(box);
+      const rank=p=>({nao_treinado:0,em_formacao:1,apto:2,experiente:3,referencia:4})[p||'nao_treinado'];
+      const ordenados=_devMembros.slice().sort((a,b)=> rank((habAll[a.id]||{})[funcao]) - rank((habAll[b.id]||{})[funcao]));
+      ordenados.forEach(m=>{
+        const cur=(habAll[m.id]||{})[funcao]||'nao_treinado';
+        const r=document.createElement('div'); r.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--border);';
+        const dot=document.createElement('span'); dot.style.cssText='width:10px;height:10px;border-radius:50%;flex:none;background:'+(PROF_COR[cur]==='transparent'?'var(--border)':PROF_COR[cur])+';';
+        const nm=document.createElement('span'); nm.style.cssText='flex:1;min-width:0;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'; nm.textContent=m.apelido||m.nome;
+        const sel=document.createElement('select'); sel.className='hab-sel';
+        PROF_NIVEIS.forEach(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=PROF_LABEL[n]; if(n===cur)o.selected=true; sel.appendChild(o); });
+        sel.onchange=async()=>{ const ok=await salvarProficiencia(m.id,funcao,sel.value); if(ok){ dot.style.background=(PROF_COR[sel.value]==='transparent'?'var(--border)':PROF_COR[sel.value]); if(_matrizDesenhada) renderMatriz(document.getElementById('mtz')); } };
+        r.append(dot,nm,sel); box.appendChild(r);
+      });
+      const close=document.createElement('button'); close.className='btn-sm gray'; close.style.cssText='width:100%;margin-top:14px;'; close.textContent='Fechar'; close.onclick=()=>ov.remove();
+      md.appendChild(close); ov.appendChild(md); document.body.appendChild(ov);
+    }
+
+    let _matrizDesenhada=false;
+    function renderMatriz(container){
+      container.textContent='';
+      const wrap=document.createElement('div'); wrap.style.cssText='overflow-x:auto;border:1px solid var(--border);border-radius:8px;';
+      const tbl=document.createElement('table'); tbl.style.cssText='border-collapse:collapse;font-size:11px;min-width:100%;';
+      const thead=document.createElement('thead'); const htr=document.createElement('tr');
+      const corner=document.createElement('th'); corner.textContent='Membro';
+      corner.style.cssText='position:sticky;left:0;z-index:2;background:var(--surface2);color:var(--gold);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);min-width:120px;';
+      htr.appendChild(corner);
+      _devFuncoes.forEach(([val,label])=>{ const th=document.createElement('th'); th.textContent=label.length>4?label.slice(0,4):label; th.title=label; th.style.cssText='padding:6px 4px;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap;'; htr.appendChild(th); });
+      thead.appendChild(htr); tbl.appendChild(thead);
+      const tbody=document.createElement('tbody');
+      LIGAS.forEach(([lglabel,slugs])=>{
+        const membros=_devMembros.filter(m=>slugs.includes(m.nivel||'aspirante'));
+        if(!membros.length) return;
+        const sep=document.createElement('tr'); const sc=document.createElement('td'); sc.colSpan=_devFuncoes.length+1;
+        sc.textContent=lglabel+' · '+membros.length; sc.style.cssText='position:sticky;left:0;background:var(--surface);color:var(--gold);font-family:Sora,sans-serif;font-weight:700;padding:6px 8px;border-bottom:1px solid var(--border-wine);';
+        sep.appendChild(sc); tbody.appendChild(sep);
+        membros.forEach(m=>{
+          const tr=document.createElement('tr');
+          const nmtd=document.createElement('td'); nmtd.textContent=m.apelido||m.nome;
+          nmtd.style.cssText='position:sticky;left:0;z-index:1;background:var(--surface2);color:var(--text);padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;';
+          tr.appendChild(nmtd);
+          _devFuncoes.forEach(([val])=>{
+            const cur=(habAll[m.id]||{})[val]||'nao_treinado';
+            const td=document.createElement('td'); td.style.cssText='text-align:center;border-bottom:1px solid var(--border);padding:0;';
+            const cell=document.createElement('div'); cell.style.cssText='width:24px;height:22px;margin:2px auto;border-radius:4px;cursor:pointer;background:'+(PROF_COR[cur]==='transparent'?'transparent':PROF_COR[cur])+';border:1px solid var(--border);';
+            cell.title=(m.apelido||m.nome)+' — '+PROF_LABEL[cur];
+            cell.onclick=()=>editarCelula(td, cell, m, val);
+            td.appendChild(cell); tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+      });
+      tbl.appendChild(tbody); wrap.appendChild(tbl); container.appendChild(wrap);
+      _matrizDesenhada=true;
+    }
+    function editarCelula(td, cell, m, funcao){
+      if(td.querySelector('select')) return;
+      const cur=(habAll[m.id]||{})[funcao]||'nao_treinado';
+      const sel=document.createElement('select'); sel.className='hab-sel'; sel.style.fontSize='10px';
+      PROF_NIVEIS.forEach(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=PROF_LABEL[n]; if(n===cur)o.selected=true; sel.appendChild(o); });
+      cell.style.display='none'; td.appendChild(sel); sel.focus();
+      const fechar=()=>{ if(sel.parentNode) sel.remove(); cell.style.display=''; };
+      sel.onchange=async()=>{ const ok=await salvarProficiencia(m.id,funcao,sel.value); if(ok){ const c=PROF_COR[sel.value]; cell.style.background=(c==='transparent'?'transparent':c); cell.title=(m.apelido||m.nome)+' — '+PROF_LABEL[sel.value]; } fechar(); };
+      sel.onblur=fechar;
+    }
+
+    async function go(){
+      await carregar();
+      const out=document.getElementById('out'); const mtz=document.getElementById('mtz');
+      _redrawCobertura=()=>renderCobertura(out, abrirCoberturaFuncao);
+      _redrawCobertura();
+      renderMatriz(mtz);
+    }
+    go();
+  </script>
+</body>
+</html>
