@@ -622,20 +622,39 @@ async function abrirFuncoesEditor(m) {
   };
   body.appendChild(save);
 }
-// [Competências] = lista única (marcada = desenvolvida; desmarcada = não) — sem notificar o membro
+// [Virtudes] = progresso vem das quests; coordenação SELA quando formada (grava em competencias_desenvolvidas)
 async function abrirCompetenciasEditor(m, onSaved) {
   const feitas = new Set(m.competencias_desenvolvidas || []);
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '440px';
-  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Competências de ' + m.nome; md.appendChild(tt);
-  const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 10px;'; sub.textContent = 'Marque as desenvolvidas. As desmarcadas contam como ainda não desenvolvidas.'; md.appendChild(sub);
-  const box = document.createElement('div'); box.style.cssText = 'max-height:55vh;overflow-y:auto;'; md.appendChild(box);
-  _devComps.forEach(([val, lab]) => {
-    const r = document.createElement('label'); r.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text);cursor:pointer;';
-    const chk = document.createElement('input'); chk.type = 'checkbox'; chk.checked = feitas.has(val);
-    chk.onchange = () => { if (chk.checked) feitas.add(val); else feitas.delete(val); };
-    const sp = document.createElement('span'); sp.textContent = lab;
-    r.append(chk, sp); box.appendChild(r);
+  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '460px';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Virtudes de ' + m.nome; md.appendChild(tt);
+  const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 10px;'; sub.textContent = 'O progresso vem das quests. Confirme quando a virtude estiver formada.'; md.appendChild(sub);
+  const box = document.createElement('div'); box.style.cssText = 'max-height:55vh;overflow-y:auto;'; box.innerHTML = '<span class="loading">Carregando...</span>'; md.appendChild(box);
+  const { data } = await sb.rpc('acolitos_competencias_progresso', { p_membro: m.id });
+  const comps = (data || []).slice();
+  const ordem = { candidata: 0, em_formacao: 1, formada: 2, nenhuma: 3 };
+  comps.sort((a, b) => (ordem[a.status] - ordem[b.status]) || a.label.localeCompare(b.label));
+  box.textContent = '';
+  if (!comps.length) { const e = document.createElement('div'); e.style.cssText = 'font-size:12px;color:var(--text-muted);'; e.textContent = 'Nenhuma competência cadastrada.'; box.appendChild(e); }
+  comps.forEach(c => {
+    const r = document.createElement('div'); r.style.cssText = 'display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);';
+    const info = document.createElement('div'); info.style.cssText = 'flex:1;min-width:0;';
+    const nm = document.createElement('div'); nm.style.cssText = 'font-size:13px;color:var(--text);font-weight:600;'; nm.textContent = c.label;
+    const meta = document.createElement('div'); meta.style.cssText = 'font-size:10px;color:var(--text-muted);margin-top:2px;';
+    const bw = document.createElement('div'); bw.style.cssText = 'height:6px;border-radius:3px;background:var(--surface2);overflow:hidden;margin-top:4px;max-width:170px;';
+    const bar = document.createElement('div'); const pct = Math.min(100, Math.round(100 * c.progresso / Math.max(1, c.limiar))); bar.style.cssText = 'height:100%;background:var(--gold);width:' + pct + '%;'; bw.appendChild(bar);
+    const btn = document.createElement('button'); btn.style.cssText = 'flex:none;font-family:Oxanium,sans-serif;font-weight:700;font-size:11px;padding:5px 10px;border-radius:6px;cursor:pointer;';
+    const upd = () => {
+      const sld = feitas.has(c.valor);
+      meta.textContent = sld ? '✅ formada' : (c.status === 'candidata' ? '🟡 candidata · ' + c.progresso + '/' + c.limiar : c.progresso + '/' + c.limiar + ' quests');
+      btn.textContent = sld ? 'Retirar selo' : 'Confirmar';
+      btn.style.background = sld ? 'transparent' : 'linear-gradient(180deg,var(--gold),#9a7a1e)';
+      btn.style.color = sld ? 'var(--gold-light)' : '#2a1a00';
+      btn.style.border = sld ? '1px solid var(--gold-dim)' : 'none';
+    };
+    upd();
+    btn.onclick = () => { if (feitas.has(c.valor)) feitas.delete(c.valor); else feitas.add(c.valor); upd(); };
+    info.append(nm, meta, bw); r.append(info, btn); box.appendChild(r);
   });
   const save = document.createElement('button'); save.className = 'btn gold'; save.style.cssText = 'width:100%;margin-top:14px;'; save.textContent = 'Salvar';
   save.onclick = async () => {
@@ -651,6 +670,12 @@ const FAIXAS_DEV = [['iniciantes', '🟢 Iniciantes'], ['acolitos', '🔵 Acóli
 const FAIXA_LABEL = { iniciantes: '🟢 Iniciantes', acolitos: '🔵 Acólitos', cerimoniarios: '🟣 Cerimoniários' };
 async function renderCompLista(b) {
   b.textContent = '';
+  const padraoAtual = (typeof cfg === 'function') ? cfg('competencia_limiar_padrao', 3) : 3;
+  const head = document.createElement('div'); head.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;color:var(--text-muted);';
+  const ht = document.createElement('span'); ht.textContent = 'Limiar padrão (quests p/ candidata):';
+  const hi = document.createElement('input'); hi.type = 'number'; hi.min = '1'; hi.value = padraoAtual; hi.style.cssText = 'width:56px;font-size:12px;padding:4px;background:var(--surface);border:1px solid var(--border-wine);border-radius:4px;color:var(--text);';
+  hi.onchange = async () => { const v = Math.max(1, parseInt(hi.value, 10) || 1); const { error } = await sb.from('acolitos_config').upsert({ chave: 'competencia_limiar_padrao', valor: v }, { onConflict: 'chave' }); if (error) { toast('Erro ao salvar limiar.', 'error'); return; } if (typeof _APP_CONFIG === 'object' && _APP_CONFIG) _APP_CONFIG['competencia_limiar_padrao'] = v; toast('✓ Limiar padrão atualizado'); };
+  head.append(ht, hi); b.appendChild(head);
   const { data } = await sb.from('acolitos_listas').select('id,valor,label,meta').eq('tipo', 'competencia').order('label');
   const mini = (txt, danger) => { const x = document.createElement('button'); x.textContent = txt; x.style.cssText = 'width:30px;height:30px;border-radius:6px;cursor:pointer;font-weight:700;border:1px solid ' + (danger ? 'var(--danger)' : 'var(--gold-dim)') + ';background:var(--surface2);color:' + (danger ? 'var(--danger-text)' : 'var(--gold-light)') + ';'; return x; };
   (data || []).forEach(item => {
@@ -660,9 +685,11 @@ async function renderCompLista(b) {
     const fsel = document.createElement('select'); fsel.style.cssText = 'font-size:11px;padding:4px;background:var(--surface);border:1px solid var(--border-wine);border-radius:4px;color:var(--text);';
     FAIXAS_DEV.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; if (v === fx) o.selected = true; fsel.appendChild(o); });
     if (!fx) { const o = document.createElement('option'); o.value = ''; o.textContent = '— faixa —'; o.selected = true; fsel.insertBefore(o, fsel.firstChild); }
-    fsel.onchange = async () => { await sb.from('acolitos_listas').update({ meta: Object.assign({}, item.meta || {}, { faixa: fsel.value }) }).eq('id', item.id); toast('✓ Faixa atualizada'); };
+    fsel.onchange = async () => { await sb.from('acolitos_listas').update({ meta: Object.assign({}, item.meta || {}, { faixa: fsel.value }) }).eq('id', item.id); item.meta = Object.assign({}, item.meta || {}, { faixa: fsel.value }); toast('✓ Faixa atualizada'); };
+    const lim = document.createElement('input'); lim.type = 'number'; lim.min = '1'; lim.value = (item.meta && item.meta.limiar) || ''; lim.title = 'Limiar: quests p/ virar candidata (vazio = padrão global)'; lim.placeholder = 'lim'; lim.style.cssText = 'width:50px;font-size:11px;padding:4px;background:var(--surface);border:1px solid var(--border-wine);border-radius:4px;color:var(--text);';
+    lim.onchange = async () => { const v = lim.value === '' ? null : Math.max(1, parseInt(lim.value, 10) || 1); await sb.from('acolitos_listas').update({ meta: Object.assign({}, item.meta || {}, { limiar: v }) }).eq('id', item.id); item.meta = Object.assign({}, item.meta || {}, { limiar: v }); toast('✓ Limiar atualizado'); };
     const del = mini('−', true); del.onclick = async () => { if (!confirm('Remover competência "' + (item.label || item.valor) + '"?')) return; await sb.from('acolitos_listas').delete().eq('id', item.id); renderCompLista(b); };
-    row.append(nm, fsel, del); b.appendChild(row);
+    row.append(nm, fsel, lim, del); b.appendChild(row);
   });
   const add = document.createElement('div'); add.style.cssText = 'display:flex;gap:8px;margin-top:10px;';
   const inp = document.createElement('input'); inp.className = 'form-input'; inp.placeholder = 'Nova competência (ex.: Liderança)';
