@@ -628,7 +628,7 @@ async function abrirCompetenciasEditor(m, onSaved) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '460px';
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Virtudes de ' + m.nome; md.appendChild(tt);
-  const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 10px;'; sub.textContent = 'O progresso vem das quests. Confirme quando a virtude estiver formada.'; md.appendChild(sub);
+  const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 10px;'; sub.textContent = 'O progresso vem das quests. Você também pode conceder manualmente uma virtude que já reconhece no membro.'; md.appendChild(sub);
   const box = document.createElement('div'); box.style.cssText = 'max-height:55vh;overflow-y:auto;'; box.innerHTML = '<span class="loading">Carregando...</span>'; md.appendChild(box);
   const { data } = await sb.rpc('acolitos_competencias_progresso', { p_membro: m.id });
   const comps = (data || []).slice();
@@ -647,7 +647,7 @@ async function abrirCompetenciasEditor(m, onSaved) {
     const upd = () => {
       const sld = feitas.has(c.valor);
       meta.textContent = sld ? '✅ formada' : (c.status === 'candidata' ? '🟡 candidata · ' + c.progresso + '/' + c.limiar : c.progresso + '/' + c.limiar + ' quests');
-      btn.textContent = sld ? 'Retirar selo' : 'Confirmar';
+      btn.textContent = sld ? 'Retirar selo' : (c.status === 'candidata' ? 'Confirmar' : 'Conceder');
       btn.style.background = sld ? 'transparent' : 'linear-gradient(180deg,var(--gold),#9a7a1e)';
       btn.style.color = sld ? 'var(--gold-light)' : '#2a1a00';
       btn.style.border = sld ? '1px solid var(--gold-dim)' : 'none';
