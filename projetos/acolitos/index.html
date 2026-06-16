@@ -156,6 +156,21 @@
 <script src="shared.js"></script>
 <script>
 // EQUIPE_ROLES já vem do shared.js (redeclarar com const aqui quebrava o script)
+// Splash litúrgico: permanência mínima p/ a animação aparecer + saída suave; nunca trava a tela.
+const SPLASH_MIN_MS = 1300;
+const _splashStart = Date.now();
+let _splashGone = false;
+function hideSplash(){
+  if (_splashGone) return; _splashGone = true;
+  const el = document.getElementById('splash');
+  if (!el) return;
+  const restante = Math.max(0, SPLASH_MIN_MS - (Date.now() - _splashStart));
+  setTimeout(() => {
+    el.classList.add('splash-out');
+    setTimeout(() => { el.remove(); }, 700);
+  }, restante);
+}
+setTimeout(hideSplash, 8000); // safety-net: some mesmo se init() travar/erro
 const CRM_ETAPAS = ['aprovacao_cadastro','integracao','whatsapp','tunica','disponivel_escala','integrado'];
 const CRM_LABEL = { aprovacao_cadastro:'Aprovação', integracao:'Integração', whatsapp:'WhatsApp', tunica:'Túnica', disponivel_escala:'Disponível para Escala', integrado:'Integrado ✓' };
 const CRM_DESC = {
@@ -903,7 +918,7 @@ async function renderAgenda(main, titulo, limit, comCobertura, prefetched) {
   });
 }
 
-init();
+init().catch(err => console.error('init falhou:', err)).finally(hideSplash);
 </script>
 </body>
 </html>
