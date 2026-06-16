@@ -626,54 +626,103 @@ function abrirMontagem(celeb) {
   // Coluna posições
   const colPos=document.createElement('div');
   const t1=document.createElement('div');t1.style.cssText='font-family:Sora,sans-serif;font-size:12px;color:var(--gold);margin-bottom:10px;';t1.textContent='Posições';colPos.appendChild(t1);
-  let catAtual='';
-  tmpl.forEach((pos,idx)=>{
-    if(pos.cat!==catAtual){catAtual=pos.cat;const c=document.createElement('div');c.className='cat-titulo';c.textContent=pos.cat;colPos.appendChild(c);}
-    const existFn=esc.filter(e=>e.funcao===pos.funcao);
-    const idxDessaFn=tmpl.slice(0,idx).filter(p=>p.funcao===pos.funcao).length;
-    const exist=existFn[idxDessaFn];
+  // builder de UMA posição (modelo ou extra) — aninhado p/ usar o estado da celebração
+  function criarPosicao(funcao, label, existMembroId, container, isExtra){
     const row=document.createElement('div');row.className='pos-item';
-    const lbl=document.createElement('span');lbl.className='pos-label';lbl.textContent=pos.label;
-    const sel=document.createElement('select');sel.className='pos-select'+(exist?' filled':'');
-    sel.setAttribute('data-funcao',pos.funcao);
+    const lbl=document.createElement('span');lbl.className='pos-label';lbl.textContent=label;
+    const sel=document.createElement('select');sel.className='pos-select'+(existMembroId?' filled':'');
+    sel.setAttribute('data-funcao',funcao);
     const optV=document.createElement('option');optV.value='';optV.textContent='— vazio —';sel.appendChild(optV);
-    // "Em formação" entra SÓ na escolha manual (o gerador automático nunca usa — elegivelFuncao não os inclui)
-    const emFormacaoNesta = m => ((habMap[m.id]||{})[pos.funcao])==='em_formacao';
-    membros.filter(m=>elegivelFuncao(m,pos.funcao,celeb.comunidade) || emFormacaoNesta(m))
+    const emFormacaoNesta = m => ((habMap[m.id]||{})[funcao])==='em_formacao';
+    membros.filter(m=>elegivelFuncao(m,funcao,celeb.comunidade) || emFormacaoNesta(m))
       .forEach(m=>{
         const opt=document.createElement('option');opt.value=m.id;
         const disp=!horKey||(dispMap[m.id]||[]).includes(horKey);
         const ausente=ausNesta.has(m.id);
         const jaSem=dupSemana[m.id];
-        const emForm=emFormacaoNesta(m) && !elegivelFuncao(m,pos.funcao,celeb.comunidade);
+        const emForm=emFormacaoNesta(m) && !elegivelFuncao(m,funcao,celeb.comunidade);
         opt.textContent=(ausente?'🚫 ':(disp?'':'⚠ '))+(m.apelido||m.nome)+(emForm?' 🎓 em formação':'')+(ausente?' — ausência':'')+(jaSem?' 🔁 já: '+[...jaSem].join(', '):'');
-        if(ausente && exist?.membro_id!==m.id) opt.disabled=true; // bloqueado: declarou ausência
-        if(exist?.membro_id===m.id)opt.selected=true;
+        if(ausente && existMembroId!==m.id) opt.disabled=true;
+        if(existMembroId===m.id)opt.selected=true;
         sel.appendChild(opt);
       });
-    const pe={sel,funcao:pos.funcao};
+    const pe={sel,funcao,extra:!!isExtra};
     pendingEdicao.push(pe);
     const trc=document.createElement('button');trc.type='button';trc.className='mini-del';trc.textContent='🔄';trc.title='Trocar por outra opção';trc.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';
     trc.onclick=()=>trocarPosicao(pe);
-    const clr=document.createElement('button');clr.type='button';clr.className='mini-del';clr.textContent='✕';clr.title='Limpar esta função';clr.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';
-    clr.onclick=()=>{sel.value='';sel.classList.remove('filled');pe.atualizarAvisos();};
-    row.append(lbl,sel,trc,clr);colPos.appendChild(row);
-    // avisos embaixo do nome — recalculados AO VIVO conforme o membro selecionado no dropdown
-    const dp=document.createElement('div');dp.style.cssText='font-size:10px;margin:-4px 0 4px;padding-left:2px;font-weight:700;color:var(--danger-text);display:none;';colPos.appendChild(dp);
-    const sp=document.createElement('div');sp.style.cssText='font-size:10px;margin:-4px 0 4px;padding-left:2px;font-weight:600;display:none;';colPos.appendChild(sp);
+    const clr=document.createElement('button');clr.type='button';clr.className='mini-del';clr.textContent='✕';clr.title=isExtra?'Remover este campo extra':'Limpar esta função';clr.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';
+    const dp=document.createElement('div');dp.style.cssText='font-size:10px;margin:-4px 0 4px;padding-left:2px;font-weight:700;color:var(--danger-text);display:none;';
+    const sp=document.createElement('div');sp.style.cssText='font-size:10px;margin:-4px 0 4px;padding-left:2px;font-weight:600;display:none;';
     pe.atualizarAvisos=()=>{
       const mid=sel.value;
-      // ⚠️ já escalado em outra missa NESTA semana
       const dup=mid&&dupSemana[mid];
       if(dup&&dup.size){dp.style.display='';dp.textContent='⚠️ Já escalado(a) esta semana: '+[...dup].join(', ');}
       else{dp.style.display='none';dp.textContent='';}
-      // 🔁 escalado semana passada? (presença ou falta)
       const stp=mid&&semanaPassada[mid];
       if(stp){const pres=(stp==='presente'||stp==='atrasado'),falt=(stp==='ausente'||stp==='ausente_justificado'||stp==='substituido');sp.style.display='';sp.style.color=pres?'var(--success-text)':falt?'var(--danger-text)':'var(--text-muted)';sp.textContent='🔁 Semana passada: '+(pres?'presença marcada ✓':falt?'faltou ✗':'escalado •');}
       else{sp.style.display='none';sp.textContent='';}
     };
-    sel.onchange=()=>{sel.classList.toggle('filled',!!sel.value);pe.atualizarAvisos();};
+    if(isExtra){
+      clr.onclick=()=>{ const i=pendingEdicao.indexOf(pe); if(i>=0)pendingEdicao.splice(i,1); row.remove(); dp.remove(); sp.remove(); };
+    } else {
+      clr.onclick=()=>{sel.value='';sel.classList.remove('filled');pe.atualizarAvisos();};
+    }
+    sel.onchange=()=>{sel.classList.toggle('filled',!!sel.value);pe.atualizarAvisos();checarIrmao(pe);};
+    row.append(lbl,sel,trc,clr);container.appendChild(row);container.appendChild(dp);container.appendChild(sp);
     pe.atualizarAvisos();
+    return pe;
+  }
+  // container por categoria + botão "＋ função"
+  const catBox={};
+  function getCatBox(cat){
+    if(catBox[cat]) return catBox[cat];
+    const titulo=document.createElement('div');titulo.className='cat-titulo';titulo.textContent=cat;colPos.appendChild(titulo);
+    const box=document.createElement('div');colPos.appendChild(box);
+    const add=document.createElement('button');add.type='button';add.className='pos-add';add.textContent='＋ função';
+    add.style.cssText='margin:4px 0 10px;font-size:11px;color:var(--gold-light);background:transparent;border:1px dashed var(--gold-dim);border-radius:6px;padding:4px 10px;cursor:pointer;';
+    add.onclick=()=>abrirMenuAddFuncao(cat, add);
+    colPos.appendChild(add);
+    catBox[cat]={box,add};
+    return catBox[cat];
+  }
+  function adicionarSlotExtra(funcao, membroId){
+    const meta=FUNCAO_META[funcao]||{label:funcao,cat:'Outros'};
+    const cb=getCatBox(meta.cat);
+    const pe=criarPosicao(funcao, meta.label+' (extra)', membroId||null, cb.box, true);
+    if(membroId){ pe.sel.value=membroId; pe.sel.classList.add('filled'); pe.atualizarAvisos(); }
+    return pe;
+  }
+  function abrirMenuAddFuncao(cat, anchorBtn){
+    if(anchorBtn._menu){ anchorBtn._menu.remove(); anchorBtn._menu=null; return; }
+    const menu=document.createElement('div');menu.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px;';
+    Object.keys(FUNCAO_META).filter(f=>FUNCAO_META[f].cat===cat).forEach(f=>{
+      const b=document.createElement('button');b.type='button';b.textContent=FUNCAO_META[f].label;
+      b.style.cssText='font-size:11px;color:var(--text);background:var(--surface2);border:1px solid var(--border-wine);border-radius:6px;padding:4px 8px;cursor:pointer;';
+      b.onclick=()=>{ adicionarSlotExtra(f); menu.remove(); anchorBtn._menu=null; };
+      menu.appendChild(b);
+    });
+    anchorBtn.parentNode.insertBefore(menu, anchorBtn.nextSibling);
+    anchorBtn._menu=menu;
+  }
+  // dispensados nesta sessão do modal (par membro|irmão) — usado no alerta de irmão
+  const _irmaoDispensado=new Set();
+  function checarIrmao(pe){ /* implementado adiante */ }
+
+  // posições do MODELO
+  tmpl.forEach((pos,idx)=>{
+    const existFn=esc.filter(e=>e.funcao===pos.funcao);
+    const idxDessaFn=tmpl.slice(0,idx).filter(p=>p.funcao===pos.funcao).length;
+    const exist=existFn[idxDessaFn];
+    const cb=getCatBox(pos.cat);
+    criarPosicao(pos.funcao, pos.label, exist?exist.membro_id:null, cb.box, false);
+  });
+  // SLOTS EXTRAS: linhas de escala que excedem a contagem do modelo (persistem ao reabrir)
+  const _contFn={};
+  esc.forEach(e=>{ _contFn[e.funcao]=(_contFn[e.funcao]||0)+1; });
+  Object.keys(_contFn).forEach(funcao=>{
+    const modeloN=tmpl.filter(p=>p.funcao===funcao).length;
+    const rows=esc.filter(e=>e.funcao===funcao);
+    for(let i=modeloN;i<rows.length;i++){ adicionarSlotExtra(funcao, rows[i].membro_id); }
   });
 
   // Coluna membros
