@@ -484,7 +484,8 @@ async function renderDesenvolvimento(main) {
   main.appendChild(card);
   // gerir a LISTA de competências (movida do Config)
   const hr = document.createElement('div'); hr.style.cssText = 'border-top:1px solid var(--border-wine);margin:14px 0 10px;'; main.appendChild(hr);
-  const ch = document.createElement('div'); ch.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; ch.textContent = '🗂 Competências (lista)'; main.appendChild(ch);
+  const ch = document.createElement('div'); ch.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);margin-bottom:4px;'; ch.textContent = '🗂 Competências (lista)'; main.appendChild(ch);
+  const chs = document.createElement('div'); chs.style.cssText = 'font-size:11px;color:var(--text-muted);margin-bottom:8px;'; chs.textContent = 'Defina a faixa e o ⚖ peso de cada virtude (quantas quests para virar candidata a formada).'; main.appendChild(chs);
   const compBox = document.createElement('div'); main.appendChild(compBox); renderCompLista(compBox);
 }
 // [Panorama] = visão geral da jornada do membro (nível, XP, estrelas, quests, pendências)
@@ -672,7 +673,7 @@ async function renderCompLista(b) {
   b.textContent = '';
   const padraoAtual = (typeof cfg === 'function') ? cfg('competencia_limiar_padrao', 3) : 3;
   const head = document.createElement('div'); head.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;color:var(--text-muted);';
-  const ht = document.createElement('span'); ht.textContent = 'Limiar padrão (quests p/ candidata):';
+  const ht = document.createElement('span'); ht.textContent = '⚖ Peso padrão (quests p/ formar a virtude):';
   const hi = document.createElement('input'); hi.type = 'number'; hi.min = '1'; hi.value = padraoAtual; hi.style.cssText = 'width:56px;font-size:12px;padding:4px;background:var(--surface);border:1px solid var(--border-wine);border-radius:4px;color:var(--text);';
   hi.onchange = async () => { const v = Math.max(1, parseInt(hi.value, 10) || 1); const { error } = await sb.from('acolitos_config').upsert({ chave: 'competencia_limiar_padrao', valor: v }, { onConflict: 'chave' }); if (error) { toast('Erro ao salvar limiar.', 'error'); return; } if (typeof _APP_CONFIG === 'object' && _APP_CONFIG) _APP_CONFIG['competencia_limiar_padrao'] = v; toast('✓ Limiar padrão atualizado'); };
   head.append(ht, hi); b.appendChild(head);
@@ -686,10 +687,11 @@ async function renderCompLista(b) {
     FAIXAS_DEV.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; if (v === fx) o.selected = true; fsel.appendChild(o); });
     if (!fx) { const o = document.createElement('option'); o.value = ''; o.textContent = '— faixa —'; o.selected = true; fsel.insertBefore(o, fsel.firstChild); }
     fsel.onchange = async () => { await sb.from('acolitos_listas').update({ meta: Object.assign({}, item.meta || {}, { faixa: fsel.value }) }).eq('id', item.id); item.meta = Object.assign({}, item.meta || {}, { faixa: fsel.value }); toast('✓ Faixa atualizada'); };
-    const lim = document.createElement('input'); lim.type = 'number'; lim.min = '1'; lim.value = (item.meta && item.meta.limiar) || ''; lim.title = 'Limiar: quests p/ virar candidata (vazio = padrão global)'; lim.placeholder = 'lim'; lim.style.cssText = 'width:50px;font-size:11px;padding:4px;background:var(--surface);border:1px solid var(--border-wine);border-radius:4px;color:var(--text);';
-    lim.onchange = async () => { const v = lim.value === '' ? null : Math.max(1, parseInt(lim.value, 10) || 1); await sb.from('acolitos_listas').update({ meta: Object.assign({}, item.meta || {}, { limiar: v }) }).eq('id', item.id); item.meta = Object.assign({}, item.meta || {}, { limiar: v }); toast('✓ Limiar atualizado'); };
+    const pesoLbl = document.createElement('span'); pesoLbl.textContent = '⚖'; pesoLbl.title = 'Peso da virtude'; pesoLbl.style.cssText = 'font-size:12px;color:var(--gold-light);';
+    const lim = document.createElement('input'); lim.type = 'number'; lim.min = '1'; lim.value = (item.meta && item.meta.limiar) || ''; lim.title = 'Peso desta virtude: nº de quests p/ virar candidata (vazio = usa o padrão)'; lim.placeholder = 'peso'; lim.style.cssText = 'width:54px;font-size:11px;padding:4px;background:var(--surface);border:1px solid var(--border-wine);border-radius:4px;color:var(--text);';
+    lim.onchange = async () => { const v = lim.value === '' ? null : Math.max(1, parseInt(lim.value, 10) || 1); await sb.from('acolitos_listas').update({ meta: Object.assign({}, item.meta || {}, { limiar: v }) }).eq('id', item.id); item.meta = Object.assign({}, item.meta || {}, { limiar: v }); toast('✓ Peso atualizado'); };
     const del = mini('−', true); del.onclick = async () => { if (!confirm('Remover competência "' + (item.label || item.valor) + '"?')) return; await sb.from('acolitos_listas').delete().eq('id', item.id); renderCompLista(b); };
-    row.append(nm, fsel, lim, del); b.appendChild(row);
+    row.append(nm, fsel, pesoLbl, lim, del); b.appendChild(row);
   });
   const add = document.createElement('div'); add.style.cssText = 'display:flex;gap:8px;margin-top:10px;';
   const inp = document.createElement('input'); inp.className = 'form-input'; inp.placeholder = 'Nova competência (ex.: Liderança)';
