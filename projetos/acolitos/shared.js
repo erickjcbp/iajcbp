@@ -130,8 +130,10 @@ const ACO_SPLASH_HTML =
 +       '<path d="M80 183 L80 193"/>'
 +       '<path d="M67 203 Q80 196 93 203"/>'
 +       '<ellipse cx="80" cy="204" rx="16" ry="3.2" fill="rgba(232,185,74,.10)"/>'
-+       '<line x1="60" y1="28" x2="100" y2="28"/>'
-+       '<path d="M64 28 L58 138"/><path d="M80 28 L80 138"/><path d="M96 28 L102 138"/>'
++       '<line x1="58" y1="28" x2="102" y2="28"/>'
++       '<g stroke-width="2.6" stroke-dasharray="2.5 3">'
++         '<path d="M66 28 L54 138"/><path d="M80 28 L80 138"/><path d="M94 28 L106 138"/>'
++       '</g>'
 +       '<path d="M80 14 L80 28"/>'
 +       '<circle cx="80" cy="10" r="5"/>'
 +     '</g>'
@@ -145,7 +147,7 @@ const ACO_SPLASH_HTML =
 +   '<div class="dust" style="left:48%;animation:dustRise 6.4s linear 2.6s infinite"></div>'
 + '</div>'
 + '<div class="splash-title">SOMOS DO ALTAR</div>'
-+ '<div class="splash-sub">preparando sua jornada<span class="splash-dots"><span>.</span><span>.</span><span>.</span></span></div>'
++ '<div class="splash-sub">preparando sua jornada<span class="splash-dots"><i></i><i></i><i></i></span></div>'
 + '<div class="vignette"></div>';
 function showSplash(){
   if (document.getElementById('splash')) return;

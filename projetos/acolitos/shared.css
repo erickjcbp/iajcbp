@@ -454,12 +454,13 @@ body.has-switch { padding-top: calc(var(--header-h) + 46px + env(safe-area-inset
   background:linear-gradient(90deg,#8a6a24,#ffd97a,#8a6a24);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:goldShimmer 3s linear infinite;}
 @keyframes goldShimmer{to{background-position:200% 0}}
 #splash .splash-sub{font-family:'Sora',sans-serif;font-size:11px;color:var(--text-muted,#9a8a8e);letter-spacing:2px;}
-#splash .splash-dots span{animation:dotPulse 1.4s infinite}
-#splash .splash-dots span:nth-child(2){animation-delay:.2s}
-#splash .splash-dots span:nth-child(3){animation-delay:.4s}
+#splash .splash-dots{display:inline-flex;gap:5px;margin-left:7px;vertical-align:middle;}
+#splash .splash-dots i{width:5px;height:5px;border-radius:50%;background:var(--gold-light,#ffd97a);box-shadow:0 0 5px var(--gold,#e8b94a);animation:dotPulse 1.4s infinite}
+#splash .splash-dots i:nth-child(2){animation-delay:.2s}
+#splash .splash-dots i:nth-child(3){animation-delay:.4s}
 @keyframes dotPulse{0%,100%{opacity:.2}50%{opacity:1}}
 @media (prefers-reduced-motion:reduce){
-  #splash .turibulo,#splash .smoke,#splash .dust,#splash .splash-title,#splash .splash-dots span{animation:none!important}
+  #splash .turibulo,#splash .smoke,#splash .dust,#splash .splash-title,#splash .splash-dots i{animation:none!important}
   #splash .smoke,#splash .dust{opacity:.25}
 }
 
