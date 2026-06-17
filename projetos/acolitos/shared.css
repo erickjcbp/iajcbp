@@ -438,9 +438,9 @@ body.has-switch { padding-top: calc(var(--header-h) + 46px + env(safe-area-inset
 #splash .glow{position:absolute;top:34%;left:50%;width:340px;height:340px;transform:translate(-50%,-50%);
   background:radial-gradient(circle,rgba(232,185,74,.22),rgba(232,185,74,0) 70%);filter:blur(6px);pointer-events:none;}
 #splash .turibulo-wrap{position:relative;width:160px;height:230px;}
-#splash .turibulo{transform-box:fill-box;transform-origin:50% 4%;animation:turSwing 3.2s ease-in-out infinite;}
+#splash .turibulo{position:relative;z-index:2;transform-box:fill-box;transform-origin:50% 4%;animation:turSwing 3.2s ease-in-out infinite;}
 @keyframes turSwing{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
-#splash .smoke{position:absolute;left:50%;bottom:98px;width:24px;height:90px;border-radius:50%;
+#splash .smoke{position:absolute;z-index:1;left:50%;bottom:98px;width:24px;height:90px;border-radius:50%;
   background:radial-gradient(circle,rgba(232,185,74,.6),rgba(232,185,74,0) 70%);filter:blur(6px);opacity:0;transform:translateX(-50%);}
 #splash .smoke.s1{animation:smokeRise 4.2s ease-out infinite}
 #splash .smoke.s2{left:43%;animation:smokeRise 5s ease-out .6s infinite}
@@ -448,7 +448,7 @@ body.has-switch { padding-top: calc(var(--header-h) + 46px + env(safe-area-inset
 #splash .smoke.s4{left:48%;animation:smokeRise 4.8s ease-out 1.8s infinite}
 #splash .smoke.s5{left:53%;animation:smokeRise 6s ease-out 2.6s infinite}
 @keyframes smokeRise{0%{opacity:0;transform:translate(-50%,0) scale(.55)}25%{opacity:.7}60%{opacity:.45}100%{opacity:0;transform:translate(-50%,-230px) scale(2)}}
-#splash .dust{position:absolute;bottom:92px;width:4px;height:4px;border-radius:50%;background:var(--gold-light,#ffd97a);box-shadow:0 0 6px var(--gold,#e8b94a);opacity:0;}
+#splash .dust{position:absolute;z-index:3;bottom:92px;width:4px;height:4px;border-radius:50%;background:var(--gold-light,#ffd97a);box-shadow:0 0 6px var(--gold,#e8b94a);opacity:0;}
 @keyframes dustRise{0%{opacity:0;transform:translateY(0)}12%{opacity:.9}100%{opacity:0;transform:translateY(-170px)}}
 #splash .splash-title{font-family:'Oxanium','Sora',sans-serif;font-weight:800;font-size:22px;letter-spacing:6px;
   background:linear-gradient(90deg,#8a6a24,#ffd97a,#8a6a24);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:goldShimmer 3s linear infinite;}
