@@ -654,6 +654,7 @@ function abrirMontagem(celeb) {
         opt.textContent=(ausente?'🚫 ':(disp?'':'⚠ '))+(m.apelido||m.nome)+(emForm?' 🎓 em formação':'')+(ausente?' — ausência':'')+(jaSem?' 🔁 já: '+[...jaSem].join(', '):'');
         if(ausente && existMembroId!==m.id) opt.disabled=true;
         if(existMembroId===m.id)opt.selected=true;
+        opt._baseTxt=opt.textContent; opt._baseDis=!!opt.disabled;
         sel.appendChild(opt);
       });
     const pe={sel,funcao,extra:!!isExtra};
@@ -661,10 +662,14 @@ function abrirMontagem(celeb) {
     const trc=document.createElement('button');trc.type='button';trc.className='mini-del';trc.textContent='🔄';trc.title='Trocar por outra opção';trc.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';
     trc.onclick=()=>trocarPosicao(pe);
     const clr=document.createElement('button');clr.type='button';clr.className='mini-del';clr.textContent='✕';clr.title=isExtra?'Remover este campo extra':'Limpar esta função';clr.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';
+    const dm=document.createElement('div');dm.style.cssText='font-size:10px;margin:-4px 0 4px;padding-left:2px;font-weight:800;color:var(--danger-text);display:none;';
     const dp=document.createElement('div');dp.style.cssText='font-size:10px;margin:-4px 0 4px;padding-left:2px;font-weight:700;color:var(--danger-text);display:none;';
     const sp=document.createElement('div');sp.style.cssText='font-size:10px;margin:-4px 0 4px;padding-left:2px;font-weight:600;display:none;';
     pe.atualizarAvisos=()=>{
       const mid=sel.value;
+      const naOutra=mid&&pendingEdicao.some(p=>p!==pe&&p.sel.value===mid);
+      if(naOutra){dm.style.display='';dm.textContent='✋ Já escalado(a) nesta missa em outra função';}
+      else{dm.style.display='none';dm.textContent='';}
       const dup=mid&&dupSemana[mid];
       if(dup&&dup.size){dp.style.display='';dp.textContent='⚠️ Já escalado(a) esta semana: '+[...dup].join(', ');}
       else{dp.style.display='none';dp.textContent='';}
@@ -673,12 +678,12 @@ function abrirMontagem(celeb) {
       else{sp.style.display='none';sp.textContent='';}
     };
     if(isExtra){
-      clr.onclick=()=>{ const i=pendingEdicao.indexOf(pe); if(i>=0)pendingEdicao.splice(i,1); row.remove(); dp.remove(); sp.remove(); };
+      clr.onclick=()=>{ const i=pendingEdicao.indexOf(pe); if(i>=0)pendingEdicao.splice(i,1); row.remove(); dm.remove(); dp.remove(); sp.remove(); refreshDuplicatasMissa(); };
     } else {
-      clr.onclick=()=>{sel.value='';sel.classList.remove('filled');pe.atualizarAvisos();};
+      clr.onclick=()=>{sel.value='';sel.classList.remove('filled');refreshDuplicatasMissa();};
     }
-    sel.onchange=()=>{sel.classList.toggle('filled',!!sel.value);pe.atualizarAvisos();checarIrmao(pe);};
-    row.append(lbl,sel,trc,clr);container.appendChild(row);container.appendChild(dp);container.appendChild(sp);
+    sel.onchange=()=>{sel.classList.toggle('filled',!!sel.value);refreshDuplicatasMissa();checarIrmao(pe);};
+    row.append(lbl,sel,trc,clr);container.appendChild(row);container.appendChild(dm);container.appendChild(dp);container.appendChild(sp);
     pe.atualizarAvisos();
     return pe;
   }
@@ -699,7 +704,8 @@ function abrirMontagem(celeb) {
     const meta=FUNCAO_META[funcao]||{label:funcao,cat:'Outros'};
     const cb=getCatBox(meta.cat);
     const pe=criarPosicao(funcao, meta.label+' (extra)', membroId||null, cb.box, true);
-    if(membroId){ pe.sel.value=membroId; pe.sel.classList.add('filled'); pe.atualizarAvisos(); }
+    if(membroId){ pe.sel.value=membroId; pe.sel.classList.add('filled'); }
+    refreshDuplicatasMissa();
     return pe;
   }
   function abrirMenuAddFuncao(cat, anchorBtn){
@@ -768,6 +774,7 @@ function abrirMontagem(celeb) {
   });
   colMems.appendChild(ml);
   body.append(colPos,colMems);
+  refreshDuplicatasMissa(); // marca/avisa duplicatas na MESMA missa já ao abrir
   document.getElementById('modal-montagem').classList.add('open');
 }
 
@@ -947,6 +954,20 @@ function limparMontagem() {
 }
 
 // Troca a pessoa de uma posição por OUTRA opção válida (apta, disponível, não-ausente, sem duplicar na missa)
+// recalcula em TODOS os selects/avisos quem já está na MESMA missa (marca + desabilita opções)
+function refreshDuplicatasMissa(){
+  const naMissa=new Set();
+  pendingEdicao.forEach(p=>{ if(p.sel.value) naMissa.add(p.sel.value); });
+  pendingEdicao.forEach(p=>{
+    Array.from(p.sel.options).forEach(opt=>{
+      if(!opt.value) return;
+      const dup=naMissa.has(opt.value) && opt.value!==p.sel.value;
+      opt.disabled=(opt._baseDis||false)||dup;
+      opt.textContent=(opt._baseTxt||opt.textContent)+(dup?' ✋ nesta missa':'');
+    });
+    if(p.atualizarAvisos) p.atualizarAvisos();
+  });
+}
 function trocarPosicao(pe) {
   if (!celAtual) return;
   const horKey = horKeyDe(celAtual);
@@ -964,7 +985,7 @@ function trocarPosicao(pe) {
   const grupo = tiers.find(t => t.length);
   const escolhido = grupo[Math.floor(Math.random()*grupo.length)];
   pe.sel.value = escolhido.id; pe.sel.classList.add('filled');
-  if (pe.atualizarAvisos) pe.atualizarAvisos();
+  refreshDuplicatasMissa();
   toast('🔄 ' + (escolhido.apelido || (escolhido.nome||'').split(' ')[0]));
 }
 
@@ -1104,6 +1125,9 @@ async function salvarEscala() {
   // monta só as vagas preenchidas — pode salvar INCOMPLETA (vagas vazias são ignoradas)
   const novas=[];
   pendingEdicao.forEach(({sel,funcao})=>{ if(sel.value) novas.push({celebracao_id:pendingCelebId,membro_id:sel.value,funcao,created_by:ctx.user.id}); });
+  // trava: ninguém pode estar em duas funções da MESMA missa
+  const _ids=novas.map(n=>n.membro_id); const _dupId=_ids.find((id,i)=>_ids.indexOf(id)!==i);
+  if(_dupId){ const _m=membros.find(x=>x.id===_dupId); salvandoEscala=false; btn.disabled=false; btn.textContent='Salvar Escala'; toast('✋ '+((_m&&(_m.apelido||_m.nome))||'Um membro')+' está em duas funções nesta missa. Ajuste antes de salvar.','error'); return; }
   const del=await sb.from('acolitos_escalas').delete().eq('celebracao_id',pendingCelebId);
   if(del.error){ salvandoEscala=false; btn.disabled=false; btn.textContent='Salvar Escala'; toast('Erro ao salvar: '+del.error.message,'error'); return; }
   let gravadas=0;
