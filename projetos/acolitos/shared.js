@@ -110,6 +110,61 @@ function toast(msg, tipo) {
   clearTimeout(t._tm); t._tm = setTimeout(() => { t.classList.remove('show'); }, 2600);
 }
 
+// ── Splash litúrgico (turíbulo) — mostrado em toda carga de página do app ──
+const ACO_SPLASH_MIN_MS = 2200;
+let _acoSplashStart = 0, _acoSplashGone = false;
+const ACO_SPLASH_HTML =
+  '<div class="glow"></div>'
++ '<div class="turibulo-wrap">'
++   '<svg class="turibulo" viewBox="0 0 160 230" width="160" height="230" fill="none" aria-hidden="true">'
++     '<defs>'
++       '<filter id="tglow"><feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
++       '<linearGradient id="tgold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd97a"/><stop offset="1" stop-color="#8a6a24"/></linearGradient>'
++     '</defs>'
++     '<g filter="url(#tglow)" stroke="url(#tgold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
++       '<path d="M52 140 Q80 116 104 140" fill="rgba(232,185,74,.08)"/>'
++       '<line x1="66" y1="129" x2="66" y2="136"/><line x1="80" y1="125" x2="80" y2="133"/><line x1="94" y1="129" x2="94" y2="136"/>'
++       '<path d="M52 140 Q80 137 108 140 L93 170 Q80 178 67 170 Z" fill="rgba(232,185,74,.12)"/>'
++       '<ellipse cx="80" cy="150" rx="24" ry="6" fill="rgba(255,120,40,.34)" stroke="none"/>'
++       '<circle cx="80" cy="179" r="4"/>'
++       '<path d="M80 183 L80 193"/>'
++       '<path d="M67 203 Q80 196 93 203"/>'
++       '<ellipse cx="80" cy="204" rx="16" ry="3.2" fill="rgba(232,185,74,.10)"/>'
++       '<line x1="60" y1="28" x2="100" y2="28"/>'
++       '<path d="M64 28 L58 138"/><path d="M80 28 L80 138"/><path d="M96 28 L102 138"/>'
++       '<path d="M80 14 L80 28"/>'
++       '<circle cx="80" cy="10" r="5"/>'
++     '</g>'
++   '</svg>'
++   '<div class="smoke s1"></div><div class="smoke s2"></div><div class="smoke s3"></div><div class="smoke s4"></div><div class="smoke s5"></div>'
++   '<div class="dust" style="left:46%;animation:dustRise 5s linear infinite"></div>'
++   '<div class="dust" style="left:54%;animation:dustRise 5.6s linear .6s infinite"></div>'
++   '<div class="dust" style="left:50%;animation:dustRise 4.6s linear 1s infinite"></div>'
++   '<div class="dust" style="left:42%;animation:dustRise 6s linear 1.4s infinite"></div>'
++   '<div class="dust" style="left:58%;animation:dustRise 5.2s linear 2s infinite"></div>'
++   '<div class="dust" style="left:48%;animation:dustRise 6.4s linear 2.6s infinite"></div>'
++ '</div>'
++ '<div class="splash-title">SOMOS DO ALTAR</div>'
++ '<div class="splash-sub">preparando sua jornada<span class="splash-dots"><span>.</span><span>.</span><span>.</span></span></div>'
++ '<div class="vignette"></div>';
+function showSplash(){
+  if (document.getElementById('splash')) return;
+  if (/login\.html$/.test(location.pathname)) return;
+  const el = document.createElement('div');
+  el.id = 'splash'; el.setAttribute('aria-hidden','true'); el.innerHTML = ACO_SPLASH_HTML;
+  (document.body || document.documentElement).appendChild(el);
+  _acoSplashStart = Date.now();
+  setTimeout(hideSplash, 8000);
+}
+function hideSplash(){
+  if (_acoSplashGone) return; _acoSplashGone = true;
+  const el = document.getElementById('splash');
+  if (!el) return;
+  const restante = Math.max(0, ACO_SPLASH_MIN_MS - (Date.now() - _acoSplashStart));
+  setTimeout(() => { el.classList.add('splash-out'); setTimeout(() => el.remove(), 700); }, restante);
+}
+showSplash();
+
 async function initModulo(requiredRoles = null) {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return null; }
@@ -138,6 +193,7 @@ async function initModulo(requiredRoles = null) {
     if (!window.location.pathname.includes('novos.html')) {
       window.location.href = 'novos.html';
     }
+    hideSplash();
     return { user: session.user, membership: null, membro: null };
   }
 
@@ -184,6 +240,7 @@ async function initModulo(requiredRoles = null) {
 
   queueNotificacoes(membro);
 
+  hideSplash();
   return { user: session.user, membership, membro, conta, grupoIrmaos };
 }
 

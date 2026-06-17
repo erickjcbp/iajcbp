@@ -83,80 +83,10 @@
     @keyframes rnNext { 0%,44%{opacity:0} 52%,94%{opacity:1} 100%{opacity:0} }
     @media (prefers-reduced-motion: reduce) { .rank-flip-inner, .rank-face, .rn-cur, .rn-next { animation:none; } .rn-next, .rank-face.back { opacity:0; } }
     .rank-fill { transition:width .5s ease; }
-    /* ── Splash litúrgico (turíbulo) ── */
-    #splash{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
-      background:radial-gradient(circle at 50% 38%, #2a0e16 0%, #1a0a0f 55%, #0c0608 100%);overflow:hidden;transition:opacity .6s ease;}
-    #splash.splash-out{opacity:0;pointer-events:none;}
-    #splash .vignette{position:absolute;inset:0;box-shadow:inset 0 0 160px 40px rgba(0,0,0,.7);pointer-events:none;}
-    #splash .glow{position:absolute;top:34%;left:50%;width:340px;height:340px;transform:translate(-50%,-50%);
-      background:radial-gradient(circle,rgba(232,185,74,.22),rgba(232,185,74,0) 70%);filter:blur(6px);pointer-events:none;}
-    #splash .turibulo-wrap{position:relative;width:160px;height:230px;}
-    #splash .turibulo{transform-box:fill-box;transform-origin:50% 4%;animation:turSwing 3.2s ease-in-out infinite;}
-    @keyframes turSwing{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
-    #splash .smoke{position:absolute;left:50%;bottom:98px;width:24px;height:90px;border-radius:50%;
-      background:radial-gradient(circle,rgba(232,185,74,.6),rgba(232,185,74,0) 70%);filter:blur(6px);opacity:0;transform:translateX(-50%);}
-    #splash .smoke.s1{animation:smokeRise 4.2s ease-out infinite}
-    #splash .smoke.s2{left:43%;animation:smokeRise 5s ease-out .6s infinite}
-    #splash .smoke.s3{left:57%;animation:smokeRise 5.6s ease-out 1.2s infinite}
-    #splash .smoke.s4{left:48%;animation:smokeRise 4.8s ease-out 1.8s infinite}
-    #splash .smoke.s5{left:53%;animation:smokeRise 6s ease-out 2.6s infinite}
-    @keyframes smokeRise{0%{opacity:0;transform:translate(-50%,0) scale(.55)}25%{opacity:.7}60%{opacity:.45}100%{opacity:0;transform:translate(-50%,-230px) scale(2)}}
-    #splash .dust{position:absolute;bottom:92px;width:4px;height:4px;border-radius:50%;background:var(--gold-light,#ffd97a);box-shadow:0 0 6px var(--gold,#e8b94a);opacity:0;}
-    @keyframes dustRise{0%{opacity:0;transform:translateY(0)}12%{opacity:.9}100%{opacity:0;transform:translateY(-170px)}}
-    #splash .splash-title{font-family:'Oxanium','Sora',sans-serif;font-weight:800;font-size:22px;letter-spacing:6px;
-      background:linear-gradient(90deg,#8a6a24,#ffd97a,#8a6a24);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:goldShimmer 3s linear infinite;}
-    @keyframes goldShimmer{to{background-position:200% 0}}
-    #splash .splash-sub{font-family:'Sora',sans-serif;font-size:11px;color:var(--text-muted,#9a8a8e);letter-spacing:2px;}
-    #splash .splash-dots span{animation:dotPulse 1.4s infinite}
-    #splash .splash-dots span:nth-child(2){animation-delay:.2s}
-    #splash .splash-dots span:nth-child(3){animation-delay:.4s}
-    @keyframes dotPulse{0%,100%{opacity:.2}50%{opacity:1}}
-    @media (prefers-reduced-motion:reduce){
-      #splash .turibulo,#splash .smoke,#splash .dust,#splash .splash-title,#splash .splash-dots span{animation:none!important}
-      #splash .smoke,#splash .dust{opacity:.25}
-    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js" integrity="sha384-4Cjkyy4cE1EgIS0C+Y3xzGmJ2noQFRRU91yKAW8IxtPfVtbQXPMqadSc3sYnjwou" crossorigin="anonymous"></script>
 </head>
 <body>
-<div id="splash" aria-hidden="true">
-  <div class="glow"></div>
-  <div class="turibulo-wrap">
-    <svg class="turibulo" viewBox="0 0 160 230" width="160" height="230" fill="none" aria-hidden="true">
-      <defs>
-        <filter id="tglow"><feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        <linearGradient id="tgold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd97a"/><stop offset="1" stop-color="#8a6a24"/></linearGradient>
-      </defs>
-      <g filter="url(#tglow)" stroke="url(#tgold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="80" cy="10" r="5"/>
-        <path d="M80 15 L80 24"/>
-        <line x1="60" y1="26" x2="100" y2="26"/>
-        <path d="M64 26 L50 140"/>
-        <path d="M80 26 L80 118"/>
-        <path d="M96 26 L110 140"/>
-        <path d="M56 140 Q80 116 104 140" fill="rgba(232,185,74,.08)"/>
-        <circle cx="80" cy="116" r="2.6" fill="rgba(232,185,74,.22)"/>
-        <line x1="66" y1="129" x2="66" y2="136"/><line x1="80" y1="125" x2="80" y2="133"/><line x1="94" y1="129" x2="94" y2="136"/>
-        <path d="M52 140 Q80 137 108 140 L93 170 Q80 178 67 170 Z" fill="rgba(232,185,74,.12)"/>
-        <ellipse cx="80" cy="150" rx="24" ry="6" fill="rgba(255,120,40,.34)" stroke="none"/>
-        <circle cx="80" cy="179" r="4"/>
-        <path d="M80 183 L80 193"/>
-        <path d="M67 203 Q80 196 93 203"/>
-        <ellipse cx="80" cy="204" rx="16" ry="3.2" fill="rgba(232,185,74,.10)"/>
-      </g>
-    </svg>
-    <div class="smoke s1"></div><div class="smoke s2"></div><div class="smoke s3"></div><div class="smoke s4"></div><div class="smoke s5"></div>
-    <div class="dust" style="left:46%;animation:dustRise 5s linear infinite"></div>
-    <div class="dust" style="left:54%;animation:dustRise 5.6s linear .6s infinite"></div>
-    <div class="dust" style="left:50%;animation:dustRise 4.6s linear 1s infinite"></div>
-    <div class="dust" style="left:42%;animation:dustRise 6s linear 1.4s infinite"></div>
-    <div class="dust" style="left:58%;animation:dustRise 5.2s linear 2s infinite"></div>
-    <div class="dust" style="left:48%;animation:dustRise 6.4s linear 2.6s infinite"></div>
-  </div>
-  <div class="splash-title">SOMOS DO ALTAR</div>
-  <div class="splash-sub">preparando sua jornada<span class="splash-dots"><span>.</span><span>.</span><span>.</span></span></div>
-  <div class="vignette"></div>
-</div>
 <div id="app-header"></div>
 <div id="app-nav"></div>
 <div class="main" id="main">
@@ -166,21 +96,7 @@
 <script src="shared.js"></script>
 <script>
 // EQUIPE_ROLES já vem do shared.js (redeclarar com const aqui quebrava o script)
-// Splash litúrgico: permanência mínima p/ a animação aparecer + saída suave; nunca trava a tela.
-const SPLASH_MIN_MS = 2200;
-const _splashStart = Date.now();
-let _splashGone = false;
-function hideSplash(){
-  if (_splashGone) return; _splashGone = true;
-  const el = document.getElementById('splash');
-  if (!el) return;
-  const restante = Math.max(0, SPLASH_MIN_MS - (Date.now() - _splashStart));
-  setTimeout(() => {
-    el.classList.add('splash-out');
-    setTimeout(() => { el.remove(); }, 700);
-  }, restante);
-}
-setTimeout(hideSplash, 8000); // safety-net: some mesmo se init() travar/erro
+// Splash (turíbulo) agora é centralizado no shared.js — mostrado/escondido em todas as páginas.
 const CRM_ETAPAS = ['aprovacao_cadastro','integracao','whatsapp','tunica','disponivel_escala','integrado'];
 const CRM_LABEL = { aprovacao_cadastro:'Aprovação', integracao:'Integração', whatsapp:'WhatsApp', tunica:'Túnica', disponivel_escala:'Disponível para Escala', integrado:'Integrado ✓' };
 const CRM_DESC = {
@@ -928,7 +844,7 @@ async function renderAgenda(main, titulo, limit, comCobertura, prefetched) {
   });
 }
 
-init().catch(err => console.error('init falhou:', err)).finally(hideSplash);
+init().catch(err => console.error('init falhou:', err));
 </script>
 </body>
 </html>

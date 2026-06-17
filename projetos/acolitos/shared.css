@@ -423,14 +423,45 @@ body.has-switch { padding-top: calc(var(--header-h) + 46px + env(safe-area-inset
 }
 .loading { position: relative; }
 .loading::after {
-  content: ''; display: block; width: 46px; height: 64px; margin: 14px auto 0;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 84'%3E%3Cg fill='none' stroke='%23e8b94a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='30' cy='5' r='2.5'/%3E%3Cpath d='M30 7 L30 12'/%3E%3Cline x1='22' y1='13' x2='38' y2='13'/%3E%3Cpath d='M24 13 L18 46'/%3E%3Cpath d='M30 13 L30 42'/%3E%3Cpath d='M36 13 L42 46'/%3E%3Cpath d='M20 46 Q30 34 40 46' fill='%23e8b94a22'/%3E%3Cpath d='M19 46 Q30 44 41 46 L34 60 Q30 65 26 60 Z' fill='%23e8b94a22'/%3E%3Cellipse cx='30' cy='52' rx='8' ry='2.4' fill='%23ff7a2855' stroke='none'/%3E%3Ccircle cx='30' cy='65' r='1.8'/%3E%3Cpath d='M30 67 L30 73'/%3E%3Cpath d='M24 78 Q30 74 36 78'/%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat;
-  transform-origin: 50% 9%; animation: censerSwing 2.6s ease-in-out infinite;
-  filter: drop-shadow(0 0 6px var(--red-glow));
+  content: ''; display: block; width: 30px; height: 30px; margin: 16px auto 0;
+  border: 3px solid var(--border-wine); border-top-color: var(--red-soft);
+  border-radius: 50%; animation: spin .8s linear infinite;
+  box-shadow: 0 0 14px var(--red-glow);
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-@keyframes censerSwing { 0%,100% { transform: rotate(-13deg); } 50% { transform: rotate(13deg); } }
-@media (prefers-reduced-motion: reduce) { .loading::after { animation: none; } }
+
+/* ── Splash litúrgico (turíbulo) — injetado pelo shared.js em todas as páginas ── */
+#splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  background:radial-gradient(circle at 50% 38%, #2a0e16 0%, #1a0a0f 55%, #0c0608 100%);overflow:hidden;transition:opacity .6s ease;}
+#splash.splash-out{opacity:0;pointer-events:none;}
+#splash .vignette{position:absolute;inset:0;box-shadow:inset 0 0 160px 40px rgba(0,0,0,.7);pointer-events:none;}
+#splash .glow{position:absolute;top:34%;left:50%;width:340px;height:340px;transform:translate(-50%,-50%);
+  background:radial-gradient(circle,rgba(232,185,74,.22),rgba(232,185,74,0) 70%);filter:blur(6px);pointer-events:none;}
+#splash .turibulo-wrap{position:relative;width:160px;height:230px;}
+#splash .turibulo{transform-box:fill-box;transform-origin:50% 4%;animation:turSwing 3.2s ease-in-out infinite;}
+@keyframes turSwing{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+#splash .smoke{position:absolute;left:50%;bottom:98px;width:24px;height:90px;border-radius:50%;
+  background:radial-gradient(circle,rgba(232,185,74,.6),rgba(232,185,74,0) 70%);filter:blur(6px);opacity:0;transform:translateX(-50%);}
+#splash .smoke.s1{animation:smokeRise 4.2s ease-out infinite}
+#splash .smoke.s2{left:43%;animation:smokeRise 5s ease-out .6s infinite}
+#splash .smoke.s3{left:57%;animation:smokeRise 5.6s ease-out 1.2s infinite}
+#splash .smoke.s4{left:48%;animation:smokeRise 4.8s ease-out 1.8s infinite}
+#splash .smoke.s5{left:53%;animation:smokeRise 6s ease-out 2.6s infinite}
+@keyframes smokeRise{0%{opacity:0;transform:translate(-50%,0) scale(.55)}25%{opacity:.7}60%{opacity:.45}100%{opacity:0;transform:translate(-50%,-230px) scale(2)}}
+#splash .dust{position:absolute;bottom:92px;width:4px;height:4px;border-radius:50%;background:var(--gold-light,#ffd97a);box-shadow:0 0 6px var(--gold,#e8b94a);opacity:0;}
+@keyframes dustRise{0%{opacity:0;transform:translateY(0)}12%{opacity:.9}100%{opacity:0;transform:translateY(-170px)}}
+#splash .splash-title{font-family:'Oxanium','Sora',sans-serif;font-weight:800;font-size:22px;letter-spacing:6px;
+  background:linear-gradient(90deg,#8a6a24,#ffd97a,#8a6a24);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:goldShimmer 3s linear infinite;}
+@keyframes goldShimmer{to{background-position:200% 0}}
+#splash .splash-sub{font-family:'Sora',sans-serif;font-size:11px;color:var(--text-muted,#9a8a8e);letter-spacing:2px;}
+#splash .splash-dots span{animation:dotPulse 1.4s infinite}
+#splash .splash-dots span:nth-child(2){animation-delay:.2s}
+#splash .splash-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dotPulse{0%,100%{opacity:.2}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){
+  #splash .turibulo,#splash .smoke,#splash .dust,#splash .splash-title,#splash .splash-dots span{animation:none!important}
+  #splash .smoke,#splash .dust{opacity:.25}
+}
 
 /* ── SECTION CARD ────────────────────────────────────────────── */
 .section-card {
