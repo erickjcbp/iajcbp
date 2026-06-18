@@ -145,6 +145,7 @@
       <button class="btn-sm gray" onclick="abrirAusencias()" title="Últimas ausências">🚫 Ausências</button>
       <button class="btn-sm gray" onclick="abrirFaltas()" title="Quem faltou na chamada">❌ Faltas</button>
       <button class="btn-sm gray" onclick="abrirRelatorioFrequencia()" title="Relatório de frequência (PDF/CSV)">📊 Frequência</button>
+      <button class="btn-sm gray" onclick="escalaPDF()" title="Imprimir a escala do período (PDF)">🖨 Escala PDF</button>
       <button class="btn-sm gray" onclick="abrirRegistrarAusenciaCoord()" title="Registrar ausência de um membro">📅 Registrar ausência</button>
       <button class="btn-sm gray" id="btn-hist-escala" onclick="toggleHistorico()" title="Incluir celebrações passadas (últimos 90 dias)">🕓 Histórico</button>
     </div>
@@ -1067,6 +1068,38 @@ async function gerarEscalaSemana(celebs, btnEl) {
 }
 
 // Exporta as escalas da semana em texto "Nome - Função" (copiar/baixar p/ compartilhar)
+// ── Escala em PDF (período carregado, por semana → missa, alfabético) ──
+function escalaPDF(){
+  if(!celebracoes || !celebracoes.length){ toast('Nenhuma celebração no período.','error'); return; }
+  const HOR_ORDEM=['17h','18h30','7h','9h','19h'];
+  const horRank=h=>{ const i=HOR_ORDEM.indexOf(String(h||'').replace(/^0/,'')); return i<0?99:i; };
+  const nomeDe=e=>(e.acolitos_membros && e.acolitos_membros.nome) || '—';
+  const comLbl=c=>c==='matriz'?'Matriz':'Sto. Antônio';
+  const semanas={};
+  celebracoes.forEach(c=>{
+    const d=new Date(c.data+'T00:00:00'); const mon=new Date(d); mon.setDate(d.getDate()-((d.getDay()+6)%7));
+    const key=mon.toISOString().slice(0,10);
+    if(!semanas[key]) semanas[key]={ label:'Semana de '+mon.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}), items:[] };
+    semanas[key].items.push(c);
+  });
+  let corpo='';
+  Object.keys(semanas).sort().forEach(key=>{
+    const sem=semanas[key];
+    corpo+='<h2>'+relEsc(sem.label)+'</h2>';
+    sem.items.slice().sort((a,b)=>a.data.localeCompare(b.data)||horRank(a.horario)-horRank(b.horario)).forEach(c=>{
+      const d=new Date(c.data+'T00:00:00');
+      const tit=DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' · '+c.horario+' · '+comLbl(c.comunidade)+' · '+(TIPO_LABEL[c.tipo]||c.tipo);
+      corpo+='<h3>'+relEsc(tit)+'</h3>';
+      const escalas=(escalasMap[c.id]||[]).slice().sort((a,b)=>nomeDe(a).localeCompare(nomeDe(b),'pt',{sensitivity:'base'}));
+      if(!escalas.length){ corpo+='<p class="muted">(escala não montada)</p>'; return; }
+      corpo+=relTabela(['Membro','Função'], escalas.map(e=>[ nomeDe(e), (FUNCAO_LABEL[e.funcao]||e.funcao) ]));
+    });
+  });
+  const datas=celebracoes.map(c=>c.data).sort();
+  const f=s=>new Date(s+'T00:00:00').toLocaleDateString('pt-BR');
+  const periodo = datas.length ? (f(datas[0])+' a '+f(datas[datas.length-1])) : 'período carregado';
+  abrirRelatorio({ titulo:'Escala', subtitulo:'Acólitos · '+periodo, corpo, css:'h3{margin:14px 0 4px}' });
+}
 function exportarSemana(celebs, label) {
   // ordem fixa das missas: 17h, 18h30, 7h, 9h, 19h (por dia); lista de cada missa em ordem ALFABÉTICA por nome
   const HOR_ORDEM = ['17h','18h30','7h','9h','19h'];
