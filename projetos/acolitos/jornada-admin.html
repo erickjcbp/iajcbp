@@ -370,6 +370,73 @@ function baixarRelatorioCSV(){
   });
   baixarCSV('desenvolvimento', linhas);
 }
+// ── Boletim/Panorama por membro ──
+function _idadeDe(dn){ if(!dn) return ''; const d=new Date(dn+'T00:00:00'); if(isNaN(d.getTime())) return ''; const h=new Date(); let a=h.getFullYear()-d.getFullYear(); const mm=h.getMonth()-d.getMonth(); if(mm<0||(mm===0&&h.getDate()<d.getDate())) a--; return (a>=0&&a<120)?String(a):''; }
+function _funcoesDoMembro(mId){
+  const aptas=[], form=[]; let naoTreino=0;
+  _devFuncoes.forEach(([v,l])=>{ const p=_profDe(mId,v);
+    if(p==='apto'||p==='experiente'||p==='referencia') aptas.push(l+' ('+PROF_LABEL[p]+')');
+    else if(p==='em_formacao') form.push(l);
+    else naoTreino++; });
+  return { aptas, form, naoTreino };
+}
+function _cabecalhoBoletim(m, comNome){
+  const ni=nivelInfo(m.nivel||'aspirante');
+  const com=m.comunidade==='matriz'?'Matriz':m.comunidade==='santo_antonio'?'Sto. Antônio':(m.comunidade?'Outra':'');
+  const id=_idadeDe(m.data_nascimento);
+  const sub='<p class="muted">'+_escHtml(ni.label)+(ni.titulo?' · '+_escHtml(ni.titulo):'')+(com?' · '+com:'')+(id?' · '+id+' anos':'')+'</p>';
+  return (comNome?'<h2>'+_escHtml(m.apelido||m.nome)+'</h2>':'')+sub;
+}
+function _freqHtml(freq){
+  if(!freq) return '<p class="muted">Sem dados de frequência.</p>';
+  const faltas=(freq.faltas_just||0)+(freq.faltas_nao_just||0);
+  const ult=freq.ultima_participacao ? new Date(freq.ultima_participacao+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  return relTabela(['Servidas','Faltas','Taxa','Última participação'],
+    [[String(freq.servidas||0), String(faltas), (freq.taxa!=null?freq.taxa+'%':'—'), ult]]);
+}
+function _blocoFuncoesVirtudes(m){
+  const f=_funcoesDoMembro(m.id);
+  const virt=(m.competencias_desenvolvidas||[]).map(s=>_compLabelMap()[s]||s);
+  return '<h3>Funções</h3><p>Aptas: '+(f.aptas.length?_escHtml(f.aptas.join(', ')):'—')+'</p>'
+    +(f.form.length?'<p>Em formação: '+_escHtml(f.form.join(', '))+'</p>':'')
+    +'<p class="muted">Não treinadas: '+f.naoTreino+'</p>'
+    +'<h3>Virtudes formadas</h3><p>'+(virt.length?_escHtml(virt.join(', ')):'—')+'</p>';
+}
+function gerarPanoramaPDF(m, board, est, badges){
+  fetchFrequencia(m.id).then(freq=>{
+    let corpo=_cabecalhoBoletim(m, false);
+    if(board && !board.erro){
+      const caps=board.capitulos||[], bonus=board.bonus||[]; const allQ=[];
+      caps.forEach(c=>(c.missoes||[]).forEach(q=>allQ.push(q))); bonus.forEach(q=>allQ.push(q));
+      let c=0,a=0,p=0; allQ.forEach(q=>{ if(q.status==='concluida')c++; else if(q.status==='em_analise')a++; else p++; });
+      corpo+='<h3>Jornada</h3><p>✦ XP: <b>'+(board.xp_total||0)+'</b> &nbsp; ⭐ '+((est&&est.estrelas)||0)
+        +' &nbsp; Próximo: '+(board.proximo_nivel?_escHtml(nivelInfo(board.proximo_nivel).label)+(board.elegivel?' (elegível!)':''):'nível máximo')+'</p>'
+        +'<p>Quests — concluídas: '+c+' · em análise: '+a+' · pendentes: '+p+'</p>';
+      const pend=(board.pendencias||[]).map(x=>_escHtml(x.label));
+      if(pend.length) corpo+='<p class="muted">Funções pendentes: '+pend.join(', ')+'</p>';
+      const med=(badges||[]).filter(b=>!b.nivel && b.validacao==='avaliada');
+      if(med.length) corpo+='<p class="muted">Medalhas especiais: '+med.map(b=>_escHtml(b.label)+(b.ganho?' ✓':'')).join(', ')+'</p>';
+    }
+    corpo+=_blocoFuncoesVirtudes(m);
+    corpo+='<h3>Frequência</h3>'+_freqHtml(freq);
+    abrirRelatorio({ titulo:'Panorama — '+(m.apelido||m.nome), subtitulo:'Acólitos', corpo });
+  });
+}
+function gerarPanoramasLote(){
+  fetchFrequencia().then(freqMap=>{
+    let corpo='';
+    LIGAS_DEV.forEach(([lglabel,slugs])=>{
+      _membrosDaLiga(slugs).forEach(m=>{
+        corpo+='<div class="pg">'+_cabecalhoBoletim(m, true)
+          +_blocoFuncoesVirtudes(m)
+          +'<h3>Frequência</h3>'+_freqHtml(freqMap[m.id])
+          +'</div>';
+      });
+    });
+    if(!corpo) corpo='<p class="muted">Nenhum membro.</p>';
+    abrirRelatorio({ titulo:'Boletins de Desenvolvimento', subtitulo:'Acólitos · '+_devMembros.length+' membros', corpo, css:'.pg{page-break-after:always} .pg:last-child{page-break-after:auto} h2{border:none;margin-top:0}' });
+  });
+}
 async function salvarProficiencia(membroId, funcao, nivel){
   const { error } = await sb.from('acolitos_habilitacoes')
     .upsert([{ membro_id:membroId, funcao, proficiencia:nivel, updated_at:new Date().toISOString() }], { onConflict:'membro_id,funcao' });
@@ -464,7 +531,7 @@ function editarCelula(td, cell, m, funcao){
 let _devMembros = [], _devFuncoes = [], _devComps = [];
 async function carregarDev() {
   const [{ data: mems }, { data: listas }] = await Promise.all([
-    sb.from('acolitos_membros').select('id,nome,apelido,nivel,foto_url,competencias_desenvolvidas,desenvolvimento_competencias').eq('status', 'ativo').order('nome'),
+    sb.from('acolitos_membros').select('id,nome,apelido,nivel,foto_url,comunidade,data_nascimento,competencias_desenvolvidas,desenvolvimento_competencias').eq('status', 'ativo').order('nome'),
     sb.from('acolitos_listas').select('valor,label,tipo').in('tipo', ['funcao', 'competencia']),
   ]);
   _devMembros = mems || [];
@@ -499,7 +566,11 @@ async function renderDesenvolvimento(main) {
   const selNivel = document.createElement('select'); selNivel.className = 'form-input'; selNivel.style.cssText = 'flex:1;min-width:130px;';
   const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Todos os níveis'; selNivel.appendChild(o0);
   (typeof NIVEIS !== 'undefined' ? NIVEIS : []).forEach(n => { const o = document.createElement('option'); o.value = n.slug; o.textContent = n.label; selNivel.appendChild(o); });
-  filtros.append(busca, selNivel); card.appendChild(filtros);
+  const btnLote = document.createElement('button'); btnLote.type='button'; btnLote.textContent='🖨 Boletins';
+  btnLote.title='Imprimir 1 boletim por membro (leve, sem quests)';
+  btnLote.style.cssText='flex:none;font-family:Oxanium,sans-serif;font-weight:700;font-size:11px;padding:0 10px;border-radius:8px;cursor:pointer;background:transparent;border:1px solid var(--gold-dim);color:var(--gold-light);';
+  btnLote.onclick = gerarPanoramasLote;
+  filtros.append(busca, selNivel, btnLote); card.appendChild(filtros);
   const list = document.createElement('div'); card.appendChild(list);
   const LIGAS = LIGAS_DEV;
   const mk = (txt, primary, onClick) => {
@@ -557,6 +628,11 @@ async function abrirPanorama(m) {
     sb.rpc('acolitos_estrelas', { p_membro: m.id }),
     sb.rpc('acolitos_badges_membro', { p_membro: m.id })
   ]);
+  const btnPrint = document.createElement('button'); btnPrint.className='btn-sm';
+  btnPrint.style.cssText='width:100%;margin-top:8px;background:linear-gradient(180deg,var(--gold),#9a7a1e);color:#2a1a00;border:none;font-weight:700;';
+  btnPrint.textContent='🖨 Imprimir panorama';
+  btnPrint.onclick=()=>gerarPanoramaPDF(m, board, est, badges);
+  md.insertBefore(btnPrint, close);
   body.textContent = '';
   if (!board || board.erro) { const e = document.createElement('span'); e.className = 'empty'; e.textContent = 'Não foi possível carregar (' + (board?.erro || '') + ').'; body.appendChild(e); return; }
 
