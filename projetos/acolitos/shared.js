@@ -2027,6 +2027,48 @@ function buildPresencaChart(escalas) {
   return box;
 }
 
+// ── Central de Relatórios (impressão/PDF + CSV) ──
+function relEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function relTabela(headers, rows){
+  const th = headers.map(h=>'<th>'+relEsc(h)+'</th>').join('');
+  const tb = rows.map(r=>'<tr>'+r.map(c=>{
+    if(c && typeof c==='object') return '<td style="background:'+(c.bg||'transparent')+'">'+relEsc(c.t)+'</td>';
+    return '<td>'+relEsc(c)+'</td>';
+  }).join('')+'</tr>').join('');
+  return '<table class="rel"><thead><tr>'+th+'</tr></thead><tbody>'+tb+'</tbody></table>';
+}
+function abrirRelatorio(opts){
+  const o = opts || {};
+  const w = window.open('', '_blank');
+  if(!w){ toast('Permita pop-ups para gerar o relatório.','error'); return null; }
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const css = '<style>'
+    + '*{ -webkit-print-color-adjust:exact; print-color-adjust:exact; box-sizing:border-box; }'
+    + 'body{ font-family:Georgia,serif; color:#1c1c1c; margin:0; padding:18px; }'
+    + 'h1{ font-size:20px; margin:0; } h2{ font-size:15px; border-bottom:2px solid #8a6a24; color:#7a5a14; margin:22px 0 8px; } h3{ font-size:12px; margin:12px 0 4px; color:#333; }'
+    + '.rel-hd{ display:flex; align-items:center; gap:12px; border-bottom:3px solid #8a6a24; padding-bottom:10px; }'
+    + '.rel-hd img{ height:54px; } .rel-hd .sub{ font-size:11px; color:#666; }'
+    + 'table{ border-collapse:collapse; width:100%; font-size:11px; margin:4px 0 10px; } th,td{ border:1px solid #bbb; padding:3px 6px; text-align:left; }'
+    + 'td.nm{ white-space:nowrap; } .muted{ color:#777; font-size:11px; } .dev{ margin:6px 0; font-size:12px; }'
+    + '.leg span{ display:inline-block; padding:1px 6px; border:1px solid #bbb; border-radius:3px; } tr.warn td{ font-weight:bold; color:#b00; }'
+    + '@page{ margin:12mm; }'
+    + (o.css||'')
+    + '</style>';
+  const cab = '<div class="rel-hd"><img src="'+location.origin+'/midia/logos/brasao-pastoral.png" onerror="this.style.display=\'none\'"><div><h1>'+relEsc(o.titulo||'Relatório')+'</h1><div class="sub">'+relEsc(o.subtitulo||'')+' · '+hoje+'</div></div></div>';
+  const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>'+relEsc(o.titulo||'Relatório')+'</title>'+css+'</head><body>'+cab+(o.corpo||'')+'</body></html>';
+  w.document.write(html); w.document.close(); w.focus();
+  setTimeout(()=>{ try{ w.print(); }catch(e){} }, 350);
+  return w;
+}
+function baixarCSV(nomeBase, linhas){
+  const esc=s=>{ s=String(s==null?'':s); return /[";\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+  const csv='﻿'+(linhas||[]).map(r=>r.map(esc).join(';')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download=(nomeBase||'relatorio')+'-'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  URL.revokeObjectURL(url); toast('✓ CSV gerado');
+}
+
 // ── ARRASTAR-PARA-FECHAR (bottom-sheet no mobile) ──────────────
 // Delegado no document: funciona p/ qualquer .modal-handle, inclusive modais
 // criados dinamicamente. Modais com id (ex.: modal-ficha) só fecham (remove
