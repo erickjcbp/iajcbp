@@ -328,10 +328,6 @@ function _membrosDaLiga(slugs){ return _devMembros.filter(m => slugs.includes(m.
 function _compLabelMap(){ const o={}; _devComps.forEach(([v,l])=>{o[v]=l;}); return o; }
 function _nome(m){ return m.apelido || m.nome || '—'; }
 function gerarRelatorioPDF(){
-  const w = window.open('', '_blank');
-  if(!w){ toast('Permita pop-ups para gerar o relatório.','error'); return; }
-  const hoje = new Date().toLocaleDateString('pt-BR');
-  const total = _devMembros.length;
   const compMap = _compLabelMap();
   const orden = _devFuncoes.slice().sort((a,b)=>bucketsFuncao(a[0]).prontos - bucketsFuncao(b[0]).prontos);
   const linhasCob = orden.map(([v,l])=>{ const b=bucketsFuncao(v); const al=b.prontos<3?' ⚠':'';
@@ -355,47 +351,24 @@ function gerarRelatorioPDF(){
       return '<tr><td class="nm">'+_escHtml(_nome(m))+'</td><td>'+(vs.length?vs.join(', '):'—')+'</td></tr>'; }).join('');
     return '<h3>'+_escHtml(lglabel)+'</h3><table class="virt"><tbody>'+rows+'</tbody></table>';
   }).join('');
-  const css = '<style>'
-    + '*{ -webkit-print-color-adjust:exact; print-color-adjust:exact; box-sizing:border-box; }'
-    + 'body{ font-family:Georgia,serif; color:#1c1c1c; margin:0; padding:18px; }'
-    + 'h1{ font-size:20px; margin:0; } h2{ font-size:15px; border-bottom:2px solid #8a6a24; color:#7a5a14; margin:22px 0 8px; }'
-    + 'h3{ font-size:12px; margin:12px 0 4px; color:#333; }'
-    + '.hd{ display:flex; align-items:center; gap:12px; border-bottom:3px solid #8a6a24; padding-bottom:10px; }'
-    + '.hd img{ height:54px; } .hd .sub{ font-size:11px; color:#666; }'
-    + 'table{ border-collapse:collapse; width:100%; font-size:11px; } th,td{ border:1px solid #bbb; padding:3px 6px; text-align:center; }'
-    + 'table.mtz td.nm, table.virt td.nm{ text-align:left; white-space:nowrap; } table.virt td{ text-align:left; }'
-    + '.cob td:first-child{ text-align:left; }'
-    + 'tr.warn td{ font-weight:bold; color:#b00; }'
-    + '.dev{ margin:6px 0; font-size:12px; } .muted{ color:#777; font-size:11px; } .leg span{ display:inline-block; padding:1px 6px; border:1px solid #bbb; border-radius:3px; }'
-    + '@page{ margin:12mm; }'
-    + '</style>';
-  const cab = '<div class="hd"><img src="'+location.origin+'/midia/logos/brasao-pastoral.png" onerror="this.style.display=\'none\'"><div><h1>Relatório de Desenvolvimento</h1><div class="sub">Acólitos · '+hoje+' · '+total+' membros ativos</div></div></div>';
-  const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório de Desenvolvimento</title>'+css+'</head><body>'
-    + cab
-    + '<h2>1. Cobertura por função</h2><table class="cob"><thead><tr><th>Função</th><th>Prontos</th><th>Em formação</th><th>Zero</th></tr></thead><tbody>'+linhasCob+'</tbody></table>'
+  const extraCss = 'table.cob th,table.cob td{text-align:center} table.cob td:first-child{text-align:left}'
+    + ' table.mtz th,table.mtz td{text-align:center} table.mtz td.nm{text-align:left}'
+    + ' table.virt td{text-align:left}';
+  const corpo = '<h2>1. Cobertura por função</h2><table class="cob"><thead><tr><th>Função</th><th>Prontos</th><th>Em formação</th><th>Zero</th></tr></thead><tbody>'+linhasCob+'</tbody></table>'
     + '<h2>2. A desenvolver (funções escassas)</h2>'+blocosDev
     + '<h2>3. Matriz de proficiência</h2>'+legenda+matriz
-    + '<h2>4. Virtudes formadas</h2>'+virtudes
-    + '</body></html>';
-  w.document.write(html); w.document.close(); w.focus();
-  setTimeout(()=>{ try{ w.print(); }catch(e){} }, 350);
+    + '<h2>4. Virtudes formadas</h2>'+virtudes;
+  abrirRelatorio({ titulo:'Relatório de Desenvolvimento', subtitulo:'Acólitos · '+_devMembros.length+' membros ativos', corpo, css: extraCss });
 }
 function baixarRelatorioCSV(){
-  const SEP=';';
-  const esc=s=>{ s=String(s==null?'':s); return /[";\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
-  const head=['Liga','Membro'].concat(_devFuncoes.map(([,l])=>l)).map(esc).join(SEP);
+  const head=['Liga','Membro'].concat(_devFuncoes.map(([,l])=>l));
   const linhas=[head];
   LIGAS_DEV.forEach(([lglabel,slugs])=>{
     _membrosDaLiga(slugs).forEach(m=>{
-      const cols=[lglabel.replace(/^[^\w]+\s*/,''), _nome(m)].concat(_devFuncoes.map(([v])=>PROF_LABEL[_profDe(m.id,v)]));
-      linhas.push(cols.map(esc).join(SEP));
+      linhas.push([lglabel.replace(/^[^\w]+\s*/,''), _nome(m)].concat(_devFuncoes.map(([v])=>PROF_LABEL[_profDe(m.id,v)])));
     });
   });
-  const csv='﻿'+linhas.join('\r\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
-  const url=URL.createObjectURL(blob); const a=document.createElement('a');
-  a.href=url; a.download='desenvolvimento-'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
-  URL.revokeObjectURL(url); toast('✓ CSV gerado');
+  baixarCSV('desenvolvimento', linhas);
 }
 async function salvarProficiencia(membroId, funcao, nivel){
   const { error } = await sb.from('acolitos_habilitacoes')
