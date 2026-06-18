@@ -144,6 +144,7 @@
       <button class="btn-sm gray" onclick="abrirModelos()" title="Modelos de celebração">⚙️ Modelos</button>
       <button class="btn-sm gray" onclick="abrirAusencias()" title="Últimas ausências">🚫 Ausências</button>
       <button class="btn-sm gray" onclick="abrirFaltas()" title="Quem faltou na chamada">❌ Faltas</button>
+      <button class="btn-sm gray" onclick="abrirRelatorioFrequencia()" title="Relatório de frequência (PDF/CSV)">📊 Frequência</button>
       <button class="btn-sm gray" onclick="abrirRegistrarAusenciaCoord()" title="Registrar ausência de um membro">📅 Registrar ausência</button>
       <button class="btn-sm gray" id="btn-hist-escala" onclick="toggleHistorico()" title="Incluir celebrações passadas (últimos 90 dias)">🕓 Histórico</button>
     </div>
@@ -1373,6 +1374,68 @@ async function abrirRegistrarAusenciaCoord(){
   };
   acts.append(cancel,salvar);md.appendChild(acts);
   ov.appendChild(md);document.body.appendChild(ov);
+}
+// ── Relatório de Frequência (acumulado via view OU por período) ──
+function _freqComLabel(c){ return c==='matriz'?'Matriz':c==='santo_antonio'?'Sto. Antônio':'Outra'; }
+function _freqPeriodoLabel(de,ate){ const f=d=>new Date(d+'T00:00:00').toLocaleDateString('pt-BR'); if(de&&ate)return 'de '+f(de)+' a '+f(ate); if(de)return 'a partir de '+f(de); if(ate)return 'até '+f(ate); return 'Acumulado (histórico total)'; }
+async function _freqDados(de, ate){
+  const out = membros.map(m=>({ m, servidas:0, faltas:0, atrasos:0, taxa:null, ultima:null }));
+  const byId = {}; out.forEach(r=>{ byId[r.m.id]=r; });
+  if(!de && !ate){
+    const freq = (freqMap && Object.keys(freqMap).length) ? freqMap : (await fetchFrequencia());
+    out.forEach(r=>{ const f=freq[r.m.id]; if(f){ r.servidas=f.servidas||0; r.faltas=(f.faltas_just||0)+(f.faltas_nao_just||0); r.atrasos=f.atrasos||0; r.taxa=(f.taxa!=null?f.taxa:null); r.ultima=f.ultima_participacao||null; } });
+    return out;
+  }
+  let q = sb.from('acolitos_escalas').select('membro_id,status,acolitos_celebracoes!inner(data)');
+  if(de) q=q.gte('acolitos_celebracoes.data', de);
+  if(ate) q=q.lte('acolitos_celebracoes.data', ate);
+  const { data } = await q;
+  (data||[]).forEach(e=>{ const r=byId[e.membro_id]; if(!r) return; const dt=e.acolitos_celebracoes&&e.acolitos_celebracoes.data;
+    if(e.status==='presente'||e.status==='atrasado'){ r.servidas++; if(e.status==='atrasado') r.atrasos++; if(dt&&(!r.ultima||dt>r.ultima)) r.ultima=dt; }
+    else if(e.status==='ausente'||e.status==='ausente_justificado'){ r.faltas++; }
+  });
+  out.forEach(r=>{ const den=r.servidas+r.faltas; r.taxa = den ? Math.round(100*r.servidas/den) : null; });
+  return out;
+}
+function _freqOrdena(a){ return a.sort((x,y)=>{ if(x.taxa==null&&y.taxa==null) return (x.m.nome||'').localeCompare(y.m.nome||''); if(x.taxa==null) return 1; if(y.taxa==null) return -1; return x.taxa-y.taxa; }); }
+async function freqPDF(){
+  const de=document.getElementById('freq-de').value, ate=document.getElementById('freq-ate').value;
+  if(de&&ate&&de>ate){ toast('A data inicial é maior que a final.','error'); return; }
+  const rows=await _freqDados(de,ate);
+  const ordem=['matriz','santo_antonio','outra']; const grp={matriz:[],santo_antonio:[],outra:[]};
+  rows.forEach(r=>grp[ordem.includes(r.m.comunidade)?r.m.comunidade:'outra'].push(r));
+  const fmtD=d=>d?new Date(d+'T00:00:00').toLocaleDateString('pt-BR'):'—';
+  let corpo='';
+  ordem.forEach(c=>{ const arr=grp[c]; if(!arr.length) return; _freqOrdena(arr);
+    const trows=arr.map(r=>[ (r.m.apelido||r.m.nome), String(r.servidas), String(r.faltas), String(r.atrasos),
+      (r.taxa==null?{t:'—'}:{t:r.taxa+'%', bg:(r.taxa<70?'#f7caca':'transparent')}), fmtD(r.ultima) ]);
+    corpo+='<h2>'+_freqComLabel(c)+' · '+arr.length+'</h2>'+relTabela(['Membro','Servidas','Faltas','Atrasos','Taxa','Última'], trows);
+  });
+  if(!corpo) corpo='<p class="muted">Sem dados.</p>';
+  if(de||ate) corpo+='<p class="muted">Período não credita substitutos.</p>';
+  abrirRelatorio({ titulo:'Relatório de Frequência', subtitulo:'Acólitos · '+_freqPeriodoLabel(de,ate), corpo });
+}
+async function freqCSV(){
+  const de=document.getElementById('freq-de').value, ate=document.getElementById('freq-ate').value;
+  if(de&&ate&&de>ate){ toast('A data inicial é maior que a final.','error'); return; }
+  const rows=await _freqDados(de,ate); _freqOrdena(rows);
+  const fmtD=d=>d?new Date(d+'T00:00:00').toLocaleDateString('pt-BR'):'';
+  const linhas=[['Comunidade','Membro','Servidas','Faltas','Atrasos','Taxa','Última']];
+  rows.forEach(r=>linhas.push([ _freqComLabel(r.m.comunidade), r.m.nome||'', String(r.servidas), String(r.faltas), String(r.atrasos), (r.taxa==null?'':r.taxa+'%'), fmtD(r.ultima) ]));
+  baixarCSV('frequencia', linhas);
+}
+function abrirRelatorioFrequencia(){
+  const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='420px';
+  md.innerHTML='<div class="modal-title">📊 Relatório de Frequência</div>'
+    +'<p style="font-size:12px;color:var(--text-muted);margin:-4px 0 12px;">Deixe as datas em branco para o acumulado (histórico total).</p>'
+    +'<div style="display:flex;gap:10px;"><label style="flex:1;font-size:12px;color:var(--text-muted);">De<input type="date" id="freq-de" class="form-input" style="width:100%;"></label>'
+    +'<label style="flex:1;font-size:12px;color:var(--text-muted);">Até<input type="date" id="freq-ate" class="form-input" style="width:100%;"></label></div>'
+    +'<div style="display:flex;gap:8px;margin-top:14px;"><button class="btn-sm gold" id="freq-pdf" style="flex:1;">📄 PDF</button><button class="btn-sm gray" id="freq-csv" style="flex:1;">⬇️ CSV</button><button class="btn-sm gray" id="freq-x">Fechar</button></div>';
+  ov.appendChild(md); document.body.appendChild(ov);
+  md.querySelector('#freq-pdf').onclick=freqPDF;
+  md.querySelector('#freq-csv').onclick=freqCSV;
+  md.querySelector('#freq-x').onclick=()=>ov.remove();
 }
 async function abrirAusencias(){
   document.getElementById('modal-ausencias').classList.add('open');
