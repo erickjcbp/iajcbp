@@ -724,21 +724,19 @@ function abrirMontagem(celeb) {
   }
   // dispensados nesta sessão do modal (par membro|irmão) — usado no alerta de irmão
   const _irmaoDispensado=new Set();
-  function checarIrmao(pe){
+  async function checarIrmao(pe){
     const id=pe.sel.value; if(!id) return;
     const m=membros.find(x=>x.id===id); if(!m||!m.escalar_com_irmao||!m.grupo_irmaos) return;
     const irmaos=membros.filter(x=>x.grupo_irmaos===m.grupo_irmaos && x.escalar_com_irmao && x.id!==m.id);
-    irmaos.forEach(irmao=>{
+    for(const irmao of irmaos){
       const jaEsta=pendingEdicao.some(p=>p.sel.value===irmao.id);
       const chave=m.id+'|'+irmao.id;
-      if(jaEsta || _irmaoDispensado.has(chave)) return;
+      if(jaEsta || _irmaoDispensado.has(chave)) continue;
       const aus=ausNesta.has(irmao.id)?' (atenção: ele declarou ausência nesta missa)':'';
-      if(confirm('Você escalou '+(m.apelido||m.nome)+' e o irmão '+(irmao.apelido||irmao.nome)+' ainda não está na escala.'+aus+'\n\nAdicionar '+(irmao.apelido||irmao.nome)+' como Apoio?')){
-        adicionarSlotExtra('apoio', irmao.id);
-      } else {
-        _irmaoDispensado.add(chave);
-      }
-    });
+      const yes=await uiConfirm('Você escalou '+(m.apelido||m.nome)+' e o irmão '+(irmao.apelido||irmao.nome)+' ainda não está na escala.'+aus+'\n\nAdicionar '+(irmao.apelido||irmao.nome)+' como Apoio?', {ok:'Adicionar como Apoio', cancel:'Agora não'});
+      if(yes) adicionarSlotExtra('apoio', irmao.id);
+      else _irmaoDispensado.add(chave);
+    }
   }
 
   // posições do MODELO

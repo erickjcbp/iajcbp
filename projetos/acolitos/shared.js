@@ -2037,10 +2037,24 @@ function relTabela(headers, rows){
   }).join('')+'</tr>').join('');
   return '<table class="rel"><thead><tr>'+th+'</tr></thead><tbody>'+tb+'</tbody></table>';
 }
+// Confirmação com modal bonito (Promise<boolean>) — substitui o confirm() nativo
+function uiConfirm(message, opts){
+  opts = opts || {};
+  return new Promise(function(resolve){
+    const ov=document.createElement('div'); ov.className='modal-overlay open';
+    const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='400px';
+    const msg=document.createElement('p'); msg.style.cssText='font-size:14px;color:var(--text);line-height:1.5;white-space:pre-line;margin:0 0 16px;'; msg.textContent=message;
+    const acts=document.createElement('div'); acts.style.cssText='display:flex;gap:8px;';
+    const no=document.createElement('button'); no.className='btn-sm gray'; no.style.flex='1'; no.textContent=opts.cancel||'Cancelar';
+    const yes=document.createElement('button'); yes.className='btn-sm gold'; yes.style.flex='1'; yes.textContent=opts.ok||'Confirmar';
+    let dn=false; function done(v){ if(dn)return; dn=true; ov.remove(); resolve(v); }
+    no.onclick=function(){ done(false); }; yes.onclick=function(){ done(true); };
+    ov.onclick=function(e){ if(e.target===ov) done(false); };
+    acts.append(no, yes); md.append(msg, acts); ov.appendChild(md); document.body.appendChild(ov);
+  });
+}
 function abrirRelatorio(opts){
   const o = opts || {};
-  const w = window.open('', '_blank');
-  if(!w){ toast('Permita pop-ups para gerar o relatório.','error'); return null; }
   const hoje = new Date().toLocaleDateString('pt-BR');
   const css = '<style>'
     + '*{ -webkit-print-color-adjust:exact; print-color-adjust:exact; box-sizing:border-box; }'
@@ -2056,9 +2070,17 @@ function abrirRelatorio(opts){
     + '</style>';
   const cab = '<div class="rel-hd"><img src="'+location.origin+'/midia/logos/brasao-pastoral.png" onerror="this.style.display=\'none\'"><div><h1>'+relEsc(o.titulo||'Relatório')+'</h1><div class="sub">'+relEsc(o.subtitulo||'')+' · '+hoje+'</div></div></div>';
   const html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>'+relEsc(o.titulo||'Relatório')+'</title>'+css+'</head><body>'+cab+(o.corpo||'')+'</body></html>';
-  w.document.write(html); w.document.close(); w.focus();
-  setTimeout(()=>{ try{ w.print(); }catch(e){} }, 350);
-  return w;
+  // Imprime via iframe oculto na própria página (não abre janela/aba — evita "prender" o app no iOS/PWA)
+  const ifr = document.createElement('iframe');
+  ifr.setAttribute('aria-hidden','true');
+  ifr.style.cssText = 'position:fixed;left:-9999px;top:0;width:0;height:0;border:0;';
+  ifr.onload = function(){
+    setTimeout(function(){ try{ ifr.contentWindow.focus(); ifr.contentWindow.print(); }catch(e){} }, 300);
+    try{ ifr.contentWindow.onafterprint = function(){ if(ifr.parentNode) ifr.remove(); }; }catch(e){}
+    setTimeout(function(){ if(ifr.parentNode) ifr.remove(); }, 120000);
+  };
+  ifr.srcdoc = html;
+  document.body.appendChild(ifr);
 }
 function baixarCSV(nomeBase, linhas){
   const esc=s=>{ s=String(s==null?'':s); return /[";\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
