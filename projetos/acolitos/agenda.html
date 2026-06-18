@@ -534,7 +534,7 @@ async function abrirChamadaEnsaio(e) {
 }
 
 async function excluirEvento(e, ov) {
-  if (!confirm('Excluir o evento "' + e.titulo + '"? As confirmações de presença serão apagadas.')) return;
+  if (!await uiConfirm('Excluir o evento "' + e.titulo + '"? As confirmações de presença serão apagadas.')) return;
   const { error } = await sb.from('acolitos_eventos').delete().eq('id', e.id);
   if (error) { toast('Erro ao excluir.', 'error'); return; }
   toast('Evento excluído.'); ov.remove(); await reload();

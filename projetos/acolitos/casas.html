@@ -204,7 +204,7 @@ function abrirAddSetor(slug, label) {
 }
 
 async function adicionarSetor() {
-  const nome = (prompt('Nome do novo setor:') || '').trim(); if (!nome) return;
+  const nome = (await uiPrompt('Nome do novo setor:') || '').trim(); if (!nome) return;
   const valor = 's_' + nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24) + '_' + Math.random().toString(36).slice(2, 6);
   const { error } = await sbAdmin.from('acolitos_listas').insert({ tipo: 'setor', valor, label: nome });
   if (error) { toast('Não foi possível adicionar.', 'error'); return; }
@@ -275,7 +275,7 @@ function abrirEditarCasa(casa) {
       xb.onclick = () => { carac.splice(i, 1); renderChips(); }; chip.appendChild(xb); chips.appendChild(chip);
     });
   }
-  addC.onclick = () => { const v = (prompt('Nova característica:') || '').trim(); if (v) { carac.push(v); renderChips(); } };
+  addC.onclick = async () => { const v = (await uiPrompt('Nova característica:') || '').trim(); if (v) { carac.push(v); renderChips(); } };
   renderChips();
 
   const msg = document.createElement('div'); msg.className = 'msg'; modal.appendChild(msg);

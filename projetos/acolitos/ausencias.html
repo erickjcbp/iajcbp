@@ -124,7 +124,7 @@ async function renderPendentesPublicas(){
   };
   const decidir = async (ids, acao, onOk)=>{
     const { data:r } = await sb.rpc('acolitos_ausencia_pendente_decidir',{ p_ids:ids, p_acao:acao });
-    if(r && r.ok){ onOk(); } else { alert('Erro ao processar.'); }
+    if(r && r.ok){ onOk(); } else { await uiAlert('Erro ao processar.'); }
   };
 
   // Ação em massa
@@ -421,7 +421,7 @@ async function renderMotivosAdmin(main) {
       const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
       const nm = document.createElement('span'); nm.style.cssText = 'flex:1;font-size:13px;color:var(--text);'; nm.textContent = item.label || item.valor;
       const del = miniBtn('−', true);
-      del.onclick = async () => { if (!confirm('Remover motivo "' + (item.label || item.valor) + '"?')) return; await sb.from('acolitos_listas').delete().eq('id', item.id); pinta(); };
+      del.onclick = async () => { if (!await uiConfirm('Remover motivo "' + (item.label || item.valor) + '"?')) return; await sb.from('acolitos_listas').delete().eq('id', item.id); pinta(); };
       row.append(nm, del); box.appendChild(row);
     });
     const add = document.createElement('div'); add.style.cssText = 'display:flex;gap:8px;margin-top:10px;';

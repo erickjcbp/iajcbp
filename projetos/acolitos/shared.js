@@ -1821,7 +1821,7 @@ function buildAvatarEl(fotoUrl, role, size, opts) {
           fotoEl = novo;
           if (typeof opts.onUpload === 'function') opts.onUpload(url);
         } catch (err) {
-          alert('Não foi possível enviar a foto. ' + (err?.message || ''));
+          await uiAlert('Não foi possível enviar a foto. ' + (err?.message || ''));
         } finally {
           badge.textContent = prev; badge.disabled = false;
         }
@@ -2051,6 +2051,38 @@ function uiConfirm(message, opts){
     no.onclick=function(){ done(false); }; yes.onclick=function(){ done(true); };
     ov.onclick=function(e){ if(e.target===ov) done(false); };
     acts.append(no, yes); md.append(msg, acts); ov.appendChild(md); document.body.appendChild(ov);
+  });
+}
+// Alerta com modal bonito (Promise) — substitui o alert() nativo
+function uiAlert(message, opts){
+  opts = opts || {};
+  return new Promise(function(resolve){
+    const ov=document.createElement('div'); ov.className='modal-overlay open';
+    const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='400px';
+    const msg=document.createElement('p'); msg.style.cssText='font-size:14px;color:var(--text);line-height:1.5;white-space:pre-line;margin:0 0 16px;'; msg.textContent=message;
+    const ok=document.createElement('button'); ok.className='btn-sm gold'; ok.style.width='100%'; ok.textContent=opts.ok||'OK';
+    let dn=false; function done(){ if(dn)return; dn=true; ov.remove(); resolve(); }
+    ok.onclick=done; ov.onclick=function(e){ if(e.target===ov) done(); };
+    md.append(msg, ok); ov.appendChild(md); document.body.appendChild(ov);
+  });
+}
+// Prompt com modal bonito (Promise<string|null>) — substitui o prompt() nativo
+function uiPrompt(message, opts){
+  opts = opts || {};
+  return new Promise(function(resolve){
+    const ov=document.createElement('div'); ov.className='modal-overlay open';
+    const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='400px';
+    const msg=document.createElement('p'); msg.style.cssText='font-size:14px;color:var(--text);line-height:1.5;white-space:pre-line;margin:0 0 10px;'; msg.textContent=message;
+    const inp=document.createElement('input'); inp.className='form-input'; inp.style.width='100%'; inp.value=opts.value||'';
+    const acts=document.createElement('div'); acts.style.cssText='display:flex;gap:8px;margin-top:14px;';
+    const no=document.createElement('button'); no.className='btn-sm gray'; no.style.flex='1'; no.textContent=opts.cancel||'Cancelar';
+    const yes=document.createElement('button'); yes.className='btn-sm gold'; yes.style.flex='1'; yes.textContent=opts.ok||'OK';
+    let dn=false; function done(v){ if(dn)return; dn=true; ov.remove(); resolve(v); }
+    no.onclick=function(){ done(null); }; yes.onclick=function(){ done(inp.value); };
+    inp.onkeydown=function(e){ if(e.key==='Enter') done(inp.value); };
+    ov.onclick=function(e){ if(e.target===ov) done(null); };
+    acts.append(no, yes); md.append(msg, inp, acts); ov.appendChild(md); document.body.appendChild(ov);
+    setTimeout(function(){ inp.focus(); }, 50);
   });
 }
 function abrirRelatorio(opts){

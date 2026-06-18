@@ -139,7 +139,7 @@ function render() {
     info.append(desc, meta);
     const val = document.createElement('div'); val.className = 'lanc-val ' + l.tipo; val.textContent = (l.tipo === 'entrada' ? '+ ' : '− ') + brl(l.valor);
     const del = document.createElement('button'); del.className = 'lanc-del'; del.textContent = '🗑'; del.title = 'Excluir';
-    del.onclick = async (e) => { e.stopPropagation(); if (!confirm('Excluir este lançamento?')) return; await sb.from('acolitos_financeiro').delete().eq('id', l.id); load(); };
+    del.onclick = async (e) => { e.stopPropagation(); if (!await uiConfirm('Excluir este lançamento?')) return; await sb.from('acolitos_financeiro').delete().eq('id', l.id); load(); };
     row.style.cursor = 'pointer'; row.title = 'Editar lançamento';
     row.onclick = () => abrirLancamento(l);
     row.append(ico, info, val, del); main.appendChild(row);
@@ -178,19 +178,19 @@ function abrirLancamento(editar) {
   catRow.append(catSel, delCat);
   popCat();
   addCat.onclick = async () => {
-    const nome = (prompt('Nome da nova categoria de ' + (tipo === 'entrada' ? 'entrada' : 'saída') + ':') || '').trim();
+    const nome = (await uiPrompt('Nome da nova categoria de ' + (tipo === 'entrada' ? 'entrada' : 'saída') + ':') || '').trim();
     if (!nome) return;
     const valor = 'c_' + nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24) + '_' + Math.random().toString(36).slice(2, 6);
     const t = tipo;
     const { error } = await sb.from('acolitos_listas').insert({ tipo: t === 'entrada' ? 'cat_entrada' : 'cat_saida', valor, label: nome });
-    if (error) { alert('Não foi possível adicionar essa categoria.'); return; }
+    if (error) { await uiAlert('Não foi possível adicionar essa categoria.'); return; }
     customCats[t].push([valor, nome]); rebuildCatLabel();
     if (tipo === t) { popCat(); catSel.value = valor; syncDelCat(); }
   };
   delCat.onclick = async () => {
     const val = catSel.value, t = tipo;
     if (!isCustom(t, val)) return;
-    if (!confirm('Remover a categoria "' + (CAT_LABEL[val] || val) + '"?\n(Os lançamentos já feitos não são apagados.)')) return;
+    if (!await uiConfirm('Remover a categoria "' + (CAT_LABEL[val] || val) + '"?\n(Os lançamentos já feitos não são apagados.)')) return;
     await sb.from('acolitos_listas').delete().eq('tipo', t === 'entrada' ? 'cat_entrada' : 'cat_saida').eq('valor', val);
     customCats[t] = customCats[t].filter(c => c[0] !== val); rebuildCatLabel();
     popCat();

@@ -161,7 +161,7 @@ async function renderBoard(main) {
 }
 
 async function reivindicar(missaoId) {
-  const ev = prompt('Conte rapidinho o que você fez (opcional):');
+  const ev = await uiPrompt('Conte rapidinho o que você fez (opcional):');
   const { data, error } = await sb.rpc('acolitos_missao_reivindicar', { p_missao: missaoId, p_evidencia: (ev || null) });
   if (error || data?.erro) { toast('Erro: ' + (data?.erro || error?.message), 'error'); return; }
   toast('✓ Enviado pra avaliação da coordenação'); await renderAll();
@@ -211,7 +211,7 @@ async function decidir(missao, membro, decisao) {
   toast(decisao === 'aprovar' ? '✓ Aprovada (+' + data.xp + ' XP)' : '✕ Recusada'); await renderAll();
 }
 async function promover(membro, nivel, nome) {
-  if (!confirm('Promover ' + nome + ' para ' + nivelInfo(nivel).label + '?')) return;
+  if (!await uiConfirm('Promover ' + nome + ' para ' + nivelInfo(nivel).label + '?')) return;
   const { data, error } = await sb.rpc('acolitos_promover', { p_membro: membro, p_novo_nivel: nivel });
   if (error || data?.erro) { toast('Erro: ' + (data?.erro || error?.message), 'error'); return; }
   toast('🎉 Promovido para ' + nivelInfo(nivel).label); await renderAll();

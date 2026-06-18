@@ -273,7 +273,7 @@ async function renderTemporadaAdmin(main) {
     card.append(t, sb2);
     const btn = document.createElement('button'); btn.className = 'mx-mini no'; btn.style.marginTop = '10px'; btn.textContent = '🏁 Encerrar e premiar campeões';
     btn.onclick = async () => {
-      if (!confirm('Encerrar a temporada "' + ativa.nome + '"?\nO campeão de cada liga vira Destaque e recebe um aviso de parabéns. O ranking zera ao abrir a próxima.')) return;
+      if (!await uiConfirm('Encerrar a temporada "' + ativa.nome + '"?\nO campeão de cada liga vira Destaque e recebe um aviso de parabéns. O ranking zera ao abrir a próxima.')) return;
       const { data: r } = await sb.rpc('acolitos_temporada_fechar');
       if (r && r.ok) { toast('🏆 Temporada encerrada! ' + r.campeoes + ' campeão(ões) coroado(s).'); renderAll(); } else { toast('Erro: ' + (r && r.erro || 'tente de novo'), 'error'); }
     };
@@ -712,7 +712,7 @@ async function abrirPanorama(m) {
 
 // Coordenação concede uma missão AVALIADA (credita XP + dispara medalha se houver). Reabre o panorama.
 async function concederMissao(missaoId, mm, ov) {
-  if (!confirm('Conceder esta conquista a ' + (mm.apelido || mm.nome) + '?')) return;
+  if (!await uiConfirm('Conceder esta conquista a ' + (mm.apelido || mm.nome) + '?')) return;
   const { data, error } = await sb.rpc('acolitos_missao_decidir', { p_missao: missaoId, p_membro: mm.id, p_decisao: 'aprovar' });
   if (error || data?.erro) { toast('Erro: ' + (data?.erro || error?.message), 'error'); return; }
   toast('✓ Concedida' + (data && data.xp ? ' (+' + data.xp + ' XP)' : ''));
@@ -821,7 +821,7 @@ async function renderCompLista(b) {
     const pesoLbl = document.createElement('span'); pesoLbl.textContent = '⚖'; pesoLbl.title = 'Peso da virtude'; pesoLbl.style.cssText = 'font-size:12px;color:var(--gold-light);';
     const lim = document.createElement('input'); lim.type = 'number'; lim.min = '1'; lim.value = (item.meta && item.meta.limiar) || ''; lim.title = 'Peso desta virtude: nº de quests p/ virar candidata (vazio = usa o padrão)'; lim.placeholder = 'peso'; lim.style.cssText = 'width:54px;font-size:11px;padding:4px;background:var(--surface);border:1px solid var(--border-wine);border-radius:4px;color:var(--text);';
     lim.onchange = async () => { const v = lim.value === '' ? null : Math.max(1, parseInt(lim.value, 10) || 1); await sb.from('acolitos_listas').update({ meta: Object.assign({}, item.meta || {}, { limiar: v }) }).eq('id', item.id); item.meta = Object.assign({}, item.meta || {}, { limiar: v }); toast('✓ Peso atualizado'); };
-    const del = mini('−', true); del.onclick = async () => { if (!confirm('Remover competência "' + (item.label || item.valor) + '"?')) return; await sb.from('acolitos_listas').delete().eq('id', item.id); renderCompLista(b); };
+    const del = mini('−', true); del.onclick = async () => { if (!await uiConfirm('Remover competência "' + (item.label || item.valor) + '"?')) return; await sb.from('acolitos_listas').delete().eq('id', item.id); renderCompLista(b); };
     row.append(nm, fsel, pesoLbl, lim, del); b.appendChild(row);
   });
   const add = document.createElement('div'); add.style.cssText = 'display:flex;gap:8px;margin-top:10px;';
@@ -857,7 +857,7 @@ function abrirRevisar(titulo, onSend) {
   acts.append(c, s); md.appendChild(acts); ov.appendChild(md); document.body.appendChild(ov);
 }
 async function promover(membro, nivel, nome) {
-  if (!confirm('Promover ' + nome + ' para ' + nivelInfo(nivel).label + '?')) return;
+  if (!await uiConfirm('Promover ' + nome + ' para ' + nivelInfo(nivel).label + '?')) return;
   const { data, error } = await sb.rpc('acolitos_promover', { p_membro: membro, p_novo_nivel: nivel });
   if (error || data?.erro) { toast('Erro: ' + (data?.erro || error?.message), 'error'); return; }
   toast('🎉 Promovido para ' + nivelInfo(nivel).label); await renderAll();

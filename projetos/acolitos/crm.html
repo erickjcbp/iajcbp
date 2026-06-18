@@ -302,7 +302,7 @@ function abrirModal(entry) {
 async function recusarCadastro() {
   if (!pendingEntry) return;
   const nome = pendingEntry.acolitos_membros?.nome || 'este cadastro';
-  if (!confirm('RECUSAR e APAGAR o cadastro de ' + nome + '?\n\nRemove o membro, o funil, o histórico E a conta de acesso — não dá pra desfazer.\n(Para só tirar do funil sem apagar, use "Tirar do funil".)')) return;
+  if (!await uiConfirm('RECUSAR e APAGAR o cadastro de ' + nome + '?\n\nRemove o membro, o funil, o histórico E a conta de acesso — não dá pra desfazer.\n(Para só tirar do funil sem apagar, use "Tirar do funil".)')) return;
   const { data: { session } } = await sb.auth.getSession();
   const r = await fetch('/api/acolito-admin', {
     method: 'POST',
@@ -310,7 +310,7 @@ async function recusarCadastro() {
     body: JSON.stringify({ action: 'reject', membro_id: pendingEntry.membro_id })
   });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) { alert(d.error || 'Não foi possível apagar.'); return; }
+  if (!r.ok) { await uiAlert(d.error || 'Não foi possível apagar.'); return; }
   fecharModal(); pendingEntry = null; await loadCrm();
 }
 
@@ -319,7 +319,7 @@ async function voltarEtapa() {
   const idx = ETAPAS.indexOf(pendingEntry.etapa);
   if (idx <= 0) return;
   const anterior = ETAPAS[idx - 1];
-  if (!confirm('Voltar ' + (pendingEntry.acolitos_membros?.nome || 'este membro') + ' para a etapa "' + ETAPA_LABEL[anterior] + '"?')) return;
+  if (!await uiConfirm('Voltar ' + (pendingEntry.acolitos_membros?.nome || 'este membro') + ' para a etapa "' + ETAPA_LABEL[anterior] + '"?')) return;
   await sbAdmin.from('acolitos_crm').update({ etapa: anterior, etapa_iniciada_em: new Date().toISOString() }).eq('membro_id', pendingEntry.membro_id);
   await sbAdmin.from('acolitos_crm_historico').insert({ membro_id: pendingEntry.membro_id, etapa_de: pendingEntry.etapa, etapa_para: anterior, changed_by: ctx.user.id });
   fecharModal(); pendingEntry = null; await loadCrm();
@@ -328,10 +328,10 @@ async function voltarEtapa() {
 async function excluirEntry() {
   if (!pendingEntry) return;
   const nome = pendingEntry.acolitos_membros?.nome || 'este membro';
-  if (!confirm('Remover ' + nome + ' do funil de integração?\n(O cadastro do membro não é apagado — só sai do CRM.)')) return;
+  if (!await uiConfirm('Remover ' + nome + ' do funil de integração?\n(O cadastro do membro não é apagado — só sai do CRM.)')) return;
   await sbAdmin.from('acolitos_crm_historico').delete().eq('membro_id', pendingEntry.membro_id);
   const { error } = await sbAdmin.from('acolitos_crm').delete().eq('membro_id', pendingEntry.membro_id);
-  if (error) { alert('Não foi possível remover. Tente novamente.'); return; }
+  if (error) { await uiAlert('Não foi possível remover. Tente novamente.'); return; }
   fecharModal(); pendingEntry = null; await loadCrm();
 }
 

@@ -92,25 +92,25 @@ async function renderLogins(b){
   const list=document.createElement('div'); box.appendChild(list);
   const mini=(txt,danger)=>{ const x=document.createElement('button'); x.textContent=txt; x.style.cssText='font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;border:1px solid '+(danger?'var(--danger)':'var(--gold-dim)')+';background:var(--surface2);color:'+(danger?'var(--danger-text)':'var(--gold-light)')+';'; return x; };
   async function setSenha(m){
-    const s=(prompt('Nova senha para '+m.nome+' (mín. 6 caracteres):')||'').trim(); if(!s) return; if(s.length<6){alert('Senha muito curta.');return;}
+    const s=((await uiPrompt('Nova senha para '+m.nome+' (mín. 6 caracteres):'))||'').trim(); if(!s) return; if(s.length<6){await uiAlert('Senha muito curta.');return;}
     const r=await apiPost('/api/acolito-admin',{action:'password',user_id:m.user_id,password:s});
-    if(!r.ok){alert('Erro: '+((r.data&&r.data.error)||'tente de novo'));return;}
-    alert('Senha de '+m.nome+' redefinida:\n\n'+s+'\n\n⚠️ Anote agora — ela NÃO fica salva e não será mostrada de novo.');
+    if(!r.ok){await uiAlert('Erro: '+((r.data&&r.data.error)||'tente de novo'));return;}
+    await uiAlert('Senha de '+m.nome+' redefinida:\n\n'+s+'\n\n⚠️ Anote agora — ela NÃO fica salva e não será mostrada de novo.');
   }
   async function setUser(m){
-    const u=(prompt('Novo usuário (login) de '+m.nome+':', m.usuario||'')||'').trim(); if(!u) return;
+    const u=((await uiPrompt('Novo usuário (login) de '+m.nome+':', {value:m.usuario||''}))||'').trim(); if(!u) return;
     const r=await apiPost('/api/acolito-admin',{action:'username',user_id:m.user_id,usuario:u});
-    if(!r.ok){alert('Erro: '+((r.data&&r.data.error)||'tente de novo'));return;}
+    if(!r.ok){await uiAlert('Erro: '+((r.data&&r.data.error)||'tente de novo'));return;}
     await sb.rpc('acolitos_login_registrar',{p_membro:m.id,p_usuario:u,p_senha:null});
     m.usuario=u; desenha();
   }
   async function criarConta(m){
-    const u=(prompt('Usuário (login) de '+m.nome+':')||'').trim(); if(!u) return;
-    const s=(prompt('Senha (mín. 6 caracteres):')||'').trim(); if(!s){return;} if(s.length<6){alert('Senha muito curta.');return;}
+    const u=((await uiPrompt('Usuário (login) de '+m.nome+':'))||'').trim(); if(!u) return;
+    const s=((await uiPrompt('Senha (mín. 6 caracteres):'))||'').trim(); if(!s){return;} if(s.length<6){await uiAlert('Senha muito curta.');return;}
     const r=await apiPost('/api/acolito-admin',{action:'create',usuario:u,password:s,nome:m.nome,membro_id:m.id});
-    if(!r.ok){alert('Erro: '+((r.data&&r.data.error)||'tente de novo'));return;}
+    if(!r.ok){await uiAlert('Erro: '+((r.data&&r.data.error)||'tente de novo'));return;}
     await sb.rpc('acolitos_login_registrar',{p_membro:m.id,p_usuario:u,p_senha:null});
-    alert('Conta criada para '+m.nome+'.\nUsuário: '+u+'\nSenha: '+s+'\n\n⚠️ Anote a senha agora — ela NÃO fica salva e não será mostrada de novo.');
+    await uiAlert('Conta criada para '+m.nome+'.\nUsuário: '+u+'\nSenha: '+s+'\n\n⚠️ Anote a senha agora — ela NÃO fica salva e não será mostrada de novo.');
     m.tem_conta=true; if(r.data&&r.data.user_id) m.user_id=r.data.user_id; m.usuario=u; desenha();
   }
   function desenha(){
@@ -149,7 +149,7 @@ async function renderListas(b){
     const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
     const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=item.label||item.valor;
     const del=document.createElement('button'); del.className='mini-del'; del.textContent='−';
-    del.onclick=async()=>{ if(!confirm('Remover "'+(item.label||item.valor)+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',item.id); renderListas(b); };
+    del.onclick=async()=>{ if(!await uiConfirm('Remover "'+(item.label||item.valor)+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',item.id); renderListas(b); };
     row.append(nm,del); b.appendChild(row);
   });
   const add=document.createElement('div'); add.style.cssText='display:flex;gap:8px;margin-top:10px;';
@@ -177,7 +177,7 @@ async function renderTipos(b){
     const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=item.label||item.valor;
     const sl=document.createElement('span'); sl.style.cssText='font-size:11px;color:var(--text-muted);'; sl.textContent=item.valor;
     const del=document.createElement('button'); del.className='mini-del'; del.textContent='−';
-    del.onclick=async()=>{ if(!confirm('Remover "'+(item.label||item.valor)+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',item.id); renderTipos(b); };
+    del.onclick=async()=>{ if(!await uiConfirm('Remover "'+(item.label||item.valor)+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',item.id); renderTipos(b); };
     row.append(nm,sl,del); b.appendChild(row);
   });
   const add=document.createElement('div'); add.style.cssText='display:flex;gap:8px;margin-top:10px;';
@@ -202,8 +202,8 @@ async function renderFuncoes(b){
     paint(); tg.onclick=()=>{ if(sel.has(f.valor))sel.delete(f.valor); else sel.add(f.valor); paint(); };
     row.append(nm,tg);
     if(f.custom){
-      const ed=document.createElement('button'); ed.className='mini-add'; ed.textContent='✎'; ed.onclick=async()=>{ const nv=(prompt('Novo nome da função:', f.label)||'').trim(); if(!nv)return; await sb.from('acolitos_listas').update({label:nv}).eq('id',f.id); renderFuncoes(b); }; row.append(ed);
-      const del=document.createElement('button'); del.className='mini-del'; del.textContent='−'; del.onclick=async()=>{ if(!confirm('Remover função própria "'+f.label+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',f.id); renderFuncoes(b); }; row.append(del);
+      const ed=document.createElement('button'); ed.className='mini-add'; ed.textContent='✎'; ed.onclick=async()=>{ const nv=((await uiPrompt('Novo nome da função:', {value:f.label}))||'').trim(); if(!nv)return; await sb.from('acolitos_listas').update({label:nv}).eq('id',f.id); renderFuncoes(b); }; row.append(ed);
+      const del=document.createElement('button'); del.className='mini-del'; del.textContent='−'; del.onclick=async()=>{ if(!await uiConfirm('Remover função própria "'+f.label+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',f.id); renderFuncoes(b); }; row.append(del);
     }
     b.appendChild(row);
   });
@@ -247,7 +247,7 @@ function renderComunidades(b){
       const top=document.createElement('div'); top.style.cssText='display:flex;gap:8px;align-items:center;';
       const lab=document.createElement('input'); lab.className='form-input'; lab.style.flex='1'; lab.value=c.label; lab.oninput=()=>{ c.label=lab.value; };
       const sl=document.createElement('span'); sl.style.cssText='font-size:10px;color:var(--text-muted);'; sl.textContent=c.slug;
-      const rm=document.createElement('button'); rm.className='mini-del'; rm.textContent='−'; rm.title='Remover'; rm.onclick=()=>{ if(confirm('Remover comunidade "'+c.label+'"?')){ work.splice(ci,1); repaint(); } };
+      const rm=document.createElement('button'); rm.className='mini-del'; rm.textContent='−'; rm.title='Remover'; rm.onclick=async()=>{ if(await uiConfirm('Remover comunidade "'+c.label+'"?')){ work.splice(ci,1); repaint(); } };
       top.append(lab,sl,rm); card.appendChild(top);
       const chips=document.createElement('div'); chips.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center;';
       c.horarios.forEach((h,hi)=>{ const ch=document.createElement('span'); ch.style.cssText='display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:2px 4px 2px 9px;font-size:12px;'; ch.textContent=h; const x=document.createElement('button'); x.className='mini-del'; x.textContent='×'; x.style.cssText='width:18px;height:18px;font-size:11px;'; x.onclick=()=>{ c.horarios.splice(hi,1); repaint(); }; ch.appendChild(x); chips.appendChild(ch); });
@@ -257,7 +257,7 @@ function renderComunidades(b){
   };
   repaint(); b.appendChild(cont);
   const acts=document.createElement('div'); acts.style.cssText='display:flex;gap:8px;margin-top:4px;';
-  const addC=document.createElement('button'); addC.className='btn'; addC.textContent='+ Comunidade'; addC.onclick=()=>{ const nome=prompt('Nome da comunidade:'); if(!nome)return; const slug=nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''); work.push({slug,label:nome,horarios:[]}); repaint(); };
+  const addC=document.createElement('button'); addC.className='btn'; addC.textContent='+ Comunidade'; addC.onclick=async()=>{ const nome=await uiPrompt('Nome da comunidade:'); if(!nome)return; const slug=nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''); work.push({slug,label:nome,horarios:[]}); repaint(); };
   const save=document.createElement('button'); save.className='btn gold'; save.textContent='Salvar comunidades'; save.onclick=async()=>{ await setConfig('comunidades', work); };
   acts.append(addC,save); b.appendChild(acts);
 }
@@ -307,7 +307,7 @@ async function renderAdmins(b){
       const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
       const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=nomePorUser[pm.user_id]||'(sem nome)';
       const tag=document.createElement('span'); tag.style.cssText='font-size:11px;color:var(--gold);'; tag.textContent=pm.role==='coord_admin'?'Coord. Admin':'Subadmin';
-      const dn=document.createElement('button'); dn.className='btn-sm gray'; dn.textContent='Rebaixar'; dn.onclick=async()=>{ if(!confirm('Rebaixar '+nm.textContent+' para equipe?'))return; const {error}=await sb.rpc('acolitos_set_admin_role',{p_user:pm.user_id,p_role:'membro_equipe'}); if(error){toast('Erro.','error');return;} toast('✓ Rebaixado.'); carregarAdmins(); };
+      const dn=document.createElement('button'); dn.className='btn-sm gray'; dn.textContent='Rebaixar'; dn.onclick=async()=>{ if(!await uiConfirm('Rebaixar '+nm.textContent+' para equipe?'))return; const {error}=await sb.rpc('acolitos_set_admin_role',{p_user:pm.user_id,p_role:'membro_equipe'}); if(error){toast('Erro.','error');return;} toast('✓ Rebaixado.'); carregarAdmins(); };
       row.append(nm,tag,dn); listaAdmins.appendChild(row);
     });
   };
@@ -327,7 +327,7 @@ async function renderAdmins(b){
       row.append(nm,bs,bc); res.appendChild(row);
     });
   };
-  async function setAdmin(m,role){ if(!confirm('Tornar '+m.nome+' '+(role==='coord_admin'?'Coord. Admin':'Subadmin')+'?'))return; const {error}=await sb.rpc('acolitos_set_admin_role',{p_user:m.user_id,p_role:role}); if(error){toast('Erro (a pessoa tem login?).','error');return;} toast('✓ Promovido!'); pInp.value=''; res.textContent=''; carregarAdmins(); }
+  async function setAdmin(m,role){ if(!await uiConfirm('Tornar '+m.nome+' '+(role==='coord_admin'?'Coord. Admin':'Subadmin')+'?'))return; const {error}=await sb.rpc('acolitos_set_admin_role',{p_user:m.user_id,p_role:role}); if(error){toast('Erro (a pessoa tem login?).','error');return;} toast('✓ Promovido!'); pInp.value=''; res.textContent=''; carregarAdmins(); }
 }
 function renderIdentidade(b){
   b.textContent='';
@@ -439,7 +439,7 @@ async function renderSetorLista(b){
     const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
     const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=item.label||item.valor;
     const del=document.createElement('button'); del.className='mini-del'; del.textContent='−';
-    del.onclick=async()=>{ if(!confirm('Remover setor "'+(item.label||item.valor)+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',item.id); renderSetorLista(b); };
+    del.onclick=async()=>{ if(!await uiConfirm('Remover setor "'+(item.label||item.valor)+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',item.id); renderSetorLista(b); };
     row.append(nm,del); b.appendChild(row);
   });
   const add=document.createElement('div'); add.style.cssText='display:flex;gap:8px;margin-top:10px;';
@@ -505,7 +505,7 @@ async function renderTesouraria(b){
     const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
     const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=item.label||item.valor;
     const del=document.createElement('button'); del.className='mini-del'; del.textContent='−';
-    del.onclick=async()=>{ if(!confirm('Remover "'+(item.label||item.valor)+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',item.id); renderTesouraria(b); };
+    del.onclick=async()=>{ if(!await uiConfirm('Remover "'+(item.label||item.valor)+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',item.id); renderTesouraria(b); };
     row.append(nm,del); b.appendChild(row);
   });
   const add=document.createElement('div'); add.style.cssText='display:flex;gap:8px;margin-top:10px;';
@@ -617,7 +617,7 @@ async function renderMissoes(b){
     const ed=document.createElement('button'); ed.className='cfg-mini'; ed.textContent='✎';
     ed.onclick=()=>abrirEditorMissao(m, async(patch)=>{ const {error}=await sb.from('acolitos_missoes').update(patch).eq('id',m.id); if(error){toast('Erro ao salvar','error');return false;} Object.assign(m,patch); toast('✓ Salvo'); pinta(); return true; });
     const del=document.createElement('button'); del.className='cfg-mini danger'; del.textContent='×';
-    del.onclick=async()=>{ if(!confirm('Excluir "'+m.titulo+'"?'))return; const {error}=await sb.from('acolitos_missoes').delete().eq('id',m.id); if(error){toast('Erro','error');return;} const i=miss.indexOf(m); if(i>=0)miss.splice(i,1); toast('✓ Excluída'); pinta(); };
+    del.onclick=async()=>{ if(!await uiConfirm('Excluir "'+m.titulo+'"?'))return; const {error}=await sb.from('acolitos_missoes').delete().eq('id',m.id); if(error){toast('Erro','error');return;} const i=miss.indexOf(m); if(i>=0)miss.splice(i,1); toast('✓ Excluída'); pinta(); };
     hd.append(tt,ed,del); card.appendChild(hd); return card;
   }
   function pinta(){
@@ -715,7 +715,7 @@ function renderCrm(b){
       nw.append(stp,li);
       const up=document.createElement('button'); up.className='cfg-mini'; up.textContent='↑'; up.disabled=(i===0); up.onclick=()=>{ const t=work[i-1]; work[i-1]=work[i]; work[i]=t; repaint(); };
       const dn=document.createElement('button'); dn.className='cfg-mini'; dn.textContent='↓'; dn.disabled=(i===work.length-1); dn.onclick=()=>{ const t=work[i+1]; work[i+1]=work[i]; work[i]=t; repaint(); };
-      const del=document.createElement('button'); del.className='cfg-mini danger'; del.textContent='×'; del.onclick=()=>{ if(confirm('Excluir a fase "'+et.label+'"? Membros nela ficam sem etapa válida.')){ work.splice(i,1); repaint(); } };
+      const del=document.createElement('button'); del.className='cfg-mini danger'; del.textContent='×'; del.onclick=async()=>{ if(await uiConfirm('Excluir a fase "'+et.label+'"? Membros nela ficam sem etapa válida.')){ work.splice(i,1); repaint(); } };
       hd.append(nw,up,dn,del); card.appendChild(hd);
       _cfgField(card,'Texto da ação', et.acao, 'area', v=>{ et.acao=v; });
       cont.appendChild(card);
@@ -723,7 +723,7 @@ function renderCrm(b){
   };
   repaint();
   const acts=document.createElement('div'); acts.style.cssText='display:flex;gap:8px;';
-  const add=document.createElement('button'); add.className='btn'; add.textContent='+ Fase'; add.onclick=()=>{ const nome=(prompt('Nome da nova fase:')||'').trim(); if(!nome)return; const slug=(nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''))||('fase_'+Date.now()); work.splice(Math.max(0,work.length-1),0,{slug,label:nome,acao:''}); repaint(); };
+  const add=document.createElement('button'); add.className='btn'; add.textContent='+ Fase'; add.onclick=async()=>{ const nome=((await uiPrompt('Nome da nova fase:'))||'').trim(); if(!nome)return; const slug=(nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''))||('fase_'+Date.now()); work.splice(Math.max(0,work.length-1),0,{slug,label:nome,acao:''}); repaint(); };
   const save=document.createElement('button'); save.className='btn gold'; save.textContent='Salvar fases'; save.onclick=async()=>{ await setConfig('crm_etapas', work); };
   acts.append(add,save); b.appendChild(acts);
 }
@@ -749,7 +749,7 @@ function renderNiveis(b){
       nw.append(stp,li);
       const up=document.createElement('button'); up.className='cfg-mini'; up.textContent='↑'; up.disabled=(i===0); up.onclick=()=>{ const t=work[i-1]; work[i-1]=work[i]; work[i]=t; repaint(); };
       const dn=document.createElement('button'); dn.className='cfg-mini'; dn.textContent='↓'; dn.disabled=(i===work.length-1); dn.onclick=()=>{ const t=work[i+1]; work[i+1]=work[i]; work[i]=t; repaint(); };
-      const del=document.createElement('button'); del.className='cfg-mini danger'; del.textContent='×'; del.onclick=()=>{ if(confirm('Excluir o nível "'+w.label+'"? Membros nele ficam sem nível válido.')){ work.splice(i,1); repaint(); } };
+      const del=document.createElement('button'); del.className='cfg-mini danger'; del.textContent='×'; del.onclick=async()=>{ if(await uiConfirm('Excluir o nível "'+w.label+'"? Membros nele ficam sem nível válido.')){ work.splice(i,1); repaint(); } };
       hd.append(patch,nw,up,dn,del); card.appendChild(hd);
       const gp=document.createElement('button'); gp.className='btn-sm'; gp.style.cssText='margin-top:6px;background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2));border:1px solid var(--gold-dim);color:var(--gold-light);'; gp.textContent='🎨 Gerar patch';
       gp.onclick=()=>abrirGeradorPatch(w.slug, w.patch || _specPadraoNivel(w.slug), (spec)=>{ w.patch=spec; pinta(); }); card.appendChild(gp);
@@ -769,7 +769,7 @@ function renderNiveis(b){
   repaint();
   const acts=document.createElement('div'); acts.style.cssText='display:flex;gap:8px;';
   const add=document.createElement('button'); add.className='btn'; add.textContent='+ Nível';
-  add.onclick=()=>{ const nome=(prompt('Nome do novo nível:')||'').trim(); if(!nome)return; const slug=(nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''))||('nivel_'+Date.now()); work.push({ slug, label:nome, base:'acolito', int:work.length, pips:0, titulo:'', intro:'', missao:'', desafio:'', proximo:'', patch:_specPadraoNivel('acolito_aspirante') }); repaint(); };
+  add.onclick=async()=>{ const nome=((await uiPrompt('Nome do novo nível:'))||'').trim(); if(!nome)return; const slug=(nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''))||('nivel_'+Date.now()); work.push({ slug, label:nome, base:'acolito', int:work.length, pips:0, titulo:'', intro:'', missao:'', desafio:'', proximo:'', patch:_specPadraoNivel('acolito_aspirante') }); repaint(); };
   const save=document.createElement('button'); save.className='btn gold'; save.textContent='Salvar níveis';
   save.onclick=async()=>{ const ok=await setConfig('niveis_full', work); if(ok){ if(typeof aplicarNiveisEstrutura==='function') aplicarNiveisEstrutura(); toast('✓ Salvo! Recarregue o app pra ver na Jornada.'); } };
   acts.append(add,save); b.appendChild(acts);

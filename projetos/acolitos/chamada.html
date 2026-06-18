@@ -309,7 +309,7 @@ async function renderAvulsos(main, celebId){
 
 // Limpa/reseta a chamada desta missa (apaga registro e volta as escalas p/ 'escalado') — via RPC
 async function limparChamada(){
-  if(!confirm('Limpar a chamada desta missa? Os status voltam para "escalado" e você poderá fazer a chamada de novo.')) return;
+  if(!await uiConfirm('Limpar a chamada desta missa? Os status voltam para "escalado" e você poderá fazer a chamada de novo.')) return;
   const { error } = await sb.rpc('acolitos_limpar_chamada', { p_celebracao: celebAtual.id });
   if(error){ toast('Erro ao limpar a chamada.','error'); return; }
   toast('✓ Chamada limpa. Pode refazer.');

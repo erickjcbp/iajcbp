@@ -380,7 +380,7 @@ async function decidir(missao, membro, decisao) {
   toast(decisao === 'aprovar' ? '✓ Aprovada (+' + data.xp + ' XP)' : '✕ Recusada'); await renderAll();
 }
 async function promover(membro, nivel, nome) {
-  if (!confirm('Promover ' + nome + ' para ' + nivelInfo(nivel).label + '?')) return;
+  if (!await uiConfirm('Promover ' + nome + ' para ' + nivelInfo(nivel).label + '?')) return;
   const { data, error } = await sb.rpc('acolitos_promover', { p_membro: membro, p_novo_nivel: nivel });
   if (error || data?.erro) { toast('Erro: ' + (data?.erro || error?.message), 'error'); return; }
   toast('🎉 Promovido para ' + nivelInfo(nivel).label); await renderAll();

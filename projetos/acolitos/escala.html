@@ -598,7 +598,7 @@ function renderCards() {
 
 async function excluirCelebracao(c) {
   const d=new Date(c.data+'T00:00:00');
-  if(!confirm('Excluir a celebração de '+DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' · '+c.horario+'?\nA escala e as ausências desta missa também serão removidas.'))return;
+  if(!await uiConfirm('Excluir a celebração de '+DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' · '+c.horario+'?\nA escala e as ausências desta missa também serão removidas.'))return;
   // FK em cascata já remove escalas/ausências; .select() confirma que a linha foi mesmo apagada
   const{data,error}=await sb.from('acolitos_celebracoes').delete().eq('id',c.id).select();
   if(error){toast('Erro ao excluir: '+error.message,'error');return;}
@@ -992,7 +992,7 @@ function trocarPosicao(pe) {
 // Gera e SALVA a escala de todas as missas de um fim de semana (preenche só as vagas ainda vazias)
 async function gerarEscalaSemana(celebs, btnEl) {
   if (!celebs || !celebs.length) return;
-  if (!confirm('Gerar a escala de ' + celebs.length + ' missa(s) deste fim de semana?\n(Preenche as vagas ainda vazias, mantendo o que já estiver montado.)')) return;
+  if (!await uiConfirm('Gerar a escala de ' + celebs.length + ' missa(s) deste fim de semana?\n(Preenche as vagas ainda vazias, mantendo o que já estiver montado.)')) return;
   const txt0 = btnEl ? btnEl.textContent : '';
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Gerando...'; }
   const ordc = celebs.slice().sort((a,b) => (a.data+a.horario).localeCompare(b.data+b.horario));
@@ -1060,7 +1060,7 @@ async function gerarEscalaSemana(celebs, btnEl) {
   }
   if (novas.length) {
     const { error } = await sb.from('acolitos_escalas').insert(novas);
-    if (error) { alert('Erro ao salvar: ' + error.message); if (btnEl) { btnEl.disabled = false; btnEl.textContent = txt0; } return; }
+    if (error) { await uiAlert('Erro ao salvar: ' + error.message); if (btnEl) { btnEl.disabled = false; btnEl.textContent = txt0; } return; }
   }
   await loadDados();
 }
@@ -1138,7 +1138,7 @@ function exportarSemana(celebs, label) {
 // Apaga TODAS as escalas das missas do fim de semana (direto no banco)
 async function limparEscalaSemana(celebs, btnEl) {
   if (!celebs || !celebs.length) return;
-  if (!confirm('Limpar TODAS as escalas das ' + celebs.length + ' missa(s) deste fim de semana?\n(Apaga as posições já montadas — não pode desfazer.)')) return;
+  if (!await uiConfirm('Limpar TODAS as escalas das ' + celebs.length + ' missa(s) deste fim de semana?\n(Apaga as posições já montadas — não pode desfazer.)')) return;
   const txt0 = btnEl ? btnEl.textContent : '';
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Limpando...'; }
   const { error } = await sb.from('acolitos_escalas').delete().in('celebracao_id', celebs.map(c => c.id));
@@ -1486,7 +1486,7 @@ async function abrirAusencias(){
     const mo=document.createElement('div'); mo.style.cssText='font-size:11px;color:var(--text-muted);'; mo.textContent=(MOTIVO_LABEL[a.motivo]||a.motivo)+(a.observacao?' · '+a.observacao:'');
     left.append(nm,wh,mo);
     const del=document.createElement('button'); del.className='mini-del'; del.textContent='🗑'; del.title='Remover ausência';
-    del.onclick=async()=>{ if(!confirm('Remover esta ausência?'))return; await sb.from('acolitos_ausencias').delete().eq('id',a.id); abrirAusencias(); loadDados(); };
+    del.onclick=async()=>{ if(!await uiConfirm('Remover esta ausência?'))return; await sb.from('acolitos_ausencias').delete().eq('id',a.id); abrirAusencias(); loadDados(); };
     row.append(left,del); body.appendChild(row);
   });
 }

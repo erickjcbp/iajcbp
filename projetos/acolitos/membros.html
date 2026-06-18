@@ -381,14 +381,14 @@ function abrirNovoMembro() {
 }
 
 async function arquivarMembro(m) {
-  if (!confirm('Arquivar ' + (m.apelido || m.nome) + '?\nSai das listas e da escala, mas o cadastro e o histórico são mantidos. Você pode restaurar depois.')) return;
+  if (!await uiConfirm('Arquivar ' + (m.apelido || m.nome) + '?\nSai das listas e da escala, mas o cadastro e o histórico são mantidos. Você pode restaurar depois.')) return;
   const { error } = await sbAdmin.from('acolitos_membros').update({ status: 'afastado' }).eq('id', m.id);
-  if (error) { alert('Não foi possível arquivar.'); return; }
+  if (error) { await uiAlert('Não foi possível arquivar.'); return; }
   fecharFicha(); await loadMembros();
 }
 async function restaurarMembro(m) {
   const { error } = await sbAdmin.from('acolitos_membros').update({ status: 'ativo' }).eq('id', m.id);
-  if (error) { alert('Não foi possível restaurar.'); return; }
+  if (error) { await uiAlert('Não foi possível restaurar.'); return; }
   fecharFicha(); await loadMembros();
 }
 
@@ -520,11 +520,11 @@ function editMulti(label, col, current, options, manage) {
 
 // Adiciona/remove habilidade ou competência customizada (tabela acolitos_listas)
 async function addCustomLista(tipo) {
-  const nome = (prompt('Nova ' + (tipo === 'habilidade' ? 'habilidade' : 'competência') + ':') || '').trim();
+  const nome = (await uiPrompt('Nova ' + (tipo === 'habilidade' ? 'habilidade' : 'competência') + ':') || '').trim();
   if (!nome) return;
   const valor = (tipo === 'habilidade' ? 'h_' : 'k_') + nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24) + '_' + Math.random().toString(36).slice(2, 6);
   const { error } = await sbAdmin.from('acolitos_listas').insert({ tipo, valor, label: nome });
-  if (error) { alert('Não foi possível adicionar.'); return; }
+  if (error) { await uiAlert('Não foi possível adicionar.'); return; }
   const arr = tipo === 'habilidade' ? HABILIDADES : COMPETENCIAS;
   const lbl = tipo === 'habilidade' ? HABILIDADE_LABEL : COMPETENCIA_LABEL;
   arr.push([valor, nome]); lbl[valor] = nome;
@@ -533,7 +533,7 @@ async function addCustomLista(tipo) {
 }
 async function removeCustomLista(tipo, valor) {
   const lbl = tipo === 'habilidade' ? HABILIDADE_LABEL : COMPETENCIA_LABEL;
-  if (!confirm('Remover "' + (lbl[valor] || valor) + '" da lista?')) return;
+  if (!await uiConfirm('Remover "' + (lbl[valor] || valor) + '" da lista?')) return;
   await sbAdmin.from('acolitos_listas').delete().eq('tipo', tipo).eq('valor', valor);
   const arr = tipo === 'habilidade' ? HABILIDADES : COMPETENCIAS;
   const i = arr.findIndex(x => x[0] === valor); if (i >= 0) arr.splice(i, 1);
@@ -559,16 +559,16 @@ function appendEquipeFields(el, m) {
 
 // Adiciona/remove função personalizada (tabela acolitos_listas, tipo 'funcao')
 async function addCustomFuncao() {
-  const nome = (prompt('Nova função (ex: Naveta 2, Boldriê, Báculo...):') || '').trim();
+  const nome = (await uiPrompt('Nova função (ex: Naveta 2, Boldriê, Báculo...):') || '').trim();
   if (!nome) return;
   const valor = 'f_' + nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24) + '_' + Math.random().toString(36).slice(2, 6);
   const { error } = await sbAdmin.from('acolitos_listas').insert({ tipo: 'funcao', valor, label: nome });
-  if (error) { alert('Não foi possível adicionar.'); return; }
+  if (error) { await uiAlert('Não foi possível adicionar.'); return; }
   listasCustom.funcao.push({ valor, label: nome });
   renderTab('Evolução');
 }
 async function removeCustomFuncao(valor) {
-  if (!confirm('Remover esta função personalizada?\n(As proficiências dela serão apagadas.)')) return;
+  if (!await uiConfirm('Remover esta função personalizada?\n(As proficiências dela serão apagadas.)')) return;
   await sbAdmin.from('acolitos_listas').delete().eq('tipo', 'funcao').eq('valor', valor);
   await sbAdmin.from('acolitos_habilitacoes').delete().eq('funcao', valor);
   listasCustom.funcao = listasCustom.funcao.filter(x => x.valor !== valor);
@@ -1044,8 +1044,8 @@ async function salvarFicha() {
   renderGrid(); // atualiza os cards atrás, sem fechar a janela
 }
 
-function fecharFicha() {
-  if (fichaDirty && !confirm('Há alterações não salvas. Fechar mesmo assim?')) return;
+async function fecharFicha() {
+  if (fichaDirty && !await uiConfirm('Há alterações não salvas. Fechar mesmo assim?')) return;
   document.getElementById('modal-ficha').classList.remove('open');
   membroAtual = null; habAtual = {}; fichaEdits = {}; fichaDirty = false; fichaDisp = null;
 }
