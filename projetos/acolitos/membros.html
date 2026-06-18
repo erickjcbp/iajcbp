@@ -85,6 +85,8 @@
     </div>
     <button class="btn-sm gold" onclick="abrirNovoMembro()">+ Novo</button>
     <button class="btn-sm gray" id="btn-arq" onclick="toggleArquivados()" title="Ver arquivados">🗄</button>
+    <button class="btn-sm gray" onclick="relatorioMembrosPDF()" title="Relatório (imprimir/PDF)">📄</button>
+    <button class="btn-sm gray" onclick="relatorioMembrosCSV()" title="Exportar CSV">⬇️</button>
   </div>
 
   <div class="filtros-wrap" id="filtros">
@@ -200,6 +202,29 @@ async function loadMembros() {
   listasCustom = { habilidade: [], competencia: [], funcao: [] };
   (listas || []).forEach(r => { if (listasCustom[r.tipo]) listasCustom[r.tipo].push({ valor: r.valor, label: r.label }); });
   renderGrid();
+}
+
+// ── Relatório de Membros (usa a fundação do shared.js) ──
+function _comLabelRel(c){ return c==='matriz'?'Matriz':c==='santo_antonio'?'Sto. Antônio':'Outra'; }
+function _idadeRel(dn){ if(!dn) return ''; const d=new Date(dn+'T00:00:00'); if(isNaN(d.getTime())) return ''; const h=new Date(); let a=h.getFullYear()-d.getFullYear(); const mm=h.getMonth()-d.getMonth(); if(mm<0||(mm===0&&h.getDate()<d.getDate())) a--; return (a>=0&&a<120)?String(a):''; }
+function _nivelLabel(m){ return (typeof nivelInfo==='function' ? nivelInfo(m.nivel||m.role||'aspirante').label : (m.nivel||'')) || '—'; }
+function relatorioMembrosPDF(){
+  const ordem=['matriz','santo_antonio','outra']; const porCom={matriz:[],santo_antonio:[],outra:[]};
+  todos.forEach(m=>{ porCom[ordem.includes(m.comunidade)?m.comunidade:'outra'].push(m); });
+  let corpo='<p class="muted">Total: <b>'+todos.length+'</b> · '+ordem.filter(c=>porCom[c].length).map(c=>_comLabelRel(c)+': '+porCom[c].length).join(' · ')+'</p>';
+  ordem.forEach(c=>{ const ms=porCom[c]; if(!ms.length) return;
+    ms.sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+    const rows=ms.map(m=>[ m.nome||'—', _nivelLabel(m), _idadeRel(m.data_nascimento), m.telefone||'', m.telefone_whatsapp||'', m.responsavel||'', m.tem_tunica?'Sim':'Não', m.status==='afastado'?'Afastado':'Ativo' ]);
+    corpo+='<h2>'+_comLabelRel(c)+' · '+ms.length+'</h2>'+relTabela(['Nome','Nível','Idade','Telefone','WhatsApp','Responsável','Túnica','Status'], rows);
+  });
+  abrirRelatorio({ titulo:'Relatório de Membros', subtitulo:'Acólitos · '+todos.length+' '+(verArquivados?'arquivados':'ativos'), corpo });
+}
+function relatorioMembrosCSV(){
+  const linhas=[['Nome','Apelido','Nível','Comunidade','Nascimento','Idade','Telefone','WhatsApp','Responsável','Cel. Mãe','Cel. Recado','Túnica','Status','Grupo irmãos']];
+  todos.slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).forEach(m=>{
+    linhas.push([ m.nome||'', m.apelido||'', _nivelLabel(m), _comLabelRel(m.comunidade), m.data_nascimento||'', _idadeRel(m.data_nascimento), m.telefone||'', m.telefone_whatsapp||'', m.responsavel||'', m.celular_mae||'', m.celular_recado||'', m.tem_tunica?'Sim':'Não', m.status==='afastado'?'Afastado':'Ativo', m.grupo_irmaos||'' ]);
+  });
+  baixarCSV('membros', linhas);
 }
 
 function filtrar() { renderGrid(); }
