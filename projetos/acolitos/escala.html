@@ -1464,7 +1464,7 @@ function abrirRelatorioFrequencia(){
     +'<p style="font-size:12px;color:var(--text-muted);margin:-4px 0 12px;">Deixe as datas em branco para o acumulado (histórico total).</p>'
     +'<div style="display:flex;gap:10px;"><label style="flex:1;font-size:12px;color:var(--text-muted);">De<input type="date" id="freq-de" class="form-input" style="width:100%;"></label>'
     +'<label style="flex:1;font-size:12px;color:var(--text-muted);">Até<input type="date" id="freq-ate" class="form-input" style="width:100%;"></label></div>'
-    +'<div style="display:flex;gap:8px;margin-top:14px;"><button class="btn-sm gold" id="freq-pdf" style="flex:1;">📄 PDF</button><button class="btn-sm gray" id="freq-csv" style="flex:1;">⬇️ CSV</button><button class="btn-sm gray" id="freq-x">Fechar</button></div>';
+    +'<div style="display:flex;gap:8px;margin-top:14px;"><button class="btn-sm gold" id="freq-pdf" style="flex:1;">🖨 Imprimir/PDF</button><button class="btn-sm gray" id="freq-csv" style="flex:1;">⬇️ CSV</button><button class="btn-sm gray" id="freq-x">Fechar</button></div>';
   ov.appendChild(md); document.body.appendChild(ov);
   md.querySelector('#freq-pdf').onclick=freqPDF;
   md.querySelector('#freq-csv').onclick=freqCSV;

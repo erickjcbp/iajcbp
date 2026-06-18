@@ -85,8 +85,7 @@
     </div>
     <button class="btn-sm gold" onclick="abrirNovoMembro()">+ Novo</button>
     <button class="btn-sm gray" id="btn-arq" onclick="toggleArquivados()" title="Ver arquivados">🗄</button>
-    <button class="btn-sm gray" onclick="relatorioMembrosPDF()" title="Relatório (imprimir/PDF)">📄</button>
-    <button class="btn-sm gray" onclick="relatorioMembrosCSV()" title="Exportar CSV">⬇️</button>
+    <button class="btn-sm gray" onclick="abrirRelatorioMembros()" title="Relatório / backup">📄 Relatório</button>
   </div>
 
   <div class="filtros-wrap" id="filtros">
@@ -208,6 +207,20 @@ async function loadMembros() {
 function _comLabelRel(c){ return c==='matriz'?'Matriz':c==='santo_antonio'?'Sto. Antônio':'Outra'; }
 function _idadeRel(dn){ if(!dn) return ''; const d=new Date(dn+'T00:00:00'); if(isNaN(d.getTime())) return ''; const h=new Date(); let a=h.getFullYear()-d.getFullYear(); const mm=h.getMonth()-d.getMonth(); if(mm<0||(mm===0&&h.getDate()<d.getDate())) a--; return (a>=0&&a<120)?String(a):''; }
 function _nivelLabel(m){ return (typeof nivelInfo==='function' ? nivelInfo(m.nivel||m.role||'aspirante').label : (m.nivel||'')) || '—'; }
+function abrirRelatorioMembros(){
+  const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='420px';
+  md.innerHTML='<div class="modal-title">📄 Relatório de Membros</div>'
+    +'<p style="font-size:12px;color:var(--text-muted);margin:-4px 0 12px;">PDF = resumo legível. CSV = backup completo (todos os dados + funções + frequência).</p>'
+    +'<div style="display:flex;flex-direction:column;gap:8px;">'
+    +'<button class="btn-sm gold" id="rm-pdf" style="width:100%;">🖨 Imprimir/PDF</button>'
+    +'<button class="btn-sm" id="rm-csv" style="width:100%;background:transparent;border:1px solid var(--gold-dim);color:var(--gold-light);">⬇️ CSV (backup completo)</button>'
+    +'<button class="btn-sm gray" id="rm-x" style="width:100%;">Fechar</button></div>';
+  ov.appendChild(md); document.body.appendChild(ov);
+  md.querySelector('#rm-pdf').onclick=()=>relatorioMembrosPDF();
+  md.querySelector('#rm-csv').onclick=()=>relatorioMembrosCSV();
+  md.querySelector('#rm-x').onclick=()=>ov.remove();
+}
 function relatorioMembrosPDF(){
   const ordem=['matriz','santo_antonio','outra']; const porCom={matriz:[],santo_antonio:[],outra:[]};
   todos.forEach(m=>{ porCom[ordem.includes(m.comunidade)?m.comunidade:'outra'].push(m); });
@@ -219,12 +232,26 @@ function relatorioMembrosPDF(){
   });
   abrirRelatorio({ titulo:'Relatório de Membros', subtitulo:'Acólitos · '+todos.length+' '+(verArquivados?'arquivados':'ativos'), corpo });
 }
-function relatorioMembrosCSV(){
-  const linhas=[['Nome','Apelido','Nível','Comunidade','Nascimento','Idade','Telefone','WhatsApp','Responsável','Cel. Mãe','Cel. Recado','Túnica','Status','Grupo irmãos']];
+async function relatorioMembrosCSV(){
+  if(!todos.length){ baixarCSV('membros-backup', [['(sem membros)']]); return; }
+  const { data: habs } = await sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia');
+  const habBy={}; (habs||[]).forEach(h=>{ (habBy[h.membro_id]=habBy[h.membro_id]||{})[h.funcao]=h.proficiencia; });
+  let freqMap={}; try{ freqMap = await fetchFrequencia() || {}; }catch(e){}
+  const memberCols=[...new Set(todos.flatMap(m=>Object.keys(m)))];
+  const funcCols=FUNCOES.map(f=>f.id);
+  const head=memberCols.concat(funcCols.map(id=>'func:'+id)).concat(['freq_servidas','freq_faltas','freq_atrasos','freq_taxa','freq_ultima']);
+  const fmt=v=>(Array.isArray(v)||(v&&typeof v==='object'))?JSON.stringify(v):(v==null?'':String(v));
+  const linhas=[head];
   todos.slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).forEach(m=>{
-    linhas.push([ m.nome||'', m.apelido||'', _nivelLabel(m), _comLabelRel(m.comunidade), m.data_nascimento||'', _idadeRel(m.data_nascimento), m.telefone||'', m.telefone_whatsapp||'', m.responsavel||'', m.celular_mae||'', m.celular_recado||'', m.tem_tunica?'Sim':'Não', m.status==='afastado'?'Afastado':'Ativo', m.grupo_irmaos||'' ]);
+    const h=habBy[m.id]||{}, f=freqMap[m.id]||{};
+    const faltas=(f.faltas_just||0)+(f.faltas_nao_just||0);
+    linhas.push(
+      memberCols.map(c=>fmt(m[c]))
+        .concat(funcCols.map(id=>h[id]||''))
+        .concat([ f.servidas!=null?String(f.servidas):'', String(faltas), f.atrasos!=null?String(f.atrasos):'', f.taxa!=null?String(f.taxa):'', f.ultima_participacao||'' ])
+    );
   });
-  baixarCSV('membros', linhas);
+  baixarCSV('membros-backup', linhas);
 }
 
 function filtrar() { renderGrid(); }

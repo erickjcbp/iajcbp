@@ -407,7 +407,7 @@ body.has-switch { padding-top: calc(var(--header-h) + 46px + env(safe-area-inset
 .kpi-sub    { font-size: 10px; color: var(--text-muted); margin-top: 4px; font-weight: 600; }
 
 /* ── TOOLBAR ─────────────────────────────────────────────────── */
-.toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 10px; }
+.toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 10px; }
 .search-input {
   flex: 1; padding: 11px 14px; min-height: 44px;
   background: var(--surface2); border: 1px solid var(--border-wine);
