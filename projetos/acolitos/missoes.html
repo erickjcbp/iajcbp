@@ -305,6 +305,37 @@ async function renderBoard(main) {
     }
   } catch (e) {}
 
+  // 🌟 Virtudes a desenvolver — progresso vem das quests; coord sela quando formada
+  try {
+    const { data: comps } = await sb.rpc('acolitos_competencias_progresso', { p_membro: ctx.membro.id });
+    const aDesenv = (comps || []).filter(c => !c.formada);
+    if (aDesenv.length) {
+      const ord = { candidata: 0, em_formacao: 1 };
+      const ativas = aDesenv.filter(c => c.status !== 'nenhuma').sort((a, b) => (ord[a.status] - ord[b.status]) || (b.progresso - a.progresso) || a.label.localeCompare(b.label));
+      const naoInic = aDesenv.filter(c => c.status === 'nenhuma').sort((a, b) => a.label.localeCompare(b.label));
+      const vc = document.createElement('div'); vc.className = 'mx-card';
+      const vh = document.createElement('div'); vh.className = 'mx-hd'; vh.textContent = '🌟 Virtudes a desenvolver'; vc.appendChild(vh);
+      const vs = document.createElement('div'); vs.className = 'mx-q-sub'; vs.style.marginBottom = '6px'; vs.textContent = 'Você desenvolve virtudes cumprindo missões. Quando completa o suficiente, a coordenação confirma (sela) a virtude.'; vc.appendChild(vs);
+      ativas.forEach(c => {
+        const r = document.createElement('div'); r.className = 'mx-q';
+        const ic = document.createElement('span'); ic.style.cssText = 'font-size:15px;flex:none;'; ic.textContent = c.status === 'candidata' ? '🟡' : '🌱'; r.appendChild(ic);
+        const bd = document.createElement('div'); bd.className = 'mx-q-body';
+        const t = document.createElement('div'); t.className = 'mx-q-tit'; t.textContent = c.label; bd.appendChild(t);
+        const sub = document.createElement('div'); sub.className = 'mx-q-sub'; sub.textContent = c.status === 'candidata' ? '🟡 Pronta! Aguardando a coordenação confirmar.' : (c.progresso + '/' + c.limiar + ' missões'); bd.appendChild(sub);
+        const bw = document.createElement('div'); bw.style.cssText = 'height:5px;border-radius:3px;background:var(--surface2);overflow:hidden;margin-top:5px;max-width:200px;';
+        const bar = document.createElement('div'); const pct = Math.min(100, Math.round(100 * c.progresso / Math.max(1, c.limiar))); bar.style.cssText = 'height:100%;background:var(--gold);width:' + pct + '%;'; bw.appendChild(bar); bd.appendChild(bw);
+        r.appendChild(bd); vc.appendChild(r);
+      });
+      if (naoInic.length) {
+        const nl = document.createElement('div'); nl.className = 'mx-q-sub'; nl.style.cssText = 'margin-top:' + (ativas.length ? '10px' : '2px') + ';font-weight:700;color:var(--text-muted);'; nl.textContent = 'Ainda não começou (cumpra missões destas virtudes):'; vc.appendChild(nl);
+        const chips = document.createElement('div'); chips.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;';
+        naoInic.forEach(c => { const ch = document.createElement('span'); ch.style.cssText = 'font-size:11px;padding:3px 8px;border-radius:10px;background:var(--surface2);color:var(--text-muted);'; ch.textContent = c.label; chips.appendChild(ch); });
+        vc.appendChild(chips);
+      }
+      main.appendChild(vc);
+    }
+  } catch (e) {}
+
   // Bônus
   const bonus = data.bonus || [];
   const bc = document.createElement('div'); bc.className = 'mx-card';
