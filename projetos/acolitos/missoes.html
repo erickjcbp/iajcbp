@@ -82,6 +82,10 @@ async function renderAll() {
 }
 
 let revisoesMap = {}, revHabMap = {}; // missao_id->obs e funcao->obs (revisões da coordenação)
+// Funções e escala de proficiência (mesma do jornada-admin) — p/ "Funções a desenvolver"
+const FUNCOES_DEV = [['apoio','Apoio'],['cruz','Cruz'],['vela','Vela'],['sineta','Sineta'],['sinao','Sinão'],['altar','Altar'],['turibulo','Turíbulo'],['naveta','Naveta'],['missal','Missal'],['cred_altar','Cerimoniário Altar'],['cred_credencia','Cerimoniário Credência'],['mitra','Mitra'],['baculo','Báculo']];
+const PROF_ORD = ['nao_treinado','em_formacao','apto','experiente','referencia'];
+const PROF_LBL = { nao_treinado:'Não treinado', em_formacao:'Em formação', apto:'Apto', experiente:'Experiente', referencia:'Referência' };
 function statusIco(status) {
   const d = document.createElement('div'); d.className = 'mx-q-ico ' + (status === 'concluida' ? 'done' : status === 'em_analise' ? 'wait' : 'pend');
   d.textContent = status === 'concluida' ? '✓' : status === 'em_analise' ? '⏳' : status === 'revisao' ? '📝' : '○';
@@ -262,6 +266,44 @@ async function renderBoard(main) {
     if (caps.length) caps.forEach(c => main.appendChild(capCard(c)));
     else { const e = document.createElement('div'); e.className = 'mx-empty'; e.style.padding = '8px 2px'; e.textContent = 'Nenhum capítulo cadastrado pra este nível ainda.'; main.appendChild(e); }
   }
+
+  // 📋 Funções a desenvolver — TODAS abaixo de Apto (não só as do próximo nível)
+  try {
+    const { data: mh, error: mhErr } = await sb.rpc('acolitos_hab_minhas', { p_membro: ctx.membro.id });
+    if (mhErr) throw mhErr; // sem a RPC, não renderiza (evita marcar tudo como "a desenvolver")
+    const prof = {}; (mh || []).forEach(h => prof[h.funcao] = h.proficiencia);
+    const pendCodes = new Set((data.pendencias || []).map(p => p.funcao)); // já aparecem na seção do nível
+    const { data: meus } = await sb.rpc('acolitos_hab_pedidos_meus', { p_membro: ctx.membro.id });
+    const pedidoSet = new Set(meus || []);
+    const gaps = FUNCOES_DEV.filter(([code]) => {
+      const p = prof[code] || 'nao_treinado';
+      return PROF_ORD.indexOf(p) < PROF_ORD.indexOf('apto') && !pendCodes.has(code);
+    });
+    if (gaps.length) {
+      const dc = document.createElement('div'); dc.className = 'mx-card';
+      const dh = document.createElement('div'); dh.className = 'mx-hd'; dh.textContent = '📋 Funções a desenvolver'; dc.appendChild(dh);
+      const ds = document.createElement('div'); ds.className = 'mx-q-sub'; ds.style.marginBottom = '6px'; ds.textContent = 'Todas as funções em que você ainda não está Apto. Treine nas missas/ensaios e marque "Já faço" pra coordenação avaliar.'; dc.appendChild(ds);
+      gaps.forEach(([code, label]) => {
+        const f = { funcao: code, label };
+        const p = prof[code] || 'nao_treinado';
+        const r = document.createElement('div'); r.className = 'mx-q';
+        const ic = document.createElement('span'); ic.style.cssText = 'font-size:15px;flex:none;'; ic.textContent = '⚙️'; r.appendChild(ic);
+        const bd = document.createElement('div'); bd.className = 'mx-q-body';
+        const t = document.createElement('div'); t.className = 'mx-q-tit'; t.textContent = label; bd.appendChild(t);
+        const sub = document.createElement('div'); sub.className = 'mx-q-sub'; sub.textContent = 'Atual: ' + (PROF_LBL[p] || p); bd.appendChild(sub);
+        r.appendChild(bd);
+        if (pedidoSet.has(code)) {
+          const tag = document.createElement('span'); tag.className = 'mx-q-sub'; tag.style.cssText = 'color:var(--gold-dim);font-size:11px;font-weight:700;flex:none;'; tag.textContent = '⏳ em análise'; r.appendChild(tag);
+        } else {
+          if (revHabMap[code] != null) { const rv = document.createElement('div'); rv.className = 'mx-q-sub'; rv.style.cssText = 'color:var(--danger-text);font-size:10px;margin-top:2px;font-weight:700;'; rv.textContent = '📝 Revisão: ' + (revHabMap[code] || 'reenvie'); bd.appendChild(rv); }
+          const b = document.createElement('button'); b.className = 'mx-mini go'; b.textContent = revHabMap[code] != null ? 'Reenviar' : 'Já faço';
+          b.onclick = () => pedirHab(f); r.appendChild(b);
+        }
+        dc.appendChild(r);
+      });
+      main.appendChild(dc);
+    }
+  } catch (e) {}
 
   // Bônus
   const bonus = data.bonus || [];
