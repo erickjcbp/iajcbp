@@ -2202,15 +2202,21 @@ function baixarCSV(nomeBase, linhas){
   if (window.__acModalHistory) return; window.__acModalHistory = true;
 
   var stack = [];          // overlays abertos, na ordem (LIFO)
-  var closingProgrammatic = false; // evita reprocessar nosso próprio history.back()
+  var pendingBacks = 0;    // nº de history.back() nossos ainda não consumidos por um popstate
+  // (contador, não boolean: quando 2+ overlays fecham no mesmo tick — ex. uiConfirm
+  // sobre um modal-avancar, confirmar fecha os dois de uma vez — cada onClose dispara
+  // seu próprio back(); um boolean deixaria os subsequentes "perdidos" e o popstate real
+  // só consumiria 1, sobrando estados fantasma no histórico.)
 
   function isOpen(ov){ return ov && ov.classList && ov.classList.contains('open') && ov.classList.contains('modal-overlay'); }
   function optedOut(ov){ return ov.hasAttribute && ov.hasAttribute('data-no-history'); }
 
   function onOpen(ov){
     if (optedOut(ov) || stack.indexOf(ov) !== -1) return;
-    stack.push(ov);
-    try { history.pushState({ acmodal: true, depth: stack.length }, ''); } catch(e){}
+    try {
+      history.pushState({ acmodal: true, depth: stack.length + 1 }, '');
+      stack.push(ov); // só entra na pilha se o pushState realmente aconteceu
+    } catch(e){}
   }
 
   // Chamado quando um modal deixou de estar aberto por QUALQUER via (X, fundo, Esc, programático, .open removido).
@@ -2218,12 +2224,11 @@ function baixarCSV(nomeBase, linhas){
     var i = stack.indexOf(ov);
     if (i === -1) return;
     stack.splice(i, 1);
-    // Se o fechamento NÃO veio de um popstate nosso, descartamos o estado empilhado.
-    if (!closingProgrammatic) {
-      closingProgrammatic = true;
-      try { history.back(); } catch(e){ closingProgrammatic = false; }
-      // o popstate resultante cai no handler abaixo, que reseta a flag.
-    }
+    // Fechamento manual/programático (não veio de um popstate do usuário): descartamos
+    // o estado empilhado. Cada onClose soma seu próprio back() ao contador — o popstate
+    // handler consome exatamente um por vez, então N closes no mesmo tick = N backs = N consumos.
+    pendingBacks++;
+    try { history.back(); } catch(e){ pendingBacks--; }
   }
 
   // Fecha visualmente um overlay a pedido do Voltar (cobre os dois padrões + ui* com Promise pendente).
@@ -2237,11 +2242,12 @@ function baixarCSV(nomeBase, linhas){
   }
 
   window.addEventListener('popstate', function(){
-    if (closingProgrammatic) {           // foi o history.back() que nós disparamos ao fechar por X/fundo/Esc
-      closingProgrammatic = false;
+    if (pendingBacks > 0) {              // consome um dos nossos history.back() (X/fundo/Esc/programático)
+      pendingBacks--;
       return;
     }
     // Voltar do usuário: se há modal aberto, fecha o topo e NÃO deixa a navegação prosseguir "vazia".
+    // Não chamamos back() aqui — é o próprio Back do usuário que está sendo consumido.
     if (stack.length) {
       var ov = stack[stack.length - 1];
       stack.pop();
@@ -2263,6 +2269,12 @@ function baixarCSV(nomeBase, linhas){
             if (isOpen(n)) onOpen(n);
           }
         });
+        // Assume: .modal-overlay é sempre removido DIRETAMENTE (não dentro de um container
+        // pai também removido). m.removedNodes só lista os nós de topo removidos — se um
+        // overlay algum dia for aninhado dentro de outro elemento e o pai inteiro for
+        // desmontado de uma vez, este ramo não vê o overlay e o estado dele fica órfão
+        // na pilha. Hoje todo overlay dinâmico é anexado direto em document.body, então
+        // não ocorre; um novo call-site que aninhe overlay precisa revisar isto.
         m.removedNodes && Array.prototype.forEach.call(m.removedNodes, function(n){
           if (n.nodeType===1 && n.classList && n.classList.contains('modal-overlay')) onClose(n);
         });
