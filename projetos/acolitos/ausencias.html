@@ -98,14 +98,13 @@ function dispMapDeAus(rows) { const m = {}; (rows || []).forEach(r => { (m[r.mem
 function horKeyDeCelAus(c) { const d = new Date(c.data + 'T00:00:00'); const DIAK = ['dom','seg','ter','qua','qui','sex','sab']; return DIAK[d.getDay()] + '_' + c.horario; }
 
 // Aplica a auto-troca (motor único GeradorSubstituto) para os itens recém-APROVADOS da fila pública.
-// `itens`: objetos crus vindos de acolitos_ausencia_pendente_listar() — {membro_id,data,horario,comunidade,...}.
-// GUESS/adaptação: a RPC de listagem não devolve celebracao_id (só data/horario/comunidade, já
-// juntados da celebração para exibir o rótulo) — então resolvemos a celebração de volta por
-// (data,horario,comunidade), que já é a chave usada em celLabel() nesta mesma tela para identificar
-// a missa. Itens sem horario/comunidade são "data avulsa" (sem celebração única) e ficam de fora,
-// igual ao caminho de Registrar Ausência (enviarAusencia) só chama acolitos_substituir_ausente ali.
+// `itens`: objetos vindos de acolitos_ausencia_pendente_listar() — {membro_id,data,horario,comunidade,celebracao_id,...}.
+// Migration 010 passou a devolver celebracao_id direto na RPC: usamos ele como identidade (não mais
+// o casamento frágil por data+horario+comunidade). Itens com celebracao_id null são "data avulsa"
+// (sem celebração única) e ficam de fora, igual ao caminho de Registrar Ausência (enviarAusencia) só
+// chama acolitos_substituir_ausente ali.
 async function autoTrocaAprovadas(itens) {
-  const comCel = (itens || []).filter(p => p.horario && p.comunidade);
+  const comCel = (itens || []).filter(p => p.celebracao_id != null);
   if (!comCel.length) return;
   await carregarRosterAus();
   if (!rosterMembrosAus || !rosterMembrosAus.length) return;
@@ -115,27 +114,52 @@ async function autoTrocaAprovadas(itens) {
   const dispMap = dispMapDeAus(dispRows);
   const config = { gerador: (typeof cfg === 'function' ? cfg('gerador', {}) : {}), funcoes_maiores: (typeof cfg === 'function' ? cfg('funcoes_maiores', null) : null) };
 
-  const datas = [...new Set(comCel.map(p => p.data))];
-  const { data: cels } = await sb.from('acolitos_celebracoes').select('id,data,horario,comunidade').in('data', datas);
-  const celDe = (p) => (cels || []).find(c => c.data === p.data && c.horario === p.horario && c.comunidade === p.comunidade);
+  // A RPC já devolve data/horario/comunidade junto (pro rótulo na tela) — usamos direto de `p`.
+  // Só busca no banco por id os que vierem incompletos (defesa contra RPC antiga/parcial).
+  const idsFaltantes = [...new Set(comCel.filter(p => !p.data || !p.comunidade).map(p => p.celebracao_id))];
+  let celsPorId = {};
+  if (idsFaltantes.length) {
+    const { data: cels } = await sb.from('acolitos_celebracoes').select('id,data,horario,comunidade').in('id', idsFaltantes);
+    (cels || []).forEach(c => { celsPorId[c.id] = c; });
+  }
+  const celDe = (p) => {
+    if (p.data && p.comunidade) return { id: p.celebracao_id, data: p.data, horario: p.horario, comunidade: p.comunidade };
+    const c = celsPorId[p.celebracao_id];
+    return c ? { id: c.id, data: c.data, horario: c.horario, comunidade: c.comunidade } : null;
+  };
 
+  const cargaPorData = {}; // Fix 3: cacheia a carga (janela de 42d) por data — evita 1 query por item aprovado
   const trocas = [];
+  const falhas = [];
   for (const p of comCel) {
     const cel = celDe(p);
-    if (!cel) continue; // não achou a celebração correspondente — não força nada
-    const carga = await carregarCargaAus(cel.data);
-    const t = await GeradorSubstituto.aplicarTrocaEscala(sb,
-      { celebracao_id: cel.id, comunidade: cel.comunidade, data: cel.data, membroAusenteId: p.membro_id },
-      (funcao, usadosNaMissa, usadoFds) => ({
-        funcao, comunidade: cel.comunidade, horKey: horKeyDeCelAus(cel), membroAusenteId: p.membro_id,
-        roster: rosterMembrosAus, habMap, dispMap, cargaMap: carga,
-        usadosNaMissa, usadoFds: new Set(), config
-      }));
-    if (t) trocas.push(t);
+    if (!cel || !cel.id) continue; // não achou a celebração — não força nada
+    try {
+      if (!cargaPorData[cel.data]) cargaPorData[cel.data] = await carregarCargaAus(cel.data);
+      const carga = cargaPorData[cel.data];
+      const t = await GeradorSubstituto.aplicarTrocaEscala(sb,
+        { celebracao_id: cel.id, comunidade: cel.comunidade, data: cel.data, membroAusenteId: p.membro_id },
+        (funcao, usadosNaMissa, usadoFds) => ({
+          funcao, comunidade: cel.comunidade, horKey: horKeyDeCelAus(cel), membroAusenteId: p.membro_id,
+          roster: rosterMembrosAus, habMap, dispMap, cargaMap: carga,
+          usadosNaMissa, usadoFds: new Set(), config
+        }));
+      if (t) trocas.push(t);
+    } catch (e) {
+      console.error('auto-troca item falhou', p, e);
+      falhas.push(p);
+    }
   }
   if (trocas.length) {
     const nomes = {}; rosterMembrosAus.forEach(m => { nomes[m.id] = m.apelido || m.nome; });
     GeradorSubstituto.abrirResumoTrocas(trocas, nomes, (t) => GeradorSubstituto.desfazerTroca(sb, t));
+  }
+  if (falhas.length) {
+    // Fix 2: sinaliza pro chamador (approve flow) mostrar aviso — a aprovação em si já foi salva,
+    // isso só avisa que a troca automática pode ter ficado incompleta para 1+ item.
+    const err = new Error('auto-troca falhou para ' + falhas.length + ' item(ns) aprovado(s)');
+    err.falhas = falhas;
+    throw err;
   }
 }
 let motivoSelecionado = 'doenca';
@@ -194,7 +218,13 @@ async function renderPendentesPublicas(){
       // a ausência real com celebracao_id). `pend` é o array completo carregado no topo desta função.
       if (acao === 'aprovar') {
         const itens = pend.filter(p => ids.includes(p.id));
-        try { await autoTrocaAprovadas(itens); } catch (e) { console.error('auto-troca (aprovação) falhou', e); }
+        try { await autoTrocaAprovadas(itens); }
+        catch (e) {
+          console.error('auto-troca (aprovação) falhou', e);
+          // Ausência já foi aprovada (não desfaz) — só avisa que a troca automática não foi
+          // garantida, pro coordenador conferir a escala manualmente.
+          await uiAlert('Ausência aprovada, mas a troca automática não foi concluída para 1 ou mais item(ns). Confira a escala manualmente.');
+        }
       }
     } else { await uiAlert('Erro ao processar.'); }
   };
