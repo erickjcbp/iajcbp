@@ -54,6 +54,7 @@
 </div>
 
 <script src="shared.js"></script>
+<script src="gerador-substituto.js"></script>
 <script>
 let MOTIVOS = { doenca:'🤒 Doença', viagem:'✈️ Viagem', familia:'👨‍👩‍👧 Família', outro:'📌 Outro' }; // fallback; o Config (acolitos_listas tipo motivo) sobrescreve
 async function carregarMotivos(){
@@ -65,14 +66,77 @@ const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 // EQUIPE_ROLES já vem do shared.js (redeclarar com const aqui quebrava o script)
 
 let ctx = null;
-let rosterMembrosAus = null, rosterMapAus = {};
+let rosterMembrosAus = null, rosterMapAus = {}, rosterHabsAus = [];
 // Roster seguro (security-definer) — cobre o cerimoniário, que não lê acolitos_membros por RLS.
 async function carregarRosterAus() {
   if (rosterMembrosAus) return rosterMembrosAus;
   const { data } = await sb.rpc('acolitos_roster_substituicao');
   rosterMembrosAus = (data && data.membros) || [];
+  rosterHabsAus = (data && data.habs) || [];
   rosterMapAus = {}; rosterMembrosAus.forEach(m => { rosterMapAus[m.id] = m; });
   return rosterMembrosAus;
+}
+
+// ── Motor único (GeradorSubstituto) — auto-troca ao APROVAR ausência pública ──
+// Espelha carregarCargaHistorica/dispMapDe/horKeyDe da escala.html (mesma janela/regra).
+async function carregarCargaAus(refData) {
+  const _ger = (typeof cfg === 'function') ? (cfg('gerador', {}) || {}) : {};
+  const dias = Number(_ger.janela_dias) || 42;
+  const ini = new Date(refData + 'T00:00:00'); ini.setDate(ini.getDate() - dias);
+  const iniStr = ini.toISOString().slice(0, 10);
+  const base = {};
+  try {
+    const { data: cels } = await sb.from('acolitos_celebracoes').select('id').gte('data', iniStr).lte('data', refData);
+    const ids = (cels || []).map(c => c.id);
+    if (!ids.length) return base;
+    const { data } = await sb.from('acolitos_escalas').select('membro_id').in('celebracao_id', ids).limit(5000);
+    (data || []).forEach(e => { base[e.membro_id] = (base[e.membro_id] || 0) + 1; });
+  } catch (err) { console.error('carga histórica (ausências) falhou', err); }
+  return base;
+}
+function dispMapDeAus(rows) { const m = {}; (rows || []).forEach(r => { (m[r.membro_id] = m[r.membro_id] || []).push(r.dia + '_' + r.horario); }); return m; }
+function horKeyDeCelAus(c) { const d = new Date(c.data + 'T00:00:00'); const DIAK = ['dom','seg','ter','qua','qui','sex','sab']; return DIAK[d.getDay()] + '_' + c.horario; }
+
+// Aplica a auto-troca (motor único GeradorSubstituto) para os itens recém-APROVADOS da fila pública.
+// `itens`: objetos crus vindos de acolitos_ausencia_pendente_listar() — {membro_id,data,horario,comunidade,...}.
+// GUESS/adaptação: a RPC de listagem não devolve celebracao_id (só data/horario/comunidade, já
+// juntados da celebração para exibir o rótulo) — então resolvemos a celebração de volta por
+// (data,horario,comunidade), que já é a chave usada em celLabel() nesta mesma tela para identificar
+// a missa. Itens sem horario/comunidade são "data avulsa" (sem celebração única) e ficam de fora,
+// igual ao caminho de Registrar Ausência (enviarAusencia) só chama acolitos_substituir_ausente ali.
+async function autoTrocaAprovadas(itens) {
+  const comCel = (itens || []).filter(p => p.horario && p.comunidade);
+  if (!comCel.length) return;
+  await carregarRosterAus();
+  if (!rosterMembrosAus || !rosterMembrosAus.length) return;
+
+  const habMap = {}; (rosterHabsAus || []).forEach(h => { (habMap[h.membro_id] = habMap[h.membro_id] || {})[h.funcao] = h.proficiencia; });
+  const { data: dispRows } = await sb.from('acolitos_disponibilidade').select('membro_id,dia,horario');
+  const dispMap = dispMapDeAus(dispRows);
+  const config = { gerador: (typeof cfg === 'function' ? cfg('gerador', {}) : {}), funcoes_maiores: (typeof cfg === 'function' ? cfg('funcoes_maiores', null) : null) };
+
+  const datas = [...new Set(comCel.map(p => p.data))];
+  const { data: cels } = await sb.from('acolitos_celebracoes').select('id,data,horario,comunidade').in('data', datas);
+  const celDe = (p) => (cels || []).find(c => c.data === p.data && c.horario === p.horario && c.comunidade === p.comunidade);
+
+  const trocas = [];
+  for (const p of comCel) {
+    const cel = celDe(p);
+    if (!cel) continue; // não achou a celebração correspondente — não força nada
+    const carga = await carregarCargaAus(cel.data);
+    const t = await GeradorSubstituto.aplicarTrocaEscala(sb,
+      { celebracao_id: cel.id, comunidade: cel.comunidade, data: cel.data, membroAusenteId: p.membro_id },
+      (funcao, usadosNaMissa, usadoFds) => ({
+        funcao, comunidade: cel.comunidade, horKey: horKeyDeCelAus(cel), membroAusenteId: p.membro_id,
+        roster: rosterMembrosAus, habMap, dispMap, cargaMap: carga,
+        usadosNaMissa, usadoFds: new Set(), config
+      }));
+    if (t) trocas.push(t);
+  }
+  if (trocas.length) {
+    const nomes = {}; rosterMembrosAus.forEach(m => { nomes[m.id] = m.apelido || m.nome; });
+    GeradorSubstituto.abrirResumoTrocas(trocas, nomes, (t) => GeradorSubstituto.desfazerTroca(sb, t));
+  }
 }
 let motivoSelecionado = 'doenca';
 let datasAvulsasSel = []; // datas (YYYY-MM-DD) informadas sem celebração cadastrada
@@ -124,7 +188,15 @@ async function renderPendentesPublicas(){
   };
   const decidir = async (ids, acao, onOk)=>{
     const { data:r } = await sb.rpc('acolitos_ausencia_pendente_decidir',{ p_ids:ids, p_acao:acao });
-    if(r && r.ok){ onOk(); } else { await uiAlert('Erro ao processar.'); }
+    if(r && r.ok){
+      onOk();
+      // Auto-troca (Task 5): só ao aprovar, e só para os itens desta chamada (o RPC já gravou
+      // a ausência real com celebracao_id). `pend` é o array completo carregado no topo desta função.
+      if (acao === 'aprovar') {
+        const itens = pend.filter(p => ids.includes(p.id));
+        try { await autoTrocaAprovadas(itens); } catch (e) { console.error('auto-troca (aprovação) falhou', e); }
+      }
+    } else { await uiAlert('Erro ao processar.'); }
   };
 
   // Ação em massa
