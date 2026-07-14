@@ -2048,6 +2048,7 @@ function uiConfirm(message, opts){
     const no=document.createElement('button'); no.className='btn-sm gray'; no.style.flex='1'; no.textContent=opts.cancel||'Cancelar';
     const yes=document.createElement('button'); yes.className='btn-sm gold'; yes.style.flex='1'; yes.textContent=opts.ok||'Confirmar';
     let dn=false; function done(v){ if(dn)return; dn=true; ov.remove(); resolve(v); }
+    ov._acResolveClose = function(){ done(false); }; // Voltar/gesto fecha == cancelar (evita Promise pendurada)
     no.onclick=function(){ done(false); }; yes.onclick=function(){ done(true); };
     ov.onclick=function(e){ if(e.target===ov) done(false); };
     acts.append(no, yes); md.append(msg, acts); ov.appendChild(md); document.body.appendChild(ov);
@@ -2062,6 +2063,7 @@ function uiAlert(message, opts){
     const msg=document.createElement('p'); msg.style.cssText='font-size:14px;color:var(--text);line-height:1.5;white-space:pre-line;margin:0 0 16px;'; msg.textContent=message;
     const ok=document.createElement('button'); ok.className='btn-sm gold'; ok.style.width='100%'; ok.textContent=opts.ok||'OK';
     let dn=false; function done(){ if(dn)return; dn=true; ov.remove(); resolve(); }
+    ov._acResolveClose = done; // Voltar/gesto fecha == OK (evita Promise pendurada)
     ok.onclick=done; ov.onclick=function(e){ if(e.target===ov) done(); };
     md.append(msg, ok); ov.appendChild(md); document.body.appendChild(ov);
   });
@@ -2078,6 +2080,7 @@ function uiPrompt(message, opts){
     const no=document.createElement('button'); no.className='btn-sm gray'; no.style.flex='1'; no.textContent=opts.cancel||'Cancelar';
     const yes=document.createElement('button'); yes.className='btn-sm gold'; yes.style.flex='1'; yes.textContent=opts.ok||'OK';
     let dn=false; function done(v){ if(dn)return; dn=true; ov.remove(); resolve(v); }
+    ov._acResolveClose = function(){ done(null); }; // Voltar/gesto fecha == cancelar (evita Promise pendurada)
     no.onclick=function(){ done(null); }; yes.onclick=function(){ done(inp.value); };
     inp.onkeydown=function(e){ if(e.key==='Enter') done(inp.value); };
     ov.onclick=function(e){ if(e.target===ov) done(null); };
@@ -2131,6 +2134,7 @@ function baixarCSV(nomeBase, linhas){
   let modal = null, overlay = null, startY = 0, curY = 0, dragging = false;
   function fechar(ov) {
     if (!ov) return;
+    if (typeof ov._acResolveClose === 'function') { ov._acResolveClose(); return; } // ui* pendente: resolve a Promise (não só remove)
     if (ov.id) ov.classList.remove('open'); else ov.remove();
   }
   document.addEventListener('touchstart', (e) => {
@@ -2162,7 +2166,7 @@ function baixarCSV(nomeBase, linhas){
 
 // ── FECHAR/VOLTAR CONSISTENTE EM TODO MODAL (✕ no canto + tecla Esc) ──
 (function () {
-  function closeOverlay(ov) { if (!ov) return; if (ov.id) ov.classList.remove('open'); else ov.remove(); }
+  function closeOverlay(ov) { if (!ov) return; if (typeof ov._acResolveClose === 'function') { ov._acResolveClose(); return; } if (ov.id) ov.classList.remove('open'); else ov.remove(); }
   function ensureClose(modal) {
     if (!modal || modal.querySelector(':scope > .modal-close')) return;
     const x = document.createElement('button');
@@ -2185,4 +2189,102 @@ function baixarCSV(nomeBase, linhas){
     const opens = [...document.querySelectorAll('.modal-overlay.open')];
     if (opens.length) closeOverlay(opens[opens.length - 1]);
   });
+})();
+
+// ── Histórico de modal: o Voltar do navegador/gesto fecha o modal aberto ──
+// Transparente e app-wide: observa .modal-overlay.open no DOM (cobre modais fixos e
+// dinâmicos), empilha um estado no history ao abrir, e no popstate fecha o topo.
+// Spec D · Fase 1. Opt-out: overlays com [data-no-history] não entram no histórico
+// (nenhum overlay do shared.js precisou disso — celebração/PWA/cropper usam outras
+// classes, não .modal-overlay; ver relatório em .superpowers/sdd/nav-f1-report.md).
+(function modalHistory(){
+  'use strict';
+  if (window.__acModalHistory) return; window.__acModalHistory = true;
+
+  var stack = [];          // overlays abertos, na ordem (LIFO)
+  var pendingBacks = 0;    // nº de history.back() nossos ainda não consumidos por um popstate
+  // (contador, não boolean: quando 2+ overlays fecham no mesmo tick — ex. uiConfirm
+  // sobre um modal-avancar, confirmar fecha os dois de uma vez — cada onClose dispara
+  // seu próprio back(); um boolean deixaria os subsequentes "perdidos" e o popstate real
+  // só consumiria 1, sobrando estados fantasma no histórico.)
+
+  function isOpen(ov){ return ov && ov.classList && ov.classList.contains('open') && ov.classList.contains('modal-overlay'); }
+  function optedOut(ov){ return ov.hasAttribute && ov.hasAttribute('data-no-history'); }
+
+  function onOpen(ov){
+    if (optedOut(ov) || stack.indexOf(ov) !== -1) return;
+    try {
+      history.pushState({ acmodal: true, depth: stack.length + 1 }, '');
+      stack.push(ov); // só entra na pilha se o pushState realmente aconteceu
+    } catch(e){}
+  }
+
+  // Chamado quando um modal deixou de estar aberto por QUALQUER via (X, fundo, Esc, programático, .open removido).
+  function onClose(ov){
+    var i = stack.indexOf(ov);
+    if (i === -1) return;
+    stack.splice(i, 1);
+    // Fechamento manual/programático (não veio de um popstate do usuário): descartamos
+    // o estado empilhado. Cada onClose soma seu próprio back() ao contador — o popstate
+    // handler consome exatamente um por vez, então N closes no mesmo tick = N backs = N consumos.
+    pendingBacks++;
+    try { history.back(); } catch(e){ pendingBacks--; }
+  }
+
+  // Fecha visualmente um overlay a pedido do Voltar (cobre os dois padrões + ui* com Promise pendente).
+  function closeOverlay(ov){
+    if (!ov) return;
+    if (typeof ov._acResolveClose === 'function') { ov._acResolveClose(); return; } // uiConfirm/uiAlert/uiPrompt: resolve como cancelar/OK
+    if (ov.classList.contains('open')) ov.classList.remove('open');
+    if (ov.parentNode && !ov.classList.contains('open') && ov.dataset.acmodalDynamic === '1') {
+      ov.parentNode.removeChild(ov);
+    }
+  }
+
+  window.addEventListener('popstate', function(){
+    if (pendingBacks > 0) {              // consome um dos nossos history.back() (X/fundo/Esc/programático)
+      pendingBacks--;
+      return;
+    }
+    // Voltar do usuário: se há modal aberto, fecha o topo e NÃO deixa a navegação prosseguir "vazia".
+    // Não chamamos back() aqui — é o próprio Back do usuário que está sendo consumido.
+    if (stack.length) {
+      var ov = stack[stack.length - 1];
+      stack.pop();
+      closeOverlay(ov);
+    }
+    // se stack vazio: navegação normal (não intervimos).
+  });
+
+  // Observa o DOM inteiro: entra/sai .open e nós adicionados/removidos.
+  var mo = new MutationObserver(function(muts){
+    muts.forEach(function(m){
+      if (m.type === 'attributes' && m.target && m.target.classList && m.target.classList.contains('modal-overlay')) {
+        if (isOpen(m.target)) onOpen(m.target); else onClose(m.target);
+      }
+      if (m.type === 'childList') {
+        m.addedNodes && Array.prototype.forEach.call(m.addedNodes, function(n){
+          if (n.nodeType===1 && n.classList && n.classList.contains('modal-overlay')) {
+            n.dataset.acmodalDynamic = '1';           // criado dinamicamente (fecha com remove() completo, não só classList)
+            if (isOpen(n)) onOpen(n);
+          }
+        });
+        // Assume: .modal-overlay é sempre removido DIRETAMENTE (não dentro de um container
+        // pai também removido). m.removedNodes só lista os nós de topo removidos — se um
+        // overlay algum dia for aninhado dentro de outro elemento e o pai inteiro for
+        // desmontado de uma vez, este ramo não vê o overlay e o estado dele fica órfão
+        // na pilha. Hoje todo overlay dinâmico é anexado direto em document.body, então
+        // não ocorre; um novo call-site que aninhe overlay precisa revisar isto.
+        m.removedNodes && Array.prototype.forEach.call(m.removedNodes, function(n){
+          if (n.nodeType===1 && n.classList && n.classList.contains('modal-overlay')) onClose(n);
+        });
+      }
+    });
+  });
+  function start(){
+    mo.observe(document.body, { subtree:true, childList:true, attributes:true, attributeFilter:['class'] });
+    // captura modais já abertos no load (raro)
+    Array.prototype.forEach.call(document.querySelectorAll('.modal-overlay.open'), onOpen);
+  }
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
 })();
