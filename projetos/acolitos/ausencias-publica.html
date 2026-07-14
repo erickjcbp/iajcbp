@@ -2,7 +2,13 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <script>
+    // Bloqueia zoom por pinça/gesto no iOS Safari (que ignora user-scalable=no). Android/PWA: viewport acima.
+    ['gesturestart','gesturechange','gestureend'].forEach(function(ev){
+      document.addEventListener(ev, function(e){ e.preventDefault(); }, { passive:false });
+    });
+  </script>
   <title>Informar Ausência — Acólitos JCBP</title>
   <link rel="icon" href="../../midia/logos/brasao-pastoral.png">
   <link rel="apple-touch-icon" href="../../midia/logos/brasao-pastoral.png">
