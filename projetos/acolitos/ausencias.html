@@ -95,7 +95,7 @@ async function carregarCargaAus(refData) {
   return base;
 }
 function dispMapDeAus(rows) { const m = {}; (rows || []).forEach(r => { (m[r.membro_id] = m[r.membro_id] || []).push(r.dia + '_' + r.horario); }); return m; }
-function horKeyDeCelAus(c) { const d = new Date(c.data + 'T00:00:00'); const DIAK = ['dom','seg','ter','qua','qui','sex','sab']; return DIAK[d.getDay()] + '_' + c.horario; }
+function horKeyDeCelAus(c) { const dow = new Date(c.data + 'T00:00:00').getDay(); const diaK = dow===0?'domingo':dow===6?'sabado':null; return diaK ? diaK + '_' + c.horario : null; }
 
 // Aplica a auto-troca (motor único GeradorSubstituto) para os itens recém-APROVADOS da fila pública.
 // `itens`: objetos vindos de acolitos_ausencia_pendente_listar() — {membro_id,data,horario,comunidade,celebracao_id,...}.
