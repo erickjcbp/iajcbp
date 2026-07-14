@@ -132,6 +132,25 @@
 
     .footer{ text-align:center; font-size:11px; color:var(--muted); margin-top:22px; }
 
+    /* Tutorial (coach-marks) */
+    #tourBackdrop{ position:fixed; inset:0; background:rgba(0,0,0,.62); z-index:80; display:none; }
+    #tourBackdrop.show{ display:block; }
+    #tourRing{ position:absolute; border:2px solid var(--gold-light); border-radius:14px;
+      box-shadow:0 0 0 4000px rgba(0,0,0,.62); transition:all .25s ease; pointer-events:none; }
+    #tourTip{ position:absolute; max-width:280px; background:linear-gradient(180deg,var(--surface),#241019);
+      border:1px solid var(--gold-dim); border-radius:14px; padding:14px 15px; z-index:82;
+      box-shadow:0 14px 40px rgba(0,0,0,.6); transition:all .25s ease; }
+    #tourTip .tnum{ font-family:'Sora',sans-serif; font-size:11px; color:var(--gold-light); font-weight:800; letter-spacing:.4px; }
+    #tourTip .ttxt{ font-size:13.5px; line-height:1.5; margin:5px 0 12px; color:var(--text); }
+    #tourTip .trow{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    #tourTip .tskip{ background:none; border:none; color:var(--muted); font-size:12.5px; cursor:pointer; font-family:inherit; }
+    #tourTip .tnext{ border:none; border-radius:10px; padding:9px 16px; font-family:'Sora',sans-serif;
+      font-weight:800; font-size:13px; cursor:pointer; color:#2a1500;
+      background:linear-gradient(160deg,var(--gold-light),var(--gold)); }
+    .help-btn{ display:inline-flex; align-items:center; gap:6px; margin:0 auto; cursor:pointer;
+      background:#3a1c24; border:1px solid var(--gold-dim); color:var(--gold-light);
+      border-radius:20px; padding:6px 13px; font-size:12px; font-weight:700; font-family:'Sora',sans-serif; }
+
     /* Tela de sucesso */
     .ok-screen{ text-align:center; padding:48px 16px; }
     .ok-screen .crest{ width:70px; height:70px; object-fit:contain; opacity:.95; }
@@ -145,6 +164,7 @@
         <img class="crest" src="../../midia/logos/brasao-pastoral.png" alt="Brasão da Pastoral" onerror="this.style.display='none'">
         <h1>Informar Ausência</h1>
         <p class="sub">Avise que um ou mais coroinhas não poderão servir em determinadas celebrações.</p>
+        <button id="verTutorial" class="help-btn" type="button">❔ Ver tutorial</button>
       </div>
 
       <div class="card">
@@ -180,6 +200,13 @@
       <button class="btn" style="max-width:280px;margin:22px auto 0;" onclick="location.reload()">Informar outra ausência</button>
     </div>
     <div id="flash" class="flash"></div>
+  </div>
+
+  <div id="tourBackdrop"><div id="tourRing"></div></div>
+  <div id="tourTip" style="display:none;">
+    <div class="tnum" id="tourNum"></div>
+    <div class="ttxt" id="tourTxt"></div>
+    <div class="trow"><button class="tskip" id="tourSkip">Pular</button><button class="tnext" id="tourNext">Próximo</button></div>
   </div>
 
   <!-- supabase-js auto-hospedado (mesmo domínio) para não depender de CDN externo,
@@ -389,6 +416,44 @@
       $('ok-screen').style.display='block';
       window.scrollTo(0,0);
     };
+
+    // ── TUTORIAL (coach-marks) ──
+    const TOUR=[
+      { el:'busca',      n:'PASSO 1 DE 4', t:'Comece digitando o nome do coroinha que vai faltar. Toque no nome que aparecer para adicionar — pode adicionar vários.' },
+      { el:'cels',       n:'PASSO 2 DE 4', t:'Marque as celebrações em que ele vai faltar. Use "marcar mês" ou "marcar semana" para selecionar vários de uma vez.' },
+      { el:'informante', n:'PASSO 3 DE 4', t:'Preencha seu nome, o motivo e um contato. São obrigatórios para a equipe confirmar.' },
+      { el:'enviar',     n:'PASSO 4 DE 4', t:'Pronto! Toque em "Enviar aviso" e a equipe recebe a ausência para confirmar.' }
+    ];
+    let tourI=0;
+    function posTour(){
+      const step=TOUR[tourI]; const target=$(step.el); if(!target) return endTour();
+      target.scrollIntoView({block:'center',behavior:'smooth'});
+      // espera o scroll assentar antes de medir
+      setTimeout(()=>{
+        const r=target.getBoundingClientRect();
+        const ring=$('tourRing'), tip=$('tourTip');
+        ring.style.left=(r.left-6)+'px'; ring.style.top=(r.top-6)+'px';
+        ring.style.width=(r.width+12)+'px'; ring.style.height=(r.height+12)+'px';
+        $('tourNum').textContent=step.n; $('tourTxt').textContent=step.t;
+        $('tourNext').textContent = tourI===TOUR.length-1 ? 'Entendi' : 'Próximo';
+        tip.style.display='block';
+        // posiciona o balão abaixo do alvo (ou acima se não couber)
+        const th=tip.offsetHeight||150, below=r.bottom+12, fits=below+th < window.innerHeight;
+        tip.style.top = (fits ? below : Math.max(12, r.top-th-12)) + 'px';
+        const left=Math.min(Math.max(12, r.left), window.innerWidth-tip.offsetWidth-12);
+        tip.style.left=left+'px';
+      }, 260);
+    }
+    function startTour(){ tourI=0; $('tourBackdrop').classList.add('show'); posTour(); }
+    function endTour(){
+      $('tourBackdrop').classList.remove('show'); $('tourTip').style.display='none';
+      try{ localStorage.setItem('aus_tutorial_visto','1'); }catch(e){}
+    }
+    $('tourNext').onclick=()=>{ if(tourI>=TOUR.length-1) return endTour(); tourI++; posTour(); };
+    $('tourSkip').onclick=endTour;
+    $('verTutorial').onclick=startTour;
+    // auto-abre na 1ª visita
+    try{ if(!localStorage.getItem('aus_tutorial_visto')) setTimeout(startTour, 500); }catch(e){}
 
     carregarCelebracoes();
   </script>
