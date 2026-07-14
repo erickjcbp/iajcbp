@@ -75,7 +75,75 @@
     return { membroId: grupo[0].id, motivo:null };
   }
 
-  var API = { escolherSubstituto: escolherSubstituto, elegivelFuncao: elegivelFuncao, nivelInt: nivelInt, calcIdade: calcIdade };
+  // --- Camada de I/O (recebe o client supabase `sb`) ---
+  // O JS escolhe o substituto (escolherSubstituto) e a RPC grava atômico (cobre cerimonário via RLS).
+  async function aplicarTrocaEscala(sb, arg, ctxBuilder){
+    // arg: {celebracao_id, comunidade, data, membroAusenteId}
+    // ctxBuilder(funcao, usadosNaMissa, usadoFds) -> ctx (cada página injeta suas queries)
+    const { data: linhas } = await sb.from('acolitos_escalas')
+      .select('id,membro_id,funcao,status')
+      .eq('celebracao_id', arg.celebracao_id);
+    const alvo = (linhas||[]).find(e => e.membro_id===arg.membroAusenteId
+      && (e.status==='escalado' || e.status==='presente' || e.status==='atrasado'));
+    if(!alvo) return null; // não estava escalado (ativo) nessa missa
+    const usadosNaMissa = new Set((linhas||[]).map(e=>e.membro_id));
+    // IMPORTANTE (mesmo furo pego na Task 3): excluir TODOS os ausentes desta missa, não só o alvo —
+    // senão o motor poderia sugerir alguém que também declarou ausência. Ausência vem por celebracao_id
+    // OU por data (celebracao_id null). Dobramos no set de excluídos (o motor exclui usadosNaMissa).
+    const [{ data: ausCel }, { data: ausData }] = await Promise.all([
+      sb.from('acolitos_ausencias').select('membro_id').eq('celebracao_id', arg.celebracao_id),
+      sb.from('acolitos_ausencias').select('membro_id').is('celebracao_id', null).eq('data', arg.data)
+    ]);
+    (ausCel||[]).forEach(a => usadosNaMissa.add(a.membro_id));
+    (ausData||[]).forEach(a => usadosNaMissa.add(a.membro_id));
+    const ctx = await ctxBuilder(alvo.funcao, usadosNaMissa, new Set());
+    const r = escolherSubstituto(ctx);
+    const novoId = r.membroId || null;
+    // grava atômico via RPC (SECURITY DEFINER; funciona p/ coord E cerimonário)
+    const { data: res, error } = await sb.rpc('acolitos_aplicar_troca_escala', {
+      p_celebracao_id: arg.celebracao_id, p_membro_ausente_id: arg.membroAusenteId, p_novo_membro_id: novoId
+    });
+    if(error || !res || res.erro || res.nao_escalado) return null;
+    return { funcao: res.funcao, saiu: arg.membroAusenteId, entrou: novoId,
+             novoEscalaId: res.novo_escala_id || null, alvoId: res.alvo_id };
+  }
+
+  async function desfazerTroca(sb, troca){
+    await sb.rpc('acolitos_desfazer_troca_escala', {
+      p_alvo_id: troca.alvoId, p_novo_escala_id: troca.novoEscalaId || null
+    });
+  }
+
+  function abrirResumoTrocas(trocas, nomes, onDesfazer){
+    var nome = function(id){ return id ? (nomes[id]||id) : '—'; };
+    var ov = document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;';
+    var card = document.createElement('div');
+    card.style.cssText='background:#241019;border:1px solid #5a3a3f;border-radius:16px;max-width:440px;width:100%;padding:18px;color:#f7ebe7;max-height:80vh;overflow:auto;';
+    var h = document.createElement('div'); h.textContent='⚡ Trocas por ausência ('+trocas.length+')';
+    h.style.cssText='font-weight:800;font-size:16px;margin-bottom:10px;color:#ffd97a;'; card.appendChild(h);
+    trocas.forEach(function(t){
+      var row = document.createElement('div');
+      row.style.cssText='display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #43282e;font-size:13px;';
+      var txt = document.createElement('div');
+      txt.innerHTML = '<b>'+nome(t.saiu)+'</b> ('+(t.funcao)+') ausente<br>→ '+(t.entrou?('entrou <b>'+nome(t.entrou)+'</b>'):'<span style="color:#e0607a">SEM substituto ⚠ (vaga vazia)</span>');
+      row.appendChild(txt);
+      if(t.entrou){
+        var d = document.createElement('button'); d.textContent='Desfazer';
+        d.style.cssText='flex:none;background:#3a1c24;border:1px solid #7a5a1a;color:#ffd97a;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;';
+        d.onclick=async function(){ d.disabled=true; d.textContent='...'; await onDesfazer(t); txt.innerHTML='<b>'+nome(t.saiu)+'</b> ('+t.funcao+') — vaga vazia (desfeito)'; d.remove(); };
+        row.appendChild(d);
+      }
+      card.appendChild(row);
+    });
+    var fechar = document.createElement('button'); fechar.textContent='Ok';
+    fechar.style.cssText='margin-top:14px;width:100%;background:linear-gradient(160deg,#ffd97a,#8a6a24);color:#2a1500;border:none;border-radius:10px;padding:11px;font-weight:800;cursor:pointer;';
+    fechar.onclick=function(){ ov.remove(); if(typeof onDesfazer._done==='function') onDesfazer._done(); };
+    card.appendChild(fechar); ov.appendChild(card); document.body.appendChild(ov);
+  }
+
+  var API = { escolherSubstituto: escolherSubstituto, elegivelFuncao: elegivelFuncao, nivelInt: nivelInt, calcIdade: calcIdade,
+              aplicarTrocaEscala: aplicarTrocaEscala, desfazerTroca: desfazerTroca, abrirResumoTrocas: abrirResumoTrocas };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;   // node/testes
   global.GeradorSubstituto = API;                                             // navegador
 })(typeof window !== 'undefined' ? window : globalThis);

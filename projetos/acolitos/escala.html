@@ -1417,6 +1417,22 @@ async function abrirRegistrarAusenciaCoord(){
       if(error){msg.textContent='Erro ao salvar (data avulsa).';salvar.disabled=false;salvar.textContent='Salvar';return;}
     }
     toast('✓ Ausência registrada'); ov.remove();
+    // Auto-troca: p/ cada missa cadastrada (celebracao_id definido) onde o membro estava
+    // escalado, o motor escolhe substituto e a RPC grava atômico (Task 4).
+    const trocas=[];
+    for(const cid of ids){
+      const celeb=futuras.find(c=>c.id===cid);
+      if(!celeb) continue;
+      const t=await GeradorSubstituto.aplicarTrocaEscala(sb,
+        { celebracao_id:cid, comunidade:celeb.comunidade, data:celeb.data, membroAusenteId:mid },
+        (funcao,usadosNaMissa,usadoFds)=>montarCtxSub(celeb,funcao,mid,usadosNaMissa,usadoFds));
+      if(t) trocas.push(t);
+    }
+    if(trocas.length){
+      const nomes={}; membros.forEach(m=>{ nomes[m.id]=m.apelido||m.nome; });
+      GeradorSubstituto.abrirResumoTrocas(trocas, nomes, (t)=>GeradorSubstituto.desfazerTroca(sb,t));
+    }
+    await loadDados();
   };
   acts.append(cancel,salvar);md.appendChild(acts);
   ov.appendChild(md);document.body.appendChild(ov);
