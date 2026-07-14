@@ -390,8 +390,19 @@ git commit -m "refactor(acolitos): escala usa o motor único de substituto (troc
 
 Adicionar ao `gerador-substituto.js` (usa `sb` passado; mantém o motor puro separado). Busca a linha escalada do ausente naquela celebração/qualquer função, escolhe substituto e grava:
 
+**IMPORTANTE (achado da Task 1):** a gravação NÃO é feita no client (a RLS de `acolitos_escalas` bloqueia
+o cerimonário no INSERT/DELETE, e update+insert separados não são atômicos). A gravação vai por RPC
+SECURITY DEFINER **já criada e aplicada em produção** na migration `db/seguranca/009_auto_troca_ausencia.sql`:
+- `acolitos_aplicar_troca_escala(p_celebracao_id, p_membro_ausente_id, p_novo_membro_id)` → acha a linha ativa
+  do ausente, marca `substituido`(+`substituto_id`), insere o substituto (se houver), tudo atômico.
+  Retorna `{ok, funcao, alvo_id, novo_escala_id, nao_escalado?}`.
+- `acolitos_desfazer_troca_escala(p_alvo_id, p_novo_escala_id)` → apaga a linha do substituto e limpa
+  `substituto_id` do alvo (vaga vazia). Retorna `{ok}`.
+O motor JS continua ESCOLHENDO o substituto; a RPC só PERSISTE.
+
 ```js
 // --- Camada de I/O (recebe o client supabase `sb`) ---
+// O JS escolhe o substituto (escolherSubstituto) e a RPC grava atômico (cobre cerimonário via RLS).
 async function aplicarTrocaEscala(sb, arg, ctxBuilder){
   // arg: {celebracao_id, comunidade, data, membroAusenteId}
   // ctxBuilder(funcao, usadosNaMissa, usadoFds) -> ctx (cada página injeta suas queries)
@@ -402,32 +413,35 @@ async function aplicarTrocaEscala(sb, arg, ctxBuilder){
     && (e.status==='escalado' || e.status==='presente' || e.status==='atrasado'));
   if(!alvo) return null; // não estava escalado (ativo) nessa missa
   const usadosNaMissa = new Set((linhas||[]).map(e=>e.membro_id));
+  // IMPORTANTE (mesmo furo pego na Task 3): excluir TODOS os ausentes desta missa, não só o alvo —
+  // senão o motor poderia sugerir alguém que também declarou ausência. Ausência vem por celebracao_id
+  // OU por data (celebracao_id null). Dobramos no set de excluídos (o motor exclui usadosNaMissa).
+  const [{ data: ausCel }, { data: ausData }] = await Promise.all([
+    sb.from('acolitos_ausencias').select('membro_id').eq('celebracao_id', arg.celebracao_id),
+    sb.from('acolitos_ausencias').select('membro_id').is('celebracao_id', null).eq('data', arg.data)
+  ]);
+  (ausCel||[]).forEach(a => usadosNaMissa.add(a.membro_id));
+  (ausData||[]).forEach(a => usadosNaMissa.add(a.membro_id));
   const ctx = await ctxBuilder(alvo.funcao, usadosNaMissa, new Set());
   const r = escolherSubstituto(ctx);
   const novoId = r.membroId || null;
-  // marca o ausente como substituido (+ substituto_id se houver)
-  await sb.from('acolitos_escalas').update({ status:'substituido', substituto_id: novoId })
-    .eq('id', alvo.id);
-  let novoEscalaId = null;
-  if(novoId){
-    const { data: ins } = await sb.from('acolitos_escalas')
-      .insert([{ celebracao_id: arg.celebracao_id, membro_id: novoId, funcao: alvo.funcao, status:'escalado' }])
-      .select('id').single();
-    novoEscalaId = ins ? ins.id : null;
-  }
-  return { funcao: alvo.funcao, saiu: arg.membroAusenteId, entrou: novoId, novoEscalaId: novoEscalaId, alvoId: alvo.id };
+  // grava atômico via RPC (SECURITY DEFINER; funciona p/ coord E cerimonário)
+  const { data: res, error } = await sb.rpc('acolitos_aplicar_troca_escala', {
+    p_celebracao_id: arg.celebracao_id, p_membro_ausente_id: arg.membroAusenteId, p_novo_membro_id: novoId
+  });
+  if(error || !res || res.erro || res.nao_escalado) return null;
+  return { funcao: res.funcao, saiu: arg.membroAusenteId, entrou: novoId,
+           novoEscalaId: res.novo_escala_id || null, alvoId: res.alvo_id };
 }
 ```
 
-E o Desfazer (apaga a linha do substituto; mantém o ausente `substituido`):
+E o Desfazer (via RPC — apaga o substituto e deixa a vaga vazia; mantém o ausente `substituido`):
 
 ```js
 async function desfazerTroca(sb, troca){
-  if(troca.novoEscalaId){
-    await sb.from('acolitos_escalas').delete().eq('id', troca.novoEscalaId);
-  }
-  // opcional: limpar substituto_id do alvo (vaga vazia); mantém status 'substituido'
-  await sb.from('acolitos_escalas').update({ substituto_id: null }).eq('id', troca.alvoId);
+  await sb.rpc('acolitos_desfazer_troca_escala', {
+    p_alvo_id: troca.alvoId, p_novo_escala_id: troca.novoEscalaId || null
+  });
 }
 ```
 

@@ -270,6 +270,7 @@
 </div>
 
 <script src="shared.js"></script>
+<script src="gerador-substituto.js"></script>
 <script>
 const MOTIVO_LABEL = { doenca:'🤒 Doença', viagem:'✈️ Viagem', familia:'👨‍👩‍👧 Família', outro:'📌 Outro' };
 // Metadados de cada função (rótulo, categoria, ordem) — os modelos por tipo+comunidade vêm da tabela acolitos_modelos
@@ -972,22 +973,36 @@ function refreshDuplicatasMissa(){
     if(p.atualizarAvisos) p.atualizarAvisos();
   });
 }
-function trocarPosicao(pe) {
+// Monta o ctx do motor único (GeradorSubstituto) a partir do estado já carregado na tela da escala.
+// Reutilizado por trocarPosicao (Task 3) e futuramente por outras telas (Task 4).
+async function montarCtxSub(celeb, funcao, membroAusenteId, usadosNaMissa, usadoFds){
+  const carga = await carregarCargaHistorica(celeb.data);
+  return {
+    funcao: funcao,
+    comunidade: celeb.comunidade,
+    horKey: horKeyDe(celeb),
+    membroAusenteId: membroAusenteId,
+    roster: membros,                     // já carregado (status ativo)
+    habMap: habMap,                      // já carregado
+    dispMap: dispMap,                    // já carregado
+    cargaMap: carga,
+    usadosNaMissa: usadosNaMissa || new Set(),
+    usadoFds: usadoFds || new Set(),
+    config: { gerador: (typeof cfg==='function'?cfg('gerador',{}):{}), funcoes_maiores: (typeof cfg==='function'?cfg('funcoes_maiores',null):null) }
+  };
+}
+async function trocarPosicao(pe) {
   if (!celAtual) return;
-  const horKey = horKeyDe(celAtual);
-  const ausNesta = ausMap[celAtual.id] || new Set();
-  const atual = pe.sel.value;
   const usadosOutros = new Set();
   pendingEdicao.forEach(p => { if (p !== pe && p.sel.value) usadosOutros.add(p.sel.value); });
-  const apta = (id,f) => { const m=membros.find(x=>x.id===id); return m ? elegivelFuncao(m, f, celAtual.comunidade) : false; };
-  const disp = id => !horKey || (dispMap[id]||[]).includes(horKey);
-  const nivel = id => { const m=membros.find(x=>x.id===id); return m?nivelInfo(m.nivel||'aspirante').int:0; };
-  const menor = !FUNCOES_MAIORES.has(pe.funcao);
-  const pool = membros.filter(m => apta(m.id,pe.funcao) && disp(m.id) && !ausNesta.has(m.id) && !usadosOutros.has(m.id) && m.id!==atual);
-  if (!pool.length) { toast('Sem outra opção disponível e apta pra essa função.','error'); return; }
-  const tiers = menor ? [pool.filter(m => nivel(m.id) < 6), pool] : [pool]; // menor: evita cerimoniário
-  const grupo = tiers.find(t => t.length);
-  const escolhido = grupo[Math.floor(Math.random()*grupo.length)];
+  // O motor só exclui `membroAusenteId` (a posição sendo trocada); ausências DECLARADAS nesta
+  // missa (ausMap) são um conceito à parte que o engine não recebe — juntamos em usadosNaMissa
+  // pra preservar o comportamento anterior (nunca sugerir quem avisou ausência nesta celebração).
+  (ausMap[celAtual.id] || new Set()).forEach(id => usadosOutros.add(id));
+  const ctx = await montarCtxSub(celAtual, pe.funcao, pe.sel.value, usadosOutros, new Set());
+  const r = GeradorSubstituto.escolherSubstituto(ctx);
+  if (!r.membroId) { toast('Sem outra opção disponível e apta pra essa função.','error'); return; }
+  const escolhido = membros.find(m => m.id === r.membroId);
   pe.sel.value = escolhido.id; pe.sel.classList.add('filled');
   refreshDuplicatasMissa();
   toast('🔄 ' + (escolhido.apelido || (escolhido.nome||'').split(' ')[0]));
@@ -1418,6 +1433,22 @@ async function abrirRegistrarAusenciaCoord(){
       if(error){msg.textContent='Erro ao salvar (data avulsa).';salvar.disabled=false;salvar.textContent='Salvar';return;}
     }
     toast('✓ Ausência registrada'); ov.remove();
+    // Auto-troca: p/ cada missa cadastrada (celebracao_id definido) onde o membro estava
+    // escalado, o motor escolhe substituto e a RPC grava atômico (Task 4).
+    const trocas=[];
+    for(const cid of ids){
+      const celeb=futuras.find(c=>c.id===cid);
+      if(!celeb) continue;
+      const t=await GeradorSubstituto.aplicarTrocaEscala(sb,
+        { celebracao_id:cid, comunidade:celeb.comunidade, data:celeb.data, membroAusenteId:mid },
+        (funcao,usadosNaMissa,usadoFds)=>montarCtxSub(celeb,funcao,mid,usadosNaMissa,usadoFds));
+      if(t) trocas.push(t);
+    }
+    if(trocas.length){
+      const nomes={}; membros.forEach(m=>{ nomes[m.id]=m.apelido||m.nome; });
+      GeradorSubstituto.abrirResumoTrocas(trocas, nomes, (t)=>GeradorSubstituto.desfazerTroca(sb,t));
+    }
+    await loadDados();
   };
   acts.append(cancel,salvar);md.appendChild(acts);
   ov.appendChild(md);document.body.appendChild(ov);
