@@ -108,6 +108,18 @@
     .cels-meta{ font-size:11.5px; color:var(--muted); margin-top:6px; }
     .cels-meta b{ color:var(--gold-light); }
     .cels-empty{ padding:16px 13px; font-size:13px; color:var(--muted); }
+    .cel-mes{ display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:10px 13px; background:#2a1520; border-bottom:1px solid var(--border-soft);
+      position:sticky; top:0; z-index:2; }
+    .cel-mes .mtit{ font-family:'Sora',sans-serif; font-weight:800; font-size:13px; color:var(--gold-light); letter-spacing:.3px; }
+    .cel-sem{ display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:7px 13px 7px 16px; background:#241019; border-bottom:1px solid var(--border-soft); }
+    .cel-sem .stit{ font-size:11.5px; color:var(--muted); font-weight:600; }
+    .mark-btn{ flex:none; border:1px solid var(--gold-dim); background:#3a1c24; color:var(--gold-light);
+      border-radius:20px; padding:5px 11px; font-size:11.5px; font-weight:700; cursor:pointer; font-family:'Sora',sans-serif; }
+    .mark-btn:active{ background:#4a2430; }
+    .mark-btn.on{ background:linear-gradient(160deg,var(--gold-light),var(--gold)); color:#2a1500; border-color:var(--gold-light); }
+    .cel{ padding-left:16px; }
 
     .btn{ width:100%; margin-top:22px; padding:14px; border-radius:13px; border:none;
       background:linear-gradient(160deg,var(--gold-light),var(--gold)); color:#2a1500;
@@ -247,6 +259,28 @@
     }
 
     // ── CELEBRAÇÕES ──
+    // chave da semana (domingo → sábado) a partir de um Date local
+    function grupoKeySemana(d){
+      const dom=new Date(d); dom.setDate(d.getDate()-d.getDay()); // volta pro domingo
+      const sab=new Date(dom); sab.setDate(dom.getDate()+6);
+      const fmt=x=>x.getDate()+'/'+(x.getMonth()+1);
+      return { key: dom.toISOString().slice(0,10), label:'Semana '+fmt(dom)+'–'+fmt(sab) };
+    }
+    function toggleGrupo(ids, btn){
+      const todasOn = ids.every(id=>selCels.has(id));
+      ids.forEach(id=>{
+        const row=document.querySelector('.cel[data-id="'+id+'"]');
+        if(todasOn){ selCels.delete(id); if(row){ row.classList.remove('on'); row.querySelector('.box').textContent=''; } }
+        else { selCels.add(id); if(row){ row.classList.add('on'); row.querySelector('.box').textContent='✓'; } }
+      });
+      updateCelsMeta(); refreshMarkBtns();
+    }
+    // liga o estado "on" nos botões de mês/semana conforme o grupo esteja todo marcado
+    const _grupos=[]; // {ids, btn}
+    function refreshMarkBtns(){
+      _grupos.forEach(g=>{ g.btn.classList.toggle('on', g.ids.length>0 && g.ids.every(id=>selCels.has(id))); });
+    }
+
     async function carregarCelebracoes(){
       const box=$('cels');
       box.innerHTML='<div class="cels-empty">Carregando celebrações…</div>';
@@ -259,7 +293,7 @@
         ]);
         data = resp.data; error = resp.error;
       } catch(e){ error = e; }
-      box.innerHTML='';
+      box.innerHTML=''; _grupos.length=0;
       if(error){
         // falha de conexão/RPC — NÃO é o mesmo que "não há missas"; oferece tentar de novo
         const w=document.createElement('div'); w.className='cels-empty';
@@ -272,20 +306,57 @@
       if(!Array.isArray(data) || !data.length){
         box.innerHTML='<div class="cels-empty">Nenhuma celebração futura cadastrada.</div>'; return;
       }
+
+      // agrupa por mês, depois por semana (data já vem ordenada por data/horario)
+      const meses=new Map(); // 'YYYY-MM' -> { label, semanas: Map(semKey -> {label, itens[]}) }
       data.forEach(c=>{
-        const lab=celLabel(c);
-        const row=document.createElement('div'); row.className='cel'; row.dataset.id=c.id;
-        row.innerHTML='<div class="box"></div><div class="lab"><div class="d1"></div><div class="d2"></div></div>';
-        row.querySelector('.d1').textContent=lab.d1;
-        row.querySelector('.d2').textContent=lab.d2;
-        row.onclick=()=>{
-          if(selCels.has(c.id)){ selCels.delete(c.id); row.classList.remove('on'); row.querySelector('.box').textContent=''; }
-          else { selCels.add(c.id); row.classList.add('on'); row.querySelector('.box').textContent='✓'; }
-          updateCelsMeta();
-        };
-        box.appendChild(row);
+        const dt=new Date(c.data+'T00:00:00');
+        const mk=c.data.slice(0,7);
+        if(!meses.has(mk)){
+          meses.set(mk, { label: dt.toLocaleDateString('pt-BR',{month:'long',year:'numeric'}), semanas:new Map() });
+        }
+        const sem=grupoKeySemana(dt);
+        const M=meses.get(mk);
+        if(!M.semanas.has(sem.key)) M.semanas.set(sem.key, { label:sem.label, itens:[] });
+        M.semanas.get(sem.key).itens.push(c);
       });
-      updateCelsMeta();
+
+      meses.forEach(M=>{
+        const idsMes=[];
+        // cabeçalho do mês
+        const hMes=document.createElement('div'); hMes.className='cel-mes';
+        const tit=document.createElement('span'); tit.className='mtit';
+        tit.textContent=M.label.charAt(0).toUpperCase()+M.label.slice(1);
+        const bMes=document.createElement('button'); bMes.className='mark-btn'; bMes.textContent='✓ marcar mês';
+        hMes.append(tit,bMes); box.appendChild(hMes);
+
+        M.semanas.forEach(S=>{
+          const idsSem=S.itens.map(c=>c.id); idsMes.push(...idsSem);
+          const hSem=document.createElement('div'); hSem.className='cel-sem';
+          const st=document.createElement('span'); st.className='stit'; st.textContent=S.label;
+          const bSem=document.createElement('button'); bSem.className='mark-btn'; bSem.textContent='✓ marcar semana';
+          hSem.append(st,bSem); box.appendChild(hSem);
+          bSem.onclick=()=>toggleGrupo(idsSem, bSem);
+          _grupos.push({ ids:idsSem, btn:bSem });
+
+          S.itens.forEach(c=>{
+            const lab=celLabel(c);
+            const row=document.createElement('div'); row.className='cel'; row.dataset.id=c.id;
+            row.innerHTML='<div class="box"></div><div class="lab"><div class="d1"></div><div class="d2"></div></div>';
+            row.querySelector('.d1').textContent=lab.d1;
+            row.querySelector('.d2').textContent=lab.d2;
+            row.onclick=()=>{
+              if(selCels.has(c.id)){ selCels.delete(c.id); row.classList.remove('on'); row.querySelector('.box').textContent=''; }
+              else { selCels.add(c.id); row.classList.add('on'); row.querySelector('.box').textContent='✓'; }
+              updateCelsMeta(); refreshMarkBtns();
+            };
+            box.appendChild(row);
+          });
+        });
+        bMes.onclick=()=>toggleGrupo(idsMes, bMes);
+        _grupos.push({ ids:idsMes, btn:bMes });
+      });
+      updateCelsMeta(); refreshMarkBtns();
     }
     function updateCelsMeta(){
       const n=selCels.size;
