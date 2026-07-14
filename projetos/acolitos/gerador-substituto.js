@@ -126,12 +126,21 @@
       var row = document.createElement('div');
       row.style.cssText='display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #43282e;font-size:13px;';
       var txt = document.createElement('div');
-      txt.innerHTML = '<b>'+nome(t.saiu)+'</b> ('+(t.funcao)+') ausente<br>→ '+(t.entrou?('entrou <b>'+nome(t.entrou)+'</b>'):'<span style="color:#e0607a">SEM substituto ⚠ (vaga vazia)</span>');
+      txt.textContent='';
+      var b1=document.createElement('b'); b1.textContent=nome(t.saiu);
+      txt.append(b1, document.createTextNode(' ('+t.funcao+') ausente'), document.createElement('br'));
+      if(t.entrou){
+        var b2=document.createElement('b'); b2.textContent=nome(t.entrou);
+        txt.append(document.createTextNode('→ entrou '), b2);
+      } else {
+        var s=document.createElement('span'); s.style.color='#e0607a';
+        s.textContent='SEM substituto ⚠ (vaga vazia)'; txt.append(document.createTextNode('→ '), s);
+      }
       row.appendChild(txt);
       if(t.entrou){
         var d = document.createElement('button'); d.textContent='Desfazer';
         d.style.cssText='flex:none;background:#3a1c24;border:1px solid #7a5a1a;color:#ffd97a;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;';
-        d.onclick=async function(){ d.disabled=true; d.textContent='...'; await onDesfazer(t); txt.innerHTML='<b>'+nome(t.saiu)+'</b> ('+t.funcao+') — vaga vazia (desfeito)'; d.remove(); };
+        d.onclick=async function(){ d.disabled=true; d.textContent='...'; await onDesfazer(t); txt.textContent=''; var b=document.createElement('b'); b.textContent=nome(t.saiu); txt.append(b, document.createTextNode(' ('+t.funcao+') — vaga vazia (desfeito)')); d.remove(); };
         row.appendChild(d);
       }
       card.appendChild(row);
