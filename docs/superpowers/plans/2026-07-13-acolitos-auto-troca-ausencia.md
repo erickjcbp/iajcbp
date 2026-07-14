@@ -413,6 +413,15 @@ async function aplicarTrocaEscala(sb, arg, ctxBuilder){
     && (e.status==='escalado' || e.status==='presente' || e.status==='atrasado'));
   if(!alvo) return null; // não estava escalado (ativo) nessa missa
   const usadosNaMissa = new Set((linhas||[]).map(e=>e.membro_id));
+  // IMPORTANTE (mesmo furo pego na Task 3): excluir TODOS os ausentes desta missa, não só o alvo —
+  // senão o motor poderia sugerir alguém que também declarou ausência. Ausência vem por celebracao_id
+  // OU por data (celebracao_id null). Dobramos no set de excluídos (o motor exclui usadosNaMissa).
+  const [{ data: ausCel }, { data: ausData }] = await Promise.all([
+    sb.from('acolitos_ausencias').select('membro_id').eq('celebracao_id', arg.celebracao_id),
+    sb.from('acolitos_ausencias').select('membro_id').is('celebracao_id', null).eq('data', arg.data)
+  ]);
+  (ausCel||[]).forEach(a => usadosNaMissa.add(a.membro_id));
+  (ausData||[]).forEach(a => usadosNaMissa.add(a.membro_id));
   const ctx = await ctxBuilder(alvo.funcao, usadosNaMissa, new Set());
   const r = escolherSubstituto(ctx);
   const novoId = r.membroId || null;
