@@ -134,7 +134,7 @@
 
 <div class="main">
   <div class="escala-toolbar">
-    <select id="filtro-com" class="form-select" onchange="loadDados()">
+    <select id="filtro-com" class="form-select" onchange="loadDados();salvarEstadoEscala()">
       <option value="">Todas as comunidades</option>
       <option value="matriz">Matriz</option>
       <option value="santo_antonio">Santo Antônio</option>
@@ -377,6 +377,20 @@ let freqMap = {}, restricaoMap = {}, ausMap = {}, chamadasFeitas = new Set(), se
 let pendingCelebId = null, pendingEdicao = [], abaAtual = 'cards', editCelebId = null, celAtual = null;
 let montagemDirty = false;
 
+// Estado da tela (aba/filtro/histórico/rolagem) — lembrado entre reabertas (Spec D F3)
+function salvarEstadoEscala(){
+  try{ localStorage.setItem('estado-escala', JSON.stringify({
+    aba: abaAtual, com: (document.getElementById('filtro-com')||{}).value || '',
+    hist: !!verHistorico, y: window.scrollY
+  })); }catch(e){}
+}
+function restaurarEstadoEscala(){
+  let s; try{ s = JSON.parse(localStorage.getItem('estado-escala')||'null'); }catch(e){ s=null; }
+  return s || null;
+}
+window.addEventListener('pagehide', salvarEstadoEscala);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') salvarEstadoEscala(); });
+
 // Fecha qualquer modal (remove a classe 'open'). Estava sendo chamada em vários lugares mas nunca foi definida —
 // por isso "Fechar" não funcionava e o "Salvar" travava em "✓ Escala salva!" (o erro abortava o reset do botão).
 function fecharModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('open'); }
@@ -399,6 +413,16 @@ async function init() {
   popularComunidades();        // comunidades do Config no select de criar celebração
   await loadModelos();
   popHorarios();
+
+  // Restaura aba/filtro/histórico/rolagem salvos da visita anterior (Spec D F3)
+  const _est = restaurarEstadoEscala();
+  if(_est){
+    if(_est.com!==undefined){ const f=document.getElementById('filtro-com'); if(f) f.value=_est.com; }
+    if(_est.hist){ verHistorico = true; const b=document.getElementById('btn-hist-escala'); if(b){ b.classList.add('gold'); b.classList.remove('gray'); b.textContent='🕓 Histórico ✓'; } }
+    if(_est.aba){ abaAtual = _est.aba; }
+    window.__escRestoreY = _est.y!=null ? _est.y : null;
+  }
+
   await loadDados();
 }
 
@@ -449,6 +473,7 @@ function toggleHistorico(){
   const b = document.getElementById('btn-hist-escala');
   if(b){ b.classList.toggle('gold',verHistorico); b.classList.toggle('gray',!verHistorico); b.textContent = verHistorico?'🕓 Histórico ✓':'🕓 Histórico'; }
   loadDados();
+  salvarEstadoEscala();
 }
 
 async function loadDados() {
@@ -510,6 +535,14 @@ async function loadDados() {
   }
 
   abaAtual==='cards' ? renderCards() : renderPlanilha();
+
+  // Aplica a aba restaurada no toggle visual + restaura a rolagem salva (uma vez, após o render)
+  document.getElementById('view-cards').style.display = abaAtual==='cards'?'':'none';
+  document.getElementById('view-planilha').style.display = abaAtual==='planilha'?'':'none';
+  const bc=document.getElementById('btn-cards'), bp=document.getElementById('btn-planilha');
+  if(bc) bc.classList.toggle('active',abaAtual==='cards');
+  if(bp) bp.classList.toggle('active',abaAtual==='planilha');
+  if(window.__escRestoreY!=null){ const y=window.__escRestoreY; window.__escRestoreY=null; requestAnimationFrame(()=>window.scrollTo(0,y)); }
 }
 
 function setAba(a) {
@@ -519,6 +552,7 @@ function setAba(a) {
   document.getElementById('btn-cards').classList.toggle('active',a==='cards');
   document.getElementById('btn-planilha').classList.toggle('active',a==='planilha');
   a==='cards' ? renderCards() : renderPlanilha();
+  salvarEstadoEscala();
 }
 
 function getCobertura(celebId, comunidade, tipo) {
