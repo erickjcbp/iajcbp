@@ -89,5 +89,50 @@ eq('sem candidato válido → null',
     membroAusenteId:'q', roster:[M('x')], habMap:{}, dispMap:{x:['dom_08:00']},
     cargaMap:{}, usadosNaMissa:new Set(), usadoFds:new Set(), config:{}, rnd:rnd0 }).membroId, null);
 
+// 9) MENOR tier 2 vs tier 3: !cerimo (tier 2) bate !usadoFds (tier 3)
+eq('menor: tier 2 (!cerimo) sobre tier 3 (!usadoFds)',
+  escolherSubstituto({ funcao:'altar', comunidade:'matriz', horKey:'dom_08:00',
+    membroAusenteId:'q',
+    roster:[M('cer',{nivel:'cerimoniario_guardiao'}), M('cor',{nivel:'coroinha'})],
+    habMap:{cer:hab('altar'),cor:hab('altar')},
+    dispMap:{cer:['dom_08:00'],cor:['dom_08:00']},
+    cargaMap:{cer:0,cor:0},
+    usadosNaMissa:new Set(),
+    usadoFds:new Set(['cor']),
+    config:{}, rnd:rnd0 }).membroId, 'cor');
+
+// 10) MAIOR: !usadoFds (tier 1) sobre any (tier 2)
+eq('maior (turibulo): !usadoFds (tier 1) sobre qualquer (tier 2)',
+  escolherSubstituto({ funcao:'turibulo', comunidade:'matriz', horKey:'dom_08:00',
+    membroAusenteId:'q',
+    roster:[M('a'), M('b')],
+    habMap:{a:hab('turibulo'),b:hab('turibulo')},
+    dispMap:{a:['dom_08:00'],b:['dom_08:00']},
+    cargaMap:{a:0,b:0},
+    usadosNaMissa:new Set(),
+    usadoFds:new Set(['a']),
+    config:{}, rnd:rnd0 }).membroId, 'b');
+
+// 11) config.funcoes_maiores override: altar como MAIOR, cerimoniário com menor carga ganha
+eq('override funcoes_maiores: altar MAIOR, cerimoniário menor carga ganha',
+  escolherSubstituto({ funcao:'altar', comunidade:'matriz', horKey:'dom_08:00',
+    membroAusenteId:'q',
+    roster:[M('cer',{nivel:'cerimoniario_guardiao'}), M('cor',{nivel:'coroinha'})],
+    habMap:{cer:hab('altar'),cor:hab('altar')},
+    dispMap:{cer:['dom_08:00'],cor:['dom_08:00']},
+    cargaMap:{cer:1,cor:9},
+    usadosNaMissa:new Set(),
+    usadoFds:new Set(),
+    config:{funcoes_maiores:['altar']},
+    rnd:rnd0 }).membroId, 'cer');
+
+// 12) kit Santo Antônio: age boundary (idade_min 7)
+eq('kit santo_antonio: cruz data_nascimento 2000-01-01 (7+) elegível',
+  elegivelFuncao(M('a',{data_nascimento:'2000-01-01'}), 'cruz', 'santo_antonio', {}, {}), true);
+
+var threeYearsAgo = ((new Date().getFullYear())-3)+'-01-01';
+eq('kit santo_antonio: cruz data_nascimento 3 anos atrás (<7) inelegível',
+  elegivelFuncao(M('b',{data_nascimento:threeYearsAgo}), 'cruz', 'santo_antonio', {}, {}), false);
+
 console.log(falhas? ('\n'+falhas+' FALHA(S)') : '\nTODOS OK');
 process.exit(falhas?1:0);
