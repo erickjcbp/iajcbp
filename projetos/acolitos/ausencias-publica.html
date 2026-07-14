@@ -53,11 +53,42 @@
     .results button:last-child{ border-bottom:none; }
     .results button:active{ background:#3a1c24; }
 
+    /* Afordância de toque nos resultados */
+    .results .rhint{ font-size:11px; color:var(--gold-light); padding:8px 13px 6px; background:#2a1520;
+      border-bottom:1px solid var(--border-soft); font-family:'Sora',sans-serif; letter-spacing:.2px; }
+    .results button{ display:flex; align-items:center; gap:10px; }
+    .results .ini{ width:26px; height:26px; border-radius:50%; flex:none; display:flex; align-items:center;
+      justify-content:center; font-size:12px; font-weight:700; color:#2a1500;
+      background:linear-gradient(160deg,var(--gold-light),var(--gold)); }
+    .results .rn{ flex:1; min-width:0; }
+    .results .plus{ flex:none; width:22px; height:22px; border-radius:50%; background:#00000030;
+      color:var(--gold-light); font-weight:800; display:flex; align-items:center; justify-content:center; font-size:16px; }
+
+    /* Indicador que aponta pro campo de nome (some após 1ª pessoa) */
+    .point{ position:relative; margin:8px 0 0; padding:10px 12px; border-radius:11px;
+      background:#3a1c24; border:1px dashed var(--gold-dim); color:var(--gold-light);
+      font-size:12.5px; display:flex; align-items:center; gap:8px; animation:pointPulse 1.6s ease-in-out infinite; }
+    .point::before{ content:''; position:absolute; top:-7px; left:22px; width:12px; height:12px;
+      background:#3a1c24; border-left:1px dashed var(--gold-dim); border-top:1px dashed var(--gold-dim);
+      transform:rotate(45deg); }
+    .point.hide{ display:none; }
+    @keyframes pointPulse{ 0%,100%{ opacity:.85 } 50%{ opacity:1 } }
+
+    /* Toast "adicionou" */
+    .flash{ position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(10px);
+      background:#1f3a24; color:#c9f5d3; border:1px solid var(--ok); border-radius:12px;
+      padding:10px 16px; font-size:13px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.5);
+      opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:60; }
+    .flash.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
     /* Chips de pessoas */
     .chips{ display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
     .chip{ display:inline-flex; align-items:center; gap:7px; background:#3a1c24;
       border:1px solid var(--gold-dim); border-radius:20px; padding:6px 7px 6px 12px; font-size:13px; }
     .chip b{ color:var(--gold-light); font-weight:600; }
+    .chip .cini{ width:22px; height:22px; border-radius:50%; flex:none; display:flex; align-items:center;
+      justify-content:center; font-size:11px; font-weight:700; color:#2a1500;
+      background:linear-gradient(160deg,var(--gold-light),var(--gold)); margin-left:-4px; }
     .chip .x{ cursor:pointer; color:var(--muted); font-weight:800; width:18px; height:18px; line-height:16px;
       text-align:center; border-radius:50%; background:#00000030; }
     .chip .x:active{ color:var(--danger); }
@@ -109,6 +140,7 @@
         <input id="busca" type="text" placeholder="digite o nome (mín. 2 letras)…" autocomplete="off">
         <div id="results" class="results"></div>
         <div id="chips" class="chips"></div>
+        <div id="point" class="point">👆 Comece aqui: digite o nome do coroinha e <b>toque no nome</b> que aparecer para adicionar.</div>
 
         <label>Em quais celebrações? <span class="req">*</span></label>
         <div class="help">Toque para marcar as missas em que faltará.</div>
@@ -135,6 +167,7 @@
       <p class="sub" id="ok-txt">Obrigado!</p>
       <button class="btn" style="max-width:280px;margin:22px auto 0;" onclick="location.reload()">Informar outra ausência</button>
     </div>
+    <div id="flash" class="flash"></div>
   </div>
 
   <!-- supabase-js auto-hospedado (mesmo domínio) para não depender de CDN externo,
@@ -177,9 +210,20 @@
       const { data, error } = await sb.rpc('acolitos_ausencia_publica_buscar', { p_q:q });
       const box=$('results'); box.innerHTML='';
       if(error || !Array.isArray(data) || !data.length){ box.classList.remove('show'); return; }
+      const hint=document.createElement('div'); hint.className='rhint'; hint.textContent='toque no nome para adicionar';
+      box.appendChild(hint);
       data.forEach(m=>{
-        const b=document.createElement('button'); b.textContent=m.nome;
-        b.onclick=()=>{ selMembros.set(m.id, m.nome); renderChips(); box.classList.remove('show'); $('busca').value=''; };
+        const b=document.createElement('button');
+        const ini=document.createElement('span'); ini.className='ini'; ini.textContent=(m.nome||'?').trim().charAt(0).toUpperCase();
+        const nm=document.createElement('span'); nm.className='rn'; nm.textContent=m.nome;
+        const pl=document.createElement('span'); pl.className='plus'; pl.textContent='+';
+        b.append(ini,nm,pl);
+        b.onclick=()=>{
+          const novo=!selMembros.has(m.id);
+          selMembros.set(m.id, m.nome); renderChips();
+          box.classList.remove('show'); $('busca').value='';
+          if(novo) flashAdd('Adicionou! Pode buscar e adicionar mais de um.');
+        };
         box.appendChild(b);
       });
       box.classList.add('show');
@@ -188,11 +232,18 @@
       const c=$('chips'); c.innerHTML='';
       selMembros.forEach((nome,id)=>{
         const chip=document.createElement('span'); chip.className='chip';
-        chip.innerHTML='<b></b><span class="x">×</span>';
-        chip.querySelector('b').textContent=nome;
-        chip.querySelector('.x').onclick=()=>{ selMembros.delete(id); renderChips(); };
-        c.appendChild(chip);
+        const ini=document.createElement('span'); ini.className='cini'; ini.textContent=(nome||'?').trim().charAt(0).toUpperCase();
+        const b=document.createElement('b'); b.textContent=nome;
+        const x=document.createElement('span'); x.className='x'; x.textContent='×';
+        x.onclick=()=>{ selMembros.delete(id); renderChips(); };
+        chip.append(ini,b,x); c.appendChild(chip);
       });
+      // Indicador some quando já há ao menos 1 pessoa
+      $('point').classList.toggle('hide', selMembros.size>0);
+    }
+    function flashAdd(msg){
+      const f=$('flash'); f.textContent=msg; f.classList.add('show');
+      clearTimeout(flashAdd._t); flashAdd._t=setTimeout(()=>f.classList.remove('show'), 2600);
     }
 
     // ── CELEBRAÇÕES ──
