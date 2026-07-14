@@ -89,11 +89,11 @@
   </div>
 
   <div class="filtros-wrap" id="filtros">
-    <button class="form-toggle active" onclick="setFiltro(this,'')">Todos</button>
-    <button class="form-toggle" onclick="setFiltro(this,'cerimonario')">Cerimoniários</button>
-    <button class="form-toggle" onclick="setFiltro(this,'acolito')">Acólitos</button>
-    <button class="form-toggle" onclick="setFiltro(this,'coroinha')">Coroinhas</button>
-    <button class="form-toggle" onclick="setFiltro(this,'aspirante')">Aspirantes</button>
+    <button class="form-toggle active" data-role="" onclick="setFiltro(this,'')">Todos</button>
+    <button class="form-toggle" data-role="cerimonario" onclick="setFiltro(this,'cerimonario')">Cerimoniários</button>
+    <button class="form-toggle" data-role="acolito" onclick="setFiltro(this,'acolito')">Acólitos</button>
+    <button class="form-toggle" data-role="coroinha" onclick="setFiltro(this,'coroinha')">Coroinhas</button>
+    <button class="form-toggle" data-role="aspirante" onclick="setFiltro(this,'aspirante')">Aspirantes</button>
   </div>
 
   <div class="cards-grid" id="grid">
@@ -175,6 +175,39 @@ let fichaDisp = null;   // estado da disponibilidade (Set 'dia_horario') enquant
 let listasCustom = { habilidade: [], competencia: [], funcao: [] }; // listas criadas pela equipe (p/ botão remover)
 let vista = localStorage.getItem('membros-vista') || 'cards'; // 'cards' | 'lista'
 
+// ── Lembrar filtro/busca/rolagem ao reabrir (estado-membros; 'membros-vista' continua separado) ──
+function salvarEstadoMembros() {
+  try {
+    localStorage.setItem('estado-membros', JSON.stringify({
+      filtro: filtroAtivo || '',
+      busca: (document.getElementById('busca') || {}).value || '',
+      y: window.scrollY
+    }));
+  } catch (e) {}
+}
+function restaurarEstadoMembros() {
+  let s; try { s = JSON.parse(localStorage.getItem('estado-membros') || 'null'); } catch (e) { s = null; }
+  if (!s) return;
+  filtroAtivo = s.filtro || '';
+  document.querySelectorAll('#filtros .form-toggle').forEach(b => {
+    b.classList.toggle('active', (b.dataset.role || '') === filtroAtivo);
+  });
+  if (s.busca) {
+    const b = document.getElementById('busca');
+    if (b) b.value = s.busca;
+  }
+  window.__memRestoreY = (s.y != null) ? s.y : null;
+}
+function restaurarScrollMembrosSeNecessario() {
+  if (window.__memRestoreY != null) {
+    const y = window.__memRestoreY;
+    window.__memRestoreY = null;
+    requestAnimationFrame(() => window.scrollTo(0, y));
+  }
+}
+window.addEventListener('pagehide', salvarEstadoMembros);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') salvarEstadoMembros(); });
+
 async function init() {
   ctx = await initModulo(['coord_admin','subadmin','membro_equipe']);
   if (!ctx) return;
@@ -182,6 +215,7 @@ async function init() {
   renderBottomNav(ctx, 'membros');
   document.getElementById('vt-cards').classList.toggle('active', vista === 'cards');
   document.getElementById('vt-lista').classList.toggle('active', vista === 'lista');
+  restaurarEstadoMembros();
   await loadMembros();
 }
 
@@ -254,7 +288,7 @@ async function relatorioMembrosCSV(){
   baixarCSV('membros-backup', linhas);
 }
 
-function filtrar() { renderGrid(); }
+function filtrar() { renderGrid(); salvarEstadoMembros(); }
 function scrollTabs(dir) { const el = document.getElementById('ficha-tabs'); if (el) el.scrollBy({ left: dir * 160, behavior: 'smooth' }); }
 function setVista(v) {
   vista = v; localStorage.setItem('membros-vista', v);
@@ -268,6 +302,7 @@ function setFiltro(btn, role) {
   document.querySelectorAll('#filtros .form-toggle').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderGrid();
+  salvarEstadoMembros();
 }
 
 function toggleArquivados() {
@@ -292,7 +327,9 @@ function renderGrid() {
   );
   if (!lista.length) {
     const em = document.createElement('span'); em.className = 'empty';
-    em.textContent = 'Nenhum membro encontrado.'; grid.appendChild(em); return;
+    em.textContent = 'Nenhum membro encontrado.'; grid.appendChild(em);
+    restaurarScrollMembrosSeNecessario();
+    return;
   }
   const comLabel = (c) => c === 'matriz' ? 'Matriz' : c === 'santo_antonio' ? 'Sto. Antônio' : 'Outra';
   acEstrelasLote(lista.map(m => m.id)); // pré-carrega estrelas em lote (1 request)
@@ -335,6 +372,7 @@ function renderGrid() {
     card.append(avatarWrap, nome, meta, com);
     grid.appendChild(card);
   });
+  restaurarScrollMembrosSeNecessario();
 }
 
 function abrirNovoMembro() {
