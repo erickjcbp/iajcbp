@@ -174,7 +174,6 @@ function fmtDataBR(d) { const x = new Date(d + 'T00:00:00'); return DIAS[x.getDa
 
 // ── Caixa de Aprovações — grupos Trocas / Candidaturas (Task 10) + Cobrir (Task 11) ──
 async function renderCaixaSolicitacoes(container){
-  const SC = window.SolicitacoesCore;
   const { data } = await sb.rpc('acolitos_solicitacoes_pendentes');
   const trocas=(data&&data.trocas)||[]; const cand=(data&&data.candidaturas)||[]; const cobrir=(data&&data.cobrir)||[];
 
@@ -236,12 +235,6 @@ async function init() {
   // o card após a view de equipe já ter montado (ela limpa #main-content no início).
   if (EQUIPE_ROLES.includes(_r) || _r === 'cerimonario') {
     await renderViewEquipe();
-    // Caixa de Aprovações (Trocas/Candidaturas/Cobrir) — container dedicado, no topo do
-    // conteúdo montado por renderViewEquipe (main.firstChild no momento da inserção).
-    const main = document.getElementById('main-content');
-    const caixaBox = document.createElement('div');
-    main.insertBefore(caixaBox, main.firstChild);
-    renderCaixaSolicitacoes(caixaBox);
     renderPendentesPublicas();
   }
   else renderViewMembro();
@@ -524,6 +517,13 @@ async function enviarAusencia() {
 async function renderViewEquipe() {
   const main = document.getElementById('main-content');
   main.textContent = '';
+
+  // Caixa de Aprovações (Trocas/Candidaturas/Cobrir) — reconstruída a cada render
+  // (inclusive após "Registrar ausência" chamar renderViewEquipe de novo), pois
+  // main.textContent='' acima limpa qualquer container anterior.
+  const caixaBox = document.createElement('div');
+  main.appendChild(caixaBox);
+  renderCaixaSolicitacoes(caixaBox);
 
   const title = document.createElement('h1'); title.className = 'page-title';
   title.textContent = 'Ausências Informadas'; main.appendChild(title);
