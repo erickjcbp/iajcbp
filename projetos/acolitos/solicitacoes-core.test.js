@@ -14,5 +14,29 @@ eq('recusado_colega é pendente (dá pra reenviar/cobrir)', estaPendente('recusa
 eq('homologado NÃO é pendente', estaPendente('homologado'), false);
 eq('cancelado NÃO é pendente', estaPendente('cancelado'), false);
 eq('tipo troca', TIPO_LABEL['troca'], 'Troca');
+
+// ── agruparVagasPorMissa ──
+const { agruparVagasPorMissa } = require('./solicitacoes-core.js');
+eq('vazio → []', agruparVagasPorMissa([]), []);
+eq('null → []', agruparVagasPorMissa(null), []);
+eq('2 funções da mesma missa → 1 missa com 2 funções',
+  agruparVagasPorMissa([
+    { celebracao_id:'c1', data:'2026-07-19', horario:'19:00', comunidade:'matriz', tipo:'missa_comum', funcao:'cruz' },
+    { celebracao_id:'c1', data:'2026-07-19', horario:'19:00', comunidade:'matriz', tipo:'missa_comum', funcao:'vela' }
+  ]),
+  [{ celebracao_id:'c1', data:'2026-07-19', horario:'19:00', comunidade:'matriz', tipo:'missa_comum', funcoes:['cruz','vela'] }]);
+eq('2 missas → preserva ordem de entrada',
+  agruparVagasPorMissa([
+    { celebracao_id:'c1', data:'2026-07-19', horario:'19:00', comunidade:'matriz', tipo:'missa_comum', funcao:'cruz' },
+    { celebracao_id:'c2', data:'2026-07-20', horario:'08:00', comunidade:'santo_antonio', tipo:'missa_comum', funcao:'vela' }
+  ]).map(m=>m.celebracao_id),
+  ['c1','c2']);
+eq('função duplicada é deduplicada',
+  agruparVagasPorMissa([
+    { celebracao_id:'c1', data:'2026-07-19', horario:'19:00', comunidade:'matriz', tipo:'missa_comum', funcao:'cruz' },
+    { celebracao_id:'c1', data:'2026-07-19', horario:'19:00', comunidade:'matriz', tipo:'missa_comum', funcao:'cruz' }
+  ])[0].funcoes,
+  ['cruz']);
+
 console.log(falhas? ('\n'+falhas+' FALHA(S)') : '\nTODOS OK');
 process.exit(falhas?1:0);
