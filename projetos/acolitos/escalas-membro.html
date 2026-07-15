@@ -159,12 +159,9 @@ async function abrirPedirTroca(escala, ctx){
     'Tem certeza que não poderá cumprir esta escala?\n\nServir é um compromisso. Só peça troca se realmente não puder.',
     { ok:'Sim, pedir troca', cancel:'Voltar' });
   if(!ok) return;
-  // roster habilitado na função (via RPC de roster, que já traz habs)
-  const { data: r } = await sb.rpc('acolitos_roster_substituicao');
-  const membros = (r && r.membros) || []; const habs = (r && r.habs) || [];
-  const habSet = new Set(habs.filter(h=>h.funcao===escala.funcao).map(h=>h.membro_id));
-  const meId = ctx.membro && ctx.membro.id;
-  const elegiveis = membros.filter(mm=> mm.id!==meId && habSet.has(mm.id));
+  // roster habilitado na função (RPC member-facing, já filtra habilitados/ativos/exclui o próprio)
+  const { data: r } = await sb.rpc('acolitos_habilitados_funcao', { p_funcao: escala.funcao });
+  const elegiveis = (r && r.membros) || [];
 
   const ov=document.createElement('div'); ov.className='modal-overlay open';
   ov.onclick=(ev)=>{ if(ev.target===ov) ov.remove(); };
@@ -177,9 +174,10 @@ async function abrirPedirTroca(escala, ctx){
   modal.appendChild(hint);
 
   async function enviar(alvoId){
-    const { data: res } = await sb.rpc('acolitos_solicitar_troca',
+    const { data: res, error } = await sb.rpc('acolitos_solicitar_troca',
       { p_escala_id: escala.id, p_alvo_membro_id: alvoId||null, p_motivo: null });
     ov.remove();
+    if (error) { toast('Erro ao enviar o pedido. Tente de novo.','error'); return; }
     if(res && res.ok){ toast(alvoId?'Convite enviado ao colega.':'Pedido enviado à coordenação.','success'); }
     else if(res && res.erro==='ja_existe'){ toast('Você já tem um pedido pendente para esta missa.','error'); }
     else { toast('Não foi possível enviar o pedido.','error'); }
