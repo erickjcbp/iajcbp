@@ -33,6 +33,7 @@
     .esc-chamada-btn.feita { border-color:var(--success-text,#4caf50); background:linear-gradient(165deg, rgba(76,175,80,.14), var(--surface2)); color:var(--success-text,#7bd88f); }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
+  <script src="/projetos/acolitos/solicitacoes-core.js"></script>
 </head>
 <body>
 <div id="app-header"></div>
@@ -51,6 +52,7 @@ const FUNCAO_ORDEM = { cred_altar:10, cred_credencia:11, missal:12, altar:20, cr
 
 function dataLabel(d) { const x = new Date(d+'T00:00:00'); return DIAS[x.getDay()] + ' ' + x.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}); }
 function comLabel(c) { return c==='matriz'?'Matriz':'Sto. Antônio'; }
+function hojeStr() { return new Date().toISOString().slice(0,10); }
 
 async function init() {
   const ctx = await initModulo();
@@ -63,12 +65,33 @@ async function init() {
   const title = document.createElement('h1'); title.className = 'page-title'; title.textContent = 'Escalas'; main.appendChild(title);
   const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 10px;'; hint.textContent = 'Toque numa missa para ver quem está escalado.'; main.appendChild(hint);
 
+  // Seletor de visão: Minhas (pessoal, com ações) | Todas (browse read-only, comportamento atual)
+  const visSel = document.createElement('div'); visSel.style.cssText='display:flex;gap:8px;margin:4px 0 12px;';
+  const bMinhas = document.createElement('button'); bMinhas.textContent='Minhas';
+  const bTodas  = document.createElement('button'); bTodas.textContent='Todas';
+  visSel.append(bMinhas, bTodas); main.appendChild(visSel);
+  const areaMinhas = document.createElement('div'); main.appendChild(areaMinhas);
+  const areaTodas  = document.createElement('div'); main.appendChild(areaTodas);
+  function estiloSel(btn, on){
+    btn.style.cssText = on
+      ? 'flex:1;cursor:pointer;border-radius:8px;padding:9px;background:var(--gold);color:#1a0e10;border:1px solid var(--gold);font-weight:800;font-family:Sora,sans-serif;'
+      : 'flex:1;cursor:pointer;border-radius:8px;padding:9px;background:transparent;color:var(--text-muted);border:1px solid var(--border);font-family:Sora,sans-serif;';
+  }
+  function setVisao(v){
+    estiloSel(bMinhas, v==='minhas'); estiloSel(bTodas, v==='todas');
+    areaMinhas.style.display = v==='minhas' ? 'block' : 'none';
+    areaTodas.style.display  = v==='todas'  ? 'block' : 'none';
+    if (v==='minhas' && !areaMinhas.dataset.loaded) { renderMinhas(areaMinhas, ctx); areaMinhas.dataset.loaded='1'; }
+  }
+  bMinhas.onclick=()=>setVisao('minhas');
+  bTodas.onclick=()=>setVisao('todas');
+
   // Abas Próximas / Histórico
   const tabs = document.createElement('div'); tabs.style.cssText='display:flex;gap:8px;margin-bottom:8px;';
   const tabProx=document.createElement('button'); tabProx.textContent='Próximas';
   const tabHist=document.createElement('button'); tabHist.textContent='Histórico';
-  tabs.append(tabProx, tabHist); main.appendChild(tabs);
-  const wrap = document.createElement('div'); main.appendChild(wrap);
+  tabs.append(tabProx, tabHist); areaTodas.appendChild(tabs);
+  const wrap = document.createElement('div'); areaTodas.appendChild(wrap);
 
   function setActive(modo){
     const on='flex:1;cursor:pointer;border-radius:8px;padding:8px;background:var(--gold);color:#1a0e10;border:1px solid var(--gold);font-weight:700;font-family:Sora,sans-serif;';
@@ -97,6 +120,174 @@ async function init() {
   tabProx.onclick=()=>carregar('futuras');
   tabHist.onclick=()=>carregar('passadas');
   carregar('futuras');
+  setVisao('minhas');
+}
+
+function subTab(label){ const b=document.createElement('button'); b.textContent=label;
+  b.style.cssText='flex:1;cursor:pointer;border-radius:8px;padding:8px;font-size:13px;font-family:Sora,sans-serif;';
+  return b; }
+function estiloSub(b,on){ b.style.background=on?'var(--surface2)':'transparent'; b.style.color=on?'var(--gold-light)':'var(--text-muted)';
+  b.style.border='1px solid '+(on?'var(--gold-dim)':'var(--border)'); b.style.fontWeight=on?'700':'400'; }
+
+async function carregarMinhasMissas(body, ctx){
+  const m = ctx.membro;
+  if(!m){ body.textContent=''; const e=document.createElement('span'); e.className='empty'; e.textContent='Perfil não encontrado.'; body.appendChild(e); return; }
+  const { data, error } = await sb.from('acolitos_escalas')
+    .select('id,funcao, acolitos_celebracoes!inner(id,data,horario,comunidade,tipo)')
+    .eq('membro_id', m.id).eq('status','escalado')
+    .gte('acolitos_celebracoes.data', hojeStr());
+  body.textContent='';
+  if(error){ const e=document.createElement('span'); e.className='empty'; e.textContent='Não foi possível carregar.'; body.appendChild(e); return; }
+  const linhas = (data||[]).filter(e=>e.acolitos_celebracoes)
+    .sort((a,b)=> (a.acolitos_celebracoes.data+a.acolitos_celebracoes.horario).localeCompare(b.acolitos_celebracoes.data+b.acolitos_celebracoes.horario));
+  if(!linhas.length){ const e=document.createElement('span'); e.className='empty'; e.textContent='Você não está escalado em nenhuma missa futura.'; body.appendChild(e); return; }
+  linhas.forEach(e=>{
+    const c=e.acolitos_celebracoes;
+    const card=document.createElement('div'); card.className='esc-card'; card.style.cursor='default';
+    const dt=document.createElement('div'); dt.className='esc-data'; dt.textContent=dataLabel(c.data)+' · '+c.horario;
+    const sub=document.createElement('div'); sub.className='esc-sub'; sub.textContent=comLabel(c.comunidade)+' · '+(FUNCAO_LABEL[e.funcao]||e.funcao);
+    const bTroca=document.createElement('button');
+    bTroca.textContent='⚠ Pedir troca';
+    bTroca.style.cssText='margin-top:10px;width:100%;padding:9px;border-radius:8px;border:1px solid #7a2a34;background:linear-gradient(165deg,rgba(224,96,122,.16),var(--surface2));color:#ff9db0;font-family:Sora,sans-serif;font-weight:700;font-size:12px;cursor:pointer;';
+    bTroca.onclick=()=>abrirPedirTroca(e, ctx);
+    card.append(dt,sub,bTroca); body.appendChild(card);
+  });
+}
+
+async function abrirPedirTroca(escala, ctx){
+  const ok = await uiConfirm(
+    'Tem certeza que não poderá cumprir esta escala?\n\nServir é um compromisso. Só peça troca se realmente não puder.',
+    { ok:'Sim, pedir troca', cancel:'Voltar' });
+  if(!ok) return;
+  // roster habilitado na função (RPC member-facing, já filtra habilitados/ativos/exclui o próprio)
+  const { data: r } = await sb.rpc('acolitos_habilitados_funcao', { p_funcao: escala.funcao });
+  const elegiveis = (r && r.membros) || [];
+
+  const ov=document.createElement('div'); ov.className='modal-overlay open';
+  ov.onclick=(ev)=>{ if(ev.target===ov) ov.remove(); };
+  const modal=document.createElement('div'); modal.className='modal';
+  const h=document.createElement('div'); h.className='modal-handle';
+  const tt=document.createElement('div'); tt.className='modal-title'; tt.textContent='Com quem trocar?';
+  modal.append(h,tt);
+  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:-6px 0 10px;';
+  hint.textContent='Escolha um colega habilitado. Ele precisa aceitar e a coordenação homologa. Ou peça pra coordenação cobrir.';
+  modal.appendChild(hint);
+
+  async function enviar(alvoId){
+    const { data: res, error } = await sb.rpc('acolitos_solicitar_troca',
+      { p_escala_id: escala.id, p_alvo_membro_id: alvoId||null, p_motivo: null });
+    ov.remove();
+    if (error) { toast('Erro ao enviar o pedido. Tente de novo.','error'); return; }
+    if(res && res.ok){ toast(alvoId?'Convite enviado ao colega.':'Pedido enviado à coordenação.','success'); }
+    else if(res && res.erro==='ja_existe'){ toast('Você já tem um pedido pendente para esta missa.','error'); }
+    else { toast('Não foi possível enviar o pedido.','error'); }
+  }
+
+  const lista=document.createElement('div'); lista.style.cssText='max-height:46vh;overflow:auto;';
+  if(!elegiveis.length){ const e=document.createElement('div'); e.style.cssText='color:var(--text-muted);font-style:italic;padding:8px 0;'; e.textContent='Nenhum colega habilitado nesta função.'; lista.appendChild(e); }
+  elegiveis.forEach(mm=>{
+    const row=document.createElement('button'); row.style.cssText='display:block;width:100%;text-align:left;padding:10px;margin-bottom:6px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;';
+    row.textContent=(mm.apelido||mm.nome);
+    row.onclick=()=>enviar(mm.id);
+    lista.appendChild(row);
+  });
+  modal.appendChild(lista);
+
+  const bCob=document.createElement('button'); bCob.className='btn-sm'; bCob.style.cssText='margin-top:10px;width:100%;';
+  bCob.textContent='Não sei quem chamar — pedir à coordenação';
+  bCob.onclick=()=>enviar(null);
+  const bX=document.createElement('button'); bX.className='btn-sm gray'; bX.style.marginTop='8px'; bX.textContent='Cancelar'; bX.onclick=()=>ov.remove();
+  modal.append(bCob,bX);
+  ov.appendChild(modal); document.body.appendChild(ov);
+}
+
+async function carregarVagas(body, ctx){
+  const { data } = await sb.rpc('acolitos_vagas_abertas_membro');
+  const vagas = (data && data.vagas) || [];
+  body.textContent='';
+  if(!vagas.length){ const e=document.createElement('span'); e.className='empty'; e.textContent='Nenhuma vaga aberta na sua função no momento.'; body.appendChild(e); return; }
+  vagas.forEach(v=>{
+    const card=document.createElement('div'); card.className='esc-card'; card.style.cursor='default';
+    const dt=document.createElement('div'); dt.className='esc-data'; dt.textContent=dataLabel(v.data)+' · '+v.horario;
+    const sub=document.createElement('div'); sub.className='esc-sub'; sub.textContent=comLabel(v.comunidade)+' · '+(FUNCAO_LABEL[v.funcao]||v.funcao)+' — vaga em aberto';
+    const b=document.createElement('button'); b.className='esc-chamada-btn'; b.textContent='Me candidatar';
+    b.onclick=async()=>{ b.disabled=true; b.textContent='...';
+      const { data: res } = await sb.rpc('acolitos_candidatar_vaga', { p_celebracao_id:v.celebracao_id, p_funcao:v.funcao, p_motivo:null });
+      if(res && res.ok){ toast('Candidatura enviada.','success'); b.textContent='✓ Enviada'; }
+      else if(res && res.erro==='ja_candidatou'){ toast('Você já se candidatou.','error'); b.textContent='Já candidatou'; }
+      else { toast('Não foi possível candidatar.','error'); b.disabled=false; b.textContent='Me candidatar'; }
+    };
+    card.append(dt,sub,b); body.appendChild(card);
+  });
+}
+
+async function carregarMeusPedidos(body, ctx){
+  const { data } = await sb.rpc('acolitos_solicitacoes_membro');
+  const meus=(data&&data.meus)||[]; const convites=(data&&data.convites)||[];
+  body.textContent='';
+  const SC = window.SolicitacoesCore;
+
+  // Convites recebidos (aceitar/recusar) — accept/reject SÓ aqui
+  const hCon=document.createElement('div'); hCon.className='esc-cat'; hCon.textContent='Convites recebidos'; body.appendChild(hCon);
+  if(!convites.length){ const e=document.createElement('div'); e.style.cssText='color:var(--text-muted);font-style:italic;font-size:12px;padding:4px 0 8px;'; e.textContent='Nenhum convite.'; body.appendChild(e); }
+  convites.forEach(cv=>{
+    const row=document.createElement('div'); row.className='esc-card'; row.style.cursor='default';
+    const t=document.createElement('div'); t.className='esc-data'; t.textContent=(cv.de_nome||'Colega')+' quer trocar com você';
+    const s=document.createElement('div'); s.className='esc-sub'; s.textContent=dataLabel(cv.data)+' · '+cv.horario+' · '+(FUNCAO_LABEL[cv.funcao]||cv.funcao);
+    const acts=document.createElement('div'); acts.style.cssText='display:flex;gap:8px;margin-top:10px;';
+    const bNo=document.createElement('button'); bNo.className='btn-sm gray'; bNo.style.flex='1'; bNo.textContent='Recusar';
+    const bYes=document.createElement('button'); bYes.className='esc-chamada-btn'; bYes.style.flex='1'; bYes.style.marginTop='0'; bYes.textContent='Aceitar';
+    async function responder(aceita){ bYes.disabled=bNo.disabled=true;
+      const { data: res } = await sb.rpc('acolitos_troca_responder', { p_solicitacao_id:cv.id, p_aceita:aceita });
+      if(res && res.ok){ toast(aceita?'Você aceitou. Vai pra coordenação homologar.':'Convite recusado.','success'); carregarMeusPedidos(body,ctx); }
+      else { toast('Não foi possível responder.','error'); bYes.disabled=bNo.disabled=false; }
+    }
+    bNo.onclick=()=>responder(false); bYes.onclick=()=>responder(true);
+    acts.append(bNo,bYes); row.append(t,s,acts); body.appendChild(row);
+  });
+
+  // Meus pedidos
+  const hMy=document.createElement('div'); hMy.className='esc-cat'; hMy.textContent='Meus pedidos'; body.appendChild(hMy);
+  if(!meus.length){ const e=document.createElement('div'); e.style.cssText='color:var(--text-muted);font-style:italic;font-size:12px;padding:4px 0;'; e.textContent='Você ainda não fez pedidos.'; body.appendChild(e); }
+  meus.forEach(p=>{
+    const row=document.createElement('div'); row.className='esc-card'; row.style.cursor='default';
+    const t=document.createElement('div'); t.className='esc-data'; t.textContent=(SC.TIPO_LABEL[p.tipo]||p.tipo)+' · '+dataLabel(p.data)+' · '+p.horario;
+    const s=document.createElement('div'); s.className='esc-sub'; s.textContent=(FUNCAO_LABEL[p.funcao]||p.funcao)+' — '+(SC.STATUS_LABEL[p.status]||p.status);
+    row.append(t,s);
+    const acts=document.createElement('div'); acts.style.cssText='display:flex;gap:8px;margin-top:10px;';
+    if(p.status==='recusado_colega'){
+      const bCob=document.createElement('button'); bCob.className='btn-sm'; bCob.style.flex='1'; bCob.textContent='Pedir à coordenação';
+      bCob.onclick=async()=>{ const { data:res }=await sb.rpc('acolitos_solicitacao_reenviar',{p_solicitacao_id:p.id,p_novo_alvo:null});
+        if(res&&res.ok){ toast('Enviado à coordenação.','success'); carregarMeusPedidos(body,ctx);} else toast('Falhou.','error'); };
+      acts.appendChild(bCob);
+    }
+    if(SC.estaPendente(p.status)){
+      const bCancel=document.createElement('button'); bCancel.className='btn-sm gray'; bCancel.style.flex='1'; bCancel.textContent='Cancelar';
+      bCancel.onclick=async()=>{ const ok=await uiConfirm('Cancelar este pedido?'); if(!ok) return;
+        const { data:res }=await sb.rpc('acolitos_solicitacao_cancelar',{p_solicitacao_id:p.id});
+        if(res&&res.ok){ toast('Cancelado.','success'); carregarMeusPedidos(body,ctx);} else toast('Falhou.','error'); };
+      acts.appendChild(bCancel);
+    }
+    if(acts.children.length) row.appendChild(acts);
+    body.appendChild(row);
+  });
+}
+
+function renderMinhas(area, ctx){
+  area.textContent='';
+  const nav=document.createElement('div'); nav.style.cssText='display:flex;gap:6px;margin-bottom:10px;';
+  const tMissas=subTab('Minhas missas'), tVagas=subTab('Vagas'), tPed=subTab('Meus pedidos');
+  nav.append(tMissas,tVagas,tPed); area.appendChild(nav);
+  const body=document.createElement('div'); area.appendChild(body);
+  function sel(qual){
+    estiloSub(tMissas,qual==='missas'); estiloSub(tVagas,qual==='vagas'); estiloSub(tPed,qual==='pedidos');
+    body.textContent=''; const ld=document.createElement('span'); ld.className='loading'; ld.textContent='Carregando...'; body.appendChild(ld);
+    if (qual==='missas') carregarMinhasMissas(body, ctx);
+    else if (qual==='vagas') carregarVagas(body, ctx);
+    else carregarMeusPedidos(body, ctx);
+  }
+  tMissas.onclick=()=>sel('missas'); tVagas.onclick=()=>sel('vagas'); tPed.onclick=()=>sel('pedidos');
+  sel('missas');
 }
 
 // Agrupa por semana e pinta os cards (reaproveitado por Próximas e Histórico)

@@ -45,6 +45,7 @@
     .aus-cel-row.sel-all { font-weight:700; color:var(--gold); margin:4px 0 2px; }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
+  <script src="/projetos/acolitos/solicitacoes-core.js"></script>
 </head>
 <body>
 <div id="app-header"></div>
@@ -64,6 +65,10 @@ async function carregarMotivos(){
 }
 const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 // EQUIPE_ROLES já vem do shared.js (redeclarar com const aqui quebrava o script)
+// FUNCAO_LABEL/dataLabel/comLabel copiados de escalas-membro.html (padrão, sem duplicar DIAS/TIPO_LABEL — TIPO_LABEL não é usado aqui)
+const FUNCAO_LABEL = { cred_altar:'Cerimonial de Altar', cred_credencia:'Cerimonial de Credência', missal:'Missal', turibulo:'Turíbulo', naveta:'Naveta', altar:'Altar', cruz:'Cruz', vela:'Vela', sineta:'Sineta', sinao:'Sinão', apoio:'Apoio', mitra:'Mitra', baculo:'Báculo' };
+function dataLabel(d) { const x = new Date(d+'T00:00:00'); return DIAS[x.getDay()] + ' ' + x.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}); }
+function comLabel(c) { return c==='matriz'?'Matriz':'Sto. Antônio'; }
 
 let ctx = null;
 let rosterMembrosAus = null, rosterMapAus = {}, rosterHabsAus = [];
@@ -162,10 +167,121 @@ async function autoTrocaAprovadas(itens) {
     throw err;
   }
 }
+// Constrói o ctx do motor p/ UMA solicitação de cobertura (espelha autoTrocaAprovadas)
+async function construirCtxMotor(it){
+  await carregarRosterAus();
+  const habMap = {}; (rosterHabsAus||[]).forEach(h => { (habMap[h.membro_id]=habMap[h.membro_id]||{})[h.funcao]=h.proficiencia; });
+  const { data: dispRows } = await sb.from('acolitos_disponibilidade').select('membro_id,dia,horario');
+  const dispMap = dispMapDeAus(dispRows);
+  const carga = await carregarCargaAus(it.data);
+  const config = { gerador: (typeof cfg==='function'?cfg('gerador',{}):{}), funcoes_maiores: (typeof cfg==='function'?cfg('funcoes_maiores',null):null) };
+  const { data: linhas } = await sb.from('acolitos_escalas').select('membro_id,status').eq('celebracao_id', it.celebracao_id);
+  const usadosNaMissa = new Set((linhas||[]).filter(e => e.status==='escalado'||e.status==='presente'||e.status==='atrasado').map(e => e.membro_id));
+  usadosNaMissa.add(it.membro_id);
+  return { funcao: it.funcao, comunidade: it.comunidade, horKey: horKeyDeCelAus({ data: it.data, horario: it.horario }),
+           membroAusenteId: it.membro_id, roster: rosterMembrosAus, habMap, dispMap, cargaMap: carga,
+           usadosNaMissa, usadoFds: new Set(), config };
+}
+function nomeDoMembro(id){ const m = rosterMapAus && rosterMapAus[id]; return m ? (m.apelido||m.nome) : id; }
+
 let motivoSelecionado = 'doenca';
 let datasAvulsasSel = []; // datas (YYYY-MM-DD) informadas sem celebração cadastrada
 
 function fmtDataBR(d) { const x = new Date(d + 'T00:00:00'); return DIAS[x.getDay()] + ' ' + x.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }); }
+
+// ── Caixa de Aprovações — grupos Trocas / Candidaturas (Task 10) + Cobrir (Task 11) ──
+async function renderCaixaSolicitacoes(container){
+  const { data } = await sb.rpc('acolitos_solicitacoes_pendentes');
+  const trocas=(data&&data.trocas)||[]; const cand=(data&&data.candidaturas)||[]; const cobrir=(data&&data.cobrir)||[];
+
+  function grupo(titulo, itens, montarItem){
+    if(!itens.length) return;
+    const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
+    h.textContent=titulo+' ('+itens.length+')'; container.appendChild(h);
+    itens.forEach(it=>container.appendChild(montarItem(it)));
+  }
+  function fmt(it){ return dataLabel(it.data)+' · '+it.horario+' · '+comLabel(it.comunidade); }
+  function card(){ const c=document.createElement('div'); c.style.cssText='background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:12px;margin-bottom:8px;'; return c; }
+  function acoes(){ const a=document.createElement('div'); a.style.cssText='display:flex;gap:8px;margin-top:10px;'; return a; }
+
+  async function decidir(id, acao, substituto, onOk){
+    const { data:res } = await sb.rpc('acolitos_solicitacao_decidir', { p_solicitacao_id:id, p_acao:acao, p_substituto_id:substituto||null });
+    if(res && res.ok){ toast('Feito.','success'); onOk(); } else { toast('Não foi possível decidir.','error'); }
+  }
+
+  // 🔄 Trocas aguardando homologação (colega já aceitou)
+  grupo('🔄 Trocas aguardando você', trocas, (it)=>{
+    const c=card();
+    const t=document.createElement('div'); t.style.fontWeight='700'; t.textContent=(it.de_nome||'?')+' → '+(it.alvo_nome||'?');
+    const s=document.createElement('div'); s.style.cssText='font-size:12px;color:var(--gold);'; s.textContent=fmt(it)+' · '+(FUNCAO_LABEL[it.funcao]||it.funcao);
+    const a=acoes();
+    const ok=document.createElement('button'); ok.className='btn-sm'; ok.style.flex='1'; ok.textContent='Homologar';
+    const no=document.createElement('button'); no.className='btn-sm gray'; no.style.flex='1'; no.textContent='Negar';
+    ok.onclick=()=>decidir(it.id,'homologar',null,()=>c.remove());
+    no.onclick=()=>decidir(it.id,'negar',null,()=>c.remove());
+    a.append(ok,no); c.append(t,s,a); return c;
+  });
+
+  // 🙋 Candidaturas a vaga
+  grupo('🙋 Candidaturas a vaga', cand, (it)=>{
+    const c=card();
+    const t=document.createElement('div'); t.style.fontWeight='700'; t.textContent=(it.de_nome||'?')+' quer '+(FUNCAO_LABEL[it.funcao]||it.funcao);
+    const s=document.createElement('div'); s.style.cssText='font-size:12px;color:var(--gold);'; s.textContent=fmt(it);
+    const a=acoes();
+    const ok=document.createElement('button'); ok.className='btn-sm'; ok.style.flex='1'; ok.textContent='Aprovar';
+    const no=document.createElement('button'); no.className='btn-sm gray'; no.style.flex='1'; no.textContent='Negar';
+    ok.onclick=()=>decidir(it.id,'aprovar_candidatura',null,()=>c.remove());
+    no.onclick=()=>decidir(it.id,'negar',null,()=>c.remove());
+    a.append(ok,no); c.append(t,s,a); return c;
+  });
+
+  // 🛟 Cobrir — tratado na Task 11 (auto-troca)
+  renderCaixaCobrir(container, cobrir);
+
+  // 🆕 Novos cadastros aguardando aprovação (fonte: CRM)
+  try {
+    const { data: novos } = await sb.from('acolitos_crm')
+      .select('membro_id, etapa, acolitos_membros(nome)')
+      .eq('etapa','aprovacao_cadastro');
+    if ((novos||[]).length){
+      const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
+      h.textContent='🆕 Novos cadastros ('+novos.length+')'; container.appendChild(h);
+      novos.forEach(n=>{
+        const c=document.createElement('div'); c.style.cssText='background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;';
+        const t=document.createElement('div'); t.style.fontWeight='700'; t.textContent=(n.acolitos_membros && n.acolitos_membros.nome) || '(sem nome)';
+        const b=document.createElement('a'); b.className='btn-sm'; b.href='crm.html'; b.textContent='Abrir no CRM →';
+        c.append(t,b); container.appendChild(c);
+      });
+    }
+  } catch(e){ console.error('novos cadastros (caixa) falhou', e); }
+}
+async function renderCaixaCobrir(container, cobrir){
+  if(!cobrir.length) return;
+  const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
+  h.textContent='🛟 Cobrir / auto-troca ('+cobrir.length+')'; container.appendChild(h);
+  for (const it of cobrir){
+    const c=document.createElement('div'); c.style.cssText='background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:12px;margin-bottom:8px;';
+    const t=document.createElement('div'); t.style.fontWeight='700'; t.textContent='Vaga de '+(it.de_nome||'?')+' — '+(FUNCAO_LABEL[it.funcao]||it.funcao);
+    const s=document.createElement('div'); s.style.cssText='font-size:12px;color:var(--gold);'; s.textContent=dataLabel(it.data)+' · '+it.horario+' · '+comLabel(it.comunidade);
+    c.append(t,s);
+    const sug=document.createElement('div'); sug.style.cssText='font-size:13px;margin-top:8px;'; sug.textContent='Calculando sugestão...'; c.appendChild(sug);
+    let sugeridoId=null;
+    try {
+      const ctxMotor = await construirCtxMotor(it);
+      const r = GeradorSubstituto.escolherSubstituto(ctxMotor);
+      sugeridoId = r.membroId || null;
+      sug.textContent = sugeridoId ? ('Sugerido: '+nomeDoMembro(sugeridoId)) : 'Sem candidato disponível (vaga ficará vazia)';
+    } catch(e){ console.error('sugestão cobertura falhou', e); sug.textContent='Não foi possível calcular sugestão.'; }
+    const a=document.createElement('div'); a.style.cssText='display:flex;gap:8px;margin-top:10px;';
+    const ok=document.createElement('button'); ok.className='btn-sm'; ok.style.flex='1'; ok.textContent=sugeridoId?'Confirmar':'Deixar vago';
+    const no=document.createElement('button'); no.className='btn-sm gray'; no.style.flex='1'; no.textContent='Negar';
+    ok.onclick=async()=>{ ok.disabled=no.disabled=true; const { data:res }=await sb.rpc('acolitos_solicitacao_decidir',{p_solicitacao_id:it.id,p_acao:'confirmar_cobertura',p_substituto_id:sugeridoId});
+      if(res&&res.ok){ toast('Cobertura confirmada.','success'); c.remove(); } else { toast('Não foi possível confirmar.','error'); ok.disabled=no.disabled=false; } };
+    no.onclick=async()=>{ ok.disabled=no.disabled=true; const { data:res }=await sb.rpc('acolitos_solicitacao_decidir',{p_solicitacao_id:it.id,p_acao:'negar',p_substituto_id:null});
+      if(res&&res.ok){ toast('Negado.','success'); c.remove(); } else { toast('Não foi possível negar.','error'); ok.disabled=no.disabled=false; } };
+    a.append(ok,no); c.appendChild(a); container.appendChild(c);
+  }
+}
 
 async function init() {
   ctx = await initModulo();
@@ -177,7 +293,10 @@ async function init() {
   const _r = ctx.membership.role;
   // renderPendentesPublicas sem await de propósito: carrega em background e prepende
   // o card após a view de equipe já ter montado (ela limpa #main-content no início).
-  if (EQUIPE_ROLES.includes(_r) || _r === 'cerimonario') { await renderViewEquipe(); renderPendentesPublicas(); }
+  if (EQUIPE_ROLES.includes(_r) || _r === 'cerimonario') {
+    await renderViewEquipe();
+    renderPendentesPublicas();
+  }
   else renderViewMembro();
 }
 
@@ -458,6 +577,13 @@ async function enviarAusencia() {
 async function renderViewEquipe() {
   const main = document.getElementById('main-content');
   main.textContent = '';
+
+  // Caixa de Aprovações (Trocas/Candidaturas/Cobrir) — reconstruída a cada render
+  // (inclusive após "Registrar ausência" chamar renderViewEquipe de novo), pois
+  // main.textContent='' acima limpa qualquer container anterior.
+  const caixaBox = document.createElement('div');
+  main.appendChild(caixaBox);
+  renderCaixaSolicitacoes(caixaBox);
 
   const title = document.createElement('h1'); title.className = 'page-title';
   title.textContent = 'Ausências Informadas'; main.appendChild(title);

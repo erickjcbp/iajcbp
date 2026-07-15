@@ -94,6 +94,7 @@
     .continuar-chip:active{ background:rgba(232,205,143,.2); }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
+  <script src="/projetos/acolitos/solicitacoes-core.js"></script>
 </head>
 <body>
 <div id="app-header"></div>
@@ -531,6 +532,22 @@ async function renderDashboardMembro(ctx) {
   greet.appendChild(info);
   main.appendChild(greet);
 
+  // Aviso: convites de troca que exigem minha resposta (leva à Escala eu; não age aqui)
+  if (m) {
+    try {
+      const { data: sol } = await sb.rpc('acolitos_solicitacoes_membro');
+      const nConv = ((sol && sol.convites) || []).length;
+      if (nConv > 0) {
+        const av = document.createElement('a'); av.href = 'escalas-membro.html';
+        av.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2));border:1px solid var(--gold-dim);border-radius:10px;padding:12px 14px;margin-bottom:16px;';
+        const tx = document.createElement('div'); tx.style.cssText='color:var(--gold-light);font-weight:700;font-size:13px;';
+        tx.textContent = '⚡ Você tem ' + nConv + (nConv>1?' convites de troca pra responder':' convite de troca pra responder');
+        const go = document.createElement('span'); go.style.cssText='color:var(--gold);font-size:12px;white-space:nowrap;'; go.textContent='Ver na escala →';
+        av.append(tx, go); main.appendChild(av);
+      }
+    } catch (e) {}
+  }
+
   // Destaque do nível atual (animado) + jornada
   renderRankProgress(main, nivel, m);
 
@@ -577,8 +594,10 @@ async function renderDashboardMembro(ctx) {
         const top=document.createElement('div'); top.className='ev-top'; top.textContent=d.dow+' · '+c.horario+' · '+(c.comunidade==='matriz'?'Matriz':'Sto. Antônio');
         const fn=document.createElement('div'); fn.className='ev-funcao'; fn.textContent=FUNCAO_LABEL[e.funcao]||e.funcao;
         body.append(top,fn);
-        const btn=document.createElement('a'); btn.className='btn-sm gray'; btn.href='ausencias.html'; btn.textContent='Ausência';
-        item.append(dt,body,btn); main.appendChild(item);
+        item.append(dt,body);
+        item.style.cursor='pointer';
+        item.onclick=()=>{ window.location.href='escalas-membro.html'; };
+        main.appendChild(item);
       });
     }
   }
@@ -591,6 +610,24 @@ async function renderDashboardMembro(ctx) {
 async function renderDashboardEquipe(ctx) {
   const main = document.getElementById('main'); main.textContent = '';
   const title = document.createElement('h1'); title.className='page-title'; title.textContent='Painel Operacional'; main.appendChild(title);
+
+  // Badge de pendências → Caixa de Aprovações
+  try {
+    const [{ data: sol }, { data: aus }] = await Promise.all([
+      sb.rpc('acolitos_solicitacoes_pendentes'),
+      sb.rpc('acolitos_ausencia_pendente_listar')
+    ]);
+    const nSol = sol ? (((sol.trocas||[]).length)+((sol.candidaturas||[]).length)+((sol.cobrir||[]).length)) : 0;
+    const nAus = aus ? ((aus.pendentes||[]).length) : 0;
+    const total = nSol + nAus;
+    if (total > 0) {
+      const a = document.createElement('a'); a.href='ausencias.html';
+      a.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;background:linear-gradient(165deg,rgba(224,96,122,.14),var(--surface2));border:1px solid #7a3a44;border-radius:10px;padding:12px 14px;margin-bottom:16px;';
+      const t=document.createElement('div'); t.style.cssText='color:#ff9db0;font-weight:800;font-size:14px;'; t.textContent='⚡ '+total+' pendência'+(total>1?'s':'')+' aguardando você';
+      const g=document.createElement('span'); g.style.cssText='color:var(--gold);font-size:12px;white-space:nowrap;'; g.textContent='Abrir Caixa →';
+      a.append(t,g); main.appendChild(a);
+    }
+  } catch(e){}
 
   // Carrega dados
   const hoje = hojeStr();
