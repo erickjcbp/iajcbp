@@ -281,6 +281,135 @@ git commit -m "feat(acolitos): ESCALA EU! — card animado + fluxo guiado missa�
 
 ---
 
+### Task 3: Tela única — 4 seções empilhadas (rolagem)
+
+Achata a navegação da tela Escalas: remove o seletor **Minhas/Todas** e as
+sub-abas; `init()` passa a renderizar 4 seções em sequência dentro de
+`#main-content`: **ESCALA EU!** (herói) → **Minhas missas** → **Meus pedidos**
+→ **Todas as missas** (com toggle Próximas/Histórico preservado). As funções
+de conteúdo não mudam — só onde são montadas. Remove o código órfão
+(`renderMinhas`, `subTab`, `estiloSub`).
+
+**Files:**
+- Modify: `projetos/acolitos/escalas-membro.html` (CSS `.esc-secao`; corpo do `init()`; remoção de 3 funções órfãs)
+
+**Interfaces:**
+- Consumes (todas já existem e ficam intactas): `carregarVagas(body,ctx)` (Task 2), `carregarMinhasMissas(body,ctx)`, `carregarMeusPedidos(body,ctx)`, `pintarSemanas(cels,container,isCerimo,chamadasFeitas,modo)`, e os RPCs `acolitos_escalas_futuras`/`acolitos_escalas_passadas`.
+- Produces: nada consumido por outras tasks.
+
+- [ ] **Step 1: Adicionar o CSS do título de seção**
+
+Em `projetos/acolitos/escalas-membro.html`, no bloco `<style>`, **logo após** a última regra `.ee-chip:disabled { ... }` adicionada na Task 2, inserir:
+
+```css
+    .esc-secao { font-family:'Sora',sans-serif; font-weight:800; font-size:15px; color:var(--gold-light); letter-spacing:.5px; margin:28px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--border-wine); }
+```
+
+- [ ] **Step 2: Reescrever o corpo do `init()` para as 4 seções**
+
+No `init()`, substituir o trecho que vai **da linha do hint** `const hint = document.createElement('p'); ... main.appendChild(hint);` **até imediatamente antes** do `}` que fecha o `init()` (ou seja: todo o bloco `visSel`/`areaMinhas`/`areaTodas`/`setVisao`, as abas Próximas/Histórico e a chamada `setVisao('minhas')`) por:
+
+```javascript
+  // ── Tela única: seções empilhadas (rolagem) ──
+  function secaoTitulo(txt){ const h=document.createElement('div'); h.className='esc-secao'; h.textContent=txt; return h; }
+
+  // 1) ESCALA EU! (herói + fluxo missa→função) — se anuncia sozinho, sem título
+  const secVagas = document.createElement('div'); main.appendChild(secVagas);
+  carregarVagas(secVagas, ctx);
+
+  // 2) Minhas missas
+  main.appendChild(secaoTitulo('Minhas missas'));
+  const secMinhas = document.createElement('div'); main.appendChild(secMinhas);
+  carregarMinhasMissas(secMinhas, ctx);
+
+  // 3) Meus pedidos
+  main.appendChild(secaoTitulo('Meus pedidos'));
+  const secPed = document.createElement('div'); main.appendChild(secPed);
+  carregarMeusPedidos(secPed, ctx);
+
+  // 4) Todas as missas (browse read-only) — mantém toggle Próximas/Histórico
+  main.appendChild(secaoTitulo('Todas as missas'));
+  const secTodas = document.createElement('div'); main.appendChild(secTodas);
+  const hintTodas = document.createElement('p'); hintTodas.style.cssText='font-size:12px;color:var(--text-muted);margin:-2px 0 8px;'; hintTodas.textContent='Toque numa missa para ver quem está escalado.'; secTodas.appendChild(hintTodas);
+  const tabs = document.createElement('div'); tabs.style.cssText='display:flex;gap:8px;margin-bottom:8px;';
+  const tabProx=document.createElement('button'); tabProx.textContent='Próximas';
+  const tabHist=document.createElement('button'); tabHist.textContent='Histórico';
+  tabs.append(tabProx, tabHist); secTodas.appendChild(tabs);
+  const wrap = document.createElement('div'); secTodas.appendChild(wrap);
+
+  function setActive(modo){
+    const on='flex:1;cursor:pointer;border-radius:8px;padding:8px;background:var(--gold);color:#1a0e10;border:1px solid var(--gold);font-weight:700;font-family:Sora,sans-serif;';
+    const off='flex:1;cursor:pointer;border-radius:8px;padding:8px;background:transparent;color:var(--text-muted);border:1px solid var(--border);font-family:Sora,sans-serif;';
+    tabProx.style.cssText = modo==='futuras'?on:off;
+    tabHist.style.cssText = modo==='passadas'?on:off;
+  }
+  async function carregar(modo){
+    setActive(modo);
+    wrap.textContent=''; const ld=document.createElement('span'); ld.className='loading'; ld.textContent='Carregando...'; wrap.appendChild(ld);
+    const rpc = modo==='passadas' ? 'acolitos_escalas_passadas' : 'acolitos_escalas_futuras';
+    const { data, error } = await sb.rpc(rpc);
+    wrap.textContent='';
+    if (error) { const e=document.createElement('span'); e.className='empty'; e.textContent='Não foi possível carregar as escalas.'; wrap.appendChild(e); return; }
+    const cels = data || [];
+    if (!cels.length) { const e=document.createElement('span'); e.className='empty'; e.textContent = modo==='passadas' ? 'Nenhuma missa no histórico.' : 'Nenhuma missa futura cadastrada.'; wrap.appendChild(e); return; }
+    let chamadasFeitas = new Set();
+    if (isCerimo) { try { const { data: chs } = await sb.from('acolitos_chamadas').select('celebracao_id'); (chs||[]).forEach(x => chamadasFeitas.add(x.celebracao_id)); } catch (e) {} }
+    pintarSemanas(cels, wrap, isCerimo, chamadasFeitas, modo);
+  }
+  tabProx.onclick=()=>carregar('futuras');
+  tabHist.onclick=()=>carregar('passadas');
+  carregar('futuras');
+```
+
+Observação: a linha original do hint genérico (`const hint = ...`) é **removida** (o hint agora vive dentro da seção "Todas as missas" como `hintTodas`). A `const title` acima do hint permanece.
+
+- [ ] **Step 3: Remover as 3 funções órfãs**
+
+Depois do Step 2, `renderMinhas`, `subTab` e `estiloSub` não têm mais nenhum chamador. Remover as três definições inteiras de `projetos/acolitos/escalas-membro.html`:
+- `function subTab(label){ ... }` (bloco de ~3 linhas)
+- `function estiloSub(b,on){ ... }` (bloco de ~2 linhas)
+- `function renderMinhas(area, ctx){ ... }` (bloco que vai de `function renderMinhas` até seu `}` de fechamento, ~16 linhas)
+
+Antes de remover, confirmar zero chamadores com grep; depois de remover, confirmar que sumiram e que não sobrou referência:
+
+```bash
+grep -n "renderMinhas\|subTab\|estiloSub" projetos/acolitos/escalas-membro.html
+```
+Expected após remoção: **nenhuma linha** (saída vazia).
+
+- [ ] **Step 4: Validar sintaxe e core**
+
+Run: `node projetos/acolitos/solicitacoes-core.test.js`
+Expected: `TODOS OK`.
+
+Extrair o conteúdo do `<script>` inline principal para um `.js` temporário e rodar `node --check` nele.
+Expected: sem SyntaxError (só globais de browser, que `node --check` não avalia).
+
+Confirmar que `carregarVagas`, `carregarMinhasMissas`, `carregarMeusPedidos`, `pintarSemanas` continuam definidas exatamente uma vez cada:
+
+```bash
+grep -c "function carregarVagas\|carregarVagas(secVagas" projetos/acolitos/escalas-membro.html
+```
+
+- [ ] **Step 5: Verificação manual — a rolagem de 4 seções**
+
+`cd ~/iajcbp && python3 -m http.server 8080`, abrir `escalas-membro.html`, logar.
+Expected:
+- Uma rolagem única, sem seletor Minhas/Todas nem sub-abas.
+- Ordem: herói **ESCALA EU!** → título **Minhas missas** + conteúdo → título **Meus pedidos** + conteúdo → título **Todas as missas** + hint + toggle Próximas/Histórico + lista.
+- O herói ainda abre missa → função e o "‹ voltar" recolhe, tudo dentro da 1ª seção sem afetar as outras.
+- Toggle Próximas/Histórico na seção Todas funciona (troca a lista).
+- Celular (~375px): títulos e cards não estouram; rolagem vertical limpa.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add projetos/acolitos/escalas-membro.html
+git commit -m "feat(acolitos): Escalas em tela única — ESCALA EU! + Minhas missas + Meus pedidos + Todas (remove seletor/sub-abas)"
+```
+
+---
+
 ## Self-Review
 
 **Spec coverage:**

@@ -141,6 +141,41 @@ client-side. Verificação:
 4. **Duplicado:** pedir de novo a mesma vaga → `ja_candidatou` tratado.
 5. **Responsivo:** herói e chips não estouram a tela no celular.
 
+## Revisão 2026-07-15 — tela única (rolagem, 4 seções)
+
+Depois de ver o herói funcionando, o dono pediu para **achatar a navegação**
+da tela Escalas: em vez do seletor de visão **Minhas/Todas** + sub-abas
+(Minhas missas / Vagas / Meus pedidos), a tela vira **uma rolagem única com 4
+seções empilhadas, todas sempre abertas**, nesta ordem:
+
+1. **ESCALA EU!** — o herói animado no topo (sem título próprio; ele se
+   anuncia). Continua interativo: pulsa quando há vaga e abre o fluxo
+   missa → função na própria seção, com "‹ voltar" para recolher ao herói.
+2. **Minhas missas** — seção titulada; reusa `carregarMinhasMissas`.
+3. **Meus pedidos** — seção titulada; reusa `carregarMeusPedidos`.
+4. **Todas as missas** — seção titulada; a navegação read-only de quem está
+   escalado. **Mantém o toggle interno Próximas / Histórico** (padrão:
+   Próximas) — numa seção sempre aberta, despejar o histórico inteiro
+   deixaria a tela enorme.
+
+**Decisões:**
+- Sai o seletor **Minhas/Todas** e as sub-abas. `init()` passa a renderizar as
+  4 seções em sequência dentro de `#main-content`.
+- Ficam **órfãs e são removidas**: `renderMinhas`, `subTab`, `estiloSub` (só o
+  antigo seletor de sub-abas as usava). As funções de conteúdo
+  (`carregarVagas`, `carregarMinhasMissas`, `carregarMeusPedidos`,
+  `pintarSemanas`, e o `carregar(modo)` das Todas) **permanecem intactas** —
+  cada uma renderiza no `body` da sua seção.
+- Cada seção 2-4 ganha um **título** (nova classe `.esc-secao`). O herói (1)
+  não tem título.
+- O hint genérico "Toque numa missa…" sai do topo e vira um subtítulo da seção
+  **Todas as missas** (é onde tocar numa missa mostra o roster).
+- Todas as 4 seções carregam no `init` (antes, Vagas e Meus pedidos eram
+  lazy). São RPCs leves; aceitável.
+
+**Fora de escopo desta revisão:** nenhuma mudança em banco/RLS/RPC; o conteúdo
+interno de cada seção não muda (só onde/como são montadas).
+
 ## Extração testável sugerida
 
 Mover o agrupamento pra uma função pura reaproveitável (ex.: no
