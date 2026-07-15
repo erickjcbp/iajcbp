@@ -31,6 +31,24 @@
     .esc-chamada-btn { margin-top:10px; width:100%; padding:9px; border-radius:8px; border:1px solid var(--gold-dim); background:linear-gradient(165deg, rgba(232,185,74,.14), var(--surface2)); color:var(--gold-light); font-family:'Sora',sans-serif; font-weight:700; font-size:12px; letter-spacing:.3px; cursor:pointer; }
     .esc-chamada-btn:hover { border-color:var(--gold); box-shadow:0 0 12px var(--red-glow); }
     .esc-chamada-btn.feita { border-color:var(--success-text,#4caf50); background:linear-gradient(165deg, rgba(76,175,80,.14), var(--surface2)); color:var(--success-text,#7bd88f); }
+    /* ── ESCALA EU! ── */
+    .ee-hero { position:relative; overflow:hidden; border-radius:14px; padding:24px 18px; text-align:center; cursor:pointer; background:linear-gradient(150deg, rgba(232,185,74,.18), rgba(120,20,30,.30)); border:1px solid var(--gold-dim); transition:transform .12s, box-shadow .3s; }
+    .ee-hero.pulsa { animation:eePulse 2.2s ease-in-out infinite; }
+    .ee-hero:active { transform:scale(.99); }
+    @keyframes eePulse { 0%,100%{ box-shadow:0 0 0 0 rgba(232,185,74,0); } 50%{ box-shadow:0 0 26px 2px var(--red-glow); } }
+    .ee-hero .ee-t { font-family:'Sora',sans-serif; font-weight:800; letter-spacing:2px; font-size:26px; color:var(--gold-light); text-shadow:0 0 16px var(--red-glow); }
+    .ee-hero .ee-s { font-size:13px; color:var(--text); margin-top:6px; }
+    .ee-hero .ee-badge { display:inline-block; margin-top:14px; font-family:'Sora',sans-serif; font-weight:700; font-size:12px; color:var(--text); background:rgba(0,0,0,.25); border:1px solid var(--border-wine); border-radius:999px; padding:5px 13px; }
+    .ee-hero.calmo { animation:none; cursor:default; background:linear-gradient(150deg, rgba(120,20,30,.14), var(--surface2)); }
+    .ee-back { background:none; border:none; color:var(--gold); font-family:'Sora',sans-serif; font-weight:700; font-size:13px; cursor:pointer; padding:6px 0; margin-bottom:6px; }
+    .ee-step { animation:eeFade .28s ease both; }
+    @keyframes eeFade { from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+    .ee-resumo { font-size:12px; color:var(--gold); margin:2px 0 10px; }
+    .ee-chips { display:flex; flex-wrap:wrap; gap:10px; }
+    .ee-chip { flex:1 1 44%; min-width:130px; padding:15px 12px; border-radius:12px; border:1px solid var(--gold-dim); background:linear-gradient(165deg, rgba(232,185,74,.12), var(--surface2)); color:var(--gold-light); font-family:'Sora',sans-serif; font-weight:700; font-size:14px; cursor:pointer; text-align:center; transition:border-color .15s, transform .1s, box-shadow .2s; }
+    .ee-chip:hover { border-color:var(--gold); box-shadow:0 0 12px var(--red-glow); }
+    .ee-chip:active { transform:scale(.98); }
+    .ee-chip:disabled { cursor:default; border-color:var(--success-text,#4caf50); color:var(--success-text,#7bd88f); background:linear-gradient(165deg, rgba(76,175,80,.14), var(--surface2)); box-shadow:none; }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
   <script src="/projetos/acolitos/solicitacoes-core.js"></script>
@@ -201,24 +219,93 @@ async function abrirPedirTroca(escala, ctx){
   ov.appendChild(modal); document.body.appendChild(ov);
 }
 
+// Vagas pedidas nesta sessão (celebracao_id|funcao). O RPC filtra por
+// "escalado", não por candidatura pendente — então a vaga pedida continua
+// aparecendo; marcamos o chip como "✓" pra não deixar re-pedir.
+const _eePedidos = new Set();
+
 async function carregarVagas(body, ctx){
+  body.textContent = '';
+  const wrap = document.createElement('div'); body.appendChild(wrap);
   const { data } = await sb.rpc('acolitos_vagas_abertas_membro');
-  const vagas = (data && data.vagas) || [];
-  body.textContent='';
-  if(!vagas.length){ const e=document.createElement('span'); e.className='empty'; e.textContent='Nenhuma vaga aberta na sua função no momento.'; body.appendChild(e); return; }
-  vagas.forEach(v=>{
-    const card=document.createElement('div'); card.className='esc-card'; card.style.cursor='default';
-    const dt=document.createElement('div'); dt.className='esc-data'; dt.textContent=dataLabel(v.data)+' · '+v.horario;
-    const sub=document.createElement('div'); sub.className='esc-sub'; sub.textContent=comLabel(v.comunidade)+' · '+(FUNCAO_LABEL[v.funcao]||v.funcao)+' — vaga em aberto';
-    const b=document.createElement('button'); b.className='esc-chamada-btn'; b.textContent='Me candidatar';
-    b.onclick=async()=>{ b.disabled=true; b.textContent='...';
-      const { data: res } = await sb.rpc('acolitos_candidatar_vaga', { p_celebracao_id:v.celebracao_id, p_funcao:v.funcao, p_motivo:null });
-      if(res && res.ok){ toast('Candidatura enviada.','success'); b.textContent='✓ Enviada'; }
-      else if(res && res.erro==='ja_candidatou'){ toast('Você já se candidatou.','error'); b.textContent='Já candidatou'; }
-      else { toast('Não foi possível candidatar.','error'); b.disabled=false; b.textContent='Me candidatar'; }
-    };
-    card.append(dt,sub,b); body.appendChild(card);
-  });
+  const missas = window.SolicitacoesCore.agruparVagasPorMissa((data && data.vagas) || []);
+  renderHeroi();
+
+  function mkBack(txt, fn){ const b=document.createElement('button'); b.className='ee-back'; b.textContent=txt; b.onclick=fn; return b; }
+
+  function renderHeroi(){
+    wrap.textContent = '';
+    const hero = document.createElement('div');
+    hero.className = 'ee-hero ee-step' + (missas.length ? ' pulsa' : ' calmo');
+    const t = document.createElement('div'); t.className='ee-t'; t.textContent='ESCALA EU!';
+    const s = document.createElement('div'); s.className='ee-s';
+    hero.append(t, s);
+    if(missas.length){
+      s.textContent = 'Quer servir? Escolha uma missa e a sua função.';
+      const b = document.createElement('div'); b.className='ee-badge';
+      b.textContent = missas.length===1 ? '1 missa precisa de você' : missas.length+' missas precisam de você';
+      hero.appendChild(b);
+      hero.onclick = renderMissas;
+    } else {
+      s.textContent = 'Tudo escalado por enquanto — volte depois.';
+    }
+    wrap.appendChild(hero);
+  }
+
+  function renderMissas(){
+    wrap.textContent = '';
+    wrap.appendChild(mkBack('‹ voltar', renderHeroi));
+    missas.forEach(function(m){
+      const card = document.createElement('div'); card.className='esc-card ee-step';
+      const dt = document.createElement('div'); dt.className='esc-data'; dt.textContent = dataLabel(m.data)+' · '+m.horario;
+      const sub = document.createElement('div'); sub.className='esc-sub'; sub.textContent = comLabel(m.comunidade);
+      const cnt = document.createElement('div'); cnt.className='esc-count';
+      const strong = document.createElement('b'); strong.textContent = m.funcoes.length;
+      const k = m.funcoes.length;
+      cnt.append(strong, document.createTextNode(' '+(k===1?'função aberta pra você':'funções abertas pra você')));
+      card.append(dt, sub, cnt);
+      card.onclick = function(){ renderFuncoes(m); };
+      wrap.appendChild(card);
+    });
+  }
+
+  function renderFuncoes(m){
+    wrap.textContent = '';
+    wrap.appendChild(mkBack('‹ voltar', renderMissas));
+    const res = document.createElement('div'); res.className='ee-resumo';
+    res.textContent = dataLabel(m.data)+' · '+m.horario+' · '+comLabel(m.comunidade);
+    wrap.appendChild(res);
+    const chips = document.createElement('div'); chips.className='ee-chips ee-step'; wrap.appendChild(chips);
+    m.funcoes.forEach(function(fn){
+      const chip = document.createElement('button'); chip.className='ee-chip';
+      const nome = FUNCAO_LABEL[fn]||fn;
+      const jaPedido = _eePedidos.has(m.celebracao_id+'|'+fn);
+      chip.textContent = jaPedido ? '✓ '+nome : nome;
+      chip.disabled = jaPedido;
+      chip.onclick = function(){ pedir(m, fn, chip); };
+      chips.appendChild(chip);
+    });
+  }
+
+  async function pedir(m, fn, chip){
+    const nome = FUNCAO_LABEL[fn]||fn;
+    const ok = await uiConfirm('Pedir para servir como '+nome+' em '+dataLabel(m.data)+' · '+m.horario+'?');
+    if(!ok) return;
+    chip.disabled = true; const antes = chip.textContent; chip.textContent = '...';
+    const { data: res } = await sb.rpc('acolitos_candidatar_vaga', { p_celebracao_id:m.celebracao_id, p_funcao:fn, p_motivo:null });
+    if(res && res.ok){
+      _eePedidos.add(m.celebracao_id+'|'+fn);
+      chip.textContent = '✓ '+nome;
+      showCeleb({ icon:'⛪', tag:'ESCALA EU!', hero:'Pedido enviado!', sub:'A coordenação vai confirmar sua escala.', sound:'star', autoClose:2600, done:renderHeroi });
+    } else if(res && res.erro==='ja_candidatou'){
+      _eePedidos.add(m.celebracao_id+'|'+fn);
+      chip.textContent = '✓ '+nome;
+      toast('Você já se candidatou a essa vaga.','error');
+    } else {
+      chip.disabled = false; chip.textContent = antes;
+      toast('Não foi possível pedir.','error');
+    }
+  }
 }
 
 async function carregarMeusPedidos(body, ctx){
