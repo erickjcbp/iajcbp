@@ -294,3 +294,21 @@ revoke execute on function public.acolitos_solicitacoes_pendentes() from public;
 revoke execute on function public.acolitos_solicitacao_decidir(uuid,text,uuid) from public;
 grant execute on function public.acolitos_solicitacoes_pendentes() to authenticated;
 grant execute on function public.acolitos_solicitacao_decidir(uuid,text,uuid) to authenticated;
+
+-- ── Habilitados numa função (member-facing p/ o picker de "Pedir troca") ──
+-- acolitos_roster_substituicao é gated p/ staff; o membro comum precisa ver os habilitados
+-- da função pra escolher um colega. Devolve só id/nome/apelido de ativos habilitados, exceto eu.
+create or replace function public.acolitos_habilitados_funcao(p_funcao text)
+returns jsonb language plpgsql stable security definer set search_path to 'public' as $$
+declare v_me uuid; v_out jsonb;
+begin
+  v_me := acolitos_meu_membro_id();
+  select coalesce(jsonb_agg(jsonb_build_object('id', m.id, 'nome', m.nome, 'apelido', m.apelido)
+           order by coalesce(m.apelido, m.nome)), '[]'::jsonb) into v_out
+  from public.acolitos_membros m
+  join public.acolitos_habilitacoes h on h.membro_id = m.id and h.funcao = p_funcao
+  where m.status = 'ativo' and m.id is distinct from v_me;
+  return jsonb_build_object('membros', v_out);
+end; $$;
+revoke execute on function public.acolitos_habilitados_funcao(text) from public;
+grant execute on function public.acolitos_habilitados_funcao(text) to authenticated;
