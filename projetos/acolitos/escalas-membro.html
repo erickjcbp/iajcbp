@@ -201,6 +201,78 @@ async function abrirPedirTroca(escala, ctx){
   ov.appendChild(modal); document.body.appendChild(ov);
 }
 
+async function carregarVagas(body, ctx){
+  const { data } = await sb.rpc('acolitos_vagas_abertas_membro');
+  const vagas = (data && data.vagas) || [];
+  body.textContent='';
+  if(!vagas.length){ const e=document.createElement('span'); e.className='empty'; e.textContent='Nenhuma vaga aberta na sua função no momento.'; body.appendChild(e); return; }
+  vagas.forEach(v=>{
+    const card=document.createElement('div'); card.className='esc-card'; card.style.cursor='default';
+    const dt=document.createElement('div'); dt.className='esc-data'; dt.textContent=dataLabel(v.data)+' · '+v.horario;
+    const sub=document.createElement('div'); sub.className='esc-sub'; sub.textContent=comLabel(v.comunidade)+' · '+(FUNCAO_LABEL[v.funcao]||v.funcao)+' — vaga em aberto';
+    const b=document.createElement('button'); b.className='esc-chamada-btn'; b.textContent='Me candidatar';
+    b.onclick=async()=>{ b.disabled=true; b.textContent='...';
+      const { data: res } = await sb.rpc('acolitos_candidatar_vaga', { p_celebracao_id:v.celebracao_id, p_funcao:v.funcao, p_motivo:null });
+      if(res && res.ok){ toast('Candidatura enviada.','success'); b.textContent='✓ Enviada'; }
+      else if(res && res.erro==='ja_candidatou'){ toast('Você já se candidatou.','error'); b.textContent='Já candidatou'; }
+      else { toast('Não foi possível candidatar.','error'); b.disabled=false; b.textContent='Me candidatar'; }
+    };
+    card.append(dt,sub,b); body.appendChild(card);
+  });
+}
+
+async function carregarMeusPedidos(body, ctx){
+  const { data } = await sb.rpc('acolitos_solicitacoes_membro');
+  const meus=(data&&data.meus)||[]; const convites=(data&&data.convites)||[];
+  body.textContent='';
+  const SC = window.SolicitacoesCore;
+
+  // Convites recebidos (aceitar/recusar) — accept/reject SÓ aqui
+  const hCon=document.createElement('div'); hCon.className='esc-cat'; hCon.textContent='Convites recebidos'; body.appendChild(hCon);
+  if(!convites.length){ const e=document.createElement('div'); e.style.cssText='color:var(--text-muted);font-style:italic;font-size:12px;padding:4px 0 8px;'; e.textContent='Nenhum convite.'; body.appendChild(e); }
+  convites.forEach(cv=>{
+    const row=document.createElement('div'); row.className='esc-card'; row.style.cursor='default';
+    const t=document.createElement('div'); t.className='esc-data'; t.textContent=(cv.de_nome||'Colega')+' quer trocar com você';
+    const s=document.createElement('div'); s.className='esc-sub'; s.textContent=dataLabel(cv.data)+' · '+cv.horario+' · '+(FUNCAO_LABEL[cv.funcao]||cv.funcao);
+    const acts=document.createElement('div'); acts.style.cssText='display:flex;gap:8px;margin-top:10px;';
+    const bNo=document.createElement('button'); bNo.className='btn-sm gray'; bNo.style.flex='1'; bNo.textContent='Recusar';
+    const bYes=document.createElement('button'); bYes.className='esc-chamada-btn'; bYes.style.flex='1'; bYes.style.marginTop='0'; bYes.textContent='Aceitar';
+    async function responder(aceita){ bYes.disabled=bNo.disabled=true;
+      const { data: res } = await sb.rpc('acolitos_troca_responder', { p_solicitacao_id:cv.id, p_aceita:aceita });
+      if(res && res.ok){ toast(aceita?'Você aceitou. Vai pra coordenação homologar.':'Convite recusado.','success'); carregarMeusPedidos(body,ctx); }
+      else { toast('Não foi possível responder.','error'); bYes.disabled=bNo.disabled=false; }
+    }
+    bNo.onclick=()=>responder(false); bYes.onclick=()=>responder(true);
+    acts.append(bNo,bYes); row.append(t,s,acts); body.appendChild(row);
+  });
+
+  // Meus pedidos
+  const hMy=document.createElement('div'); hMy.className='esc-cat'; hMy.textContent='Meus pedidos'; body.appendChild(hMy);
+  if(!meus.length){ const e=document.createElement('div'); e.style.cssText='color:var(--text-muted);font-style:italic;font-size:12px;padding:4px 0;'; e.textContent='Você ainda não fez pedidos.'; body.appendChild(e); }
+  meus.forEach(p=>{
+    const row=document.createElement('div'); row.className='esc-card'; row.style.cursor='default';
+    const t=document.createElement('div'); t.className='esc-data'; t.textContent=(SC.TIPO_LABEL[p.tipo]||p.tipo)+' · '+dataLabel(p.data)+' · '+p.horario;
+    const s=document.createElement('div'); s.className='esc-sub'; s.textContent=(FUNCAO_LABEL[p.funcao]||p.funcao)+' — '+(SC.STATUS_LABEL[p.status]||p.status);
+    row.append(t,s);
+    const acts=document.createElement('div'); acts.style.cssText='display:flex;gap:8px;margin-top:10px;';
+    if(p.status==='recusado_colega'){
+      const bCob=document.createElement('button'); bCob.className='btn-sm'; bCob.style.flex='1'; bCob.textContent='Pedir à coordenação';
+      bCob.onclick=async()=>{ const { data:res }=await sb.rpc('acolitos_solicitacao_reenviar',{p_solicitacao_id:p.id,p_novo_alvo:null});
+        if(res&&res.ok){ toast('Enviado à coordenação.','success'); carregarMeusPedidos(body,ctx);} else toast('Falhou.','error'); };
+      acts.appendChild(bCob);
+    }
+    if(SC.estaPendente(p.status)){
+      const bCancel=document.createElement('button'); bCancel.className='btn-sm gray'; bCancel.style.flex='1'; bCancel.textContent='Cancelar';
+      bCancel.onclick=async()=>{ const ok=await uiConfirm('Cancelar este pedido?'); if(!ok) return;
+        const { data:res }=await sb.rpc('acolitos_solicitacao_cancelar',{p_solicitacao_id:p.id});
+        if(res&&res.ok){ toast('Cancelado.','success'); carregarMeusPedidos(body,ctx);} else toast('Falhou.','error'); };
+      acts.appendChild(bCancel);
+    }
+    if(acts.children.length) row.appendChild(acts);
+    body.appendChild(row);
+  });
+}
+
 function renderMinhas(area, ctx){
   area.textContent='';
   const nav=document.createElement('div'); nav.style.cssText='display:flex;gap:6px;margin-bottom:10px;';
