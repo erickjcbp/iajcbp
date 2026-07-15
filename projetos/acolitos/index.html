@@ -83,6 +83,15 @@
     @keyframes rnNext { 0%,44%{opacity:0} 52%,94%{opacity:1} 100%{opacity:0} }
     @media (prefers-reduced-motion: reduce) { .rank-flip-inner, .rank-face, .rn-cur, .rn-next { animation:none; } .rn-next, .rank-face.back { opacity:0; } }
     .rank-fill { transition:width .5s ease; }
+    /* Chip "Continuar: <última tela>" (Spec D · Fase 4) */
+    .continuar-chip{ display:inline-flex; align-items:center; gap:8px; margin:0 0 14px; max-width:100%;
+      padding:9px 14px; border-radius:22px; text-decoration:none; box-sizing:border-box;
+      background:linear-gradient(160deg, rgba(232,205,143,.14), rgba(138,106,36,.1));
+      border:1px solid var(--gold-dim, #7a5a1a); color:var(--gold-light, #ffd97a);
+      font-size:13px; font-weight:700; font-family:'Sora',system-ui,sans-serif; }
+    .continuar-chip .cc-ic{ font-size:14px; flex-shrink:0; }
+    .continuar-chip .cc-tx{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .continuar-chip:active{ background:rgba(232,205,143,.2); }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -133,8 +142,32 @@ async function init() {
   if (!ctx.membership || role === 'novo') await renderStatusCrm(ctx);
   else if (mode === 'coordenacao') await renderDashboardEquipe(ctx);
   else await renderDashboardMembro(ctx);
-  // depois do conteúdo montar (cada render limpa #main); senão o banner seria apagado.
+  // depois do conteúdo montar (cada render limpa #main); senão o chip/banner seriam apagados.
+  renderContinuar(ctx);
   renderAvisoAusencias();
+}
+
+// Chip "▸ Continuar: <última tela>" no topo da Home (Spec D · Fase 4).
+// Só aparece se: há última tela conhecida, não é a própria Home, e o usuário pode acessá-la.
+// Sem redirect automático — é só um atalho clicável.
+function renderContinuar(ctx){
+  let u; try{ u = JSON.parse(localStorage.getItem('ultima-tela')||'null'); }catch(e){ u=null; }
+  if(!u || !u.href || !u.label) return;
+  const caps = (typeof navCaps==='function') ? navCaps(ctx) : null;
+  const COORD = { 'membros.html':'membros','escala.html':'escala','crm.html':'crm','tesouraria.html':'tesouraria','casas.html':'casas' };
+  const permKey = COORD[u.href];
+  if(permKey){                              // tela de coordenação: exige permissão
+    if(!caps || !caps.perms || caps.perms.indexOf(permKey)===-1) return;
+  }
+  const main = document.getElementById('main');
+  if(!main) return;
+  const chip = document.createElement('a');
+  chip.href = u.href; chip.className = 'continuar-chip';
+  const ic = document.createElement('span'); ic.className = 'cc-ic'; ic.textContent = '▸';
+  const tx = document.createElement('span'); tx.className = 'cc-tx'; tx.textContent = 'Continuar: ' + u.label;
+  chip.append(ic, tx);
+  if(main.firstChild) main.insertBefore(chip, main.firstChild);
+  else main.appendChild(chip);
 }
 
 // Banner na Home: avisos de ausência aguardando confirmação (só p/ aprovadores).

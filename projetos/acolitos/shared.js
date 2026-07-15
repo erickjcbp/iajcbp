@@ -243,6 +243,7 @@ async function initModulo(requiredRoles = null) {
   queueNotificacoes(membro);
 
   hideSplash();
+  registrarUltimaTela(); // grava a tela atual p/ o chip "Continuar" da Home (só no caminho de sucesso, após todos os guards)
   return { user: session.user, membership, membro, conta, grupoIrmaos };
 }
 
@@ -1312,6 +1313,28 @@ const NAV_COORD_MODULOS = {
   casas:      { label:'Casas',      href:'casas.html',      icon:'shield' },
 };
 const ORDEM_MODULOS = ['membros','escala','crm','tesouraria','casas']; // chamada fundida na Escala
+
+// Rótulos amigáveis por arquivo, p/ o chip "Continuar" da Home (Fase 4).
+// Cobre telas de coordenação (NAV_COORD_MODULOS) e de jornada.
+const TELA_LABEL = {
+  'membros.html':'Membros', 'escala.html':'Escala', 'crm.html':'CRM',
+  'tesouraria.html':'Tesouraria', 'casas.html':'Casas',
+  'missoes.html':'Quests', 'escalas-membro.html':'Minhas Escalas', 'agenda.html':'Agenda',
+  'destaques.html':'Destaques', 'minha-casa.html':'Minha Casa', 'ausencias.html':'Ausências',
+  'jornada-admin.html':'Jornada', 'conquistas.html':'Conquistas', 'config.html':'Config'
+};
+// Telas que NÃO devem ser lembradas como "última tela"
+const TELA_NAO_LEMBRAR = { 'login.html':1, 'novos.html':1, 'index.html':1, '':1 };
+
+function registrarUltimaTela(){
+  try{
+    const file = (location.pathname.split('/').pop()||'');
+    if (TELA_NAO_LEMBRAR[file]) return;
+    const label = TELA_LABEL[file];
+    if (!label) return;                       // só telas conhecidas
+    localStorage.setItem('ultima-tela', JSON.stringify({ href:file, label:label }));
+  }catch(e){}
+}
 
 // Capacidades do usuário p/ navegação
 function navCaps(ctx) {
