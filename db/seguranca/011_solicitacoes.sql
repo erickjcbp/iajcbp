@@ -209,3 +209,88 @@ grant execute on function public.acolitos_solicitacao_cancelar(uuid) to authenti
 grant execute on function public.acolitos_solicitacao_reenviar(uuid,uuid) to authenticated;
 grant execute on function public.acolitos_solicitacoes_membro() to authenticated;
 grant execute on function public.acolitos_vagas_abertas_membro() to authenticated;
+
+-- ── Pendências para a Caixa (gate coordenação) ─────────────────────────
+create or replace function public.acolitos_solicitacoes_pendentes()
+returns jsonb language plpgsql stable security definer set search_path to 'public' as $$
+declare v_role text; v_trocas jsonb; v_cand jsonb; v_cobrir jsonb;
+begin
+  v_role := acolitos_get_role(auth.uid());
+  if v_role is null or v_role not in ('coord_admin','subadmin','membro_equipe','cerimonario') then
+    return jsonb_build_object('trocas','[]'::jsonb,'candidaturas','[]'::jsonb,'cobrir','[]'::jsonb);
+  end if;
+  select coalesce(jsonb_agg(x order by (x->>'data')), '[]'::jsonb) into v_trocas from (
+    select jsonb_build_object('id',s.id,'funcao',s.funcao,'de_nome',mp.nome,'alvo_nome',ma.nome,
+             'data',c.data,'horario',c.horario,'comunidade',c.comunidade) as x
+    from public.acolitos_solicitacoes s
+    join public.acolitos_celebracoes c on c.id=s.celebracao_id
+    join public.acolitos_membros mp on mp.id=s.membro_id
+    left join public.acolitos_membros ma on ma.id=s.alvo_membro_id
+    where s.tipo='troca' and s.status='aguardando_coordenacao') t;
+  select coalesce(jsonb_agg(x order by (x->>'data')), '[]'::jsonb) into v_cand from (
+    select jsonb_build_object('id',s.id,'funcao',s.funcao,'de_nome',mp.nome,
+             'data',c.data,'horario',c.horario,'comunidade',c.comunidade) as x
+    from public.acolitos_solicitacoes s
+    join public.acolitos_celebracoes c on c.id=s.celebracao_id
+    join public.acolitos_membros mp on mp.id=s.membro_id
+    where s.tipo='candidatura' and s.status='aguardando_coordenacao') t;
+  select coalesce(jsonb_agg(x order by (x->>'data')), '[]'::jsonb) into v_cobrir from (
+    select jsonb_build_object('id',s.id,'funcao',s.funcao,'de_nome',mp.nome,'celebracao_id',s.celebracao_id,
+             'membro_id',s.membro_id,'data',c.data,'horario',c.horario,'comunidade',c.comunidade) as x
+    from public.acolitos_solicitacoes s
+    join public.acolitos_celebracoes c on c.id=s.celebracao_id
+    join public.acolitos_membros mp on mp.id=s.membro_id
+    where s.tipo='troca' and s.status='aguardando_cobertura') t;
+  return jsonb_build_object('trocas',v_trocas,'candidaturas',v_cand,'cobrir',v_cobrir);
+end; $$;
+
+-- ── Decidir (homologar troca / confirmar cobertura / aprovar candidatura / negar) ──
+create or replace function public.acolitos_solicitacao_decidir(
+  p_solicitacao_id uuid, p_acao text, p_substituto_id uuid)
+returns jsonb language plpgsql security definer set search_path to 'public' as $$
+declare v_role text; s public.acolitos_solicitacoes%rowtype; v_troca jsonb; v_novo_esc uuid; v_final text;
+begin
+  v_role := acolitos_get_role(auth.uid());
+  if v_role is null or v_role not in ('coord_admin','subadmin','membro_equipe','cerimonario') then
+    return jsonb_build_object('erro','sem_permissao');
+  end if;
+  select * into s from public.acolitos_solicitacoes where id = p_solicitacao_id;
+  if s.id is null then return jsonb_build_object('erro','nao_encontrada'); end if;
+
+  if p_acao = 'negar' then
+    update public.acolitos_solicitacoes set status='negado', decidido_por=auth.uid(), atualizado_em=now()
+      where id = s.id;
+    return jsonb_build_object('ok',true,'status','negado');
+
+  elsif p_acao = 'homologar' and s.tipo='troca' and s.status='aguardando_coordenacao' then
+    -- membro sai, colega (alvo) entra
+    v_troca := public.acolitos_aplicar_troca_escala(s.celebracao_id, s.membro_id, s.alvo_membro_id);
+    v_novo_esc := nullif(v_troca->>'novo_escala_id','')::uuid;
+    update public.acolitos_solicitacoes set status='homologado', decidido_por=auth.uid(),
+      resultado_escala_id=v_novo_esc, atualizado_em=now() where id=s.id;
+    return jsonb_build_object('ok',true,'status','homologado');
+
+  elsif p_acao = 'confirmar_cobertura' and s.tipo='troca' and s.status='aguardando_cobertura' then
+    -- membro sai, substituto escolhido pela coordenação entra (p_substituto_id pode ser null = vaga vazia)
+    v_troca := public.acolitos_aplicar_troca_escala(s.celebracao_id, s.membro_id, p_substituto_id);
+    v_novo_esc := nullif(v_troca->>'novo_escala_id','')::uuid;
+    update public.acolitos_solicitacoes set status='coberto', decidido_por=auth.uid(),
+      resultado_escala_id=v_novo_esc, atualizado_em=now() where id=s.id;
+    return jsonb_build_object('ok',true,'status','coberto');
+
+  elsif p_acao = 'aprovar_candidatura' and s.tipo='candidatura' and s.status='aguardando_coordenacao' then
+    insert into public.acolitos_escalas(celebracao_id, membro_id, funcao, status, created_by)
+    values (s.celebracao_id, s.membro_id, s.funcao, 'escalado', auth.uid())
+    returning id into v_novo_esc;
+    update public.acolitos_solicitacoes set status='aprovado', decidido_por=auth.uid(),
+      resultado_escala_id=v_novo_esc, atualizado_em=now() where id=s.id;
+    return jsonb_build_object('ok',true,'status','aprovado');
+  end if;
+
+  return jsonb_build_object('erro','acao_invalida','tipo',s.tipo,'status',s.status);
+end; $$;
+
+revoke execute on function public.acolitos_solicitacoes_pendentes() from public;
+revoke execute on function public.acolitos_solicitacao_decidir(uuid,text,uuid) from public;
+grant execute on function public.acolitos_solicitacoes_pendentes() to authenticated;
+grant execute on function public.acolitos_solicitacao_decidir(uuid,text,uuid) to authenticated;
