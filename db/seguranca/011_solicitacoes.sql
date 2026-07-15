@@ -258,13 +258,19 @@ begin
   if s.id is null then return jsonb_build_object('erro','nao_encontrada'); end if;
 
   if p_acao = 'negar' then
+    -- guarda contra dupla-decisão (concorrência de coords): só nega o que ainda está pendente,
+    -- senão re-negaria um pedido já homologado/coberto e deixaria a escala mutada + resultado órfão.
     update public.acolitos_solicitacoes set status='negado', decidido_por=auth.uid(), atualizado_em=now()
-      where id = s.id;
+      where id = s.id
+        and status in ('aguardando_colega','aguardando_coordenacao','aguardando_cobertura','recusado_colega');
+    if not found then return jsonb_build_object('erro','nao_pendente'); end if;
     return jsonb_build_object('ok',true,'status','negado');
 
   elsif p_acao = 'homologar' and s.tipo='troca' and s.status='aguardando_coordenacao' then
     -- membro sai, colega (alvo) entra
     v_troca := public.acolitos_aplicar_troca_escala(s.celebracao_id, s.membro_id, s.alvo_membro_id);
+    -- se o membro já não estava escalado (ex.: ausência aprovada rodou auto-troca antes), não marca sucesso falso
+    if (v_troca->>'nao_escalado')::boolean then return jsonb_build_object('erro','ja_nao_escalado'); end if;
     v_novo_esc := nullif(v_troca->>'novo_escala_id','')::uuid;
     update public.acolitos_solicitacoes set status='homologado', decidido_por=auth.uid(),
       resultado_escala_id=v_novo_esc, atualizado_em=now() where id=s.id;
@@ -273,6 +279,7 @@ begin
   elsif p_acao = 'confirmar_cobertura' and s.tipo='troca' and s.status='aguardando_cobertura' then
     -- membro sai, substituto escolhido pela coordenação entra (p_substituto_id pode ser null = vaga vazia)
     v_troca := public.acolitos_aplicar_troca_escala(s.celebracao_id, s.membro_id, p_substituto_id);
+    if (v_troca->>'nao_escalado')::boolean then return jsonb_build_object('erro','ja_nao_escalado'); end if;
     v_novo_esc := nullif(v_troca->>'novo_escala_id','')::uuid;
     update public.acolitos_solicitacoes set status='coberto', decidido_por=auth.uid(),
       resultado_escala_id=v_novo_esc, atualizado_em=now() where id=s.id;
