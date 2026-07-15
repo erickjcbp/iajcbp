@@ -167,6 +167,23 @@ async function autoTrocaAprovadas(itens) {
     throw err;
   }
 }
+// Constrói o ctx do motor p/ UMA solicitação de cobertura (espelha autoTrocaAprovadas)
+async function construirCtxMotor(it){
+  await carregarRosterAus();
+  const habMap = {}; (rosterHabsAus||[]).forEach(h => { (habMap[h.membro_id]=habMap[h.membro_id]||{})[h.funcao]=h.proficiencia; });
+  const { data: dispRows } = await sb.from('acolitos_disponibilidade').select('membro_id,dia,horario');
+  const dispMap = dispMapDeAus(dispRows);
+  const carga = await carregarCargaAus(it.data);
+  const config = { gerador: (typeof cfg==='function'?cfg('gerador',{}):{}), funcoes_maiores: (typeof cfg==='function'?cfg('funcoes_maiores',null):null) };
+  const { data: linhas } = await sb.from('acolitos_escalas').select('membro_id,status').eq('celebracao_id', it.celebracao_id);
+  const usadosNaMissa = new Set((linhas||[]).filter(e => e.status==='escalado'||e.status==='presente'||e.status==='atrasado').map(e => e.membro_id));
+  usadosNaMissa.add(it.membro_id);
+  return { funcao: it.funcao, comunidade: it.comunidade, horKey: horKeyDeCelAus({ data: it.data, horario: it.horario }),
+           membroAusenteId: it.membro_id, roster: rosterMembrosAus, habMap, dispMap, cargaMap: carga,
+           usadosNaMissa, usadoFds: new Set(), config };
+}
+function nomeDoMembro(id){ const m = rosterMapAus && rosterMapAus[id]; return m ? (m.apelido||m.nome) : id; }
+
 let motivoSelecionado = 'doenca';
 let datasAvulsasSel = []; // datas (YYYY-MM-DD) informadas sem celebração cadastrada
 
@@ -221,7 +238,33 @@ async function renderCaixaSolicitacoes(container){
   // 🛟 Cobrir — tratado na Task 11 (auto-troca)
   renderCaixaCobrir(container, cobrir);
 }
-function renderCaixaCobrir(container, cobrir){ /* implementado na Task 11 */ }
+async function renderCaixaCobrir(container, cobrir){
+  if(!cobrir.length) return;
+  const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
+  h.textContent='🛟 Cobrir / auto-troca ('+cobrir.length+')'; container.appendChild(h);
+  for (const it of cobrir){
+    const c=document.createElement('div'); c.style.cssText='background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:12px;margin-bottom:8px;';
+    const t=document.createElement('div'); t.style.fontWeight='700'; t.textContent='Vaga de '+(it.de_nome||'?')+' — '+(FUNCAO_LABEL[it.funcao]||it.funcao);
+    const s=document.createElement('div'); s.style.cssText='font-size:12px;color:var(--gold);'; s.textContent=dataLabel(it.data)+' · '+it.horario+' · '+comLabel(it.comunidade);
+    c.append(t,s);
+    const sug=document.createElement('div'); sug.style.cssText='font-size:13px;margin-top:8px;'; sug.textContent='Calculando sugestão...'; c.appendChild(sug);
+    let sugeridoId=null;
+    try {
+      const ctxMotor = await construirCtxMotor(it);
+      const r = GeradorSubstituto.escolherSubstituto(ctxMotor);
+      sugeridoId = r.membroId || null;
+      sug.textContent = sugeridoId ? ('Sugerido: '+nomeDoMembro(sugeridoId)) : 'Sem candidato disponível (vaga ficará vazia)';
+    } catch(e){ console.error('sugestão cobertura falhou', e); sug.textContent='Não foi possível calcular sugestão.'; }
+    const a=document.createElement('div'); a.style.cssText='display:flex;gap:8px;margin-top:10px;';
+    const ok=document.createElement('button'); ok.className='btn-sm'; ok.style.flex='1'; ok.textContent=sugeridoId?'Confirmar':'Deixar vago';
+    const no=document.createElement('button'); no.className='btn-sm gray'; no.style.flex='1'; no.textContent='Negar';
+    ok.onclick=async()=>{ ok.disabled=no.disabled=true; const { data:res }=await sb.rpc('acolitos_solicitacao_decidir',{p_solicitacao_id:it.id,p_acao:'confirmar_cobertura',p_substituto_id:sugeridoId});
+      if(res&&res.ok){ toast('Cobertura confirmada.','success'); c.remove(); } else { toast('Não foi possível confirmar.','error'); ok.disabled=no.disabled=false; } };
+    no.onclick=async()=>{ ok.disabled=no.disabled=true; const { data:res }=await sb.rpc('acolitos_solicitacao_decidir',{p_solicitacao_id:it.id,p_acao:'negar',p_substituto_id:null});
+      if(res&&res.ok){ toast('Negado.','success'); c.remove(); } else { toast('Não foi possível negar.','error'); ok.disabled=no.disabled=false; } };
+    a.append(ok,no); c.appendChild(a); container.appendChild(c);
+  }
+}
 
 async function init() {
   ctx = await initModulo();
