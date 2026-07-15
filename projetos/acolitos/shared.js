@@ -1321,7 +1321,8 @@ const TELA_LABEL = {
   'tesouraria.html':'Tesouraria', 'casas.html':'Casas',
   'missoes.html':'Quests', 'escalas-membro.html':'Minhas Escalas', 'agenda.html':'Agenda',
   'destaques.html':'Destaques', 'minha-casa.html':'Minha Casa', 'ausencias.html':'Ausências',
-  'jornada-admin.html':'Jornada', 'conquistas.html':'Conquistas', 'config.html':'Config'
+  'jornada-admin.html':'Jornada', 'conquistas.html':'Conquistas'
+  // config.html propositalmente FORA: painel superadmin (gate por username, não perm) — não deve virar chip "Continuar"
 };
 // Telas que NÃO devem ser lembradas como "última tela"
 const TELA_NAO_LEMBRAR = { 'login.html':1, 'novos.html':1, 'index.html':1, '':1 };
