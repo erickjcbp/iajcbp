@@ -49,6 +49,7 @@
     .ee-chip:hover { border-color:var(--gold); box-shadow:0 0 12px var(--red-glow); }
     .ee-chip:active { transform:scale(.98); }
     .ee-chip:disabled { cursor:default; border-color:var(--success-text,#4caf50); color:var(--success-text,#7bd88f); background:linear-gradient(165deg, rgba(76,175,80,.14), var(--surface2)); box-shadow:none; }
+    .esc-secao { font-family:'Sora',sans-serif; font-weight:800; font-size:15px; color:var(--gold-light); letter-spacing:.5px; margin:28px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--border-wine); }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
   <script src="/projetos/acolitos/solicitacoes-core.js"></script>
@@ -81,35 +82,32 @@ async function init() {
   renderBottomNav(ctx, 'escalas-membro');
   const main = document.getElementById('main-content'); main.textContent = '';
   const title = document.createElement('h1'); title.className = 'page-title'; title.textContent = 'Escalas'; main.appendChild(title);
-  const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 10px;'; hint.textContent = 'Toque numa missa para ver quem está escalado.'; main.appendChild(hint);
+  // ── Tela única: seções empilhadas (rolagem) ──
+  function secaoTitulo(txt){ const h=document.createElement('div'); h.className='esc-secao'; h.textContent=txt; return h; }
 
-  // Seletor de visão: Minhas (pessoal, com ações) | Todas (browse read-only, comportamento atual)
-  const visSel = document.createElement('div'); visSel.style.cssText='display:flex;gap:8px;margin:4px 0 12px;';
-  const bMinhas = document.createElement('button'); bMinhas.textContent='Minhas';
-  const bTodas  = document.createElement('button'); bTodas.textContent='Todas';
-  visSel.append(bMinhas, bTodas); main.appendChild(visSel);
-  const areaMinhas = document.createElement('div'); main.appendChild(areaMinhas);
-  const areaTodas  = document.createElement('div'); main.appendChild(areaTodas);
-  function estiloSel(btn, on){
-    btn.style.cssText = on
-      ? 'flex:1;cursor:pointer;border-radius:8px;padding:9px;background:var(--gold);color:#1a0e10;border:1px solid var(--gold);font-weight:800;font-family:Sora,sans-serif;'
-      : 'flex:1;cursor:pointer;border-radius:8px;padding:9px;background:transparent;color:var(--text-muted);border:1px solid var(--border);font-family:Sora,sans-serif;';
-  }
-  function setVisao(v){
-    estiloSel(bMinhas, v==='minhas'); estiloSel(bTodas, v==='todas');
-    areaMinhas.style.display = v==='minhas' ? 'block' : 'none';
-    areaTodas.style.display  = v==='todas'  ? 'block' : 'none';
-    if (v==='minhas' && !areaMinhas.dataset.loaded) { renderMinhas(areaMinhas, ctx); areaMinhas.dataset.loaded='1'; }
-  }
-  bMinhas.onclick=()=>setVisao('minhas');
-  bTodas.onclick=()=>setVisao('todas');
+  // 1) ESCALA EU! (herói + fluxo missa→função) — se anuncia sozinho, sem título
+  const secVagas = document.createElement('div'); main.appendChild(secVagas);
+  carregarVagas(secVagas, ctx);
 
-  // Abas Próximas / Histórico
+  // 2) Minhas missas
+  main.appendChild(secaoTitulo('Minhas missas'));
+  const secMinhas = document.createElement('div'); main.appendChild(secMinhas);
+  carregarMinhasMissas(secMinhas, ctx);
+
+  // 3) Meus pedidos
+  main.appendChild(secaoTitulo('Meus pedidos'));
+  const secPed = document.createElement('div'); main.appendChild(secPed);
+  carregarMeusPedidos(secPed, ctx);
+
+  // 4) Todas as missas (browse read-only) — mantém toggle Próximas/Histórico
+  main.appendChild(secaoTitulo('Todas as missas'));
+  const secTodas = document.createElement('div'); main.appendChild(secTodas);
+  const hintTodas = document.createElement('p'); hintTodas.style.cssText='font-size:12px;color:var(--text-muted);margin:-2px 0 8px;'; hintTodas.textContent='Toque numa missa para ver quem está escalado.'; secTodas.appendChild(hintTodas);
   const tabs = document.createElement('div'); tabs.style.cssText='display:flex;gap:8px;margin-bottom:8px;';
   const tabProx=document.createElement('button'); tabProx.textContent='Próximas';
   const tabHist=document.createElement('button'); tabHist.textContent='Histórico';
-  tabs.append(tabProx, tabHist); areaTodas.appendChild(tabs);
-  const wrap = document.createElement('div'); areaTodas.appendChild(wrap);
+  tabs.append(tabProx, tabHist); secTodas.appendChild(tabs);
+  const wrap = document.createElement('div'); secTodas.appendChild(wrap);
 
   function setActive(modo){
     const on='flex:1;cursor:pointer;border-radius:8px;padding:8px;background:var(--gold);color:#1a0e10;border:1px solid var(--gold);font-weight:700;font-family:Sora,sans-serif;';
@@ -117,7 +115,6 @@ async function init() {
     tabProx.style.cssText = modo==='futuras'?on:off;
     tabHist.style.cssText = modo==='passadas'?on:off;
   }
-
   async function carregar(modo){
     setActive(modo);
     wrap.textContent=''; const ld=document.createElement('span'); ld.className='loading'; ld.textContent='Carregando...'; wrap.appendChild(ld);
@@ -127,25 +124,14 @@ async function init() {
     if (error) { const e=document.createElement('span'); e.className='empty'; e.textContent='Não foi possível carregar as escalas.'; wrap.appendChild(e); return; }
     const cels = data || [];
     if (!cels.length) { const e=document.createElement('span'); e.className='empty'; e.textContent = modo==='passadas' ? 'Nenhuma missa no histórico.' : 'Nenhuma missa futura cadastrada.'; wrap.appendChild(e); return; }
-
-    // celebrações que já tiveram chamada (pra rotular o botão) — só cerimoniário lê
     let chamadasFeitas = new Set();
     if (isCerimo) { try { const { data: chs } = await sb.from('acolitos_chamadas').select('celebracao_id'); (chs||[]).forEach(x => chamadasFeitas.add(x.celebracao_id)); } catch (e) {} }
-
     pintarSemanas(cels, wrap, isCerimo, chamadasFeitas, modo);
   }
-
   tabProx.onclick=()=>carregar('futuras');
   tabHist.onclick=()=>carregar('passadas');
   carregar('futuras');
-  setVisao('minhas');
 }
-
-function subTab(label){ const b=document.createElement('button'); b.textContent=label;
-  b.style.cssText='flex:1;cursor:pointer;border-radius:8px;padding:8px;font-size:13px;font-family:Sora,sans-serif;';
-  return b; }
-function estiloSub(b,on){ b.style.background=on?'var(--surface2)':'transparent'; b.style.color=on?'var(--gold-light)':'var(--text-muted)';
-  b.style.border='1px solid '+(on?'var(--gold-dim)':'var(--border)'); b.style.fontWeight=on?'700':'400'; }
 
 async function carregarMinhasMissas(body, ctx){
   const m = ctx.membro;
@@ -358,23 +344,6 @@ async function carregarMeusPedidos(body, ctx){
     if(acts.children.length) row.appendChild(acts);
     body.appendChild(row);
   });
-}
-
-function renderMinhas(area, ctx){
-  area.textContent='';
-  const nav=document.createElement('div'); nav.style.cssText='display:flex;gap:6px;margin-bottom:10px;';
-  const tMissas=subTab('Minhas missas'), tVagas=subTab('Vagas'), tPed=subTab('Meus pedidos');
-  nav.append(tMissas,tVagas,tPed); area.appendChild(nav);
-  const body=document.createElement('div'); area.appendChild(body);
-  function sel(qual){
-    estiloSub(tMissas,qual==='missas'); estiloSub(tVagas,qual==='vagas'); estiloSub(tPed,qual==='pedidos');
-    body.textContent=''; const ld=document.createElement('span'); ld.className='loading'; ld.textContent='Carregando...'; body.appendChild(ld);
-    if (qual==='missas') carregarMinhasMissas(body, ctx);
-    else if (qual==='vagas') carregarVagas(body, ctx);
-    else carregarMeusPedidos(body, ctx);
-  }
-  tMissas.onclick=()=>sel('missas'); tVagas.onclick=()=>sel('vagas'); tPed.onclick=()=>sel('pedidos');
-  sel('missas');
 }
 
 // Agrupa por semana e pinta os cards (reaproveitado por Próximas e Histórico)
