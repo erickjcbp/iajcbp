@@ -611,6 +611,24 @@ async function renderDashboardEquipe(ctx) {
   const main = document.getElementById('main'); main.textContent = '';
   const title = document.createElement('h1'); title.className='page-title'; title.textContent='Painel Operacional'; main.appendChild(title);
 
+  // Badge de pendências → Caixa de Aprovações
+  try {
+    const [{ data: sol }, { data: aus }] = await Promise.all([
+      sb.rpc('acolitos_solicitacoes_pendentes'),
+      sb.rpc('acolitos_ausencia_pendente_listar')
+    ]);
+    const nSol = sol ? (((sol.trocas||[]).length)+((sol.candidaturas||[]).length)+((sol.cobrir||[]).length)) : 0;
+    const nAus = aus ? ((aus.pendentes||[]).length) : 0;
+    const total = nSol + nAus;
+    if (total > 0) {
+      const a = document.createElement('a'); a.href='ausencias.html';
+      a.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;background:linear-gradient(165deg,rgba(224,96,122,.14),var(--surface2));border:1px solid #7a3a44;border-radius:10px;padding:12px 14px;margin-bottom:16px;';
+      const t=document.createElement('div'); t.style.cssText='color:#ff9db0;font-weight:800;font-size:14px;'; t.textContent='⚡ '+total+' pendência'+(total>1?'s':'')+' aguardando você';
+      const g=document.createElement('span'); g.style.cssText='color:var(--gold);font-size:12px;white-space:nowrap;'; g.textContent='Abrir Caixa →';
+      a.append(t,g); main.appendChild(a);
+    }
+  } catch(e){}
+
   // Carrega dados
   const hoje = hojeStr();
   const ini = new Date(); ini.setDate(1); const iniMes = ini.toISOString().slice(0,10);
