@@ -52,6 +52,7 @@ const FUNCAO_ORDEM = { cred_altar:10, cred_credencia:11, missal:12, altar:20, cr
 
 function dataLabel(d) { const x = new Date(d+'T00:00:00'); return DIAS[x.getDay()] + ' ' + x.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}); }
 function comLabel(c) { return c==='matriz'?'Matriz':'Sto. Antônio'; }
+function hojeStr() { return new Date().toISOString().slice(0,10); }
 
 async function init() {
   const ctx = await initModulo();
@@ -127,6 +128,80 @@ function subTab(label){ const b=document.createElement('button'); b.textContent=
   return b; }
 function estiloSub(b,on){ b.style.background=on?'var(--surface2)':'transparent'; b.style.color=on?'var(--gold-light)':'var(--text-muted)';
   b.style.border='1px solid '+(on?'var(--gold-dim)':'var(--border)'); b.style.fontWeight=on?'700':'400'; }
+
+async function carregarMinhasMissas(body, ctx){
+  const m = ctx.membro;
+  if(!m){ body.textContent=''; const e=document.createElement('span'); e.className='empty'; e.textContent='Perfil não encontrado.'; body.appendChild(e); return; }
+  const { data, error } = await sb.from('acolitos_escalas')
+    .select('id,funcao, acolitos_celebracoes!inner(id,data,horario,comunidade,tipo)')
+    .eq('membro_id', m.id).eq('status','escalado')
+    .gte('acolitos_celebracoes.data', hojeStr());
+  body.textContent='';
+  if(error){ const e=document.createElement('span'); e.className='empty'; e.textContent='Não foi possível carregar.'; body.appendChild(e); return; }
+  const linhas = (data||[]).filter(e=>e.acolitos_celebracoes)
+    .sort((a,b)=> (a.acolitos_celebracoes.data+a.acolitos_celebracoes.horario).localeCompare(b.acolitos_celebracoes.data+b.acolitos_celebracoes.horario));
+  if(!linhas.length){ const e=document.createElement('span'); e.className='empty'; e.textContent='Você não está escalado em nenhuma missa futura.'; body.appendChild(e); return; }
+  linhas.forEach(e=>{
+    const c=e.acolitos_celebracoes;
+    const card=document.createElement('div'); card.className='esc-card'; card.style.cursor='default';
+    const dt=document.createElement('div'); dt.className='esc-data'; dt.textContent=dataLabel(c.data)+' · '+c.horario;
+    const sub=document.createElement('div'); sub.className='esc-sub'; sub.textContent=comLabel(c.comunidade)+' · '+(FUNCAO_LABEL[e.funcao]||e.funcao);
+    const bTroca=document.createElement('button');
+    bTroca.textContent='⚠ Pedir troca';
+    bTroca.style.cssText='margin-top:10px;width:100%;padding:9px;border-radius:8px;border:1px solid #7a2a34;background:linear-gradient(165deg,rgba(224,96,122,.16),var(--surface2));color:#ff9db0;font-family:Sora,sans-serif;font-weight:700;font-size:12px;cursor:pointer;';
+    bTroca.onclick=()=>abrirPedirTroca(e, ctx);
+    card.append(dt,sub,bTroca); body.appendChild(card);
+  });
+}
+
+async function abrirPedirTroca(escala, ctx){
+  const ok = await uiConfirm(
+    'Tem certeza que não poderá cumprir esta escala?\n\nServir é um compromisso. Só peça troca se realmente não puder.',
+    { ok:'Sim, pedir troca', cancel:'Voltar' });
+  if(!ok) return;
+  // roster habilitado na função (via RPC de roster, que já traz habs)
+  const { data: r } = await sb.rpc('acolitos_roster_substituicao');
+  const membros = (r && r.membros) || []; const habs = (r && r.habs) || [];
+  const habSet = new Set(habs.filter(h=>h.funcao===escala.funcao).map(h=>h.membro_id));
+  const meId = ctx.membro && ctx.membro.id;
+  const elegiveis = membros.filter(mm=> mm.id!==meId && habSet.has(mm.id));
+
+  const ov=document.createElement('div'); ov.className='modal-overlay open';
+  ov.onclick=(ev)=>{ if(ev.target===ov) ov.remove(); };
+  const modal=document.createElement('div'); modal.className='modal';
+  const h=document.createElement('div'); h.className='modal-handle';
+  const tt=document.createElement('div'); tt.className='modal-title'; tt.textContent='Com quem trocar?';
+  modal.append(h,tt);
+  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:-6px 0 10px;';
+  hint.textContent='Escolha um colega habilitado. Ele precisa aceitar e a coordenação homologa. Ou peça pra coordenação cobrir.';
+  modal.appendChild(hint);
+
+  async function enviar(alvoId){
+    const { data: res } = await sb.rpc('acolitos_solicitar_troca',
+      { p_escala_id: escala.id, p_alvo_membro_id: alvoId||null, p_motivo: null });
+    ov.remove();
+    if(res && res.ok){ toast(alvoId?'Convite enviado ao colega.':'Pedido enviado à coordenação.','success'); }
+    else if(res && res.erro==='ja_existe'){ toast('Você já tem um pedido pendente para esta missa.','error'); }
+    else { toast('Não foi possível enviar o pedido.','error'); }
+  }
+
+  const lista=document.createElement('div'); lista.style.cssText='max-height:46vh;overflow:auto;';
+  if(!elegiveis.length){ const e=document.createElement('div'); e.style.cssText='color:var(--text-muted);font-style:italic;padding:8px 0;'; e.textContent='Nenhum colega habilitado nesta função.'; lista.appendChild(e); }
+  elegiveis.forEach(mm=>{
+    const row=document.createElement('button'); row.style.cssText='display:block;width:100%;text-align:left;padding:10px;margin-bottom:6px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;';
+    row.textContent=(mm.apelido||mm.nome);
+    row.onclick=()=>enviar(mm.id);
+    lista.appendChild(row);
+  });
+  modal.appendChild(lista);
+
+  const bCob=document.createElement('button'); bCob.className='btn-sm'; bCob.style.cssText='margin-top:10px;width:100%;';
+  bCob.textContent='Não sei quem chamar — pedir à coordenação';
+  bCob.onclick=()=>enviar(null);
+  const bX=document.createElement('button'); bX.className='btn-sm gray'; bX.style.marginTop='8px'; bX.textContent='Cancelar'; bX.onclick=()=>ov.remove();
+  modal.append(bCob,bX);
+  ov.appendChild(modal); document.body.appendChild(ov);
+}
 
 function renderMinhas(area, ctx){
   area.textContent='';
