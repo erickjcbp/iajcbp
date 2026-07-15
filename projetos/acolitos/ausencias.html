@@ -237,6 +237,23 @@ async function renderCaixaSolicitacoes(container){
 
   // 🛟 Cobrir — tratado na Task 11 (auto-troca)
   renderCaixaCobrir(container, cobrir);
+
+  // 🆕 Novos cadastros aguardando aprovação (fonte: CRM)
+  try {
+    const { data: novos } = await sb.from('acolitos_crm')
+      .select('membro_id, etapa, acolitos_membros(nome)')
+      .eq('etapa','aprovacao_cadastro');
+    if ((novos||[]).length){
+      const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
+      h.textContent='🆕 Novos cadastros ('+novos.length+')'; container.appendChild(h);
+      novos.forEach(n=>{
+        const c=document.createElement('div'); c.style.cssText='background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;';
+        const t=document.createElement('div'); t.style.fontWeight='700'; t.textContent=(n.acolitos_membros && n.acolitos_membros.nome) || '(sem nome)';
+        const b=document.createElement('a'); b.className='btn-sm'; b.href='crm.html'; b.textContent='Abrir no CRM →';
+        c.append(t,b); container.appendChild(c);
+      });
+    }
+  } catch(e){ console.error('novos cadastros (caixa) falhou', e); }
 }
 async function renderCaixaCobrir(container, cobrir){
   if(!cobrir.length) return;
