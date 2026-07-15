@@ -181,7 +181,7 @@ begin
   join public.acolitos_habilitacoes h
     on h.membro_id = v_me and h.funcao = mo.funcao
   where c.data >= current_date
-    and mo.vagas > (
+    and mo.quantidade > (
       select count(*) from public.acolitos_escalas e
       where e.celebracao_id = c.id and e.funcao = mo.funcao and e.status = 'escalado'
     )
