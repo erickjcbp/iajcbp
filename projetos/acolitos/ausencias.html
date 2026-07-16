@@ -150,6 +150,7 @@ async function autoTrocaAprovadas(itens) {
           usadosNaMissa, usadoFds: new Set(), config
         }));
       if (t) trocas.push(t);
+      if(t && t.entrou){ try{ apiPost('/api/enviar-push',{tipo:'escalado',membros:[t.entrou],titulo:'Você entrou na escala ⛪',texto:'Você cobriu uma vaga na escala. Confira no app.'}); }catch(_){} }
     } catch (e) {
       console.error('auto-troca item falhou', p, e);
       falhas.push(p);
@@ -332,6 +333,7 @@ async function renderPendentesPublicas(){
   const decidir = async (ids, acao, onOk)=>{
     const { data:r } = await sb.rpc('acolitos_ausencia_pendente_decidir',{ p_ids:ids, p_acao:acao });
     if(r && r.ok){
+      try { const _it=pend.filter(p=>ids.includes(p.id)); const _al=[...new Set(_it.map(i=>i.membro_id).filter(Boolean))]; if(_al.length){ const _ok=acao==='aprovar'; apiPost('/api/enviar-push',{tipo:'ausencia',membros:_al,titulo:_ok?'Ausência aprovada ✅':'Ausência recusada',texto:'Sua ausência foi '+(_ok?'APROVADA':'recusada')+'. Veja no app.'}); } } catch(_){}
       onOk();
       // Auto-troca (Task 5): só ao aprovar, e só para os itens desta chamada (o RPC já gravou
       // a ausência real com celebracao_id). `pend` é o array completo carregado no topo desta função.

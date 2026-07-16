@@ -1141,6 +1141,7 @@ async function gerarEscalaSemana(celebs, btnEl) {
   if (novas.length) {
     const { error } = await sb.from('acolitos_escalas').insert(novas);
     if (error) { await uiAlert('Erro ao salvar: ' + error.message); if (btnEl) { btnEl.disabled = false; btnEl.textContent = txt0; } return; }
+    try { const _al=[...new Set((novas||[]).map(x=>x.membro_id))]; if(_al.length) apiPost('/api/enviar-push',{tipo:'escalado',membros:_al,titulo:'Você foi escalado ⛪',texto:'Você está na escala deste fim de semana. Confira suas missas no app.'}); } catch(_){}
   }
   await loadDados();
 }
@@ -1344,6 +1345,7 @@ async function salvarEscala() {
   // trava: ninguém pode estar em duas funções da MESMA missa
   const _ids=novas.map(n=>n.membro_id); const _dupId=_ids.find((id,i)=>_ids.indexOf(id)!==i);
   if(_dupId){ const _m=membros.find(x=>x.id===_dupId); salvandoEscala=false; btn.disabled=false; btn.textContent='Salvar Escala'; toast('✋ '+((_m&&(_m.apelido||_m.nome))||'Um membro')+' está em duas funções nesta missa. Ajuste antes de salvar.','error'); return; }
+  const _antigos=new Set((escalasMap[pendingCelebId]||[]).map(e=>e.membro_id));
   const del=await sb.from('acolitos_escalas').delete().eq('celebracao_id',pendingCelebId);
   if(del.error){ salvandoEscala=false; btn.disabled=false; btn.textContent='Salvar Escala'; toast('Erro ao salvar: '+del.error.message,'error'); return; }
   let gravadas=0, novasLinhas=[];
@@ -1353,6 +1355,7 @@ async function salvarEscala() {
     novasLinhas = ins.data || [];
     gravadas = novasLinhas.length;
   }
+  try { const _novos=[...new Set((novasLinhas||[]).map(e=>e.membro_id).filter(id=>!_antigos.has(id)))]; if(_novos.length && typeof celAtual!=='undefined' && celAtual){ const _d=new Date(celAtual.data+'T00:00:00'); const _dia=_d.toLocaleDateString('pt-BR',{weekday:'short'}); const _com=celAtual.comunidade==='matriz'?'Matriz':'Sto. Antônio'; apiPost('/api/enviar-push',{tipo:'escalado',membros:_novos,titulo:'Você foi escalado ⛪',texto:_dia+' '+celAtual.horario+' — '+_com+'. Confira sua escala.'}); } } catch(_){}
   if(novas.length && gravadas===0){
     salvandoEscala=false; btn.disabled=false; btn.textContent='Salvar Escala';
     toast('⚠ Nada foi gravado (0 de '+novas.length+') — sem permissão de escrita na escala.','error'); return;
@@ -1608,6 +1611,7 @@ async function abrirRegistrarAusenciaCoord(){
         { celebracao_id:cid, comunidade:celeb.comunidade, data:celeb.data, membroAusenteId:mid },
         (funcao,usadosNaMissa,usadoFds)=>montarCtxSub(celeb,funcao,mid,usadosNaMissa,usadoFds));
       if(t) trocas.push(t);
+      if(t && t.entrou){ try{ apiPost('/api/enviar-push',{tipo:'escalado',membros:[t.entrou],titulo:'Você entrou na escala ⛪',texto:'Você cobriu uma vaga na escala. Confira no app.'}); }catch(_){} }
     }
     if(trocas.length){
       const nomes={}; membros.forEach(m=>{ nomes[m.id]=m.apelido||m.nome; });
