@@ -381,6 +381,8 @@ function queueNotificacoes(membro) {
   _notifStart();
   // 4) Lembrete diário de XP (assíncrono; só se ainda não pontuou hoje)
   _checkXpDiario(membro);
+  // 5) Pedido de ativação de notificações (só na home; enquanto não inscrito)
+  _checkPedirNotificacoes(membro);
 }
 
 // Notificação diária de engajamento: aparece 1x/dia, só na home, e SÓ se o membro
@@ -1138,6 +1140,48 @@ function desbloquearSomNotif() { try { const a = _audioNotif(); const v = a.volu
 function tocarSomNotificacao() { try { const a = _audioNotif(); a.currentTime = 0; a.play().catch(() => {}); } catch (_) {} }
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', (e) => { if (e.data && e.data.tipo === 'push') tocarSomNotificacao(); });
+}
+
+// Envia um aviso da coordenação (push) para todos os inscritos (usado na home de coordenação)
+async function avisarTodos() {
+  const txt = await uiPrompt('Mensagem do aviso (chega como notificação para todos os inscritos):', { ok: 'Enviar', cancel: 'Cancelar' });
+  if (txt == null) return;
+  const msg = String(txt).trim();
+  if (!msg) { toast('Digite uma mensagem.', 'error'); return; }
+  const r = await apiPost('/api/enviar-push', { tipo: 'aviso', texto: msg });
+  if (r && r.ok) toast('Aviso enviado' + (r.data && typeof r.data.enviados === 'number' ? (' (' + r.data.enviados + ' aparelho(s))') : '') + '.', 'success');
+  else toast((r && r.data && r.data.error) || 'Falha ao enviar o aviso.', 'error');
+}
+
+// Pede pra ativar notificações ao abrir a home, enquanto o membro não estiver inscrito (aparece a cada abertura até ativar)
+async function _checkPedirNotificacoes(membro) {
+  try {
+    if (!membro || typeof window.showLevelUp !== 'function') return;      // só na home
+    if (membro._crmEtapa === 'aprovacao_cadastro') return;                // aguardando aprovação: não incomoda
+    if (notifStatus() === 'nao-suportado' || Notification.permission === 'denied') return;
+    let ativo = false;
+    try { const reg = await navigator.serviceWorker.ready; ativo = !!(await reg.pushManager.getSubscription()); } catch (_) {}
+    if (ativo) return;                                                    // já inscrito → não pede
+    enqueueNotif(20, (done) => showPedirNotificacoesPrompt(done));
+    _notifStart();
+  } catch (e) {}
+}
+
+// Pop-up pedindo autorização de notificações
+function showPedirNotificacoesPrompt(done) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '505';
+  const modal = document.createElement('div'); modal.className = 'modal';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Ative as notificações 🔔';
+  const p = document.createElement('p'); p.style.cssText = 'font-size:14px;line-height:1.6;color:var(--text);margin:4px 0 14px;';
+  p.textContent = 'Receba no seu celular quando você for escalado, quando sua ausência for respondida, convites de troca e avisos da coordenação. Você pode desativar quando quiser.';
+  modal.append(handle, tt, p);
+  const btn = document.createElement('button'); btn.className = 'btn gold'; btn.style.width = '100%'; btn.textContent = '🔔 Ativar agora';
+  btn.onclick = async () => { btn.disabled = true; btn.textContent = 'Ativando...'; try { await ativarNotificacoes(); } catch (_) {} ov.remove(); done && done(); };
+  const later = document.createElement('button'); later.className = 'btn-sm gray'; later.style.cssText = 'width:100%;margin-top:8px;'; later.textContent = 'Agora não';
+  later.onclick = () => { ov.remove(); done && done(); };
+  modal.append(btn, later);
+  ov.appendChild(modal); document.body.appendChild(ov);
 }
 
 async function meUpdate(action, payload, btn, msgEl) {

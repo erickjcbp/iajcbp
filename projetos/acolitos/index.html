@@ -698,6 +698,12 @@ async function renderDashboardEquipe(ctx) {
     const t=document.createElement('span'); t.className='quick-link-title'; t.textContent=q.title;
     a.append(ic,t); qrow.appendChild(a);
   });
+  if (navCaps(ctx).isAdmin) {
+    const av=document.createElement('button'); av.type='button'; av.className='quick-link'; av.style.cssText='border:none;cursor:pointer;font:inherit;';
+    const aic=document.createElement('span'); aic.className='quick-link-icon'; aic.innerHTML=_svgIcon('message-circle'); // SVG hardcoded — seguro
+    const at=document.createElement('span'); at.className='quick-link-title'; at.textContent='Avisar todos';
+    av.append(aic,at); av.onclick=()=>avisarTodos(); qrow.appendChild(av);
+  }
   main.appendChild(qrow);
 }
 
