@@ -2,6 +2,7 @@ import { rotuloFuncao, rotuloComunidade, rankHorario } from './rotulos.js'
 import { resolverLiturgico } from './liturgico.mjs'
 
 const MES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+const MES_ABR = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'] // header (mesAno)
 const DIA_SEMANA = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado']
 
 function parseISO(s) { const [y,m,d] = s.split('-').map(Number); return new Date(Date.UTC(y,m-1,d)) }
@@ -59,7 +60,7 @@ export async function carregarDados(sb, { sabado, domingo }, override) {
 
   return {
     tempo: lit.tempo, descricao: lit.descricao, cor: lit.cor,
-    mesAno: `${MES[dSab.getUTCMonth()].toUpperCase()} ${dSab.getUTCFullYear()}`,
+    mesAno: `${MES_ABR[dSab.getUTCMonth()]} ${dSab.getUTCFullYear()}`,
     sabadoLabel: dataLabel(sabado), domingoLabel: dataLabel(domingo),
     missasSabado: missas.filter(m => m.dia === 'SÁBADO'),
     missasDomingo: missas.filter(m => m.dia === 'DOMINGO'),
