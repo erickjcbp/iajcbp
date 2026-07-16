@@ -1,0 +1,17 @@
+{
+  "name": "arte-escala",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "gerar": "node gerar.mjs"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "puppeteer": "^23.0.0"
+  }
+}
