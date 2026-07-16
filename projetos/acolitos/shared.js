@@ -1132,6 +1132,14 @@ async function renderBotaoNotificacoes(container) {
   container.appendChild(btn);
 }
 
+let _somNotif = null;
+function _audioNotif() { if (!_somNotif) { _somNotif = new Audio('/midia/som-notificacao.wav'); _somNotif.preload = 'auto'; } return _somNotif; }
+function desbloquearSomNotif() { try { const a = _audioNotif(); const v = a.volume; a.volume = 0; a.play().then(() => { a.pause(); a.currentTime = 0; a.volume = v; }).catch(() => { a.volume = v; }); } catch (_) {} }
+function tocarSomNotificacao() { try { const a = _audioNotif(); a.currentTime = 0; a.play().catch(() => {}); } catch (_) {} }
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (e) => { if (e.data && e.data.tipo === 'push') tocarSomNotificacao(); });
+}
+
 async function meUpdate(action, payload, btn, msgEl) {
   const prev = btn.textContent; btn.disabled = true; btn.textContent = 'Aguarde...';
   try {
