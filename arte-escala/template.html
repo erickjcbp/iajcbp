@@ -45,16 +45,16 @@
   /* ---------- CABEÇALHO ---------- */
   .cabecalho{
     display:flex; align-items:center; justify-content:center;
-    gap:30px; margin-bottom:56px;
-    border:6px solid var(--tinta); border-radius:34px;
-    padding:34px 66px; background:rgba(255,255,255,.28);
+    gap:34px; margin-bottom:60px;
   }
-  .cabecalho .brasao{ height:196px; width:auto; }
+  .cabecalho .brasao{ height:200px; width:auto; }
   .titulo-bloco{ display:flex; flex-direction:column; }
+  /* linha do título justificada: alinha às mesmas bordas de "TEMPO COMUM" e "JUL 2026" */
   .titulo-escala{
     font-family:'Sora',sans-serif; font-weight:800;
-    font-size:80px; letter-spacing:.05em; line-height:1;
-    color:var(--tinta); white-space:nowrap;
+    font-size:80px; letter-spacing:.02em; line-height:1;
+    color:var(--tinta);
+    text-align:justify; text-align-last:justify;
   }
   .titulo-linha2{
     display:flex; align-items:baseline; justify-content:space-between;
@@ -164,7 +164,7 @@
   <div class="cabecalho">
     <img class="brasao" src="data:image/png;base64,__BRASAO__" alt="">
     <div class="titulo-bloco">
-      <div class="titulo-escala">ESCALA&nbsp;&nbsp;-&nbsp;&nbsp;SERVIDORES DO ALTAR</div>
+      <div class="titulo-escala">ESCALA - SERVIDORES DO ALTAR</div>
       <div class="titulo-linha2">
         <div class="titulo-tempo">__TEMPO__</div>
         <div class="titulo-mesano">__MES_ANO__</div>
