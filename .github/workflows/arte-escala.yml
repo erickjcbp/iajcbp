@@ -1,0 +1,25 @@
+name: Arte da Escala
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'   # segunda 00:00 UTC = domingo 21h BRT
+  workflow_dispatch:
+
+jobs:
+  gerar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Instalar deps (baixa o Chromium do puppeteer)
+        run: npm ci
+        working-directory: arte-escala
+      - name: Gerar e publicar a arte
+        run: node gerar.mjs
+        working-directory: arte-escala
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GERADO_POR: ${{ github.event_name == 'workflow_dispatch' && 'manual' || 'cron' }}
