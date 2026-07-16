@@ -50,6 +50,8 @@
         && disp(m.id)
         && elegivelFuncao(m, funcao, comKey, habMap, config);
     });
+    // apoio: cerimoniário só entra manualmente — nunca na substituição automática (exclui antes das camadas)
+    if (funcao === 'apoio') pool = pool.filter(function(m){ return nivelInt(m.nivel||'aspirante') < 6; });
     if(!pool.length) return { membroId:null, motivo:'sem_candidato' };
 
     // camadas de comunidade

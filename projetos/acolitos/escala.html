@@ -900,6 +900,7 @@ async function carregarCargaHistorica(refData) {
 }
 
 let FUNCOES_MAIORES = new Set(['cred_altar','cred_credencia','missal','turibulo','naveta','mitra','baculo']);
+let FUNCOES_SEM_CERIMONIARIO = new Set(['apoio']); // cerimoniário (nível 6+) só entra nessas funções MANUALMENTE — nunca pelo gerador automático
 // Núcleo do gerador. vagas = array de funções (uma por vaga aberta). Retorna array alinhado de membro_id|null.
 // Regras: apto + não-ausente + sem repetir na missa; IRMÃOS juntos = bloco tudo-ou-nada;
 //   cerimoniários priorizados nas MAIORES (só em último caso vão p/ menores); não repetir no fim de semana (usadoFds);
@@ -909,7 +910,7 @@ function planejarVagas(vagas, horKey, ausNesta, usados, carga, usadoFds, comKey)
   const res = new Array(vagas.length).fill(null);
   const nint = {}; membros.forEach(m => { nint[m.id] = nivelInfo(m.nivel||'aspirante').int; });
   const memById = {}; membros.forEach(m => { memById[m.id] = m; });
-  const apta = (id,f) => { const m = memById[id]; return m ? elegivelFuncao(m, f, comKey) : false; };
+  const apta = (id,f) => { const m = memById[id]; if (!m) return false; if (FUNCOES_SEM_CERIMONIARIO.has(f) && nint[id] >= 6) return false; return elegivelFuncao(m, f, comKey); }; // cerimoniário nunca em 'apoio' pelo gerador (só manual)
   const disp = id => !horKey || (dispMap[id]||[]).includes(horKey);
   const livres = () => res.map((r,i)=>r?-1:i).filter(i=>i>=0);
   const assign = (i,id) => { res[i]=id; usados.add(id); usadoFds.add(id); carga[id]=(carga[id]||0)+1; };
@@ -1097,6 +1098,7 @@ async function gerarEscalaSemana(celebs, btnEl) {
   const candsDe = s => {
     const aus = ausFresh[s.c.id] || new Set();
     return membros.filter(m => elegivelFuncao(m, s.funcao, s.com)
+      && !(FUNCOES_SEM_CERIMONIARIO.has(s.funcao) && ehCerimo(m)) // cerimoniário nunca em 'apoio' pelo gerador (só manual)
       && (!s.hk || (dispMap[m.id]||[]).includes(s.hk))
       && !usadoFds.has(m.id) && !usadosMissa[s.c.id].has(m.id) && !aus.has(m.id));
   };

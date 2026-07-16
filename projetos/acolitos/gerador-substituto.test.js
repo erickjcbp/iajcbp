@@ -83,6 +83,18 @@ eq('maior (turibulo): cerimoniário entra',
     habMap:{cer:hab('turibulo')}, dispMap:{cer:['dom_08:00']}, cargaMap:{cer:0},
     usadosNaMissa:new Set(), usadoFds:new Set(), config:{}, rnd:rnd0 }).membroId, 'cer');
 
+// 7b) APOIO: cerimoniário nunca entra na substituição automática (só manual)
+eq('apoio: só cerimoniário disponível → não escala (null)',
+  escolherSubstituto({ funcao:'apoio', comunidade:'matriz', horKey:'dom_08:00',
+    membroAusenteId:'q', roster:[M('cer',{nivel:'cerimoniario_guardiao'})],
+    habMap:{cer:hab('apoio')}, dispMap:{cer:['dom_08:00']}, cargaMap:{cer:0},
+    usadosNaMissa:new Set(), usadoFds:new Set(), config:{}, rnd:rnd0 }).membroId, null);
+eq('apoio: coroinha (não-cerimoniário) entra normalmente',
+  escolherSubstituto({ funcao:'apoio', comunidade:'matriz', horKey:'dom_08:00',
+    membroAusenteId:'q', roster:[M('cor',{nivel:'coroinha'})],
+    habMap:{cor:hab('apoio')}, dispMap:{cor:['dom_08:00']}, cargaMap:{cor:0},
+    usadosNaMissa:new Set(), usadoFds:new Set(), config:{}, rnd:rnd0 }).membroId, 'cor');
+
 // 8) sem candidato → null
 eq('sem candidato válido → null',
   escolherSubstituto({ funcao:'altar', comunidade:'matriz', horKey:'dom_08:00',
