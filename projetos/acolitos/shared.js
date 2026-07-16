@@ -1072,6 +1072,66 @@ async function apiPost(path, body) {
   return { ok: r.ok, status: r.status, data };
 }
 
+// ── NOTIFICAÇÕES PUSH (🔔) ──
+const VAPID_PUBLIC_KEY = 'BBoIEtOv8hVobFiYDSU4Xu5kbdwOdEtvWU95cFoGN5k41e_V4fHRAE6zOIO3MV-du7L7ix0qJJzbSPgMZKtVIaQ';
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64); const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+function notifStatus() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return 'nao-suportado';
+  return Notification.permission; // 'default' | 'granted' | 'denied'
+}
+async function ativarNotificacoes(btn) {
+  try {
+    if (notifStatus() === 'nao-suportado') { toast('Seu navegador não suporta notificações.', 'error'); return; }
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIOS && navigator.standalone !== true) {
+      uiAlert('Para receber notificações no iPhone: toque em Compartilhar → "Adicionar à Tela de Início" e abra o app por lá. Depois volte aqui e ative.');
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { toast('Permissão negada. Ative nas configurações do navegador.', 'error'); return; }
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
+    const j = sub.toJSON();
+    const { error } = await sb.from('acolitos_push_subs').upsert({
+      user_id: ctx.user.id, endpoint: sub.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, user_agent: navigator.userAgent,
+    }, { onConflict: 'endpoint' });
+    if (error) { toast('Erro ao salvar a inscrição.', 'error'); return; }
+    if (typeof desbloquearSomNotif === 'function') desbloquearSomNotif(); // gesto do usuário → libera o áudio (iOS)
+    toast('Notificações ativadas! 🔔', 'success');
+    if (btn) pintarBotaoNotif(btn, true);
+  } catch (e) { toast('Não foi possível ativar as notificações.', 'error'); }
+}
+async function desativarNotificacoes(btn) {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) { await sb.from('acolitos_push_subs').delete().eq('endpoint', sub.endpoint); await sub.unsubscribe(); }
+    toast('Notificações desativadas.');
+    if (btn) pintarBotaoNotif(btn, false);
+  } catch (e) { toast('Erro ao desativar.', 'error'); }
+}
+function pintarBotaoNotif(btn, ativo) {
+  btn.textContent = ativo ? '🔔 Notificações ativadas ✓' : '🔔 Ativar notificações';
+  btn.onclick = () => (ativo ? desativarNotificacoes(btn) : ativarNotificacoes(btn));
+}
+async function renderBotaoNotificacoes(container) {
+  if (!container) return;
+  const btn = document.createElement('button');
+  btn.className = 'btn-sm gray'; btn.style.width = '100%'; btn.style.marginTop = '8px';
+  let ativo = false;
+  try { const reg = await navigator.serviceWorker.ready; ativo = !!(await reg.pushManager.getSubscription()); } catch (_) {}
+  if (notifStatus() === 'nao-suportado') { btn.disabled = true; btn.textContent = '🔔 Notificações não suportadas'; }
+  else pintarBotaoNotif(btn, ativo);
+  container.appendChild(btn);
+}
+
 async function meUpdate(action, payload, btn, msgEl) {
   const prev = btn.textContent; btn.disabled = true; btn.textContent = 'Aguarde...';
   try {
@@ -1143,6 +1203,13 @@ function openContaModal(ctx) {
   g2.append(l2, i2, b2);
 
   modal.append(g1, g2, msgEl);
+
+  // Notificações push (🔔)
+  const gNotif = document.createElement('div'); gNotif.className = 'form-group'; gNotif.style.marginTop = '14px';
+  const lNotif = document.createElement('label'); lNotif.className = 'form-label'; lNotif.textContent = 'Notificações no celular';
+  gNotif.appendChild(lNotif); modal.appendChild(gNotif);
+  renderBotaoNotificacoes(gNotif);
+
   const close = document.createElement('button'); close.className = 'btn gold'; close.style.marginTop = '16px';
   close.textContent = 'Fechar'; close.onclick = () => ov.remove();
   modal.appendChild(close);
