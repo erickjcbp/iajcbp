@@ -146,6 +146,7 @@
       <button class="btn-sm gray" onclick="abrirFaltas()" title="Quem faltou na chamada">❌ Faltas</button>
       <button class="btn-sm gray" onclick="abrirRelatorioFrequencia()" title="Relatório de frequência (PDF/CSV)">📊 Frequência</button>
       <button class="btn-sm gray" onclick="escalaPDF()" title="Imprimir a escala do período (PDF)">🖨 Escala PDF</button>
+      <button class="btn-sm gray" id="btn-arte-semana" style="display:none" onclick="arteSemana()" title="Arte (PNG) da escala do próximo fim de semana">🎨 Arte da semana</button>
       <button class="btn-sm gray" onclick="abrirRegistrarAusenciaCoord()" title="Registrar ausência de um membro">📅 Registrar ausência</button>
       <button class="btn-sm gray" id="btn-hist-escala" onclick="toggleHistorico()" title="Incluir celebrações passadas (últimos 90 dias)">🕓 Histórico</button>
     </div>
@@ -407,6 +408,7 @@ async function init() {
   if (!ctx) return;
   renderHeader(ctx, 'escala');
   renderBottomNav(ctx, 'escala');
+  if (navCaps(ctx).isAdmin) { const _ba = document.getElementById('btn-arte-semana'); if (_ba) _ba.style.display = ''; } // arte: só coordenação (override/regenerar)
   mergeTiposLabel(TIPO_LABEL); // tipos customizados do Config entram no rótulo + select
   mergeFuncoesConfig();        // funções próprias + "maiores" configuráveis
   popularTipos();
@@ -1150,6 +1152,92 @@ function escalaPDF(){
   const f=s=>new Date(s+'T00:00:00').toLocaleDateString('pt-BR');
   const periodo = datas.length ? (f(datas[0])+' a '+f(datas[datas.length-1])) : 'período carregado';
   abrirRelatorio({ titulo:'Escala', subtitulo:'Acólitos · '+periodo, corpo, css:'h3{margin:14px 0 4px}' });
+}
+
+// ── ARTE DA SEMANA (PNG gerado pelo cron/GitHub Actions) ──
+function _arteEscAttr(s){ return relEsc(s).replace(/"/g,'&quot;'); }
+function proxDomingoISO(){
+  const now=new Date(), dow=now.getDay();
+  const add=((7-dow)%7)||7; // próximo domingo ESTRITAMENTE após hoje
+  const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()+add);
+  const p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+}
+async function arteSemana(){
+  const domISO=proxDomingoISO();
+  const isAdmin = !!(ctx && navCaps(ctx).isAdmin);
+  const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='460px';
+  md.innerHTML='<div class="modal-title">🎨 Arte da semana</div><div id="arte-body" style="text-align:center;"><span class="loading">Carregando...</span></div>';
+  ov.appendChild(md); document.body.appendChild(ov);
+  await arteRender(md, domISO, isAdmin);
+}
+async function arteRender(md, domISO, isAdmin){
+  const body=md.querySelector('#arte-body');
+  const [ra, ro] = await Promise.all([
+    sb.from('acolitos_escala_artes').select('*').eq('domingo_data',domISO).maybeSingle(),
+    isAdmin ? sb.from('acolitos_liturgia_override').select('*').eq('domingo_data',domISO).maybeSingle() : Promise.resolve({data:null}),
+  ]);
+  const arte=ra.data, ovr=ro.data;
+  const dataLbl = (typeof dataCurta==='function') ? dataCurta(domISO) : domISO;
+  let html='<p style="font-size:12px;color:var(--text-muted);margin:-4px 0 12px;">Fim de semana do domingo <b>'+relEsc(dataLbl)+'</b></p>';
+  if(arte){
+    const src=arte.png_url+'?t='+Date.now();
+    html+='<img src="'+_arteEscAttr(src)+'" alt="Arte da escala" style="width:100%;border-radius:10px;border:1px solid var(--border);display:block;">'
+      +'<div style="font-size:11px;color:var(--text-muted);margin:6px 0 12px;">'+relEsc(arte.descricao||'')+' · '+(arte.gerado_por==='cron'?'gerada automaticamente':'gerada manualmente')+'</div>'
+      +'<button class="btn-sm gold" style="width:100%;" id="arte-baixar">⬇️ Baixar PNG</button>';
+  } else {
+    html+='<p class="empty" style="margin:16px 0;">Ainda não gerada para este fim de semana.'+(isAdmin?' Use "Gerar/Atualizar" abaixo.':'')+'</p>';
+  }
+  if(isAdmin){
+    const cores=['','verde','vermelho','branco','rosa','roxo'];
+    html+='<hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">'
+      +'<div style="text-align:left;font-size:12px;color:var(--text-muted);font-weight:700;margin-bottom:8px;">Ajuste litúrgico (opcional — sobrepõe o cálculo automático)</div>'
+      +'<label style="display:block;text-align:left;font-size:12px;color:var(--text-muted);">Tempo litúrgico<input id="ov-tempo" class="form-input" style="width:100%;" placeholder="ex.: TEMPO COMUM" value="'+(ovr?_arteEscAttr(ovr.tempo):'')+'"></label>'
+      +'<label style="display:block;text-align:left;font-size:12px;color:var(--text-muted);margin-top:6px;">Descrição<input id="ov-desc" class="form-input" style="width:100%;" placeholder="ex.: 16º Domingo do Tempo Comum, Ano A" value="'+(ovr?_arteEscAttr(ovr.descricao):'')+'"></label>'
+      +'<label style="display:block;text-align:left;font-size:12px;color:var(--text-muted);margin-top:6px;">Cor litúrgica<select id="ov-cor" class="form-select" style="width:100%;">'+cores.map(c=>'<option value="'+c+'"'+(ovr&&ovr.cor===c?' selected':'')+'>'+(c||'(automática)')+'</option>').join('')+'</select></label>'
+      +'<div style="display:flex;gap:8px;margin-top:14px;"><button class="btn-sm gray" id="arte-ov-save" style="flex:1;">💾 Salvar ajuste</button><button class="btn-sm gold" id="arte-regen" style="flex:1;">♻️ Gerar/Atualizar</button></div>'
+      +'<p style="font-size:11px;color:var(--text-muted);margin-top:8px;">Depois de "Gerar/Atualizar", aguarde ~1 min e reabra para ver a nova arte.</p>';
+  }
+  body.innerHTML=html;
+  const bb=body.querySelector('#arte-baixar'); if(bb&&arte) bb.onclick=()=>baixarArte(arte.png_url, domISO);
+  if(isAdmin){
+    body.querySelector('#arte-ov-save').onclick=()=>salvarAjusteArte(md,domISO);
+    body.querySelector('#arte-regen').onclick=()=>regenerarArte(md,domISO);
+  }
+}
+async function baixarArte(url, domISO){
+  try{
+    const r=await fetch(url+'?t='+Date.now());
+    const blob=await r.blob(); const u=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=u; a.download='escala-'+domISO+'.png'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(u),4000);
+  }catch(e){ window.open(url,'_blank'); }
+}
+async function salvarAjusteArte(md, domISO){
+  const tempo=(md.querySelector('#ov-tempo').value||'').trim();
+  const desc=(md.querySelector('#ov-desc').value||'').trim();
+  const cor=md.querySelector('#ov-cor').value;
+  if(tempo||desc||cor){
+    if(!(tempo&&desc&&cor)){ toast('Preencha tempo, descrição e cor — ou limpe os três para voltar ao automático.','error'); return; }
+    const { error }=await sb.from('acolitos_liturgia_override')
+      .upsert({ domingo_data:domISO, tempo, descricao:desc, cor, criado_por: (ctx&&ctx.user)?ctx.user.id:null });
+    if(error){ toast('Erro ao salvar o ajuste.','error'); return; }
+    toast('Ajuste salvo. Clique em "Gerar/Atualizar".');
+  } else {
+    await sb.from('acolitos_liturgia_override').delete().eq('domingo_data',domISO);
+    toast('Ajuste removido — volta ao cálculo automático.');
+  }
+}
+async function regenerarArte(md, domISO){
+  const btn=md.querySelector('#arte-regen'); const old=btn?btn.textContent:'';
+  if(btn){ btn.disabled=true; btn.textContent='Disparando...'; }
+  try{
+    const r=await apiPost('/api/regenerar-arte', {});
+    if(r&&r.ok) toast('Geração disparada — aguarde ~1 min e reabra a arte.');
+    else toast((r&&r.data&&r.data.error)||'Falha ao disparar a geração.','error');
+  }catch(e){ toast('Falha ao disparar a geração.','error'); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent=old||'♻️ Gerar/Atualizar'; } }
 }
 function exportarSemana(celebs, label) {
   // ordem fixa das missas: 17h, 18h30, 7h, 9h, 19h (por dia); lista de cada missa em ordem ALFABÉTICA por nome
