@@ -19,15 +19,19 @@ export default async function handler(req, res) {
   if (!mod) return res.status(500).json({ error: 'Módulo não encontrado' });
   const role = (await (await fetch(`${URL}/rest/v1/pastoral_members?user_id=eq.${caller.id}&module_id=eq.${mod.id}&select=role`, { headers: h })).json())[0]?.role;
 
-  const { tipo, texto } = req.body || {};
-  if (tipo !== 'aviso') return res.status(400).json({ error: 'Tipo inválido' });
+  const { tipo, texto, titulo } = req.body || {};
+  // 'aviso' = comunicado da coordenação; 'teste' = título/texto livres (preview dos gatilhos da F2)
+  if (!['aviso', 'teste'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
   if (!['coord_admin', 'subadmin'].includes(role)) return res.status(403).json({ error: 'Acesso negado' });
   const msg = String(texto || '').trim();
   if (!msg) return res.status(400).json({ error: 'Texto vazio' });
+  const title = tipo === 'teste' ? (String(titulo || '').trim() || 'Notificação') : 'Aviso da coordenação';
 
   const subs = await (await fetch(`${URL}/rest/v1/acolitos_push_subs?select=endpoint,p256dh,auth`, { headers: h })).json();
   webpush.setVapidDetails(VSUB, VPUB, VPRIV);
-  const payload = JSON.stringify({ title: 'Aviso da coordenação', body: msg.slice(0, 180), url: '/projetos/acolitos/index.html', tag: 'aviso' });
+  // tag única por envio → cada notificação aparece separada e RE-ALERTA (som), sem colapsar numa só
+  const tag = tipo + '-' + Date.now() + '-' + Math.round(Math.random() * 1e6);
+  const payload = JSON.stringify({ title, body: msg.slice(0, 180), url: '/projetos/acolitos/index.html', tag, renotify: true });
 
   let enviados = 0, removidos = 0;
   await Promise.all((subs || []).map(async (s) => {
