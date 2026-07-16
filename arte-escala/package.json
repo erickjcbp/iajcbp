@@ -8,6 +8,7 @@
     "gerar": "node gerar.mjs"
   },
   "devDependencies": {
+    "sharp": "^0.35.3",
     "vitest": "^2.1.0"
   },
   "dependencies": {
