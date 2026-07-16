@@ -1,0 +1,27 @@
+{
+  "name": "iajcbp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://erickjcbp@github.com/erickjcbp/iajcbp.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/erickjcbp/iajcbp/issues"
+  },
+  "homepage": "https://github.com/erickjcbp/iajcbp#readme",
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}
