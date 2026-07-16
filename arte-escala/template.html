@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face{
+    font-family:'Sora';
+    src:url(data:font/woff2;base64,__SORA__) format('woff2');
+    font-weight:100 900; font-display:block;
+  }
+  @font-face{
+    font-family:'Inter';
+    src:url(data:font/woff2;base64,__INTER__) format('woff2');
+    font-weight:100 900; font-display:block;
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+
+  :root{
+    --papel:#F4E9D8;
+    --tinta:#2B1C0E;
+    --verde:#2E7D4F;      /* corpo do pill/bandeira verde */
+    --verde-esc:#1C5636;  /* borda escura */
+    --vermelho:#9E2A2B;
+    --vermelho-esc:#6E1B1C;
+    --branco:#FBF7EC;
+    --branco-esc:#CBB98F;
+    --rosa:#E8A6C4;
+    --rosa-esc:#B96E92;
+    --roxo:#4B2E63;
+    --roxo-esc:#301B44;
+    --ouro:#D9A441;
+  }
+
+  #arte{
+    width:2160px; height:4800px;
+    background:var(--papel);
+    color:var(--tinta);
+    font-family:'Inter',sans-serif;
+    position:relative;
+    padding:80px 150px 70px;
+    overflow:hidden;
+  }
+
+  /* ---------- CABEÇALHO ---------- */
+  .cabecalho{
+    display:flex; align-items:center; justify-content:center;
+    gap:44px; margin-bottom:56px;
+  }
+  .cabecalho .brasao{ height:210px; width:auto; }
+  .titulo-bloco{ display:flex; flex-direction:column; }
+  .titulo-escala{
+    font-family:'Sora',sans-serif; font-weight:800;
+    font-size:80px; letter-spacing:.17em; line-height:1;
+    color:var(--tinta); white-space:nowrap;
+  }
+  .titulo-linha2{
+    display:flex; align-items:baseline; justify-content:space-between;
+    gap:60px; margin-top:14px;
+  }
+  .titulo-tempo{
+    font-family:'Sora',sans-serif; font-weight:800;
+    font-size:150px; line-height:1; color:var(--tinta);
+    text-transform:uppercase; white-space:nowrap;
+  }
+  .titulo-mesano{
+    font-family:'Sora',sans-serif; font-weight:800;
+    font-size:92px; line-height:1; color:var(--tinta);
+    text-transform:uppercase; white-space:nowrap;
+  }
+
+  /* ---------- SEÇÃO ---------- */
+  .secao{ margin-top:44px; }
+  .secao-cab{ display:flex; align-items:center; gap:34px; margin-bottom:28px; padding-left:30px; }
+  .secao-cab .bandeira{ height:150px; width:auto; }
+  .secao-cab .txt{ display:flex; flex-direction:column; gap:10px; }
+  .secao-data{ font-family:'Inter',sans-serif; font-weight:500; font-size:52px; line-height:1; }
+  .secao-desc{ font-family:'Sora',sans-serif; font-weight:800; font-size:64px; line-height:1; color:var(--tinta); }
+
+  /* ---------- LINHA DE MISSAS (2 colunas + espinha do rosário) ---------- */
+  .linha{
+    display:grid;
+    grid-template-columns:1fr 130px 1fr;
+    align-items:start;
+    margin-bottom:34px;
+  }
+  .missa{ display:flex; flex-direction:column; }
+  .missa.dir{ align-items:flex-start; }
+  .missa.esq{ align-items:flex-end; }
+
+  /* pill */
+  .pill-wrap{ display:flex; flex-direction:column; align-items:center; margin-bottom:22px; }
+  .pill-topo{
+    font-family:'Sora',sans-serif; font-weight:700; font-size:34px;
+    letter-spacing:.06em; color:var(--tinta); margin-bottom:6px;
+  }
+  .pill{
+    position:relative;
+    display:flex; align-items:center; gap:30px;
+    padding:16px 34px 16px 54px;
+    border-radius:999px;
+    background:var(--cor); border:7px solid var(--cor-esc);
+    box-shadow:14px 16px 0 rgba(0,0,0,.18);
+  }
+  .pill .dia{
+    font-family:'Sora',sans-serif; font-weight:800; font-size:60px;
+    letter-spacing:.04em; color:#FBF7EC; line-height:1;
+  }
+  .pill.claro .dia{ color:var(--tinta); }
+  .pill .hora{ display:flex; align-items:center; gap:4px; }
+  .pill .hnum{ display:flex; flex-direction:column; line-height:.9; }
+  .pill .hnum b{
+    font-family:'Sora',sans-serif; font-weight:800; font-size:66px;
+    color:var(--tinta); text-shadow:5px 5px 0 var(--ouro);
+  }
+  .pill .hbig{
+    font-family:'Sora',sans-serif; font-weight:800; font-size:120px;
+    color:var(--tinta); line-height:.8; text-shadow:6px 6px 0 var(--ouro);
+    margin-right:-16px;
+  }
+
+  /* listas de nomes */
+  ul.lista{ list-style:none; width:100%; }
+  ul.lista li{
+    font-family:'Inter',sans-serif; font-weight:500; font-size:37px;
+    line-height:1; color:var(--tinta);
+    padding:9px 0; display:flex; align-items:center; gap:22px;
+  }
+  ul.lista li .fn{ font-weight:600; }
+  .bead{
+    flex:0 0 auto; width:40px; height:40px; border-radius:50%;
+    border:5px solid var(--tinta); background:transparent;
+  }
+  /* coluna esquerda: bead na borda central (direita), texto à direita */
+  .missa.esq ul.lista li{ flex-direction:row-reverse; justify-content:flex-start; text-align:right; }
+  /* coluna direita: bead antes (esquerda), texto à esquerda */
+  .missa.dir ul.lista li{ justify-content:flex-start; text-align:left; }
+
+  li.vazia{ font-style:italic; color:#7a6a55; }
+
+  /* ---------- ESPINHA (rosário vertical + cruz) ---------- */
+  .espinha{
+    grid-column:2; grid-row:1;
+    align-self:stretch;
+    position:relative;
+    display:flex; flex-direction:column; align-items:center;
+    padding-top:120px;
+  }
+  .rosario{
+    flex:1 1 auto; width:34px;
+    background-image:radial-gradient(circle at 50% 50%, var(--tinta) 30%, transparent 34%);
+    background-size:34px 52px; background-repeat:repeat-y; background-position:center top;
+    min-height:200px;
+  }
+  .cruz{ margin-top:8px; }
+  .cruz svg{ display:block; }
+</style>
+</head>
+<body>
+<div id="arte">
+
+  <div class="cabecalho">
+    <img class="brasao" src="data:image/png;base64,__BRASAO__" alt="">
+    <div class="titulo-bloco">
+      <div class="titulo-escala">ESCALA&nbsp;&nbsp;-&nbsp;&nbsp;SERVIDORES DO ALTAR</div>
+      <div class="titulo-linha2">
+        <div class="titulo-tempo">__TEMPO__</div>
+        <div class="titulo-mesano">__MES_ANO__</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="secao">
+    <div class="secao-cab">
+      <img class="bandeira" src="data:image/png;base64,__BANDEIRA__" alt="">
+      <div class="txt">
+        <div class="secao-data">__SABADO_LABEL__</div>
+        <div class="secao-desc">__DESCRICAO__</div>
+      </div>
+    </div>
+    <!--MISSAS_SABADO-->
+  </div>
+
+  <div class="secao">
+    <div class="secao-cab">
+      <img class="bandeira" src="data:image/png;base64,__BANDEIRA__" alt="">
+      <div class="txt">
+        <div class="secao-data">__DOMINGO_LABEL__</div>
+        <div class="secao-desc">__DESCRICAO__</div>
+      </div>
+    </div>
+    <!--MISSAS_DOMINGO-->
+  </div>
+
+</div>
+</body>
+</html>
