@@ -96,6 +96,12 @@ Adicionar dois handlers (e **bumpar o BUILD** p/ atualizar os apps abertos):
 ## iOS (atenção)
 Push em PWA no iPhone exige: **app instalado na tela inicial** (iOS 16.4+) + permissão concedida a partir de um gesto. O botão detecta o caso "não instalado" e orienta. Android/desktop Chrome funcionam sem instalar (bom p/ iterar).
 
+## Som de notificação
+- **App fechado (push em background):** quem toca é o **sistema** (som padrão de notificação do aparelho). Os navegadores removeram a opção de som customizado no push em background → **não** dá pra usar um WAV próprio nesse caso.
+- **App aberto / aviso in-app:** toca um **som próprio** (`midia/som-notificacao.wav`), reusando a infra de áudio já existente (`som-estrela.wav`/`som-levelup.wav`; desbloqueio no iOS via `silent.wav` com volume 0 — ver [[reference_acolitos_audio]]). Dispara quando: (a) uma notificação chega com a aba aberta — o `sw.js` faz `postMessage` p/ os clients no evento `push` e o front toca o som; (b) ao exibir um aviso da fila in-app.
+- Asset novo: `midia/som-notificacao.wav` (toque curto e agradável). Respeitar o mesmo padrão de desbloqueio de áudio do iOS já existente (Web Audio não toca sem gesto no PWA iOS).
+- v1 sem tela de preferências de som (YAGNI). Toca só p/ quem ativou notificações.
+
 ## Segurança
 - `VAPID_PRIVATE_KEY` só em env do Vercel; nunca no repo/front.
 - RLS na `acolitos_push_subs`: cada membro só enxerga/gerencia os próprios aparelhos.
@@ -106,7 +112,7 @@ Push em PWA no iPhone exige: **app instalado na tela inicial** (iOS 16.4+) + per
 Manuais, **com a conta real superadmin do Erick, no iPhone dele** (app instalado na tela inicial) — não-destrutivo (só recebe notificação). Fluxo: tocar 🔔 Ativar → conceder permissão → coordenação envia um "aviso p/ todos" → a notificação chega no aparelho → tocar abre o app. Iteração rápida também no Chrome desktop/Android. **Não** semear/alterar dados de contas reais para testar (usar o próprio aviso e o aparelho do Erick).
 
 ## Faseamento (1 fase por sessão)
-- **F1 — Base + Aviso:** VAPID + tabela + RLS + handlers no `sw.js` + botão 🔔 (opt-in/opt-out) + `api/enviar-push` + gatilho **aviso p/ todos** + form da coordenação. Testável ponta a ponta no iPhone do Erick.
+- **F1 — Base + Aviso:** VAPID + tabela + RLS + handlers no `sw.js` (push/click + `postMessage` p/ foreground) + botão 🔔 (opt-in/opt-out) + `api/enviar-push` + gatilho **aviso p/ todos** + form da coordenação + **som de notificação** (`som-notificacao.wav`, toca em foreground/in-app). Testável ponta a ponta no iPhone do Erick.
 - **F2 — Gatilhos automáticos:** escalado, ausência respondida, convite de troca ligados aos fluxos existentes.
 
 ## Dependências
