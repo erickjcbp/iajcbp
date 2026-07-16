@@ -169,6 +169,7 @@
           <button class="mais-item" role="menuitem" onclick="maisAcao(abrirRelatorioFrequencia)">📊 Frequência</button>
           <button class="mais-item" role="menuitem" onclick="maisAcao(escalaPDF)">🖨 Escala PDF</button>
           <button class="mais-item" role="menuitem" id="btn-arte-semana" style="display:none" onclick="maisAcao(arteSemana)">🎨 Arte da semana</button>
+          <button class="mais-item" role="menuitem" onclick="maisAcao(avisarTodos)">📣 Avisar todos</button>
           <button class="mais-item" role="menuitem" onclick="maisAcao(abrirRegistrarAusenciaCoord)">📅 Registrar ausência</button>
         </div>
       </div>
@@ -1281,6 +1282,15 @@ async function regenerarArte(md, domISO){
     else toast((r&&r.data&&r.data.error)||'Falha ao disparar a geração.','error');
   }catch(e){ toast('Falha ao disparar a geração.','error'); }
   finally{ if(btn){ btn.disabled=false; btn.textContent=old||'♻️ Gerar/Atualizar'; } }
+}
+async function avisarTodos(){
+  const txt = await uiPrompt('Mensagem do aviso (chega como notificação para todos os inscritos):', { ok:'Enviar', cancel:'Cancelar' });
+  if (txt == null) return;
+  const msg = String(txt).trim();
+  if (!msg) { toast('Digite uma mensagem.','error'); return; }
+  const r = await apiPost('/api/enviar-push', { tipo:'aviso', texto: msg });
+  if (r && r.ok) toast('Aviso enviado' + (r.data && typeof r.data.enviados==='number' ? (' ('+r.data.enviados+' aparelho(s))') : '') + '.','success');
+  else toast((r && r.data && r.data.error) || 'Falha ao enviar o aviso.','error');
 }
 function exportarSemana(celebs, label) {
   // ordem fixa das missas: 17h, 18h30, 7h, 9h, 19h (por dia); lista de cada missa em ordem ALFABÉTICA por nome
