@@ -43,6 +43,15 @@ describe('liturgicoDoDomingo', () => {
     expect(r.tempo).toBe('TEMPO PASCAL')
     expect(r.cor).toBe('branco')
   })
+  it('1º Domingo do Advento 27/11/2033 (Natal 2033 cai num domingo) → ADVENTO, roxo', () => {
+    // 25/12/2033 é domingo; o 4º/1º domingo do Advento deve ser 27/11/2033
+    // (domingo estritamente anterior ao Natal), não o próprio Natal.
+    expect(liturgicoDoDomingo('2033-11-27')).toEqual({
+      tempo: 'ADVENTO',
+      descricao: '1º Domingo do Advento, Ano C',
+      cor: 'roxo', auto: true
+    })
+  })
 })
 
 describe('resolverLiturgico (override vence)', () => {

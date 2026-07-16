@@ -21,7 +21,8 @@ export function pascoa(year) {
 function primeiroAdvento(y) {
   const natal = U(y, 12, 25)
   const dow = natal.getUTCDay() // 0=Dom
-  const domingoAntesOuNoNatal = new Date(natal.getTime() - dow * DIA)
+  const back = dow === 0 ? 7 : dow
+  const domingoAntesOuNoNatal = new Date(natal.getTime() - back * DIA)
   return new Date(domingoAntesOuNoNatal.getTime() - 3 * 7 * DIA) // 4º domingo antes
 }
 
