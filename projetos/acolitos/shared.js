@@ -1223,9 +1223,7 @@ function showPedirNotificacoesPrompt(done) {
   modal.append(handle, tt, p);
   const btn = document.createElement('button'); btn.className = 'btn gold'; btn.style.width = '100%'; btn.textContent = '🔔 Ativar agora';
   btn.onclick = async () => { btn.disabled = true; btn.textContent = 'Ativando...'; try { await ativarNotificacoes(); } catch (_) {} ov.remove(); done && done(); };
-  const later = document.createElement('button'); later.className = 'btn-sm gray'; later.style.cssText = 'width:100%;margin-top:8px;'; later.textContent = 'Agora não';
-  later.onclick = () => { ov.remove(); done && done(); };
-  modal.append(btn, later);
+  modal.append(btn); // sem "Agora não" — insiste a cada abertura da home até ativar
   ov.appendChild(modal); document.body.appendChild(ov);
 }
 
