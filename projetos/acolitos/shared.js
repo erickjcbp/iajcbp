@@ -1142,15 +1142,60 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', (e) => { if (e.data && e.data.tipo === 'push') tocarSomNotificacao(); });
 }
 
-// Envia um aviso da coordenação (push) para todos os inscritos (usado na home de coordenação)
+// Enviar aviso (push): para TODOS os inscritos ou para uma/várias pessoas escolhidas
 async function avisarTodos() {
-  const txt = await uiPrompt('Mensagem do aviso (chega como notificação para todos os inscritos):', { ok: 'Enviar', cancel: 'Cancelar' });
-  if (txt == null) return;
-  const msg = String(txt).trim();
-  if (!msg) { toast('Digite uma mensagem.', 'error'); return; }
-  const r = await apiPost('/api/enviar-push', { tipo: 'aviso', texto: msg });
-  if (r && r.ok) toast('Aviso enviado' + (r.data && typeof r.data.enviados === 'number' ? (' (' + r.data.enviados + ' aparelho(s))') : '') + '.', 'success');
-  else toast((r && r.data && r.data.error) || 'Falha ao enviar o aviso.', 'error');
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '460px';
+  md.innerHTML = '<div class="modal-title">📣 Enviar aviso</div>'
+    + '<p style="font-size:12px;color:var(--text-muted);margin:-4px 0 10px;">Escolha quem recebe. Só quem ativou notificações no celular recebe.</p>'
+    + '<label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;margin-bottom:8px;cursor:pointer;"><input type="checkbox" id="av-todos" checked> Todos os membros</label>'
+    + '<div id="av-sel" style="display:none;">'
+    +   '<input id="av-busca" class="form-input" placeholder="Buscar pessoa..." style="width:100%;margin-bottom:6px;">'
+    +   '<div id="av-lista" style="max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:4px 6px;"></div>'
+    +   '<div id="av-conta" style="font-size:11px;color:var(--text-muted);margin-top:4px;"></div>'
+    + '</div>'
+    + '<textarea id="av-msg" class="form-input" rows="3" placeholder="Mensagem do aviso..." style="width:100%;margin-top:10px;resize:vertical;"></textarea>'
+    + '<div style="display:flex;gap:8px;margin-top:12px;"><button class="btn-sm gold" id="av-enviar" style="flex:1;">Enviar</button><button class="btn-sm gray" id="av-cancelar">Cancelar</button></div>';
+  ov.appendChild(md); document.body.appendChild(ov);
+
+  const todosCb = md.querySelector('#av-todos'), selDiv = md.querySelector('#av-sel');
+  const lista = md.querySelector('#av-lista'), busca = md.querySelector('#av-busca'), conta = md.querySelector('#av-conta');
+  let membros = [];
+  const atualizarConta = () => { const n = md.querySelectorAll('.av-membro:checked').length; conta.textContent = n ? (n + ' selecionada(s)') : 'Nenhuma selecionada'; };
+  function renderLista(f) {
+    const termo = (f || '').toLowerCase().trim(); lista.textContent = '';
+    membros.filter(m => !termo || ((m.apelido || '') + ' ' + (m.nome || '')).toLowerCase().includes(termo)).forEach(m => {
+      const lab = document.createElement('label'); lab.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 2px;font-size:14px;border-bottom:1px solid var(--border);cursor:pointer;';
+      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = m.id; cb.className = 'av-membro'; cb.onchange = atualizarConta;
+      const sp = document.createElement('span'); sp.textContent = m.apelido ? (m.apelido + ' · ' + m.nome) : m.nome;
+      lab.append(cb, sp); lista.appendChild(lab);
+    });
+  }
+  todosCb.onchange = async () => {
+    selDiv.style.display = todosCb.checked ? 'none' : 'block';
+    if (!todosCb.checked && !membros.length) {
+      lista.textContent = 'Carregando...';
+      const { data } = await sb.from('acolitos_membros').select('id,nome,apelido').order('nome');
+      membros = data || []; renderLista(''); atualizarConta();
+    }
+  };
+  busca.oninput = () => renderLista(busca.value);
+  md.querySelector('#av-cancelar').onclick = () => ov.remove();
+  md.querySelector('#av-enviar').onclick = async () => {
+    const msg = md.querySelector('#av-msg').value.trim();
+    if (!msg) { toast('Digite uma mensagem.', 'error'); return; }
+    const body = { tipo: 'aviso', texto: msg };
+    if (!todosCb.checked) {
+      const ids = [...md.querySelectorAll('.av-membro:checked')].map(c => c.value);
+      if (!ids.length) { toast('Selecione ao menos uma pessoa (ou marque "Todos").', 'error'); return; }
+      body.membros = ids;
+    }
+    const btn = md.querySelector('#av-enviar'); btn.disabled = true; btn.textContent = 'Enviando...';
+    const r = await apiPost('/api/enviar-push', body);
+    btn.disabled = false; btn.textContent = 'Enviar';
+    if (r && r.ok) { toast('Aviso enviado (' + (r.data && r.data.enviados != null ? r.data.enviados : 0) + ' aparelho(s)).', 'success'); ov.remove(); }
+    else toast((r && r.data && r.data.error) || 'Falha ao enviar.', 'error');
+  };
 }
 
 // Pede pra ativar notificações ao abrir a home, enquanto o membro não estiver inscrito (aparece a cada abertura até ativar)

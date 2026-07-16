@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   if (!mod) return res.status(500).json({ error: 'Módulo não encontrado' });
   const role = (await (await fetch(`${URL}/rest/v1/pastoral_members?user_id=eq.${caller.id}&module_id=eq.${mod.id}&select=role`, { headers: h })).json())[0]?.role;
 
-  const { tipo, texto, titulo } = req.body || {};
+  const { tipo, texto, titulo, membros } = req.body || {};
   // 'aviso' = comunicado da coordenação; 'teste' = título/texto livres (preview dos gatilhos da F2)
   if (!['aviso', 'teste'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
   if (!['coord_admin', 'subadmin'].includes(role)) return res.status(403).json({ error: 'Acesso negado' });
@@ -27,7 +27,16 @@ export default async function handler(req, res) {
   if (!msg) return res.status(400).json({ error: 'Texto vazio' });
   const title = tipo === 'teste' ? (String(titulo || '').trim() || 'Notificação') : 'Aviso da coordenação';
 
-  const subs = await (await fetch(`${URL}/rest/v1/acolitos_push_subs?select=endpoint,p256dh,auth`, { headers: h })).json();
+  // Alvo: se vier `membros` (lista de membro_id), manda só p/ eles; senão, TODOS os inscritos.
+  let subsUrl = `${URL}/rest/v1/acolitos_push_subs?select=endpoint,p256dh,auth`;
+  if (Array.isArray(membros) && membros.length) {
+    const ids = membros.filter((x) => typeof x === 'string').slice(0, 500).map(encodeURIComponent).join(',');
+    const mrows = await (await fetch(`${URL}/rest/v1/acolitos_membros?id=in.(${ids})&select=user_id`, { headers: h })).json();
+    const uids = [...new Set((Array.isArray(mrows) ? mrows : []).map((r) => r.user_id).filter(Boolean))];
+    if (!uids.length) return res.status(200).json({ ok: true, enviados: 0, removidos: 0, semInscritos: true });
+    subsUrl += `&user_id=in.(${uids.map(encodeURIComponent).join(',')})`;
+  }
+  const subs = await (await fetch(subsUrl, { headers: h })).json();
   webpush.setVapidDetails(VSUB, VPUB, VPRIV);
   // tag única por envio → cada notificação aparece separada e RE-ALERTA (som), sem colapsar numa só
   const tag = tipo + '-' + Date.now() + '-' + Math.round(Math.random() * 1e6);
