@@ -24,13 +24,31 @@
     .escala-toolbar { margin-bottom:14px; }
     .escala-toolbar .form-select { width:100%; margin-bottom:8px; }
     .escala-acoes { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
-    .escala-acoes .btn-sm { white-space:nowrap; padding:10px 8px; font-size:13px; }
+    .escala-acoes .btn-sm { white-space:nowrap; padding:8px 10px; font-size:11px; gap:5px; }
     @media(min-width:640px){
       .escala-toolbar { display:flex; align-items:center; gap:8px; }
       .escala-toolbar .form-select { width:auto; flex:1; max-width:220px; margin-bottom:0; }
       .escala-acoes { display:flex; gap:8px; }
       .escala-acoes .btn-sm { flex:none; }
     }
+    /* menu "⋯ Mais" (agrupa ações secundárias) */
+    .escala-mais { position:relative; display:flex; grid-column:1 / -1; } /* no grid mobile ocupa a linha toda → menu não vaza */
+    .escala-mais > .btn-sm { width:100%; justify-content:center; }
+    .escala-mais-menu {
+      position:absolute; top:calc(100% + 6px); right:0; z-index:60;
+      display:none; flex-direction:column; min-width:224px;
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:10px; box-shadow:0 12px 34px rgba(0,0,0,.5); padding:6px;
+    }
+    .escala-mais-menu.open { display:flex; }
+    .mais-item {
+      display:flex; align-items:center; gap:9px; width:100%;
+      background:none; border:none; color:var(--text); cursor:pointer;
+      font-family:'Sora',sans-serif; font-size:12.5px; font-weight:600;
+      text-align:left; padding:11px 12px; border-radius:7px; white-space:nowrap;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .mais-item:hover, .mais-item:focus { background:var(--surface3); outline:none; }
     .semana-grupo { margin-bottom:20px; }
     .semana-titulo {
       font-family:'Sora',sans-serif; font-size:11px; color:var(--text-muted);
@@ -141,14 +159,19 @@
     </select>
     <div class="escala-acoes">
       <button class="btn-sm gold" onclick="abrirNovaCeleb()">＋ Celebração</button>
-      <button class="btn-sm gray" onclick="abrirModelos()" title="Modelos de celebração">⚙️ Modelos</button>
-      <button class="btn-sm gray" onclick="abrirAusencias()" title="Últimas ausências">🚫 Ausências</button>
-      <button class="btn-sm gray" onclick="abrirFaltas()" title="Quem faltou na chamada">❌ Faltas</button>
-      <button class="btn-sm gray" onclick="abrirRelatorioFrequencia()" title="Relatório de frequência (PDF/CSV)">📊 Frequência</button>
-      <button class="btn-sm gray" onclick="escalaPDF()" title="Imprimir a escala do período (PDF)">🖨 Escala PDF</button>
-      <button class="btn-sm gray" id="btn-arte-semana" style="display:none" onclick="arteSemana()" title="Arte (PNG) da escala do próximo fim de semana">🎨 Arte da semana</button>
-      <button class="btn-sm gray" onclick="abrirRegistrarAusenciaCoord()" title="Registrar ausência de um membro">📅 Registrar ausência</button>
       <button class="btn-sm gray" id="btn-hist-escala" onclick="toggleHistorico()" title="Incluir celebrações passadas (últimos 90 dias)">🕓 Histórico</button>
+      <div class="escala-mais">
+        <button class="btn-sm gray" id="btn-mais" onclick="toggleMaisMenu(event)" aria-haspopup="true" aria-expanded="false" title="Mais ações">⋯ Mais</button>
+        <div class="escala-mais-menu" id="escala-mais-menu" role="menu">
+          <button class="mais-item" role="menuitem" onclick="maisAcao(abrirModelos)">⚙️ Modelos</button>
+          <button class="mais-item" role="menuitem" onclick="maisAcao(abrirAusencias)">🚫 Ausências</button>
+          <button class="mais-item" role="menuitem" onclick="maisAcao(abrirFaltas)">❌ Faltas</button>
+          <button class="mais-item" role="menuitem" onclick="maisAcao(abrirRelatorioFrequencia)">📊 Frequência</button>
+          <button class="mais-item" role="menuitem" onclick="maisAcao(escalaPDF)">🖨 Escala PDF</button>
+          <button class="mais-item" role="menuitem" id="btn-arte-semana" style="display:none" onclick="maisAcao(arteSemana)">🎨 Arte da semana</button>
+          <button class="mais-item" role="menuitem" onclick="maisAcao(abrirRegistrarAusenciaCoord)">📅 Registrar ausência</button>
+        </div>
+      </div>
     </div>
   </div>
   <div class="aba-toggle">
@@ -1153,6 +1176,24 @@ function escalaPDF(){
   const periodo = datas.length ? (f(datas[0])+' a '+f(datas[datas.length-1])) : 'período carregado';
   abrirRelatorio({ titulo:'Escala', subtitulo:'Acólitos · '+periodo, corpo, css:'h3{margin:14px 0 4px}' });
 }
+
+// ── MENU "⋯ Mais" da toolbar ──
+function toggleMaisMenu(ev){
+  if(ev) ev.stopPropagation();
+  const m=document.getElementById('escala-mais-menu'); if(!m) return;
+  const abriu=m.classList.toggle('open');
+  const b=document.getElementById('btn-mais'); if(b) b.setAttribute('aria-expanded', abriu?'true':'false');
+  if(abriu){ setTimeout(()=>document.addEventListener('click', _maisFora), 0); document.addEventListener('keydown', _maisEsc); }
+  else fecharMaisMenu();
+}
+function fecharMaisMenu(){
+  const m=document.getElementById('escala-mais-menu'); if(m) m.classList.remove('open');
+  const b=document.getElementById('btn-mais'); if(b) b.setAttribute('aria-expanded','false');
+  document.removeEventListener('click', _maisFora); document.removeEventListener('keydown', _maisEsc);
+}
+function _maisFora(e){ if(!e.target.closest('.escala-mais')) fecharMaisMenu(); }
+function _maisEsc(e){ if(e.key==='Escape') fecharMaisMenu(); }
+function maisAcao(fn){ fecharMaisMenu(); if(typeof fn==='function') fn(); }
 
 // ── ARTE DA SEMANA (PNG gerado pelo cron/GitHub Actions) ──
 function _arteEscAttr(s){ return relEsc(s).replace(/"/g,'&quot;'); }
