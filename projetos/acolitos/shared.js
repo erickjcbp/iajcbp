@@ -1610,27 +1610,17 @@ function renderBottomNav(ctx, activePage) {
   el.className = 'app-nav';
   el.textContent = '';
   const c = navCaps(ctx); const mode = navMode(ctx);
-  let items;
-  if (mode === 'coordenacao') {
-    items = [{ id:'home', href:'index.html', label:'Início', icon:'home' },
-      { id:'agenda', href:'agenda.html', label:'Agenda', icon:'calendar-days' }];
-    ORDEM_MODULOS.forEach(k => { if (c.perms.includes(k)) { const mod = NAV_COORD_MODULOS[k]; items.push({ id:k, href:mod.href, label:mod.label, icon:mod.icon }); } });
-    if (isSuperadmin(ctx)) items.push({ id:'config', href:'config.html', label:'Config', icon:'settings' });
-  } else {
-    items = [{ id:'home', href:'index.html', label:'Início', icon:'home' },
-      { id:'quests', href:'missoes.html', label:'Quests', icon:'star' },
-      { id:'escalas-membro', href:'escalas-membro.html', label:'Escalas', icon:'calendar' },
-      { id:'agenda', href:'agenda.html', label:'Agenda', icon:'calendar-days' },
-      { id:'destaques', href:'destaques.html', label:'Destaques', icon:'star' },
-      { id:'minha-casa', href:'minha-casa.html', label:'Casa', icon:'shield' },
-      { id:'ausencias', href:'ausencias.html', label:'Ausência', icon:'x-circle' }];
-    // Chamada foi fundida na Escala: o cerimoniário faz a chamada pelo botão no card de escala.
-  }
   // ordem customizável da barra (Config → Navegação); itens fora da lista vão pro fim na ordem padrão
   const _ordCfg = (typeof cfg === 'function') ? cfg(mode === 'coordenacao' ? 'nav_ordem_coord' : 'nav_ordem_jornada', null) : null;
-  if (Array.isArray(_ordCfg) && _ordCfg.length) {
-    items.sort((a, b) => { const ia = _ordCfg.indexOf(a.id), ib = _ordCfg.indexOf(b.id); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
-  }
+  const items = montarItensNav({
+    modo: mode,
+    perms: c.perms,
+    isAdmin: c.isAdmin,
+    isSuperadmin: isSuperadmin(ctx),
+    ordemCfg: _ordCfg,
+    modulos: NAV_COORD_MODULOS,
+    ordemModulos: ORDEM_MODULOS,
+  });
   items.forEach(item => {
     const a = document.createElement('a');
     a.className = 'nav-item' + (item.id === activePage ? ' active' : '');
