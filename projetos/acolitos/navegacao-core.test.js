@@ -35,8 +35,22 @@ test('coordenação: Config só aparece para superadmin', () => {
 
 test('jornada: lista fixa, independente de permissão', () => {
   const r = montarItensNav({ ...base, modo:'jornada', perms:[], isAdmin:false });
+  // Lista mudou na Task 6: Conquistas entrou na barra do membro.
   assert.deepStrictEqual(ids(r),
-    ['home','quests','escalas-membro','agenda','destaques','minha-casa','ausencias']);
+    ['home','quests','escalas-membro','agenda','conquistas','destaques','minha-casa','ausencias']);
+});
+
+test('jornada: Conquistas está na barra e Ausência virou Faltar', () => {
+  const r = montarItensNav({ ...base, modo:'jornada', perms:[], isAdmin:false });
+  const conq = r.find(x => x.id === 'conquistas');
+  assert.ok(conq, 'conquistas deveria estar na barra do membro');
+  assert.strictEqual(conq.href, 'conquistas.html');
+  assert.strictEqual(r.find(x => x.id === 'ausencias').label, 'Faltar');
+});
+
+test('jornada: o id ausencias NÃO muda (contrato com nav_ordem_jornada)', () => {
+  const r = montarItensNav({ ...base, modo:'jornada', perms:[], isAdmin:false });
+  assert.ok(r.some(x => x.id === 'ausencias'));
 });
 
 test('a ordem salva no Config reordena, e quem não está nela vai pro fim', () => {

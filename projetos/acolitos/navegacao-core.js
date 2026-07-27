@@ -6,13 +6,16 @@
   'use strict';
 
   var ITENS_JORNADA = [
-    { id:'home',            href:'index.html',           label:'Início',    icon:'home' },
-    { id:'quests',          href:'missoes.html',         label:'Quests',    icon:'star' },
-    { id:'escalas-membro',  href:'escalas-membro.html',  label:'Escalas',   icon:'calendar' },
-    { id:'agenda',          href:'agenda.html',          label:'Agenda',    icon:'calendar-days' },
-    { id:'destaques',       href:'destaques.html',       label:'Destaques', icon:'star' },
-    { id:'minha-casa',      href:'minha-casa.html',      label:'Casa',      icon:'shield' },
-    { id:'ausencias',       href:'ausencias.html',       label:'Ausência',  icon:'x-circle' },
+    { id:'home',            href:'index.html',           label:'Início',     icon:'home' },
+    { id:'quests',          href:'missoes.html',         label:'Quests',     icon:'star' },
+    { id:'escalas-membro',  href:'escalas-membro.html',  label:'Escalas',    icon:'calendar' },
+    { id:'agenda',          href:'agenda.html',          label:'Agenda',     icon:'calendar-days' },
+    { id:'conquistas',      href:'conquistas.html',      label:'Conquistas', icon:'award' },
+    { id:'destaques',       href:'destaques.html',       label:'Destaques',  icon:'star' },
+    { id:'minha-casa',      href:'minha-casa.html',      label:'Casa',       icon:'shield' },
+    // id 'ausencias' é contrato com nav_ordem_jornada — só o rótulo muda.
+    // "Faltar" diz o que a tela faz pro membro; pra equipe a mesma tela é a Caixa.
+    { id:'ausencias',       href:'ausencias.html',       label:'Faltar',     icon:'x-circle' },
   ];
 
   var ITENS_COORD_FIXOS = [
