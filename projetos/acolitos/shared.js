@@ -1628,6 +1628,7 @@ function renderBottomNav(ctx, activePage) {
     const a = document.createElement('a');
     a.className = 'nav-item' + (item.id === activePage ? ' active' : '');
     a.href = item.href;
+    a.dataset.id = item.id;
     // Páginas ainda não construídas ficam desabilitadas
     if (!['home','membros','crm','index'].includes(item.id) && !item.href.includes('index')) {
       // só desabilita se o arquivo não existe ainda — deixamos habilitado por ora
@@ -1640,6 +1641,31 @@ function renderBottomNav(ctx, activePage) {
     el.appendChild(a);
   });
   setupNavArrows(el);
+  pintarContadorCaixa(el);   // sem await: a barra não espera a rede
+}
+
+// Contador de pendências no item Caixa. Roda DEPOIS do render (a barra não espera
+// rede pra aparecer) e reaproveita as mesmas RPCs do aviso da Home.
+// O item nunca some: sem pendência, só não há número.
+async function pintarContadorCaixa(el) {
+  const item = el.querySelector('.nav-item[data-id="caixa"]');
+  if (!item) return;
+  try {
+    const [{ data: sol }, { data: aus }] = await Promise.all([
+      sb.rpc('acolitos_solicitacoes_pendentes'),
+      sb.rpc('acolitos_ausencia_pendente_listar'),
+    ]);
+    const nSol = sol ? (((sol.trocas || []).length) + ((sol.candidaturas || []).length) + ((sol.cobrir || []).length)) : 0;
+    const nAus = aus ? ((aus.pendentes || []).length) : 0;
+    const total = nSol + nAus;
+    const velho = item.querySelector('.nav-badge');
+    if (velho) velho.remove();
+    if (!total) return;
+    const b = document.createElement('span');
+    b.className = 'nav-badge';
+    b.textContent = total > 99 ? '99+' : String(total);
+    item.appendChild(b);
+  } catch (e) { /* contador é enfeite: falhou, a barra continua funcionando */ }
 }
 
 // Setas de rolagem no rodapé (quando há mais submódulos do que cabem)
