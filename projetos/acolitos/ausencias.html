@@ -290,7 +290,10 @@ async function init() {
   ctx = await initModulo();
   if (!ctx) return;
   renderHeader(ctx, 'ausencias');
-  renderBottomNav(ctx, 'ausencias');
+  // Esta tela tem dois ids na barra: 'ausencias' pro membro ("Faltar") e 'caixa' pra
+  // coordenação. Sem escolher o id do modo atual, nenhum item acende e a barra não
+  // rola até ele.
+  renderBottomNav(ctx, navMode(ctx) === 'coordenacao' ? 'caixa' : 'ausencias');
   await carregarMotivos(); // motivos do Config (fallback: padrões)
   // equipe E cerimoniários podem registrar ausência de outros (a RLS libera os dois)
   const _r = ctx.membership.role;

@@ -146,7 +146,7 @@ async function init() {
   else await renderDashboardMembro(ctx);
   // depois do conteúdo montar (cada render limpa #main); senão o chip/banner seriam apagados.
   renderContinuar(ctx);
-  renderAvisoAusencias();
+  renderAvisoAusencias(ctx);
 }
 
 // Chip "▸ Continuar: <última tela>" no topo da Home (Spec D · Fase 4).
@@ -173,7 +173,12 @@ function renderContinuar(ctx){
 }
 
 // Banner na Home: avisos de ausência aguardando confirmação (só p/ aprovadores).
-async function renderAvisoAusencias(){
+async function renderAvisoAusencias(ctx){
+  // Mesma regra do badge acima: só avisa quem realmente pode resolver.
+  // A RPC responde pra equipe e cerimoniário, mas quem não tem 'caixa' não vê
+  // o bloco de aprovações no destino — avisar seria mandar pra um beco sem saída.
+  const _caps = navCaps(ctx);
+  if (!_caps.isAdmin && !_caps.perms.includes('caixa')) return;
   const { data } = await sb.rpc('acolitos_ausencia_pendente_count');
   const n = (typeof data === 'number') ? data : 0;
   if(!n) return;
@@ -612,8 +617,11 @@ async function renderDashboardEquipe(ctx) {
   const main = document.getElementById('main'); main.textContent = '';
   const title = document.createElement('h1'); title.className='page-title'; title.textContent='Painel Operacional'; main.appendChild(title);
 
-  // Badge de pendências → Caixa de Aprovações
-  try {
+  // Badge de pendências → Caixa de Aprovações.
+  // Gateado pela MESMA permissão do destino: sem isto, quem não pode aprovar clicava
+  // no aviso e caía numa tela sem o bloco de aprovações — beco sem saída.
+  const _capsHome = navCaps(ctx);
+  if (_capsHome.isAdmin || _capsHome.perms.includes('caixa')) try {
     const [{ data: sol }, { data: aus }] = await Promise.all([
       sb.rpc('acolitos_solicitacoes_pendentes'),
       sb.rpc('acolitos_ausencia_pendente_listar')

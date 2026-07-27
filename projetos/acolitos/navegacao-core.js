@@ -5,6 +5,7 @@
 (function (global) {
   'use strict';
 
+  // Chamada foi fundida na Escala: o cerimoniário faz a chamada pelo botão no card de escala.
   var ITENS_JORNADA = [
     { id:'home',            href:'index.html',           label:'Início',     icon:'home' },
     { id:'quests',          href:'missoes.html',         label:'Quests',     icon:'star' },
@@ -42,15 +43,33 @@
       itens = ITENS_JORNADA.map(function (x) { return Object.assign({}, x); });
     }
 
-    // Ordem customizável (Config › Navegação). Quem não está na lista vai pro fim.
-    var ord = opts.ordemCfg;
-    if (Array.isArray(ord) && ord.length) {
-      itens.sort(function (a, b) {
-        var ia = ord.indexOf(a.id), ib = ord.indexOf(b.id);
-        return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
-      });
-    }
-    return itens;
+    // Ordem customizável (Config › Navegação).
+    // A ordem salva no banco é ANTERIOR a qualquer item novo, então ela nunca conhece
+    // o recém-chegado. Mandá-lo pro fim (o que se fazia antes) esconde item novo atrás
+    // da seta ›: a mudança que vem pra revelar uma tela a entregaria escondida.
+    // Por isso o desconhecido herda a posição que tem na ordem padrão do código —
+    // entra logo depois do vizinho que o antecede lá.
+    return ordenarPorConfig(itens, opts.ordemCfg);
+  }
+
+  function ordenarPorConfig(itens, ord) {
+    if (!Array.isArray(ord) || !ord.length) return itens;
+    var padrao = itens.map(function (x) { return x.id; });          // ordem padrão do código
+    var finalIds = ord.filter(function (id) { return padrao.indexOf(id) >= 0; }); // ignora id que já não existe
+
+    padrao.forEach(function (id, i) {
+      if (finalIds.indexOf(id) >= 0) return;                        // já posicionado pela ordem salva
+      var pos = finalIds.length;                                    // sem vizinho anterior → fim
+      for (var j = i - 1; j >= 0; j--) {
+        var at = finalIds.indexOf(padrao[j]);
+        if (at >= 0) { pos = at + 1; break; }                       // logo depois do vizinho anterior
+      }
+      finalIds.splice(pos, 0, id);
+    });
+
+    return finalIds.map(function (id) {
+      return itens.filter(function (x) { return x.id === id; })[0];
+    }).filter(Boolean);
   }
 
   var api = { montarItensNav: montarItensNav };

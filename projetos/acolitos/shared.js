@@ -1508,7 +1508,9 @@ const NAV_COORD_MODULOS = {
 };
 // 'jornada' vem primeiro pra manter o lugar que ela já ocupava na barra (logo após Agenda).
 // Ela saiu dos itens fixos: aprovar XP e promover não é pra qualquer um da equipe.
-const ORDEM_MODULOS = ['jornada','caixa','membros','escala','crm','tesouraria','casas']; // chamada fundida na Escala
+// 'caixa' vem logo em seguida porque é o trabalho diário da coordenação: aprovar
+// trocas, cadastros e ausências — o que mais se acessa depois da Jornada.
+const ORDEM_MODULOS = ['jornada','caixa','membros','escala','crm','tesouraria','casas'];
 
 // Rótulos amigáveis por arquivo, p/ o chip "Continuar" da Home (Fase 4).
 // Cobre telas de coordenação (NAV_COORD_MODULOS) e de jornada.

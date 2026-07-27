@@ -53,17 +53,20 @@ test('jornada: o id ausencias NÃO muda (contrato com nav_ordem_jornada)', () =>
   assert.ok(r.some(x => x.id === 'ausencias'));
 });
 
-test('a ordem salva no Config reordena, e quem não está nela vai pro fim', () => {
+test('a ordem salva no Config manda, e ninguém é perdido no caminho', () => {
   const semOrdem = montarItensNav({ ...base, modo:'jornada', perms:[], isAdmin:false });
+  const salva = ['agenda','home'];
   const r = montarItensNav({
     ...base, modo:'jornada', perms:[], isAdmin:false,
-    ordemCfg: ['agenda','home'],
+    ordemCfg: salva,
   });
-  assert.deepStrictEqual(ids(r).slice(0, 2), ['agenda','home']);
-  // compara com o total real, NÃO com um número fixo: a barra do membro ganha
-  // itens ao longo do plano (Conquistas na Task 6) e um 7 cravado aqui quebraria lá.
+  // os ids que o dono ordenou saem na ordem dele, sem exceção
+  assert.deepStrictEqual(ids(r).filter(x => salva.includes(x)), salva);
+  // nenhum item some: quem a ordem salva não conhece é interpolado, não descartado.
+  // (ANTES ia todo mundo pro fim; isso mudou de propósito — ver os dois testes de
+  //  "posição padrão" abaixo. A contagem é o que garante que ninguém se perdeu.)
   assert.strictEqual(ids(r).length, semOrdem.length);
-  assert.ok(ids(r).length >= 7);
+  assert.deepStrictEqual([...ids(r)].sort(), [...ids(semOrdem)].sort());
 });
 
 test('cada item tem id, href, label e icon preenchidos', () => {
@@ -85,4 +88,30 @@ test('caixa aparece na coordenação só para quem tem a permissão', () => {
   const com = montarItensNav({ ...base, modulos:MOD, ordemModulos:ORD, modo:'coordenacao', perms:['escala','caixa'], isAdmin:false });
   assert.ok(ids(com).includes('caixa'));
   assert.strictEqual(com.find(x => x.id === 'caixa').href, 'ausencias.html');
+});
+
+// A ordem salva no banco é anterior aos itens novos (Caixa, Conquistas). Antes, id
+// desconhecido ia pro índice 999 = fim da barra, atrás da seta ›. Ou seja: a mudança
+// que veio pra revelar as telas as entregava escondidas. Agora ele herda a posição
+// que tem na ordem padrão do código.
+test('item que a ordem salva não conhece entra na posição padrão, não no fim', () => {
+  // ordem real gravada em acolitos_config.nav_ordem_jornada (sem 'conquistas')
+  const salva = ['home','quests','escalas-membro','ausencias','agenda','destaques','minha-casa'];
+  const r = montarItensNav({ ...base, modo:'jornada', perms:[], isAdmin:false, ordemCfg: salva });
+  const pos = ids(r).indexOf('conquistas');
+  assert.notStrictEqual(pos, -1, 'conquistas sumiu da barra');
+  assert.notStrictEqual(pos, ids(r).length - 1, 'conquistas foi jogado pro fim');
+  // no código, conquistas vem logo depois de agenda — tem que cair ali
+  assert.strictEqual(ids(r)[ids(r).indexOf('agenda') + 1], 'conquistas');
+  // e a ordem que o dono salvou tem que ser respeitada no resto
+  assert.deepStrictEqual(ids(r).filter(x => salva.includes(x)), salva);
+});
+
+test('coordenação: caixa desconhecida pela ordem salva cai logo após jornada', () => {
+  const MOD = Object.assign({}, MODULOS, { caixa: { label:'Caixa', href:'ausencias.html', icon:'inbox' } });
+  const ORD = ['jornada','caixa','membros','escala','crm','tesouraria','casas'];
+  const salva = ['home','escala','membros','jornada','crm','agenda','tesouraria','casas','config'];
+  const r = montarItensNav({ ...base, modulos:MOD, ordemModulos:ORD, modo:'coordenacao',
+    perms:['jornada','caixa','membros','escala','crm','tesouraria','casas'], isAdmin:false, ordemCfg: salva });
+  assert.strictEqual(ids(r)[ids(r).indexOf('jornada') + 1], 'caixa');
 });
