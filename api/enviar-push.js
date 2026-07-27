@@ -4,7 +4,8 @@
 //   escalado (equipe/cerimonario)        → "você foi escalado"; membros[] obrigatório
 //   ausencia (equipe/cerimonario)        → "ausência respondida"; membros[] obrigatório
 //   troca    (qualquer membro, VALIDADO) → "convite de troca"; alvo_membro_id (o servidor confere o convite real)
-//   arte     (SÓ o robô do cron)         → "arte da escala pronta"; vai pra coordenação; texto montado aqui
+//   arte            (SÓ o robô do cron)  → "arte da escala pronta"; vai pra coordenação; texto montado aqui
+//   escala_pendente (SÓ o robô do cron)  → "a escala do fim de semana não foi montada"; idem
 import webpush from 'web-push';
 import crypto from 'node:crypto';
 
@@ -36,13 +37,14 @@ export default async function handler(req, res) {
   if (!URL || !ANON || !SRK) return res.status(500).json({ error: 'Server misconfigured' });
   if (!VPUB || !VPRIV || !VSUB) return res.status(500).json({ error: 'VAPID não configurado' });
 
-  const { tipo, texto, titulo, membros, alvo_membro_id, domingo } = req.body || {};
-  if (!['aviso', 'teste', 'escalado', 'ausencia', 'troca', 'arte'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
+  const { tipo, texto, titulo, membros, alvo_membro_id, domingo, vazias, total } = req.body || {};
+  if (!['aviso', 'teste', 'escalado', 'ausencia', 'troca', 'arte', 'escala_pendente'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
 
-  // O robô do cron não tem login: entra pelo segredo compartilhado, e SÓ para 'arte'.
+  // O robô do cron não tem login: entra pelo segredo compartilhado, e SÓ para os tipos dele.
+  const TIPOS_CRON = ['arte', 'escala_pendente'];
   const viaCron = segredoConfere(req.headers['x-cron-secret'], process.env.CRON_SECRET);
-  if (viaCron && tipo !== 'arte') return res.status(403).json({ error: 'Segredo do cron só vale para arte' });
-  if (tipo === 'arte' && !viaCron) return res.status(403).json({ error: 'Acesso negado' });
+  if (viaCron && !TIPOS_CRON.includes(tipo)) return res.status(403).json({ error: 'Segredo do cron só vale para os avisos do robô' });
+  if (TIPOS_CRON.includes(tipo) && !viaCron) return res.status(403).json({ error: 'Acesso negado' });
 
   const h = { apikey: SRK, Authorization: `Bearer ${SRK}` };
   const jget = async (path) => { try { return await (await fetch(`${URL}/rest/v1/${path}`, { headers: h })).json(); } catch (_) { return null; } };
@@ -93,14 +95,21 @@ export default async function handler(req, res) {
     body = ((me.apelido || me.nome || 'Um colega') + ' quer trocar de missa com você. Veja no app.').slice(0, 180);
     alvoMembros = [alvo_membro_id];
 
-  } else if (tipo === 'arte') {
+  } else if (TIPOS_CRON.includes(tipo)) {
     // Só o cron chega aqui (checado lá em cima). Nada de texto livre: a mensagem é montada
     // no servidor a partir da data, então o segredo não vira um megafone.
     const quando = dataPorExtenso(domingo);
-    title = 'Arte da escala pronta 🎨';
-    body = quando
-      ? `A arte do fim de semana de ${quando} já está no app. Abra a Escala pra baixar e compartilhar.`
-      : 'A arte do próximo fim de semana já está no app. Abra a Escala pra baixar e compartilhar.';
+    const doFimDeSemana = quando ? `do fim de semana de ${quando}` : 'do próximo fim de semana';
+    if (tipo === 'arte') {
+      title = 'Arte da escala pronta 🎨';
+      body = `A arte ${doFimDeSemana} já está no app. Abra a Escala pra baixar e compartilhar.`;
+    } else {
+      const quantas = (Number.isInteger(vazias) && Number.isInteger(total) && total > 0)
+        ? ` (${vazias} de ${total} missas sem ninguém)` : '';
+      title = 'Escala ainda não montada ⚠️';
+      body = `A arte ${doFimDeSemana} NÃO foi gerada porque a escala ainda não foi montada${quantas}. Monte a escala e gere a arte pela tela de Escala.`;
+    }
+    body = body.slice(0, 180);
     const coords = await jget(`pastoral_members?module_id=eq.${mod.id}&role=in.(${COORD.join(',')})&select=user_id`) || [];
     alvoUserIds = [...new Set(coords.map((r) => r.user_id).filter(Boolean))];
     if (!alvoUserIds.length) return res.status(200).json({ ok: true, enviados: 0, removidos: 0, semInscritos: true });
@@ -122,7 +131,7 @@ export default async function handler(req, res) {
 
   webpush.setVapidDetails(VSUB, VPUB, VPRIV);
   tag = tipo + '-' + Date.now() + '-' + Math.round(Math.random() * 1e6); // única → não colapsa, re-alerta
-  const url = tipo === 'arte' ? URLBASE_ESCALA
+  const url = TIPOS_CRON.includes(tipo) ? URLBASE_ESCALA   // arte e escala pendente: os dois resolvem na Escala
     : (tipo === 'aviso' || tipo === 'teste') ? '/projetos/acolitos/index.html'
     : URLBASE_MEMBRO;
   const payload = JSON.stringify({ title, body, url, tag, renotify: true });

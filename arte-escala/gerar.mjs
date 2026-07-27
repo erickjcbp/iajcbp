@@ -31,9 +31,18 @@ async function main() {
   if (!todas.length) {
     console.error('Sem celebrações para o fim de semana — nada a gerar.'); process.exit(1)
   }
-  if (totalEscalados === 0) {
-    // Celebrações existem, mas a escala ainda não foi montada → não publica arte vazia.
-    console.error('Escala ainda não gerada para o fim de semana — nada a publicar.'); process.exit(1)
+
+  // A escala é montada à mão pela coordenação. Se ela ainda não foi feita (ou foi
+  // pela metade), publicar a arte é pior que não publicar: sai um cartaz furado E
+  // todo mundo é avisado dele. Antes o corte era "zero escalados", frouxo demais —
+  // 2 pessoas em 5 missas passavam. Agora: se a MAIORIA das missas está vazia, a
+  // escala não está pronta. Em vez de falhar calado, avisa a coordenação.
+  const missasVazias = todas.filter((m) => m.itens.length === 0).length
+  if (totalEscalados === 0 || missasVazias * 2 >= todas.length) {
+    const detalhe = `${missasVazias} de ${todas.length} missas sem ninguém escalado`
+    console.error(`Escala do fim de semana ainda não montada (${detalhe}) — nada a publicar.`)
+    await avisarEscalaPendente(domingo, missasVazias, todas.length)
+    process.exit(1)
   }
   console.log(`Missas: ${todas.length} | escalados: ${totalEscalados} | ${dados.tempo} / ${dados.cor}`)
 
@@ -62,6 +71,16 @@ async function main() {
 // Avisa a coordenação por push que a arte da semana ficou pronta.
 // NUNCA derruba o job: se o aviso falhar, a arte já está publicada e é isso que importa.
 async function avisarCoordenacao(domingo) {
+  return enviarAviso({ tipo: 'arte', domingo })
+}
+
+// Avisa que a arte NÃO saiu porque a escala do fim de semana ainda não foi montada.
+// É o aviso mais útil dos dois: transforma uma falha silenciosa em algo acionável.
+async function avisarEscalaPendente(domingo, vazias, total) {
+  return enviarAviso({ tipo: 'escala_pendente', domingo, vazias, total })
+}
+
+async function enviarAviso(corpo) {
   const site = (process.env.SITE_URL || '').replace(/\/+$/, '')
   const segredo = process.env.CRON_SECRET
   if (!site || !segredo) {
@@ -72,7 +91,7 @@ async function avisarCoordenacao(domingo) {
     const r = await fetch(`${site}/api/enviar-push`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-cron-secret': segredo },
-      body: JSON.stringify({ tipo: 'arte', domingo }),
+      body: JSON.stringify(corpo),
     })
     const txt = await r.text()
     console.log(r.ok ? `Aviso enviado: ${txt}` : `Aviso falhou (${r.status}): ${txt}`)
