@@ -73,11 +73,8 @@ const brl = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', cur
 let ctx = null, lancamentos = [];
 
 async function init() {
-  ctx = await initModulo(['coord_admin','subadmin','membro_equipe']);
+  ctx = await initModulo(['coord_admin','subadmin','membro_equipe'], { perm: 'tesouraria' });
   if (!ctx) return;
-  // Só admin ou quem tem a permissão 'tesouraria'
-  const c = navCaps(ctx);
-  if (!c.isAdmin && !c.perms.includes('tesouraria')) { window.location.href = 'index.html'; return; }
   renderHeader(ctx, 'tesouraria');
   renderBottomNav(ctx, 'tesouraria');
   await load();

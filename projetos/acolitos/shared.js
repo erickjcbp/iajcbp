@@ -110,7 +110,10 @@ function toast(msg, tipo) {
   clearTimeout(t._tm); t._tm = setTimeout(() => { t.classList.remove('show'); }, 2600);
 }
 
-// ── Splash litúrgico (turíbulo) — mostrado em toda carga de página do app ──
+// ── Splash litúrgico (turíbulo) — SÓ na abertura do app ──
+// Cada tela é uma página inteira, então antes a animação repetia a cada toque na
+// barra de baixo. Agora roda uma vez por sessão: navegar entre telas não repete.
+const ACO_SPLASH_CHAVE = 'splash-visto';
 const ACO_SPLASH_MIN_MS = 2200;
 let _acoSplashStart = 0, _acoSplashGone = false;
 const ACO_SPLASH_HTML =
@@ -152,6 +155,13 @@ const ACO_SPLASH_HTML =
 function showSplash(){
   if (document.getElementById('splash')) return;
   if (/login\.html$/.test(location.pathname)) return;
+  // sessionStorage some quando o app é FECHADO — que é exatamente quando a
+  // animação deve voltar. Sobreviver à navegação entre telas é o que queremos.
+  // Se o navegador bloquear o storage (aba anônima), mostra — melhor que sumir.
+  try {
+    if (sessionStorage.getItem(ACO_SPLASH_CHAVE)) return;
+    sessionStorage.setItem(ACO_SPLASH_CHAVE, '1');
+  } catch (e) {}
   const el = document.createElement('div');
   el.id = 'splash'; el.setAttribute('aria-hidden','true'); el.innerHTML = ACO_SPLASH_HTML;
   (document.body || document.documentElement).appendChild(el);
@@ -165,9 +175,15 @@ function hideSplash(){
   const restante = Math.max(0, ACO_SPLASH_MIN_MS - (Date.now() - _acoSplashStart));
   setTimeout(() => { el.classList.add('splash-out'); setTimeout(() => el.remove(), 700); }, restante);
 }
+function esquecerSplash(){ try { sessionStorage.removeItem(ACO_SPLASH_CHAVE); } catch (e) {} }
 showSplash();
 
-async function initModulo(requiredRoles = null) {
+// requiredRoles: papéis que podem abrir a tela (null = qualquer um logado).
+// opts.perm: chave do módulo (ex.: 'membros') que a pessoa precisa ter liberada.
+//   Sem isto, a barra de baixo escondia o botão mas a URL continuava aberta —
+//   quem não tinha o módulo entrava digitando o endereço.
+// opts.livres: papéis que entram mesmo sem a permissão (ex.: cerimoniário na Chamada).
+async function initModulo(requiredRoles = null, opts = null) {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return null; }
 
@@ -238,6 +254,16 @@ async function initModulo(requiredRoles = null) {
       .select('etapa').eq('membro_id', membro.id)
       .order('etapa_iniciada_em', { ascending: false }).limit(1).maybeSingle();
     membro._crmEtapa = _crm ? _crm.etapa : null;
+  }
+
+  // Gate por PERMISSÃO — roda depois de montar o ctx, porque navCaps depende dele.
+  if (opts && opts.perm) {
+    const _ctx = { user: session.user, membership, membro, conta, grupoIrmaos };
+    const _livre = Array.isArray(opts.livres) && opts.livres.includes(membership.role);
+    const _caps = navCaps(_ctx);
+    if (!_livre && !_caps.isAdmin && !_caps.perms.includes(opts.perm)) {
+      window.location.href = 'index.html'; return null;
+    }
   }
 
   queueNotificacoes(membro);
@@ -729,7 +755,7 @@ function showAvisoUnico(aviso, membro, done) {
   const btn = document.createElement('button'); btn.className = 'btn gold'; btn.style.marginTop = '8px';
   btn.textContent = precisaLogout ? 'Entendi — sair e entrar de novo' : 'Entendi';
   btn.onclick = async () => {
-    if (precisaLogout) { try { await sb.auth.signOut(); } catch (e) {} window.location.href = 'login.html'; return; }
+    if (precisaLogout) { try { await sb.auth.signOut(); } catch (e) {} esquecerSplash(); window.location.href = 'login.html'; return; }
     ov.remove(); if (typeof done === 'function') done();
   };
   modal.appendChild(btn);
@@ -980,6 +1006,7 @@ function renderHeader(ctx, activePage) {
   sairBtn.textContent = '⏻';
   sairBtn.onclick = async () => {
     await sb.auth.signOut();
+    esquecerSplash();   // entrar de novo conta como abrir o app: a animação volta
     window.location.href = 'login.html';
   };
 
@@ -1458,23 +1485,28 @@ function attachTelMask(el) {
 }
 // Módulos que o admin pode liberar por pessoa (key, label, href). Hoje só os existentes.
 const MODULOS_LIBERAVEIS = [
+  ['jornada','Jornada (aprovar XP e promover)','jornada-admin.html'],
   ['escala','Escala','escala.html'], ['membros','Membros','membros.html'],
   ['crm','Integração (CRM)','crm.html'],
   ['tesouraria','Tesouraria','tesouraria.html'], ['casas','Casas','casas.html'],
-]; // 'chamada' foi fundida na Escala (botão por card) — não é mais um módulo de nav separado
+]; // 'chamada' foi fundida na Escala (botão por card) — não é mais um módulo de nav separado,
+   // então a Chamada é gateada pela permissão 'escala' (ver chamada.html)
 
 // ── BOTTOM NAV ────────────────────────────────────────────────
 const EQUIPE_ROLES = ['coord_admin','subadmin','membro_equipe'];
 
 // Módulos de coordenação na navegação (na ordem fixa); permissões controlam quais aparecem
 const NAV_COORD_MODULOS = {
+  jornada:    { label:'Jornada',    href:'jornada-admin.html', icon:'star' },
   membros:    { label:'Membros',    href:'membros.html',    icon:'users' },
   escala:     { label:'Escala',     href:'escala.html',     icon:'calendar' },
   crm:        { label:'CRM',        href:'crm.html',        icon:'shuffle' },
   tesouraria: { label:'Tesouraria', href:'tesouraria.html', icon:'dollar' },
   casas:      { label:'Casas',      href:'casas.html',      icon:'shield' },
 };
-const ORDEM_MODULOS = ['membros','escala','crm','tesouraria','casas']; // chamada fundida na Escala
+// 'jornada' vem primeiro pra manter o lugar que ela já ocupava na barra (logo após Agenda).
+// Ela saiu dos itens fixos: aprovar XP e promover não é pra qualquer um da equipe.
+const ORDEM_MODULOS = ['jornada','membros','escala','crm','tesouraria','casas']; // chamada fundida na Escala
 
 // Rótulos amigáveis por arquivo, p/ o chip "Continuar" da Home (Fase 4).
 // Cobre telas de coordenação (NAV_COORD_MODULOS) e de jornada.
@@ -1581,8 +1613,7 @@ function renderBottomNav(ctx, activePage) {
   let items;
   if (mode === 'coordenacao') {
     items = [{ id:'home', href:'index.html', label:'Início', icon:'home' },
-      { id:'agenda', href:'agenda.html', label:'Agenda', icon:'calendar-days' },
-      { id:'jornada', href:'jornada-admin.html', label:'Jornada', icon:'star' }];
+      { id:'agenda', href:'agenda.html', label:'Agenda', icon:'calendar-days' }];
     ORDEM_MODULOS.forEach(k => { if (c.perms.includes(k)) { const mod = NAV_COORD_MODULOS[k]; items.push({ id:k, href:mod.href, label:mod.label, icon:mod.icon }); } });
     if (isSuperadmin(ctx)) items.push({ id:'config', href:'config.html', label:'Config', icon:'settings' });
   } else {
@@ -1879,6 +1910,58 @@ function buildRankEmblem(slug, size, spec) {
   wrap.appendChild(core);
   const pr = pipRowEl(slug, size, spec); if (pr) wrap.appendChild(pr); // pips animados abaixo do logo
   return wrap;
+}
+
+// ── SELETOR DE NÍVEL (definir o rank de um membro) ──────────────
+// Vive aqui (e não numa tela só) porque a coordenação mexe em nível por dois
+// caminhos: a ficha em Membros e o card de Desenvolvimento na Jornada.
+// opts.onSalvo(novoNivel) roda depois de gravar — cada tela redesenha do seu jeito.
+// Obs.: grava direto na coluna `nivel`. A RPC acolitos_promover, usada no card
+// "Promoções pendentes" da Jornada, só avança para o PRÓXIMO nível elegível —
+// aqui a coordenação define qualquer nível (inclusive corrigir pra baixo).
+function abrirSeletorNivel(membro, opts) {
+  opts = opts || {};
+  let escolha = membro.nivel || nivelFromRole(membro.role);
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '200';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className = 'modal';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Definir nível · ' + String(membro.nome || '').split(' ')[0];
+  const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-8px 0 14px;font-weight:600;';
+  sub.textContent = 'Toque no patch do nível desejado. O membro vê a comemoração ao subir.';
+  modal.append(handle, tt, sub);
+
+  const grid = document.createElement('div'); grid.className = 'nivelsel-grid';
+  const cells = {};
+  const titEl = document.createElement('div'); titEl.className = 'nivelsel-titulo';
+  NIVEIS.forEach((n, i) => {
+    const cell = document.createElement('button'); cell.type = 'button'; cell.className = 'nivelsel-cell' + (n.slug === escolha ? ' sel' : '');
+    const num = document.createElement('span'); num.className = 'nivelsel-num'; num.textContent = i + 1;
+    const emb = document.createElement('div'); emb.className = 'nivelsel-emb'; emb.innerHTML = getNivelSvg(n.slug, 46); // SVG hardcoded — seguro
+    const lbl = document.createElement('div'); lbl.className = 'nivelsel-lbl'; lbl.textContent = n.label;
+    cell.append(num, emb);
+    const pr = pipRowEl(n.slug, 32); if (pr) cell.appendChild(pr); // pips animados abaixo do patch
+    cell.appendChild(lbl);
+    cell.onclick = () => { escolha = n.slug; Object.values(cells).forEach(c => c.classList.remove('sel')); cell.classList.add('sel'); titEl.textContent = '🏆 ' + n.titulo; };
+    cells[n.slug] = cell; grid.appendChild(cell);
+  });
+  modal.appendChild(grid);
+  titEl.textContent = '🏆 ' + nivelInfo(escolha).titulo; modal.appendChild(titEl);
+  const msg = document.createElement('div'); msg.className = 'msg'; modal.appendChild(msg);
+
+  const acts = document.createElement('div'); acts.className = 'modal-actions';
+  const cancel = document.createElement('button'); cancel.className = 'btn-sm gray'; cancel.textContent = 'Cancelar'; cancel.onclick = () => ov.remove();
+  const conf = document.createElement('button'); conf.className = 'btn-sm gold'; conf.textContent = 'Salvar nível';
+  conf.onclick = async () => {
+    conf.disabled = true; conf.textContent = 'Salvando...';
+    const { error } = await sbAdmin.from('acolitos_membros').update({ nivel: escolha }).eq('id', membro.id);
+    if (error) { msg.className = 'msg error'; msg.textContent = 'Erro: ' + error.message; conf.disabled = false; conf.textContent = 'Salvar nível'; return; }
+    membro.nivel = escolha;
+    ov.remove();
+    if (typeof opts.onSalvo === 'function') opts.onSalvo(escolha);
+  };
+  acts.append(cancel, conf); modal.appendChild(acts);
+  ov.appendChild(modal); document.body.appendChild(ov);
 }
 
 // Bloco de nome com apelido em destaque + nome menor embaixo.

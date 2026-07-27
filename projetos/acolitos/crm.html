@@ -129,7 +129,7 @@ let pendingEntry = null;
 let currentView = 'pipeline';
 
 async function init() {
-  ctx = await initModulo(['coord_admin','subadmin','membro_equipe']);
+  ctx = await initModulo(['coord_admin','subadmin','membro_equipe'], { perm: 'crm' });
   if (!ctx) return;
   // Etapas vêm do Config (lista ordenada de {slug,label,acao}); senão usa o padrão
   const _ov = (typeof cfg === 'function') ? cfg('crm_etapas', null) : null;

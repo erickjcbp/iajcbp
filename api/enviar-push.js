@@ -4,11 +4,30 @@
 //   escalado (equipe/cerimonario)        → "você foi escalado"; membros[] obrigatório
 //   ausencia (equipe/cerimonario)        → "ausência respondida"; membros[] obrigatório
 //   troca    (qualquer membro, VALIDADO) → "convite de troca"; alvo_membro_id (o servidor confere o convite real)
+//   arte     (SÓ o robô do cron)         → "arte da escala pronta"; vai pra coordenação; texto montado aqui
 import webpush from 'web-push';
+import crypto from 'node:crypto';
 
 const COORD = ['coord_admin', 'subadmin'];
 const EQUIPE = ['coord_admin', 'subadmin', 'membro_equipe', 'cerimonario'];
 const URLBASE_MEMBRO = '/projetos/acolitos/escalas-membro.html';
+const URLBASE_ESCALA = '/projetos/acolitos/escala.html';
+
+// Compara segredos sem vazar tempo. Falso se qualquer um estiver vazio.
+function segredoConfere(recebido, esperado) {
+  if (!recebido || !esperado) return false;
+  const a = Buffer.from(String(recebido)), b = Buffer.from(String(esperado));
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+// '2026-08-02' → '2 de agosto'
+function dataPorExtenso(iso) {
+  const MES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+  if (!m) return null;
+  return `${Number(m[3])} de ${MES[Number(m[2]) - 1]}`;
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -17,24 +36,33 @@ export default async function handler(req, res) {
   if (!URL || !ANON || !SRK) return res.status(500).json({ error: 'Server misconfigured' });
   if (!VPUB || !VPRIV || !VSUB) return res.status(500).json({ error: 'VAPID não configurado' });
 
-  const token = (req.headers.authorization || '').replace('Bearer ', '');
-  if (!token) return res.status(401).json({ error: 'Token ausente' });
-  const uRes = await fetch(`${URL}/auth/v1/user`, { headers: { apikey: ANON, Authorization: `Bearer ${token}` } });
-  if (!uRes.ok) return res.status(401).json({ error: 'Token inválido' });
-  const caller = await uRes.json();
+  const { tipo, texto, titulo, membros, alvo_membro_id, domingo } = req.body || {};
+  if (!['aviso', 'teste', 'escalado', 'ausencia', 'troca', 'arte'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
+
+  // O robô do cron não tem login: entra pelo segredo compartilhado, e SÓ para 'arte'.
+  const viaCron = segredoConfere(req.headers['x-cron-secret'], process.env.CRON_SECRET);
+  if (viaCron && tipo !== 'arte') return res.status(403).json({ error: 'Segredo do cron só vale para arte' });
+  if (tipo === 'arte' && !viaCron) return res.status(403).json({ error: 'Acesso negado' });
 
   const h = { apikey: SRK, Authorization: `Bearer ${SRK}` };
   const jget = async (path) => { try { return await (await fetch(`${URL}/rest/v1/${path}`, { headers: h })).json(); } catch (_) { return null; } };
 
   const mod = (await jget('pastoral_modules?slug=eq.acolitos&select=id') || [])[0];
   if (!mod) return res.status(500).json({ error: 'Módulo não encontrado' });
-  const role = ((await jget(`pastoral_members?user_id=eq.${caller.id}&module_id=eq.${mod.id}&select=role`) || [])[0] || {}).role;
 
-  const { tipo, texto, titulo, membros, alvo_membro_id } = req.body || {};
-  if (!['aviso', 'teste', 'escalado', 'ausencia', 'troca'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
+  let role = null, caller = null;
+  if (!viaCron) {
+    const token = (req.headers.authorization || '').replace('Bearer ', '');
+    if (!token) return res.status(401).json({ error: 'Token ausente' });
+    const uRes = await fetch(`${URL}/auth/v1/user`, { headers: { apikey: ANON, Authorization: `Bearer ${token}` } });
+    if (!uRes.ok) return res.status(401).json({ error: 'Token inválido' });
+    caller = await uRes.json();
+    role = ((await jget(`pastoral_members?user_id=eq.${caller.id}&module_id=eq.${mod.id}&select=role`) || [])[0] || {}).role;
+  }
 
   // ── Autorização + alvo + conteúdo, por tipo ──
   let alvoMembros = null;        // array de membro_id, ou null = TODOS (só aviso)
+  let alvoUserIds = null;        // atalho: quando o alvo já é conhecido por user_id (arte)
   let title, body, tag;
 
   if (tipo === 'aviso' || tipo === 'teste') {
@@ -64,11 +92,25 @@ export default async function handler(req, res) {
     title = 'Convite de troca 🔁';
     body = ((me.apelido || me.nome || 'Um colega') + ' quer trocar de missa com você. Veja no app.').slice(0, 180);
     alvoMembros = [alvo_membro_id];
+
+  } else if (tipo === 'arte') {
+    // Só o cron chega aqui (checado lá em cima). Nada de texto livre: a mensagem é montada
+    // no servidor a partir da data, então o segredo não vira um megafone.
+    const quando = dataPorExtenso(domingo);
+    title = 'Arte da escala pronta 🎨';
+    body = quando
+      ? `A arte do fim de semana de ${quando} já está no app. Abra a Escala pra baixar e compartilhar.`
+      : 'A arte do próximo fim de semana já está no app. Abra a Escala pra baixar e compartilhar.';
+    const coords = await jget(`pastoral_members?module_id=eq.${mod.id}&role=in.(${COORD.join(',')})&select=user_id`) || [];
+    alvoUserIds = [...new Set(coords.map((r) => r.user_id).filter(Boolean))];
+    if (!alvoUserIds.length) return res.status(200).json({ ok: true, enviados: 0, removidos: 0, semInscritos: true });
   }
 
   // ── Resolve membros → user_ids → inscrições ──
   let subsUrl = `acolitos_push_subs?select=endpoint,p256dh,auth`;
-  if (Array.isArray(alvoMembros)) {
+  if (Array.isArray(alvoUserIds)) {
+    subsUrl += `&user_id=in.(${alvoUserIds.map(encodeURIComponent).join(',')})`;
+  } else if (Array.isArray(alvoMembros)) {
     const ids = alvoMembros.filter((x) => typeof x === 'string').slice(0, 500).map(encodeURIComponent).join(',');
     if (!ids) return res.status(400).json({ error: 'Sem destinatários' });
     const mrows = await jget(`acolitos_membros?id=in.(${ids})&select=user_id`) || [];
@@ -80,7 +122,9 @@ export default async function handler(req, res) {
 
   webpush.setVapidDetails(VSUB, VPUB, VPRIV);
   tag = tipo + '-' + Date.now() + '-' + Math.round(Math.random() * 1e6); // única → não colapsa, re-alerta
-  const url = (tipo === 'aviso' || tipo === 'teste') ? '/projetos/acolitos/index.html' : URLBASE_MEMBRO;
+  const url = tipo === 'arte' ? URLBASE_ESCALA
+    : (tipo === 'aviso' || tipo === 'teste') ? '/projetos/acolitos/index.html'
+    : URLBASE_MEMBRO;
   const payload = JSON.stringify({ title, body, url, tag, renotify: true });
 
   let enviados = 0, removidos = 0;

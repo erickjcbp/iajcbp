@@ -50,7 +50,7 @@ const NIVEIS_SLUGS = () => NIVEIS.map(n => n.slug);
 let ctx = null;
 
 async function init() {
-  ctx = await initModulo(['coord_admin', 'subadmin', 'membro_equipe']);
+  ctx = await initModulo(['coord_admin', 'subadmin', 'membro_equipe'], { perm: 'jornada' });
   if (!ctx) return;
   renderHeader(ctx, 'jornada');
   renderBottomNav(ctx, 'jornada');
@@ -587,8 +587,16 @@ async function renderDesenvolvimento(main) {
     const nm = document.createElement('div'); nm.style.cssText = 'font-weight:700;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; nm.textContent = m.apelido || m.nome;
     const meta = document.createElement('div'); meta.style.cssText = 'font-size:11px;color:var(--text-muted);'; meta.textContent = nivelInfo(m.nivel || 'aspirante').label + ' · ' + ((m.competencias_desenvolvidas || []).length) + ' comp.';
     info.append(nm, meta); top.append(av, info);
-    const btns = document.createElement('div'); btns.style.cssText = 'display:flex;gap:7px;';
-    btns.append(mk('📊 Panorama', true, () => abrirPanorama(m)), mk('⚙ Funções', false, () => abrirFuncoesEditor(m)), mk('🎯 Competências', false, () => abrirCompetenciasEditor(m, desenha)));
+    // 4 botões: quebram em 2 linhas no celular (min-width) em vez de espremer tudo numa só
+    const btns = document.createElement('div'); btns.style.cssText = 'display:flex;gap:7px;flex-wrap:wrap;';
+    // renderAll (e não só desenha): mudar o nível mexe em "Promoções pendentes" e
+    // "Quase lá" — mesmo comportamento do botão ⬆ Promover, pra não deixar card velho na tela.
+    const bNivel = mk('⬆ Nível', false, () => abrirSeletorNivel(m, { onSalvo: (nv) => {
+      toast('Nível de ' + (m.apelido || m.nome).split(' ')[0] + ' definido: ' + nivelInfo(nv).label);
+      renderAll();
+    } }));
+    btns.append(mk('📊 Panorama', true, () => abrirPanorama(m)), mk('⚙ Funções', false, () => abrirFuncoesEditor(m)), mk('🎯 Competências', false, () => abrirCompetenciasEditor(m, desenha)), bNivel);
+    Array.prototype.forEach.call(btns.children, b => { b.style.minWidth = '108px'; });
     row.append(top, btns); return row;
   }
   function desenha() {

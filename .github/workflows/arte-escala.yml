@@ -2,7 +2,11 @@ name: Arte da Escala
 
 on:
   schedule:
-    - cron: '0 0 * * 1'   # segunda 00:00 UTC = domingo 21h BRT
+    # segunda 01:13 UTC = DOMINGO 22h13 BRT.
+    # Os 13 minutos são de propósito: o GitHub enfileira as tarefas agendadas e a
+    # hora cheia (:00) é a mais concorrida — na hora cheia o atraso chegou a 3h.
+    # Mesmo assim o GitHub NÃO garante pontualidade, só que roda depois do horário.
+    - cron: '13 1 * * 1'
   workflow_dispatch:
 
 jobs:
@@ -23,3 +27,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GERADO_POR: ${{ github.event_name == 'workflow_dispatch' && 'manual' || 'cron' }}
+          # Avisar a coordenação por push quando a arte ficar pronta.
+          # Se estes dois secrets não existirem, o robô só pula o aviso (a arte é gerada do mesmo jeito).
+          SITE_URL: ${{ secrets.SITE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
