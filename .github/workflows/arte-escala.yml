@@ -1,12 +1,13 @@
 name: Arte da Escala
 
+# QUEM DÁ A PARTIDA AGORA É O CRON DA VERCEL (vercel.json → /api/cron-arte),
+# domingo 22h BRT. O `schedule:` do GitHub foi REMOVIDO de propósito: ele não tem
+# hora — nas duas únicas execuções agendadas que existiram, atrasou 3h e 3h38, e a
+# arte de domingo à noite saía perto das 2h da manhã de segunda.
+# O workflow_dispatch continua: é por ele que a Vercel dispara (na hora), e é o que
+# o botão "Gerar/Atualizar" da tela de Escala usa (api/regenerar-arte.js).
+# NÃO recolocar o schedule aqui sem tirar o cron da Vercel, senão gera duas vezes.
 on:
-  schedule:
-    # segunda 01:13 UTC = DOMINGO 22h13 BRT.
-    # Os 13 minutos são de propósito: o GitHub enfileira as tarefas agendadas e a
-    # hora cheia (:00) é a mais concorrida — na hora cheia o atraso chegou a 3h.
-    # Mesmo assim o GitHub NÃO garante pontualidade, só que roda depois do horário.
-    - cron: '13 1 * * 1'
   workflow_dispatch:
 
 jobs:

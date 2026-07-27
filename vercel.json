@@ -1,4 +1,7 @@
 {
+  "crons": [
+    { "path": "/api/cron-arte", "schedule": "0 1 * * 1" }
+  ],
   "redirects": [
     { "source": "/", "has": [{ "type": "host", "value": "coroinhas.jcbplimeira.com.br" }], "destination": "/projetos/acolitos/login.html", "permanent": false },
     { "source": "/",          "destination": "/projetos/central/login.html",     "permanent": false },
