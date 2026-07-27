@@ -1486,6 +1486,7 @@ function attachTelMask(el) {
 // Módulos que o admin pode liberar por pessoa (key, label, href). Hoje só os existentes.
 const MODULOS_LIBERAVEIS = [
   ['jornada','Jornada (aprovar XP e promover)','jornada-admin.html'],
+  ['caixa','Caixa de Aprovações','ausencias.html'],
   ['escala','Escala','escala.html'], ['membros','Membros','membros.html'],
   ['crm','Integração (CRM)','crm.html'],
   ['tesouraria','Tesouraria','tesouraria.html'], ['casas','Casas','casas.html'],
@@ -1498,6 +1499,7 @@ const EQUIPE_ROLES = ['coord_admin','subadmin','membro_equipe'];
 // Módulos de coordenação na navegação (na ordem fixa); permissões controlam quais aparecem
 const NAV_COORD_MODULOS = {
   jornada:    { label:'Jornada',    href:'jornada-admin.html', icon:'star' },
+  caixa:      { label:'Caixa',      href:'ausencias.html',  icon:'inbox' },
   membros:    { label:'Membros',    href:'membros.html',    icon:'users' },
   escala:     { label:'Escala',     href:'escala.html',     icon:'calendar' },
   crm:        { label:'CRM',        href:'crm.html',        icon:'shuffle' },
@@ -1506,7 +1508,9 @@ const NAV_COORD_MODULOS = {
 };
 // 'jornada' vem primeiro pra manter o lugar que ela já ocupava na barra (logo após Agenda).
 // Ela saiu dos itens fixos: aprovar XP e promover não é pra qualquer um da equipe.
-const ORDEM_MODULOS = ['jornada','membros','escala','crm','tesouraria','casas']; // chamada fundida na Escala
+// 'caixa' vem logo em seguida porque é o trabalho diário da coordenação: aprovar
+// trocas, cadastros e ausências — o que mais se acessa depois da Jornada.
+const ORDEM_MODULOS = ['jornada','caixa','membros','escala','crm','tesouraria','casas'];
 
 // Rótulos amigáveis por arquivo, p/ o chip "Continuar" da Home (Fase 4).
 // Cobre telas de coordenação (NAV_COORD_MODULOS) e de jornada.
@@ -1563,6 +1567,9 @@ function _svgIcon(name) {
     dollar:         'M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
     star:           'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01z',
     shield:         'M12 2l8 3v6c0 5-3.5 8.6-8 11-4.5-2.4-8-6-8-11V5z',
+    inbox:          'M22 12h-6l-2 3h-4l-2-3H2 M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z',
+    // ícone de Conquistas: medalha (círculo) + fita — pra tela de insígnias/troféus do membro
+    award:          'M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14z M8.21 13.89L7 23l5-3 5 3-1.21-9.12',
     settings:       'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
   };
   return `<svg viewBox="0 0 24 24"><path d="${d[name] || ''}"/></svg>`;
@@ -1610,31 +1617,22 @@ function renderBottomNav(ctx, activePage) {
   el.className = 'app-nav';
   el.textContent = '';
   const c = navCaps(ctx); const mode = navMode(ctx);
-  let items;
-  if (mode === 'coordenacao') {
-    items = [{ id:'home', href:'index.html', label:'Início', icon:'home' },
-      { id:'agenda', href:'agenda.html', label:'Agenda', icon:'calendar-days' }];
-    ORDEM_MODULOS.forEach(k => { if (c.perms.includes(k)) { const mod = NAV_COORD_MODULOS[k]; items.push({ id:k, href:mod.href, label:mod.label, icon:mod.icon }); } });
-    if (isSuperadmin(ctx)) items.push({ id:'config', href:'config.html', label:'Config', icon:'settings' });
-  } else {
-    items = [{ id:'home', href:'index.html', label:'Início', icon:'home' },
-      { id:'quests', href:'missoes.html', label:'Quests', icon:'star' },
-      { id:'escalas-membro', href:'escalas-membro.html', label:'Escalas', icon:'calendar' },
-      { id:'agenda', href:'agenda.html', label:'Agenda', icon:'calendar-days' },
-      { id:'destaques', href:'destaques.html', label:'Destaques', icon:'star' },
-      { id:'minha-casa', href:'minha-casa.html', label:'Casa', icon:'shield' },
-      { id:'ausencias', href:'ausencias.html', label:'Ausência', icon:'x-circle' }];
-    // Chamada foi fundida na Escala: o cerimoniário faz a chamada pelo botão no card de escala.
-  }
   // ordem customizável da barra (Config → Navegação); itens fora da lista vão pro fim na ordem padrão
   const _ordCfg = (typeof cfg === 'function') ? cfg(mode === 'coordenacao' ? 'nav_ordem_coord' : 'nav_ordem_jornada', null) : null;
-  if (Array.isArray(_ordCfg) && _ordCfg.length) {
-    items.sort((a, b) => { const ia = _ordCfg.indexOf(a.id), ib = _ordCfg.indexOf(b.id); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
-  }
+  const items = montarItensNav({
+    modo: mode,
+    perms: c.perms,
+    isAdmin: c.isAdmin,
+    isSuperadmin: isSuperadmin(ctx),
+    ordemCfg: _ordCfg,
+    modulos: NAV_COORD_MODULOS,
+    ordemModulos: ORDEM_MODULOS,
+  });
   items.forEach(item => {
     const a = document.createElement('a');
     a.className = 'nav-item' + (item.id === activePage ? ' active' : '');
     a.href = item.href;
+    a.dataset.id = item.id;
     // Páginas ainda não construídas ficam desabilitadas
     if (!['home','membros','crm','index'].includes(item.id) && !item.href.includes('index')) {
       // só desabilita se o arquivo não existe ainda — deixamos habilitado por ora
@@ -1647,6 +1645,31 @@ function renderBottomNav(ctx, activePage) {
     el.appendChild(a);
   });
   setupNavArrows(el);
+  pintarContadorCaixa(el);   // sem await: a barra não espera a rede
+}
+
+// Contador de pendências no item Caixa. Roda DEPOIS do render (a barra não espera
+// rede pra aparecer) e reaproveita as mesmas RPCs do aviso da Home.
+// O item nunca some: sem pendência, só não há número.
+async function pintarContadorCaixa(el) {
+  const item = el.querySelector('.nav-item[data-id="caixa"]');
+  if (!item) return;
+  try {
+    const [{ data: sol }, { data: aus }] = await Promise.all([
+      sb.rpc('acolitos_solicitacoes_pendentes'),
+      sb.rpc('acolitos_ausencia_pendente_listar'),
+    ]);
+    const nSol = sol ? (((sol.trocas || []).length) + ((sol.candidaturas || []).length) + ((sol.cobrir || []).length)) : 0;
+    const nAus = aus ? ((aus.pendentes || []).length) : 0;
+    const total = nSol + nAus;
+    const velho = item.querySelector('.nav-badge');
+    if (velho) velho.remove();
+    if (!total) return;
+    const b = document.createElement('span');
+    b.className = 'nav-badge';
+    b.textContent = total > 99 ? '99+' : String(total);
+    item.appendChild(b);
+  } catch (e) { /* contador é enfeite: falhou, a barra continua funcionando */ }
 }
 
 // Setas de rolagem no rodapé (quando há mais submódulos do que cabem)
@@ -1665,7 +1688,19 @@ function setupNavArrows(el) {
   };
   el.addEventListener('scroll', upd, { passive: true });
   window.addEventListener('resize', upd);
-  requestAnimationFrame(() => { upd(); if (!right.hidden) { right.classList.add('hint'); setTimeout(() => right.classList.remove('hint'), 2600); } });
+  // Numa barra que rola, a tela pode abrir com o item ativo fora da vista.
+  // Centraliza o ativo ANTES de medir as setas, senão elas mostram o estado errado.
+  const centralizarAtivo = () => {
+    const ativo = el.querySelector('.nav-item.active');
+    if (!ativo || el.scrollWidth - el.clientWidth <= 4) return;
+    const alvo = ativo.offsetLeft - (el.clientWidth - ativo.offsetWidth) / 2;
+    el.scrollLeft = Math.max(0, Math.min(alvo, el.scrollWidth - el.clientWidth));
+  };
+  requestAnimationFrame(() => {
+    centralizarAtivo();
+    upd();
+    if (!right.hidden) { right.classList.add('hint'); setTimeout(() => right.classList.remove('hint'), 2600); }
+  });
 }
 
 // Switch "Minha Jornada ⇄ Coordenação" — barra fixa abaixo do header (só quem tem os dois)

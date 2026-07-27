@@ -48,6 +48,7 @@
 <div id="app-nav"></div>
 <div class="main" id="main-content"><span class="loading">Carregando...</span></div>
 
+<script src="navegacao-core.js"></script>
 <script src="shared.js"></script>
 <script>
 // A seção inicial PRECISA existir em SECOES — senão o painel abre numa tela
@@ -362,8 +363,8 @@ function renderIdentidade(b){
 // ── Seção Navegação: reordenar a barra inferior (jornada / coordenação) ──
 let _navModo = 'jornada';
 const NAV_ITENS = {
-  jornada: [['home','Início'],['quests','Quests'],['escalas-membro','Escalas'],['agenda','Agenda'],['destaques','Destaques'],['minha-casa','Casa'],['ausencias','Ausência']],
-  coord:   [['home','Início'],['agenda','Agenda'],['jornada','Jornada'],['membros','Membros'],['escala','Escala'],['crm','CRM'],['tesouraria','Tesouraria'],['casas','Casas'],['config','Config']],
+  jornada: [['home','Início'],['quests','Quests'],['escalas-membro','Escalas'],['agenda','Agenda'],['conquistas','Conquistas'],['destaques','Destaques'],['minha-casa','Casa'],['ausencias','Faltar']],
+  coord:   [['home','Início'],['agenda','Agenda'],['jornada','Jornada'],['caixa','Caixa'],['membros','Membros'],['escala','Escala'],['crm','CRM'],['tesouraria','Tesouraria'],['casas','Casas'],['config','Config']],
 };
 function renderNavOrdem(b){
   b.textContent='';

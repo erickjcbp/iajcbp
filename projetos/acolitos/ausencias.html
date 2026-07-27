@@ -54,6 +54,7 @@
   <span class="loading">Carregando...</span>
 </div>
 
+<script src="navegacao-core.js"></script>
 <script src="shared.js"></script>
 <script src="gerador-substituto.js"></script>
 <script>
@@ -71,6 +72,7 @@ function dataLabel(d) { const x = new Date(d+'T00:00:00'); return DIAS[x.getDay(
 function comLabel(c) { return c==='matriz'?'Matriz':'Sto. Antônio'; }
 
 let ctx = null;
+let podeAprovar = false;
 let rosterMembrosAus = null, rosterMapAus = {}, rosterHabsAus = [];
 // Roster seguro (security-definer) — cobre o cerimoniário, que não lê acolitos_membros por RLS.
 async function carregarRosterAus() {
@@ -288,15 +290,23 @@ async function init() {
   ctx = await initModulo();
   if (!ctx) return;
   renderHeader(ctx, 'ausencias');
-  renderBottomNav(ctx, 'ausencias');
+  // Esta tela tem dois ids na barra: 'ausencias' pro membro ("Faltar") e 'caixa' pra
+  // coordenação. Sem escolher o id do modo atual, nenhum item acende e a barra não
+  // rola até ele.
+  renderBottomNav(ctx, navMode(ctx) === 'coordenacao' ? 'caixa' : 'ausencias');
   await carregarMotivos(); // motivos do Config (fallback: padrões)
   // equipe E cerimoniários podem registrar ausência de outros (a RLS libera os dois)
   const _r = ctx.membership.role;
   // renderPendentesPublicas sem await de propósito: carrega em background e prepende
   // o card após a view de equipe já ter montado (ela limpa #main-content no início).
+  // ATENÇÃO: o gate de 'caixa' é sobre o BLOCO DE APROVAÇÕES, nunca sobre a tela.
+  // Esta tela é a única do app com dois públicos no mesmo arquivo: todo membro
+  // precisa dela pra informar ausência. Não troque isto por initModulo({perm:'caixa'}).
+  const _caps = navCaps(ctx);
+  podeAprovar = _caps.isAdmin || _caps.perms.includes('caixa');
   if (EQUIPE_ROLES.includes(_r) || _r === 'cerimonario') {
     await renderViewEquipe();
-    renderPendentesPublicas();
+    if (podeAprovar) renderPendentesPublicas();
   }
   else renderViewMembro();
 }
@@ -583,9 +593,13 @@ async function renderViewEquipe() {
   // Caixa de Aprovações (Trocas/Candidaturas/Cobrir) — reconstruída a cada render
   // (inclusive após "Registrar ausência" chamar renderViewEquipe de novo), pois
   // main.textContent='' acima limpa qualquer container anterior.
-  const caixaBox = document.createElement('div');
-  main.appendChild(caixaBox);
-  renderCaixaSolicitacoes(caixaBox);
+  // Só quem tem a permissão 'caixa' aprova. Cerimoniário continua com o resto da
+  // tela (registrar ausência de outro, KPIs, lista) — a RLS já libera isso pra ele.
+  if (podeAprovar) {
+    const caixaBox = document.createElement('div');
+    main.appendChild(caixaBox);
+    renderCaixaSolicitacoes(caixaBox);
+  }
 
   const title = document.createElement('h1'); title.className = 'page-title';
   title.textContent = 'Ausências Informadas'; main.appendChild(title);
