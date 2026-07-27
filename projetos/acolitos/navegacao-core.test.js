@@ -60,3 +60,15 @@ test('cada item tem id, href, label e icon preenchidos', () => {
     }
   }
 });
+
+test('caixa aparece na coordenação só para quem tem a permissão', () => {
+  const MOD = Object.assign({}, MODULOS, {
+    caixa: { label:'Caixa', href:'ausencias.html', icon:'inbox' },
+  });
+  const ORD = ['jornada','caixa','membros','escala','crm','tesouraria','casas'];
+  const sem = montarItensNav({ ...base, modulos:MOD, ordemModulos:ORD, modo:'coordenacao', perms:['escala'], isAdmin:false });
+  assert.ok(!ids(sem).includes('caixa'));
+  const com = montarItensNav({ ...base, modulos:MOD, ordemModulos:ORD, modo:'coordenacao', perms:['escala','caixa'], isAdmin:false });
+  assert.ok(ids(com).includes('caixa'));
+  assert.strictEqual(com.find(x => x.id === 'caixa').href, 'ausencias.html');
+});

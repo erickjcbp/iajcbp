@@ -1486,6 +1486,7 @@ function attachTelMask(el) {
 // Módulos que o admin pode liberar por pessoa (key, label, href). Hoje só os existentes.
 const MODULOS_LIBERAVEIS = [
   ['jornada','Jornada (aprovar XP e promover)','jornada-admin.html'],
+  ['caixa','Caixa de Aprovações','ausencias.html'],
   ['escala','Escala','escala.html'], ['membros','Membros','membros.html'],
   ['crm','Integração (CRM)','crm.html'],
   ['tesouraria','Tesouraria','tesouraria.html'], ['casas','Casas','casas.html'],
@@ -1498,6 +1499,7 @@ const EQUIPE_ROLES = ['coord_admin','subadmin','membro_equipe'];
 // Módulos de coordenação na navegação (na ordem fixa); permissões controlam quais aparecem
 const NAV_COORD_MODULOS = {
   jornada:    { label:'Jornada',    href:'jornada-admin.html', icon:'star' },
+  caixa:      { label:'Caixa',      href:'ausencias.html',  icon:'inbox' },
   membros:    { label:'Membros',    href:'membros.html',    icon:'users' },
   escala:     { label:'Escala',     href:'escala.html',     icon:'calendar' },
   crm:        { label:'CRM',        href:'crm.html',        icon:'shuffle' },
@@ -1506,7 +1508,7 @@ const NAV_COORD_MODULOS = {
 };
 // 'jornada' vem primeiro pra manter o lugar que ela já ocupava na barra (logo após Agenda).
 // Ela saiu dos itens fixos: aprovar XP e promover não é pra qualquer um da equipe.
-const ORDEM_MODULOS = ['jornada','membros','escala','crm','tesouraria','casas']; // chamada fundida na Escala
+const ORDEM_MODULOS = ['jornada','caixa','membros','escala','crm','tesouraria','casas']; // chamada fundida na Escala
 
 // Rótulos amigáveis por arquivo, p/ o chip "Continuar" da Home (Fase 4).
 // Cobre telas de coordenação (NAV_COORD_MODULOS) e de jornada.
@@ -1563,6 +1565,7 @@ function _svgIcon(name) {
     dollar:         'M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
     star:           'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01z',
     shield:         'M12 2l8 3v6c0 5-3.5 8.6-8 11-4.5-2.4-8-6-8-11V5z',
+    inbox:          'M22 12h-6l-2 3h-4l-2-3H2 M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z',
     settings:       'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
   };
   return `<svg viewBox="0 0 24 24"><path d="${d[name] || ''}"/></svg>`;
