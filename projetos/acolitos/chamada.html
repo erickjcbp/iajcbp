@@ -88,7 +88,9 @@ function eligiveis(funcao) {
 
 let _deepLink = false; // veio do botão "Chamada" de um card de escala (?celeb=<id>)
 async function init() {
-  ctx = await initModulo(['coord_admin','subadmin','membro_equipe','cerimonario']);
+  // A Chamada é parte do módulo Escala (o botão vive no card da celebração), por isso
+  // gateia por 'escala' — 'chamada' não existe mais como módulo liberável.
+  ctx = await initModulo(['coord_admin','subadmin','membro_equipe','cerimonario'], { perm: 'escala', livres: ['cerimonario'] });
   if (!ctx) return;
   renderHeader(ctx, 'chamada');
   renderBottomNav(ctx, 'chamada');

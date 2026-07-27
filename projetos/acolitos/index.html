@@ -106,7 +106,7 @@
 <script src="shared.js"></script>
 <script>
 // EQUIPE_ROLES já vem do shared.js (redeclarar com const aqui quebrava o script)
-// Splash (turíbulo) agora é centralizado no shared.js — mostrado/escondido em todas as páginas.
+// Splash (turíbulo) é centralizado no shared.js — roda só na ABERTURA do app (1x por sessão).
 const CRM_ETAPAS = ['aprovacao_cadastro','integracao','whatsapp','tunica','disponivel_escala','integrado'];
 const CRM_LABEL = { aprovacao_cadastro:'Aprovação', integracao:'Integração', whatsapp:'WhatsApp', tunica:'Túnica', disponivel_escala:'Disponível para Escala', integrado:'Integrado ✓' };
 const CRM_DESC = {
@@ -685,14 +685,16 @@ async function renderDashboardEquipe(ctx) {
   await renderAgenda(main, 'Próximas Celebrações', 6, true, cobR.data || []);
 
   // Acesso rápido
-  const qh = document.createElement('div'); qh.className='section-head'; qh.textContent='Acesso Rápido'; main.appendChild(qh);
   const qrow = document.createElement('div'); qrow.className='quick-row';
+  // Mesma regra da barra de baixo: só aparece o que a pessoa realmente pode abrir.
+  const _c = navCaps(ctx);
+  const podeVer = (perm) => _c.isAdmin || _c.perms.includes(perm);
   [
-    { href:'escala.html', icon:'calendar', title:'Montar Escala' },
-    { href:'membros.html', icon:'users', title:'Membros' },
-    { href:'chamada.html', icon:'message-circle', title:'Chamada' },
-    { href:'crm.html', icon:'shuffle', title:'Integração' },
-  ].forEach(q => {
+    { href:'escala.html', icon:'calendar', title:'Montar Escala', perm:'escala' },
+    { href:'membros.html', icon:'users', title:'Membros', perm:'membros' },
+    { href:'chamada.html', icon:'message-circle', title:'Chamada', perm:'escala' },
+    { href:'crm.html', icon:'shuffle', title:'Integração', perm:'crm' },
+  ].filter(q => podeVer(q.perm)).forEach(q => {
     const a=document.createElement('a'); a.className='quick-link'; a.href=q.href;
     const ic=document.createElement('span'); ic.className='quick-link-icon'; ic.innerHTML=_svgIcon(q.icon); // SVG hardcoded — seguro
     const t=document.createElement('span'); t.className='quick-link-title'; t.textContent=q.title;
@@ -704,7 +706,11 @@ async function renderDashboardEquipe(ctx) {
     const at=document.createElement('span'); at.className='quick-link-title'; at.textContent='Enviar aviso';
     av.append(aic,at); av.onclick=()=>avisarTodos(); qrow.appendChild(av);
   }
-  main.appendChild(qrow);
+  // sem nenhum atalho liberado, nem o título aparece (evita seção vazia)
+  if (qrow.children.length) {
+    const qh = document.createElement('div'); qh.className='section-head'; qh.textContent='Acesso Rápido';
+    main.append(qh, qrow);
+  }
 }
 
 /* ── GRÁFICO: presença por mês ───────────────────────────────── */

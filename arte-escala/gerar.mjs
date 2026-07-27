@@ -55,6 +55,30 @@ async function main() {
   })
   if (te) throw te
   console.log('Arte publicada:', pub.publicUrl)
+
+  await avisarCoordenacao(domingo)
+}
+
+// Avisa a coordenação por push que a arte da semana ficou pronta.
+// NUNCA derruba o job: se o aviso falhar, a arte já está publicada e é isso que importa.
+async function avisarCoordenacao(domingo) {
+  const site = (process.env.SITE_URL || '').replace(/\/+$/, '')
+  const segredo = process.env.CRON_SECRET
+  if (!site || !segredo) {
+    console.log('Aviso por push não configurado (falta SITE_URL/CRON_SECRET) — pulando.')
+    return
+  }
+  try {
+    const r = await fetch(`${site}/api/enviar-push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-cron-secret': segredo },
+      body: JSON.stringify({ tipo: 'arte', domingo }),
+    })
+    const txt = await r.text()
+    console.log(r.ok ? `Aviso enviado: ${txt}` : `Aviso falhou (${r.status}): ${txt}`)
+  } catch (e) {
+    console.log('Aviso falhou:', e.message)
+  }
 }
 
 main().catch(e => { console.error(e); process.exit(1) })

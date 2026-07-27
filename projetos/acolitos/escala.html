@@ -427,7 +427,7 @@ function openInfo(title, lines) {
 }
 
 async function init() {
-  ctx = await initModulo(['coord_admin','subadmin','membro_equipe']);
+  ctx = await initModulo(['coord_admin','subadmin','membro_equipe'], { perm: 'escala' });
   if (!ctx) return;
   renderHeader(ctx, 'escala');
   renderBottomNav(ctx, 'escala');

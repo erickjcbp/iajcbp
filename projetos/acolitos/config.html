@@ -50,11 +50,13 @@
 
 <script src="shared.js"></script>
 <script>
-let ctx = null, secaoAtual = 'listas';
+// A seção inicial PRECISA existir em SECOES — senão o painel abre numa tela
+// que não tem botão no menu e, ao sair dela, não há como voltar sem recarregar.
+let ctx = null, secaoAtual = 'identidade';
 const SECOES = [
-  ['navegacao','Navegação'], ['equipe','Equipe & Permissões'], ['tipos','Tipos & Modelos'], ['funcoes','Funções litúrgicas'],
+  ['identidade','Identidade'], ['navegacao','Navegação'], ['equipe','Equipe & Permissões'], ['tipos','Tipos & Modelos'], ['funcoes','Funções litúrgicas'],
   ['gerador','Regras do gerador'], ['comunidades','Comunidades & horários'],
-  ['cadastro','Campos do cadastro'], ['tesouraria','Categorias da Tesouraria'], ['crm','Etapas do CRM'], ['niveis','Níveis / Jornada'], ['missoes','Missões & XP'], ['logins','Logins (usuário/senha)'], ['admins','Admins & superadmin'],
+  ['cadastro','Campos do cadastro'], ['tesouraria','Categorias da Tesouraria'], ['crm','Etapas do CRM'], ['niveis','Níveis / Jornada'], ['listas','Competências'], ['missoes','Missões & XP'], ['logins','Logins (usuário/senha)'], ['admins','Admins & superadmin'],
 ];
 async function init(){
   ctx = await initModulo();
@@ -71,9 +73,10 @@ function render(){
   SECOES.forEach(([id,label])=>{ const b=document.createElement('button'); b.className='cfg-item'+(id===secaoAtual?' on':''); b.textContent=label; b.onclick=()=>{secaoAtual=id;render();}; side.appendChild(b); });
   const body = document.createElement('div'); body.id='cfg-body'; body.className='cfg-body';
   wrap.append(side, body); main.appendChild(wrap);
+  // 'modelos' não entra aqui: vive dentro de 'tipos' (Tipos & Modelos).
   ({ listas:renderListas, tipos:renderTiposModelos, funcoes:renderFuncoes, gerador:renderGerador,
      comunidades:renderComunidades, cadastro:renderCadastro, admins:renderAdmins, identidade:renderIdentidade,
-     navegacao:renderNavOrdem, equipe:renderEquipe, tesouraria:renderTesouraria, modelos:renderModelos,
+     navegacao:renderNavOrdem, equipe:renderEquipe, tesouraria:renderTesouraria,
      crm:renderCrm, niveis:renderNiveis, missoes:renderMissoes, logins:renderLogins
    }[secaoAtual] || (()=>{}))(body);
 }
@@ -141,9 +144,15 @@ const LISTAS_TIPOS = [['competencia','Competências']];
 let _listaTipo = 'competencia';
 async function renderListas(b){
   b.textContent='';
-  const subnav=document.createElement('div'); subnav.className='cfg-nav';
-  LISTAS_TIPOS.forEach(([t,l])=>{ const x=document.createElement('button'); x.className='cfg-tab'+(t===_listaTipo?' on':''); x.textContent=l; x.onclick=()=>{_listaTipo=t;renderListas(b);}; subnav.appendChild(x); });
-  b.appendChild(subnav);
+  // sub-abas só fazem sentido com mais de um tipo de lista; com um só, o título da seção já diz qual é
+  if (LISTAS_TIPOS.length > 1) {
+    const subnav=document.createElement('div'); subnav.className='cfg-nav';
+    LISTAS_TIPOS.forEach(([t,l])=>{ const x=document.createElement('button'); x.className='cfg-tab'+(t===_listaTipo?' on':''); x.textContent=l; x.onclick=()=>{_listaTipo=t;renderListas(b);}; subnav.appendChild(x); });
+    b.appendChild(subnav);
+  }
+  const dica=document.createElement('p'); dica.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 10px;';
+  dica.textContent='Competências são o plano de desenvolvimento — aparecem na Jornada, em 🎯 Competências de cada membro.';
+  b.appendChild(dica);
   const { data } = await sb.from('acolitos_listas').select('id,valor,label').eq('tipo',_listaTipo).order('valor');
   (data||[]).forEach(item=>{
     const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';

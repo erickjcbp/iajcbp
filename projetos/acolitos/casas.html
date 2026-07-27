@@ -45,10 +45,8 @@ let ctx = null, casas = [], membros = [], roleMap = {};
 function brasaoEl(slug, size) { const d = document.createElement('div'); d.style.cssText = 'flex:none;line-height:0;'; d.innerHTML = getCasaBrasao(slug, size); return d; } // SVG controlado — seguro
 
 async function init() {
-  ctx = await initModulo();
+  ctx = await initModulo(null, { perm: 'casas' });
   if (!ctx) return;
-  const c = navCaps(ctx);
-  if (!c.isAdmin && !c.perms.includes('casas')) { window.location.href = 'index.html'; return; }
   renderHeader(ctx, 'casas');
   renderBottomNav(ctx, 'casas');
   await load();
