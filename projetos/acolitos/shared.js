@@ -1655,7 +1655,19 @@ function setupNavArrows(el) {
   };
   el.addEventListener('scroll', upd, { passive: true });
   window.addEventListener('resize', upd);
-  requestAnimationFrame(() => { upd(); if (!right.hidden) { right.classList.add('hint'); setTimeout(() => right.classList.remove('hint'), 2600); } });
+  // Numa barra que rola, a tela pode abrir com o item ativo fora da vista.
+  // Centraliza o ativo ANTES de medir as setas, senão elas mostram o estado errado.
+  const centralizarAtivo = () => {
+    const ativo = el.querySelector('.nav-item.active');
+    if (!ativo || el.scrollWidth - el.clientWidth <= 4) return;
+    const alvo = ativo.offsetLeft - (el.clientWidth - ativo.offsetWidth) / 2;
+    el.scrollLeft = Math.max(0, Math.min(alvo, el.scrollWidth - el.clientWidth));
+  };
+  requestAnimationFrame(() => {
+    centralizarAtivo();
+    upd();
+    if (!right.hidden) { right.classList.add('hint'); setTimeout(() => right.classList.remove('hint'), 2600); }
+  });
 }
 
 // Switch "Minha Jornada ⇄ Coordenação" — barra fixa abaixo do header (só quem tem os dois)
