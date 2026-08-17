@@ -1499,7 +1499,7 @@ const EQUIPE_ROLES = ['coord_admin','subadmin','membro_equipe'];
 // Módulos de coordenação na navegação (na ordem fixa); permissões controlam quais aparecem
 const NAV_COORD_MODULOS = {
   jornada:    { label:'Jornada',    href:'jornada-admin.html', icon:'star' },
-  caixa:      { label:'Caixa',      href:'ausencias.html',  icon:'inbox' },
+  caixa:      { label:'Caixa',      href:'caixa.html',      icon:'inbox' }, // aprovar trocas, cadastros e ausências agora em tela própria
   membros:    { label:'Membros',    href:'membros.html',    icon:'users' },
   escala:     { label:'Escala',     href:'escala.html',     icon:'calendar' },
   crm:        { label:'CRM',        href:'crm.html',        icon:'shuffle' },

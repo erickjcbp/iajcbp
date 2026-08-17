@@ -80,14 +80,14 @@ test('cada item tem id, href, label e icon preenchidos', () => {
 
 test('caixa aparece na coordenação só para quem tem a permissão', () => {
   const MOD = Object.assign({}, MODULOS, {
-    caixa: { label:'Caixa', href:'ausencias.html', icon:'inbox' },
+    caixa: { label:'Caixa', href:'caixa.html', icon:'inbox' },
   });
   const ORD = ['jornada','caixa','membros','escala','crm','tesouraria','casas'];
   const sem = montarItensNav({ ...base, modulos:MOD, ordemModulos:ORD, modo:'coordenacao', perms:['escala'], isAdmin:false });
   assert.ok(!ids(sem).includes('caixa'));
   const com = montarItensNav({ ...base, modulos:MOD, ordemModulos:ORD, modo:'coordenacao', perms:['escala','caixa'], isAdmin:false });
   assert.ok(ids(com).includes('caixa'));
-  assert.strictEqual(com.find(x => x.id === 'caixa').href, 'ausencias.html');
+  assert.strictEqual(com.find(x => x.id === 'caixa').href, 'caixa.html');
 });
 
 // A ordem salva no banco é anterior aos itens novos (Caixa, Conquistas). Antes, id
@@ -108,7 +108,7 @@ test('item que a ordem salva não conhece entra na posição padrão, não no fi
 });
 
 test('coordenação: caixa desconhecida pela ordem salva cai logo após jornada', () => {
-  const MOD = Object.assign({}, MODULOS, { caixa: { label:'Caixa', href:'ausencias.html', icon:'inbox' } });
+  const MOD = Object.assign({}, MODULOS, { caixa: { label:'Caixa', href:'caixa.html', icon:'inbox' } });
   const ORD = ['jornada','caixa','membros','escala','crm','tesouraria','casas'];
   const salva = ['home','escala','membros','jornada','crm','agenda','tesouraria','casas','config'];
   const r = montarItensNav({ ...base, modulos:MOD, ordemModulos:ORD, modo:'coordenacao',
