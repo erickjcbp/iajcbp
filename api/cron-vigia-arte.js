@@ -50,12 +50,16 @@ export default async function handler(req, res) {
 
   // Falta a arte: avisa quem pode resolver.
   //
-  // O endereço do site vem do próprio pedido, NÃO de uma variável nova. SITE_URL existe
-  // como segredo do GitHub (o gerar.mjs usa), mas NUNCA foi criada na Vercel — se o vigia
-  // dependesse dela, ficaria mudo justamente na hora de avisar. Um vigia que precisa de
-  // configuração extra pra gritar é o mesmo defeito que ele veio matar.
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  const site = (process.env.SITE_URL || (host ? 'https://' + host : '')).replace(/\/+$/, '');
+  // O endereço do site NÃO pode depender de configuração manual nem vir do pedido.
+  //  - SITE_URL existe como segredo do GitHub (o gerar.mjs usa) mas nunca foi criada na
+  //    Vercel; exigi-la deixaria o vigia mudo justamente na hora de avisar — o mesmo
+  //    defeito que ele veio matar.
+  //  - O cabeçalho Host do pedido seria pior: quem o controla escolheria para onde esta
+  //    função manda a chamada (e o segredo junto). Passa só quem tem o CRON_SECRET, mas
+  //    "já teria o segredo mesmo" não é motivo pra deixar a porta encostada.
+  // A saída é o endereço que a própria Vercel injeta na função, que ninguém de fora move.
+  const daVercel = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+  const site = (process.env.SITE_URL || (daVercel ? 'https://' + daVercel : '')).replace(/\/+$/, '');
   if (!site) {
     console.error('cron-vigia-arte: arte de', domingo, 'NÃO existe, e não descobri o endereço do site para avisar.');
     return res.status(200).json({ ok: true, domingo, arte: 'faltando', aviso: 'sem endereço' });
