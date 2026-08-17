@@ -1486,7 +1486,7 @@ function attachTelMask(el) {
 // Módulos que o admin pode liberar por pessoa (key, label, href). Hoje só os existentes.
 const MODULOS_LIBERAVEIS = [
   ['jornada','Jornada (aprovar XP e promover)','jornada-admin.html'],
-  ['caixa','Caixa de Aprovações','ausencias.html'],
+  ['caixa','Caixa de Aprovações','caixa.html'],
   ['escala','Escala','escala.html'], ['membros','Membros','membros.html'],
   ['crm','Integração (CRM)','crm.html'],
   ['tesouraria','Tesouraria','tesouraria.html'], ['casas','Casas','casas.html'],

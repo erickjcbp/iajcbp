@@ -12,38 +12,6 @@
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
   <script>window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__bip=e;});</script>
-  <style>
-    .motivo-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
-    .motivo-btn {
-      padding:12px 8px; min-height:52px; background:var(--surface2);
-      border:1px solid var(--border); border-radius:3px; color:var(--text-muted);
-      cursor:pointer; font-size:13px; text-align:center; transition:all .2s;
-      -webkit-tap-highlight-color:transparent; line-height:1.3;
-    }
-    .motivo-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,.08); }
-    .ausencia-item {
-      background:var(--surface); border:1px solid var(--border-wine);
-      border-radius:4px; padding:14px; margin-bottom:10px;
-    }
-    .ausencia-data { font-family:'Sora',sans-serif; font-size:13px; color:var(--text); margin-bottom:4px; }
-    .ausencia-meta { font-size:12px; color:var(--text-muted); }
-    .equipe-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); }
-    .equipe-row-info { flex:1; }
-    .equipe-row-nome { font-size:13px; color:var(--text); margin-bottom:2px; }
-    .equipe-row-meta { font-size:11px; color:var(--text-muted); }
-    .view-toggle { display:flex; gap:8px; margin-bottom:16px; }
-    .view-btn {
-      padding:8px 16px; min-height:40px; background:var(--surface2);
-      border:1px solid var(--border); color:var(--text-muted); border-radius:2px;
-      cursor:pointer; font-family:'Sora',sans-serif; font-size:11px; letter-spacing:1px;
-      text-transform:uppercase; transition:all .2s; -webkit-tap-highlight-color:transparent;
-    }
-    .view-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,.08); }
-    .aus-cel-box { max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; border:1px solid var(--border-wine); border-radius:6px; padding:8px; }
-    .aus-cel-row { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text); cursor:pointer; padding:3px 4px; }
-    .aus-cel-row input[type=checkbox] { width:18px; height:18px; flex:none; accent-color:var(--gold); }
-    .aus-cel-row.sel-all { font-weight:700; color:var(--gold); margin:4px 0 2px; }
-  </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
   <script src="/projetos/acolitos/solicitacoes-core.js"></script>
 </head>
@@ -182,12 +150,23 @@ async function construirCtxMotor(it){
 function nomeDoMembro(id){ const m = rosterMapAus && rosterMapAus[id]; return m ? (m.apelido||m.nome) : id; }
 
 // ── Caixa de Aprovações — grupos Trocas / Candidaturas + Cobrir ──
-// Cópia de ausencias.html (renderCaixaSolicitacoes), com UMA mudança de assinatura:
-// devolve quantos itens desenhou no total (trocas + candidaturas + cobrir + novos
-// cadastros) — é isso que decide se a Caixa mostra "Tudo em dia". Sem essa contagem
-// a tela mostraria "Tudo em dia" por cima de pendências reais.
+// Cópia de ausencias.html (renderCaixaSolicitacoes), com várias mudanças em relação ao
+// original: (1) devolve quantos itens desenhou no total (trocas + candidaturas + cobrir +
+// novos cadastros) — é isso que decide se a Caixa mostra "Tudo em dia" — somado em três
+// pontos diferentes desta função; (2) o `await` novo em `renderCaixaCobrir` pra poder somar
+// o retorno dela ao total; (3) agora também LÊ o `error` de cada chamada ao Supabase — se
+// alguma falhar (RLS, 500, limite de taxa), esta função joga o erro pra cima em vez de
+// tratar `data: null` como "não há pendência". No supabase-js o erro nunca é lançado sozinho:
+// se ninguém ler `error`, uma falha vira lista vazia, vira total zero, vira "Tudo em dia" com
+// pendência real esperando decisão — foi exatamente isso que aconteceu num outro app daqui
+// (um 500 virou "R$ 0,00" na tela por 17h). Por isso o `throw` abaixo.
 async function renderCaixaSolicitacoes(container){
-  const { data } = await sb.rpc('acolitos_solicitacoes_pendentes');
+  let erro = false;
+  const { data, error } = await sb.rpc('acolitos_solicitacoes_pendentes');
+  if (error) {
+    console.error('Caixa: solicitações pendentes falhou', error);
+    throw error; // sem esse dado não dá pra montar o total com confiança
+  }
   const trocas=(data&&data.trocas)||[]; const cand=(data&&data.candidaturas)||[]; const cobrir=(data&&data.cobrir)||[];
   let total = trocas.length + cand.length;
 
@@ -214,8 +193,8 @@ async function renderCaixaSolicitacoes(container){
     const a=acoes();
     const ok=document.createElement('button'); ok.className='btn-sm'; ok.style.flex='1'; ok.textContent='Homologar';
     const no=document.createElement('button'); no.className='btn-sm gray'; no.style.flex='1'; no.textContent='Negar';
-    ok.onclick=()=>decidir(it.id,'homologar',null,()=>c.remove());
-    no.onclick=()=>decidir(it.id,'negar',null,()=>c.remove());
+    ok.onclick=()=>decidir(it.id,'homologar',null,()=>renderCaixa());
+    no.onclick=()=>decidir(it.id,'negar',null,()=>renderCaixa());
     a.append(ok,no); c.append(t,s,a); return c;
   });
 
@@ -227,8 +206,8 @@ async function renderCaixaSolicitacoes(container){
     const a=acoes();
     const ok=document.createElement('button'); ok.className='btn-sm'; ok.style.flex='1'; ok.textContent='Aprovar';
     const no=document.createElement('button'); no.className='btn-sm gray'; no.style.flex='1'; no.textContent='Negar';
-    ok.onclick=()=>decidir(it.id,'aprovar_candidatura',null,()=>c.remove());
-    no.onclick=()=>decidir(it.id,'negar',null,()=>c.remove());
+    ok.onclick=()=>decidir(it.id,'aprovar_candidatura',null,()=>renderCaixa());
+    no.onclick=()=>decidir(it.id,'negar',null,()=>renderCaixa());
     a.append(ok,no); c.append(t,s,a); return c;
   });
 
@@ -237,9 +216,10 @@ async function renderCaixaSolicitacoes(container){
 
   // 🆕 Novos cadastros aguardando aprovação (fonte: CRM) — também pendência, entra no total
   try {
-    const { data: novos } = await sb.from('acolitos_crm')
+    const { data: novos, error: erroNovos } = await sb.from('acolitos_crm')
       .select('membro_id, etapa, acolitos_membros(nome)')
       .eq('etapa','aprovacao_cadastro');
+    if (erroNovos) throw erroNovos; // o PostgREST não lança — sem isso um erro vira "sem novos cadastros"
     if ((novos||[]).length){
       const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
       h.textContent='🆕 Novos cadastros ('+novos.length+')'; container.appendChild(h);
@@ -251,9 +231,14 @@ async function renderCaixaSolicitacoes(container){
       });
       total += novos.length;
     }
-  } catch(e){ console.error('novos cadastros (caixa) falhou', e); }
+  } catch(e){
+    console.error('novos cadastros (caixa) falhou', e);
+    // Este bloco não impede o resto da tela de aparecer, mas não dá pra garantir
+    // "Tudo em dia" sem saber se havia cadastro novo esperando — sinaliza a falha.
+    erro = true;
+  }
 
-  return total;
+  return { total, erro };
 }
 async function renderCaixaCobrir(container, cobrir){
   if(!cobrir.length) return 0;
@@ -276,9 +261,9 @@ async function renderCaixaCobrir(container, cobrir){
     const ok=document.createElement('button'); ok.className='btn-sm'; ok.style.flex='1'; ok.textContent=sugeridoId?'Confirmar':'Deixar vago';
     const no=document.createElement('button'); no.className='btn-sm gray'; no.style.flex='1'; no.textContent='Negar';
     ok.onclick=async()=>{ ok.disabled=no.disabled=true; const { data:res }=await sb.rpc('acolitos_solicitacao_decidir',{p_solicitacao_id:it.id,p_acao:'confirmar_cobertura',p_substituto_id:sugeridoId});
-      if(res&&res.ok){ toast('Cobertura confirmada.','success'); c.remove(); } else { toast('Não foi possível confirmar.','error'); ok.disabled=no.disabled=false; } };
+      if(res&&res.ok){ toast('Cobertura confirmada.','success'); renderCaixa(); } else { toast('Não foi possível confirmar.','error'); ok.disabled=no.disabled=false; } };
     no.onclick=async()=>{ ok.disabled=no.disabled=true; const { data:res }=await sb.rpc('acolitos_solicitacao_decidir',{p_solicitacao_id:it.id,p_acao:'negar',p_substituto_id:null});
-      if(res&&res.ok){ toast('Negado.','success'); c.remove(); } else { toast('Não foi possível negar.','error'); ok.disabled=no.disabled=false; } };
+      if(res&&res.ok){ toast('Negado.','success'); renderCaixa(); } else { toast('Não foi possível negar.','error'); ok.disabled=no.disabled=false; } };
     a.append(ok,no); c.appendChild(a); container.appendChild(c);
   }
   return cobrir.length;
@@ -286,11 +271,17 @@ async function renderCaixaCobrir(container, cobrir){
 
 // Avisos recebidos pela página pública (/ausencias), aguardando confirmação.
 // Card fino (só a contagem) → toca para expandir → "Aprovar todas" de uma vez.
-// Cópia de ausencias.html (renderPendentesPublicas), com DUAS mudanças de assinatura:
-// recebe o container por argumento (em vez de buscar #main-content sozinha) e devolve
-// quantos itens desenhou — mesma razão da mudança em renderCaixaSolicitacoes.
+// Cópia de ausencias.html (renderPendentesPublicas), com mudanças em relação ao original:
+// recebe o container por argumento (em vez de buscar #main-content sozinha), devolve
+// quantos itens desenhou — mesma razão da mudança em renderCaixaSolicitacoes — e agora
+// também lê o `error` da chamada ao Supabase, jogando-o pra cima em vez de tratar
+// `data: null` como "não há aviso pendente".
 async function renderPendentesPublicas(container){
-  const { data } = await sb.rpc('acolitos_ausencia_pendente_listar');
+  const { data, error } = await sb.rpc('acolitos_ausencia_pendente_listar');
+  if (error) {
+    console.error('Caixa: avisos de ausência pendentes falhou', error);
+    throw error; // idem renderCaixaSolicitacoes — sem esse dado não dá pra dizer "não há nada"
+  }
   const pend = (data && data.pendentes) || [];
   if(!pend.length) return 0;
   const fmt = d => { const [y,m,da]=String(d).split('-'); return da+'/'+m+'/'+y; };
@@ -342,7 +333,7 @@ async function renderPendentesPublicas(container){
     const rows = Array.from(body.querySelectorAll('div[data-pend]'));
     const ids = rows.map(r=>r.dataset.id); if(!ids.length) return;
     bAll.disabled=true; bAll.textContent='Aprovando...';
-    await decidir(ids,'aprovar', ()=>{ rows.forEach(r=>r.remove()); });
+    await decidir(ids,'aprovar', ()=>{ renderCaixa(); });
     bAll.disabled=false; atualiza();
   };
   body.appendChild(bAll);
@@ -365,7 +356,7 @@ async function renderPendentesPublicas(container){
     const bNo=document.createElement('button'); bNo.textContent='Rejeitar';
     bNo.style.cssText='font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;border:1px solid var(--danger);background:var(--surface2);color:var(--danger-text);';
     const one = async (acao)=>{ bOk.disabled=true; bNo.disabled=true;
-      await decidir([p.id], acao, ()=>{ row.remove(); atualiza(); });
+      await decidir([p.id], acao, ()=>{ renderCaixa(); });
       bOk.disabled=false; bNo.disabled=false; };
     bOk.onclick=()=>one('aprovar'); bNo.onclick=()=>one('rejeitar');
     row.append(info,bOk,bNo); body.appendChild(row);
@@ -400,6 +391,32 @@ function renderTudoEmDia(main) {
   main.appendChild(box);
 }
 
+// Estado de ERRO de carregamento — NUNCA pode ser confundido com "Tudo em dia". No
+// supabase-js o erro de uma chamada não é lançado sozinho: se ninguém ler `error`, uma
+// falha (RLS, 500, limite de taxa) vira `data: null`, vira lista vazia, vira total zero,
+// e a tela mostraria "Tudo em dia" com pendência real esperando decisão — foi exatamente
+// isso que aconteceu com um 500 virando "R$ 0,00" por 17h num outro app daqui. Por isso
+// esta tela precisa de um estado PRÓPRIO, visualmente distinto (cor de alerta, ícone de
+// alerta, texto que nomeia a falha), pra quem olhar nunca confundir "não consegui carregar"
+// com "não há nada pendente".
+function renderErroCarga(main) {
+  const box = document.createElement('div');
+  box.style.cssText = 'text-align:center;padding:42px 16px;color:var(--text-muted);';
+  const ic = document.createElement('div');
+  ic.style.cssText = 'width:44px;height:44px;margin:0 auto 12px;';
+  ic.innerHTML = _svgIcon('alerta');   // SVG, nunca emoji
+  const svg = ic.firstChild;
+  if (svg) svg.setAttribute('style','width:44px;height:44px;fill:none;stroke:var(--danger-text);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;');
+  const t = document.createElement('div');
+  t.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:16px;color:var(--danger-text);';
+  t.textContent = 'Não foi possível carregar as pendências';
+  const s = document.createElement('div');
+  s.style.cssText = 'font-size:13px;margin-top:4px;';
+  s.textContent = 'Isto é falha de carregamento, não ausência de pendência. Feche e abra a tela de novo.';
+  box.append(ic, t, s);
+  main.appendChild(box);
+}
+
 // "Enviar aviso" veio do Acesso Rápido do Início: é ação da coordenação (manda notificação
 // a todos), não uma pendência — por isso fica fora do fluxo de decisão e sempre visível
 // pra quem é admin. avisarTodos() mora no shared.js, que esta tela já carrega.
@@ -425,9 +442,22 @@ async function renderCaixa() {
   t.textContent = 'Caixa'; main.appendChild(t);
 
   const box = document.createElement('div'); main.appendChild(box);
-  const houve = await renderCaixaSolicitacoes(box);   // devolve quantas pendências desenhou
-  const houvePub = await renderPendentesPublicas(box);
-  if (!houve && !houvePub) renderTudoEmDia(main);
+  // As duas chamadas abaixo agora leem `error` (renderCaixaSolicitacoes/renderPendentesPublicas
+  // jogam o erro pra cima em vez de engolir). Por isso este try/catch: falha de qualquer uma
+  // das duas — RLS, 500, limite de taxa, rede fora do ar — cai aqui, e a tela mostra o estado
+  // de ERRO, nunca "Tudo em dia".
+  let houve = 0, houvePub = 0, erro = false;
+  try {
+    const r = await renderCaixaSolicitacoes(box);   // { total, erro } — quantas pendências desenhou
+    houve = r.total; erro = r.erro;
+    houvePub = await renderPendentesPublicas(box);
+  } catch (e) {
+    console.error('Caixa: carregar pendências falhou', e);
+    erro = true;
+  }
+
+  if (erro) renderErroCarga(main);
+  else if (!houve && !houvePub) renderTudoEmDia(main);
 
   // "Enviar aviso" fica sempre visível: é ação da coordenação, não pendência.
   if (navCaps(ctx).isAdmin) main.appendChild(botaoEnviarAviso());
@@ -443,7 +473,18 @@ async function init() {
   // A tela inteira é da coordenação — diferente da ausencias.html antiga, que
   // precisava abrir para todo membro. Ver a spec de 17/08.
   if (!podeVerTela({ tela: 'caixa', role, caps })) { semAcesso(); return; }
-  await renderCaixa();
+  try {
+    await renderCaixa();
+  } catch (e) {
+    // Rede-fora-do-ar de vez (fetch rejeita) ou qualquer outra falha que escapou do
+    // try/catch interno de renderCaixa: sem esta rede de segurança a tela ficava só
+    // com o título "Caixa" e nada mais — sem dizer que algo deu errado.
+    console.error('Caixa: init falhou ao renderizar', e);
+    const main = document.getElementById('main-content'); main.textContent = '';
+    const t = document.createElement('h1'); t.className = 'page-title';
+    t.textContent = 'Caixa'; main.appendChild(t);
+    renderErroCarga(main);
+  }
 }
 function semAcesso() {
   const main = document.getElementById('main-content'); main.textContent = '';
