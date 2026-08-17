@@ -20,6 +20,20 @@ Por baixo usa o Supabase (banco de dados + login na nuvem).
   shared.css    -> A "aparência" compartilhada: cores, fontes,
                    espaçamentos e estilos usados em todas as telas.
 
+  Os arquivos terminados em "-core.js" guardam REGRAS puras (só
+  contas e decisões, sem tela e sem banco). Cada um tem um irmão
+  "-core.test.js" que confere a regra sozinho, sem abrir o app:
+
+    navegacao-core.js   -> quem aparece na barra de baixo e em que ordem.
+    solicitacoes-core.js-> regras dos pedidos (troca, cobrir, candidatar).
+    alertas-core.js     -> quais alertas de frequência aparecem no
+                           Início, em que ordem, e quando um alerta
+                           que você dispensou volta a aparecer.
+
+  Para conferir essas regras, rode no terminal, dentro da pasta do
+  projeto:
+    node --test projetos/acolitos/alertas-core.test.js
+
   manifest.json -> Ficha do PWA: nome do app, cor, ícone. É o que
                    permite "instalar" no celular.
   sw.js         -> "Service Worker": funciona como ajudante em

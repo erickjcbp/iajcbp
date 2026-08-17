@@ -218,6 +218,17 @@ async function init() {
   document.getElementById('vt-lista').classList.toggle('active', vista === 'lista');
   restaurarEstadoMembros();
   await loadMembros();
+  abrirFichaPorLink();
+}
+
+// Permite chegar direto na ficha de alguém por link (?membro=<id>) — é assim que os
+// alertas de frequência do Início viram ação em vez de recado. Mesmo padrão que a
+// Chamada já usa. Id desconhecido (ou pessoa arquivada) simplesmente não abre nada.
+function abrirFichaPorLink() {
+  const id = new URLSearchParams(location.search).get('membro');
+  if (!id) return;
+  const m = todos.find(x => String(x.id) === String(id));
+  if (m) abrirFicha(m);
 }
 
 async function loadMembros() {

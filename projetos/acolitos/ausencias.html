@@ -604,9 +604,25 @@ async function renderViewEquipe() {
   const title = document.createElement('h1'); title.className = 'page-title';
   title.textContent = 'Ausências Informadas'; main.appendChild(title);
 
+  // Ações da coordenação. "Enviar aviso" veio do Acesso Rápido do Início: é coisa que se
+  // resolve aqui, junto do resto. avisarTodos() mora no shared.js, que esta tela já carrega.
+  const acoes = document.createElement('div');
+  acoes.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;';
   const btnAdd = document.createElement('button'); btnAdd.className = 'btn-sm gold';
-  btnAdd.style.marginBottom = '16px'; btnAdd.textContent = '+ Registrar ausência';
-  btnAdd.onclick = abrirRegistroAusencia; main.appendChild(btnAdd);
+  btnAdd.textContent = '+ Registrar ausência';
+  btnAdd.onclick = abrirRegistroAusencia; acoes.appendChild(btnAdd);
+  if (navCaps(ctx).isAdmin) {
+    const btnAviso = document.createElement('button'); btnAviso.className = 'btn-sm gray';
+    btnAviso.style.cssText = 'display:inline-flex;align-items:center;gap:6px;';
+    const icAviso = document.createElement('span');
+    icAviso.style.cssText = 'width:15px;height:15px;display:flex;';
+    icAviso.innerHTML = _svgIcon('message-circle');  // SVG hardcoded — seguro (sem emoji)
+    const svgA = icAviso.firstChild;
+    if (svgA) svgA.setAttribute('style', 'width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;');
+    btnAviso.append(icAviso, document.createTextNode('Enviar aviso'));
+    btnAviso.onclick = () => avisarTodos(); acoes.appendChild(btnAviso);
+  }
+  main.appendChild(acoes);
 
   // KPIs
   const { count: totalAus } = await sb.from('acolitos_ausencias')

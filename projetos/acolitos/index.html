@@ -50,7 +50,14 @@
     /* Alertas */
     .alert-item { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); font-size:13px; color:var(--text); }
     .alert-item:last-child { border-bottom:none; }
-    .alert-ico { font-size:16px; flex-shrink:0; }
+    .alert-ico { flex-shrink:0; width:18px; height:18px; display:flex; }
+    .alert-ico svg { width:18px; height:18px; fill:none; stroke:#d4a060; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+    .alert-item.clicavel { cursor:pointer; }
+    .alert-nome { font-weight:700; }
+    .alert-txt { flex:1; min-width:0; }
+    .alert-x { flex-shrink:0; background:none; border:none; color:var(--text-muted); font-size:18px; line-height:1; padding:4px 6px; cursor:pointer; border-radius:4px; }
+    .alert-x:active { color:var(--gold); }
+    .alert-vertodos { display:block; width:100%; margin-top:10px; background:none; border:1px solid var(--border-wine); border-radius:4px; color:var(--gold); font:inherit; font-size:12px; padding:8px; cursor:pointer; }
     /* Quick links */
     .quick-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px; }
     .quick-link { background:var(--surface); border:1px solid var(--border-wine); border-radius:4px; padding:14px; display:flex; align-items:center; gap:10px; text-decoration:none; transition:border-color .2s; -webkit-tap-highlight-color:transparent; }
@@ -104,6 +111,7 @@
 </div>
 
 <script src="navegacao-core.js"></script>
+<script src="alertas-core.js"></script>
 <script src="shared.js"></script>
 <script>
 // EQUIPE_ROLES já vem do shared.js (redeclarar com const aqui quebrava o script)
@@ -172,25 +180,59 @@ function renderContinuar(ctx){
   else main.appendChild(chip);
 }
 
-// Banner na Home: avisos de ausência aguardando confirmação (só p/ aprovadores).
+// Tarja ÚNICA de pendências na Home (só p/ aprovadores).
+//
+// Antes eram duas: esta (só ausências) e um badge no painel da equipe que somava
+// ausências + trocas + candidaturas. Ou seja, a MESMA ausência era contada duas vezes,
+// em duas caixas, na mesma tela. Ficou esta e não a outra por um motivo que não é óbvio:
+// esta roda em TODOS os modos, e a outra só existia no painel da equipe — quem tem poder
+// de aprovar mas está no modo Minha Jornada ficaria sem aviso nenhum.
+//
+// O gate é o mesmo de sempre: quem não tem 'caixa' não vê o bloco de aprovações no
+// destino, então avisar seria mandar a pessoa pra um beco sem saída.
 async function renderAvisoAusencias(ctx){
-  // Mesma regra do badge acima: só avisa quem realmente pode resolver.
-  // A RPC responde pra equipe e cerimoniário, mas quem não tem 'caixa' não vê
-  // o bloco de aprovações no destino — avisar seria mandar pra um beco sem saída.
   const _caps = navCaps(ctx);
   if (!_caps.isAdmin && !_caps.perms.includes('caixa')) return;
-  const { data } = await sb.rpc('acolitos_ausencia_pendente_count');
-  const n = (typeof data === 'number') ? data : 0;
-  if(!n) return;
+
+  let sol = null, aus = null;
+  try {
+    const [rSol, rAus] = await Promise.all([
+      sb.rpc('acolitos_solicitacoes_pendentes'),
+      sb.rpc('acolitos_ausencia_pendente_listar'),
+    ]);
+    sol = rSol.data; aus = rAus.data;
+  } catch(e){ return; }
+
+  const nAus    = ((aus && aus.pendentes) || []).length;
+  const nTrocas = ((sol && sol.trocas) || []).length;
+  const nCand   = ((sol && sol.candidaturas) || []).length;
+  const nCobrir = ((sol && sol.cobrir) || []).length;
+  const total = nAus + nTrocas + nCand + nCobrir;
+  if (!total) return;
+
+  const partes = [];
+  const plural = (n, um, muitos) => n + ' ' + (n > 1 ? muitos : um);
+  if (nAus)    partes.push(plural(nAus,    'ausência',  'ausências'));
+  if (nTrocas) partes.push(plural(nTrocas, 'troca',     'trocas'));
+  if (nCand)   partes.push(plural(nCand,   'candidatura','candidaturas'));
+  if (nCobrir) partes.push(plural(nCobrir, 'cobertura', 'coberturas'));
+
   const main = document.getElementById('main');
   if(!main) return;
   const a = document.createElement('a');
   a.href = 'ausencias.html';
   a.style.cssText='display:flex;align-items:center;gap:10px;text-decoration:none;background:#33181f;border:1px solid var(--gold,#8a6a24);border-radius:12px;padding:11px 13px;margin:0 0 12px;color:var(--text);';
-  a.innerHTML = '<span style="font-size:18px">📋</span>'
-    + '<span style="flex:1;font-size:13px"><b style="color:var(--gold-light,#ffd97a)">'
-    + n + ' aviso(s) de ausência</b> aguardando sua confirmação</span>'
-    + '<span style="color:var(--gold-light,#ffd97a);font-weight:800">›</span>';
+  const ico = document.createElement('span');
+  ico.style.cssText = 'flex-shrink:0;width:20px;height:20px;display:flex;';
+  ico.innerHTML = _svgIcon('inbox');             // SVG hardcoded — seguro (sem emoji)
+  const svgP = ico.firstChild;
+  if (svgP) svgP.setAttribute('style', 'width:20px;height:20px;fill:none;stroke:var(--gold-light,#ffd97a);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;');
+  const txt = document.createElement('span'); txt.style.cssText='flex:1;font-size:13px;';
+  const forte = document.createElement('b'); forte.style.color='var(--gold-light,#ffd97a)';
+  forte.textContent = plural(total, 'pendência', 'pendências');
+  txt.append(forte, document.createTextNode(' aguardando você · ' + partes.join(' · ')));
+  const seta = document.createElement('span'); seta.style.cssText='color:var(--gold-light,#ffd97a);font-weight:800;'; seta.textContent='›';
+  a.append(ico, txt, seta);
   main.insertBefore(a, main.firstChild);
 }
 
@@ -617,26 +659,9 @@ async function renderDashboardEquipe(ctx) {
   const main = document.getElementById('main'); main.textContent = '';
   const title = document.createElement('h1'); title.className='page-title'; title.textContent='Painel Operacional'; main.appendChild(title);
 
-  // Badge de pendências → Caixa de Aprovações.
-  // Gateado pela MESMA permissão do destino: sem isto, quem não pode aprovar clicava
-  // no aviso e caía numa tela sem o bloco de aprovações — beco sem saída.
-  const _capsHome = navCaps(ctx);
-  if (_capsHome.isAdmin || _capsHome.perms.includes('caixa')) try {
-    const [{ data: sol }, { data: aus }] = await Promise.all([
-      sb.rpc('acolitos_solicitacoes_pendentes'),
-      sb.rpc('acolitos_ausencia_pendente_listar')
-    ]);
-    const nSol = sol ? (((sol.trocas||[]).length)+((sol.candidaturas||[]).length)+((sol.cobrir||[]).length)) : 0;
-    const nAus = aus ? ((aus.pendentes||[]).length) : 0;
-    const total = nSol + nAus;
-    if (total > 0) {
-      const a = document.createElement('a'); a.href='ausencias.html';
-      a.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;background:linear-gradient(165deg,rgba(224,96,122,.14),var(--surface2));border:1px solid #7a3a44;border-radius:10px;padding:12px 14px;margin-bottom:16px;';
-      const t=document.createElement('div'); t.style.cssText='color:#ff9db0;font-weight:800;font-size:14px;'; t.textContent='⚡ '+total+' pendência'+(total>1?'s':'')+' aguardando você';
-      const g=document.createElement('span'); g.style.cssText='color:var(--gold);font-size:12px;white-space:nowrap;'; g.textContent='Abrir Caixa →';
-      a.append(t,g); main.appendChild(a);
-    }
-  } catch(e){}
+  // O badge de pendências que ficava aqui foi removido: ele contava as MESMAS ausências
+  // que a tarja de renderAvisoAusencias já contava — dois avisos, a mesma coisa somada
+  // duas vezes na mesma tela. Ficou só a tarja, que ainda por cima alcança os dois modos.
 
   // Carrega dados
   const hoje = hojeStr();
@@ -687,39 +712,15 @@ async function renderDashboardEquipe(ctx) {
   // Gráfico 3 — Cobertura próximas escalas (donut)
   renderGraficoCobertura(main, cobR.data||[]);
 
-  // Painel de alertas
-  renderAlertas(main, freqMap||{});
+  // Painel de alertas — os nomes saem da lista de membros já carregada acima (sem nova query)
+  renderAlertas(main, freqMap||{}, membrosR.data||[]);
 
   // Agenda — reaproveita as celebrações já buscadas para a cobertura (sem nova query)
   await renderAgenda(main, 'Próximas Celebrações', 6, true, cobR.data || []);
 
-  // Acesso rápido
-  const qrow = document.createElement('div'); qrow.className='quick-row';
-  // Mesma regra da barra de baixo: só aparece o que a pessoa realmente pode abrir.
-  const _c = navCaps(ctx);
-  const podeVer = (perm) => _c.isAdmin || _c.perms.includes(perm);
-  [
-    { href:'escala.html', icon:'calendar', title:'Montar Escala', perm:'escala' },
-    { href:'membros.html', icon:'users', title:'Membros', perm:'membros' },
-    { href:'chamada.html', icon:'message-circle', title:'Chamada', perm:'escala' },
-    { href:'crm.html', icon:'shuffle', title:'Integração', perm:'crm' },
-  ].filter(q => podeVer(q.perm)).forEach(q => {
-    const a=document.createElement('a'); a.className='quick-link'; a.href=q.href;
-    const ic=document.createElement('span'); ic.className='quick-link-icon'; ic.innerHTML=_svgIcon(q.icon); // SVG hardcoded — seguro
-    const t=document.createElement('span'); t.className='quick-link-title'; t.textContent=q.title;
-    a.append(ic,t); qrow.appendChild(a);
-  });
-  if (navCaps(ctx).isAdmin) {
-    const av=document.createElement('button'); av.type='button'; av.className='quick-link'; av.style.cssText='border:none;cursor:pointer;font:inherit;';
-    const aic=document.createElement('span'); aic.className='quick-link-icon'; aic.innerHTML=_svgIcon('message-circle'); // SVG hardcoded — seguro
-    const at=document.createElement('span'); at.className='quick-link-title'; at.textContent='Enviar aviso';
-    av.append(aic,at); av.onclick=()=>avisarTodos(); qrow.appendChild(av);
-  }
-  // sem nenhum atalho liberado, nem o título aparece (evita seção vazia)
-  if (qrow.children.length) {
-    const qh = document.createElement('div'); qh.className='section-head'; qh.textContent='Acesso Rápido';
-    main.append(qh, qrow);
-  }
+  // O "Acesso Rápido" saiu daqui: os quatro atalhos (Escala, Membros, Chamada, Integração)
+  // já estão na barra de baixo, então a seção só repetia o que já existia. O "Enviar aviso"
+  // não se perdeu — mudou de casa para a Caixa, junto do resto que a coordenação resolve.
 }
 
 /* ── GRÁFICO: presença por mês ───────────────────────────────── */
@@ -875,24 +876,92 @@ function buildDonut(segments, size) {
 }
 
 /* ── ALERTAS ─────────────────────────────────────────────────── */
-function renderAlertas(main, freqMap) {
-  const alertas = [];
-  Object.values(freqMap).forEach(f => {
-    const realizadas = (f.servidas||0)+(f.faltas_just||0)+(f.faltas_nao_just||0);
-    if (realizadas>=3 && f.taxa!=null && f.taxa<60) alertas.push({ ico:'⚠️', txt:'Frequência baixa em '+realizadas+' convocações ('+f.taxa+'%)' });
-  });
-  const card=document.createElement('div'); card.className='chart-card';
-  const t=document.createElement('div'); t.className='chart-title'; t.textContent='Alertas'; card.appendChild(t);
-  if (!alertas.length) {
-    const ok=document.createElement('div'); ok.style.cssText='color:var(--success-text);font-size:13px;padding:6px 0;'; ok.textContent='✓ Nenhum alerta no momento.'; card.appendChild(ok);
-  } else {
-    alertas.slice(0,6).forEach(a => {
-      const it=document.createElement('div'); it.className='alert-item';
-      const ic=document.createElement('span'); ic.className='alert-ico'; ic.textContent=a.ico;
-      const sp=document.createElement('span'); sp.textContent=a.txt; it.append(ic,sp); card.appendChild(it);
-    });
+// Os alertas não são guardados em lugar nenhum: são recalculados da frequência a cada
+// abertura. Por isso "dispensar" precisa de memória própria — que fica NESTE APARELHO
+// (não vale para os outros coordenadores). QUANDO um dispensado volta é regra pura,
+// testada em alertas-core.test.js.
+const ALERTAS_DISPENSA_KEY = 'acolitos_alertas_dispensados';
+const ALERTAS_NA_TELA = 6;
+
+function lerDispensas() {
+  try { return JSON.parse(localStorage.getItem(ALERTAS_DISPENSA_KEY) || '{}') || {}; }
+  catch (e) { return {}; }
+}
+function gravarDispensa(membroId, taxa) {
+  const d = lerDispensas();
+  d[membroId] = { taxa: taxa, ts: Date.now() };
+  try { localStorage.setItem(ALERTAS_DISPENSA_KEY, JSON.stringify(d)); } catch (e) {}
+}
+
+// Uma linha de alerta. Clicar abre a ficha; o × dispensa e repinta (a 7ª sobe pro lugar).
+function linhaAlerta(a, aoDispensar) {
+  const it = document.createElement('div'); it.className = 'alert-item clicavel';
+  const ic = document.createElement('span'); ic.className = 'alert-ico';
+  ic.innerHTML = _svgIcon('alerta');            // SVG hardcoded — seguro (padrão do projeto: sem emoji)
+  const tx = document.createElement('span'); tx.className = 'alert-txt';
+  const nm = document.createElement('span'); nm.className = 'alert-nome'; nm.textContent = a.nome;
+  tx.append(nm, document.createTextNode(' — ' + a.taxa + '% em ' + a.realizadas + ' convocações'));
+  it.append(ic, tx);
+  it.onclick = () => { window.location.href = 'membros.html?membro=' + encodeURIComponent(a.membroId); };
+  if (aoDispensar) {
+    const x = document.createElement('button'); x.type = 'button'; x.className = 'alert-x';
+    x.textContent = '×'; x.title = 'Dispensar este alerta';
+    x.onclick = (ev) => { ev.stopPropagation(); gravarDispensa(a.membroId, a.taxa); aoDispensar(); };
+    it.appendChild(x);
   }
+  return it;
+}
+
+function abrirTodosAlertas(alertas, aoDispensar) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open';
+  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '460px';
+  const tt = document.createElement('div'); tt.className = 'modal-title';
+  tt.textContent = 'Alertas de frequência (' + alertas.length + ')';
+  const lista = document.createElement('div');
+  lista.style.cssText = 'max-height:60vh;overflow:auto;';
+  alertas.forEach(a => lista.appendChild(linhaAlerta(a, () => { ov.remove(); aoDispensar(); })));
+  const fechar = document.createElement('button'); fechar.className = 'btn-sm gray';
+  fechar.style.cssText = 'width:100%;margin-top:14px;'; fechar.textContent = 'Fechar';
+  const sair = () => ov.remove();
+  fechar.onclick = sair;
+  ov._acResolveClose = sair;               // gesto de voltar fecha o modal, não a tela
+  ov.onclick = (e) => { if (e.target === ov) sair(); };
+  md.append(tt, lista, fechar); ov.appendChild(md); document.body.appendChild(ov);
+}
+
+function renderAlertas(main, freqMap, membros) {
+  const card = document.createElement('div'); card.className = 'chart-card';
   main.appendChild(card);
+  pintarAlertas(card, freqMap, membros);
+}
+
+function pintarAlertas(card, freqMap, membros) {
+  card.textContent = '';
+  const alertas = montarAlertas({
+    freq: Object.values(freqMap || {}),
+    membros: membros || [],
+    dispensas: lerDispensas(),
+  });
+  const repintar = () => pintarAlertas(card, freqMap, membros);
+
+  const t = document.createElement('div'); t.className = 'chart-title';
+  t.textContent = alertas.length ? 'Alertas (' + alertas.length + ')' : 'Alertas';
+  card.appendChild(t);
+
+  if (!alertas.length) {
+    const ok = document.createElement('div');
+    ok.style.cssText = 'color:var(--success-text);font-size:13px;padding:6px 0;';
+    ok.textContent = '✓ Nenhum alerta no momento.';
+    card.appendChild(ok);
+    return;
+  }
+  alertas.slice(0, ALERTAS_NA_TELA).forEach(a => card.appendChild(linhaAlerta(a, repintar)));
+  if (alertas.length > ALERTAS_NA_TELA) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'alert-vertodos';
+    b.textContent = 'Ver todos os ' + alertas.length + ' →';
+    b.onclick = () => abrirTodosAlertas(alertas, repintar);
+    card.appendChild(b);
+  }
 }
 
 /* ── AGENDA (compartilhada) ──────────────────────────────────── */
