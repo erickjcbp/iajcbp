@@ -11,7 +11,7 @@
 // Se não existe, avisa a coordenação por push. Ele não tenta consertar nada — quem
 // gera é o robô; o trabalho do vigia é não deixar o silêncio passar por sucesso.
 import crypto from 'node:crypto';
-import { alvoFimDeSemana } from '../arte-escala/fim-de-semana.mjs';
+import { alvoFimDeSemana } from './_fim-de-semana.mjs';
 
 function segredoConfere(recebido, esperado) {
   if (!recebido || !esperado) return false;

@@ -1,22 +1,6 @@
 // arte-escala/fim-de-semana.mjs
-// Trabalha em BRT (UTC-3) convertendo para um "instante local".
-const BRT_OFFSET_MS = -3 * 60 * 60 * 1000
-
-function toBRT(date) {
-  return new Date(date.getTime() + BRT_OFFSET_MS)
-}
-function iso(d) {
-  // d já é um Date "deslocado" para BRT; usar componentes UTC dele
-  return d.toISOString().slice(0, 10)
-}
-
-export function alvoFimDeSemana(agora) {
-  const local = toBRT(agora)
-  const dow = local.getUTCDay() // 0=Dom .. 6=Sáb
-  // Próximo sábado ESTRITAMENTE após hoje. Se hoje é sábado, pega o da semana que vem.
-  let addSab = (6 - dow + 7) % 7
-  if (addSab === 0) addSab = 7
-  const sabado = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() + addSab))
-  const domingo = new Date(sabado.getTime() + 24 * 60 * 60 * 1000)
-  return { sabado: iso(sabado), domingo: iso(domingo) }
-}
+// A conta em si mora em ../api/_fim-de-semana.mjs — a Vercel só empacota o que está
+// dentro de api/, e o vigia da arte (api/cron-vigia-arte.js) precisa da MESMA conta.
+// Este arquivo continua existindo para não quebrar quem já importava daqui
+// (gerar.mjs e os testes), e para deixar claro que a regra é uma só.
+export { alvoFimDeSemana } from '../api/_fim-de-semana.mjs';
