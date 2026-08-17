@@ -49,10 +49,16 @@ export default async function handler(req, res) {
   if (existe) return res.status(200).json({ ok: true, domingo, arte: 'existe' });
 
   // Falta a arte: avisa quem pode resolver.
-  const site = (process.env.SITE_URL || '').replace(/\/+$/, '');
+  //
+  // O endereço do site vem do próprio pedido, NÃO de uma variável nova. SITE_URL existe
+  // como segredo do GitHub (o gerar.mjs usa), mas NUNCA foi criada na Vercel — se o vigia
+  // dependesse dela, ficaria mudo justamente na hora de avisar. Um vigia que precisa de
+  // configuração extra pra gritar é o mesmo defeito que ele veio matar.
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  const site = (process.env.SITE_URL || (host ? 'https://' + host : '')).replace(/\/+$/, '');
   if (!site) {
-    console.error('cron-vigia-arte: arte de', domingo, 'NÃO existe, mas falta SITE_URL para avisar.');
-    return res.status(200).json({ ok: true, domingo, arte: 'faltando', aviso: 'sem SITE_URL' });
+    console.error('cron-vigia-arte: arte de', domingo, 'NÃO existe, e não descobri o endereço do site para avisar.');
+    return res.status(200).json({ ok: true, domingo, arte: 'faltando', aviso: 'sem endereço' });
   }
   let aviso = null;
   try {
