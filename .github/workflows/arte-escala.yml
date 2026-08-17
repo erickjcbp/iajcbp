@@ -9,6 +9,11 @@ name: Arte da Escala
 # NÃO recolocar o schedule aqui sem tirar o cron da Vercel, senão gera duas vezes.
 on:
   workflow_dispatch:
+    inputs:
+      origem:
+        description: 'Quem pediu: cron (robô de domingo) ou manual (botão da Escala)'
+        required: false
+        default: 'manual'
 
 jobs:
   gerar:
@@ -27,7 +32,12 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GERADO_POR: ${{ github.event_name == 'workflow_dispatch' && 'manual' || 'cron' }}
+          # Desde que o agendamento saiu do GitHub, TODA execução é workflow_dispatch —
+          # então deduzir a origem do tipo do evento passou a carimbar "manual" até nas
+          # do robô, e o banco deixou de saber quem gerou o quê. Agora quem dispara diz.
+          # O valor é fechado nestas duas opções de propósito: só entra no ambiente o que
+          # esta linha decide, nunca o texto cru de quem chamou.
+          GERADO_POR: ${{ github.event.inputs.origem == 'cron' && 'cron' || 'manual' }}
           # Avisar a coordenação por push quando a arte ficar pronta.
           # Se estes dois secrets não existirem, o robô só pula o aviso (a arte é gerada do mesmo jeito).
           SITE_URL: ${{ secrets.SITE_URL }}

@@ -10,6 +10,7 @@
 // GATILHO migra; o trabalho pesado continua no GitHub Actions, via workflow_dispatch —
 // que dispara na hora, ao contrário do schedule.
 import crypto from 'node:crypto';
+import { dispararArte } from './_github.js';
 
 // Compara segredos sem vazar tempo. Falso se qualquer um estiver vazio.
 function segredoConfere(recebido, esperado) {
@@ -34,16 +35,12 @@ export default async function handler(req, res) {
   const enviado = (req.headers.authorization || '').replace('Bearer ', '');
   if (!segredoConfere(enviado, CRON_SECRET)) return res.status(403).json({ error: 'Acesso negado' });
 
-  const gh = await fetch(`https://api.github.com/repos/${GH_REPO}/actions/workflows/arte-escala.yml/dispatches`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${GH_PAT}`,
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': 'iajcbp-cron-arte',
-    },
-    body: JSON.stringify({ ref: 'main' }),
-  });
-  if (!gh.ok) return res.status(502).json({ error: 'Falha ao disparar', detalhe: await gh.text() });
+  const gh = await dispararArte({ GH_PAT, GH_REPO, origem: 'cron' });
+  if (!gh.ok) {
+    // Ninguém está olhando o retorno de um cron às 22h de domingo. Deixar o motivo no
+    // registro é o mínimo — quem AVISA a coordenação é o vigia (cron-vigia-arte.js).
+    console.error('cron-arte: o GitHub recusou —', gh.status, gh.motivo, gh.detalhe);
+    return res.status(502).json({ error: gh.motivo, detalhe: gh.detalhe });
+  }
   return res.status(202).json({ ok: true, disparado: 'arte-escala.yml' });
 }

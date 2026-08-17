@@ -1,5 +1,8 @@
 // Vercel serverless — dispara o workflow "Arte da Escala" (GitHub Actions).
 // Só coordenação (coord_admin/subadmin no módulo acolitos). Espelha a auth de acolito-admin.js.
+
+import { dispararArte } from './_github.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const URL = process.env.SUPABASE_URL;
@@ -27,17 +30,9 @@ export default async function handler(req, res) {
   const callerRole = (await pmRes.json())[0]?.role;
   if (!['coord_admin', 'subadmin'].includes(callerRole)) return res.status(403).json({ error: 'Acesso negado' });
 
-  // 3. Dispara o workflow_dispatch na branch default (main)
-  const gh = await fetch(`https://api.github.com/repos/${GH_REPO}/actions/workflows/arte-escala.yml/dispatches`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${GH_PAT}`,
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': 'iajcbp-arte-escala',
-    },
-    body: JSON.stringify({ ref: 'main' }),
-  });
-  if (!gh.ok) return res.status(502).json({ error: 'Falha ao disparar', detalhe: await gh.text() });
+  // 3. Manda o robô trabalhar. A tela mostra o MOTIVO da recusa, não só "falhou":
+  // em 17/08/2026 o crachá venceu e a mensagem inútil custou horas de investigação.
+  const gh = await dispararArte({ GH_PAT, GH_REPO, origem: 'manual' });
+  if (!gh.ok) return res.status(502).json({ error: gh.motivo, detalhe: gh.detalhe });
   return res.status(202).json({ ok: true });
 }

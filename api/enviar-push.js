@@ -41,7 +41,7 @@ export default async function handler(req, res) {
   if (!['aviso', 'teste', 'escalado', 'ausencia', 'troca', 'arte', 'escala_pendente'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
 
   // O robô do cron não tem login: entra pelo segredo compartilhado, e SÓ para os tipos dele.
-  const TIPOS_CRON = ['arte', 'escala_pendente'];
+  const TIPOS_CRON = ['arte', 'escala_pendente', 'arte_faltando'];
   const viaCron = segredoConfere(req.headers['x-cron-secret'], process.env.CRON_SECRET);
   if (viaCron && !TIPOS_CRON.includes(tipo)) return res.status(403).json({ error: 'Segredo do cron só vale para os avisos do robô' });
   if (TIPOS_CRON.includes(tipo) && !viaCron) return res.status(403).json({ error: 'Acesso negado' });
@@ -103,6 +103,12 @@ export default async function handler(req, res) {
     if (tipo === 'arte') {
       title = 'Arte da escala pronta 🎨';
       body = `A arte ${doFimDeSemana} já está no app. Abra a Escala pra baixar e compartilhar.`;
+    } else if (tipo === 'arte_faltando') {
+      // O aviso que faltava: até 17/08/2026 a arte só avisava quando DAVA CERTO. Quando o
+      // robô nem chegava a rodar (crachá vencido), ninguém sabia — o dono descobriu por acaso,
+      // com o fim de semana já sem arte.
+      title = 'Arte da escala não saiu ⚠️';
+      body = `A arte ${doFimDeSemana} ainda não existe e já passou da hora. Abra a Escala e use "Arte da semana → Gerar/Atualizar" — se der erro, a mensagem diz o motivo.`;
     } else {
       const quantas = (Number.isInteger(vazias) && Number.isInteger(total) && total > 0)
         ? ` (${vazias} de ${total} missas sem ninguém)` : '';
