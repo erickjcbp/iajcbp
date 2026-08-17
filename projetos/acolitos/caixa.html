@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Caixa — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#150a0d">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <script>window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__bip=e;});</script>
+  <style>
+    .motivo-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+    .motivo-btn {
+      padding:12px 8px; min-height:52px; background:var(--surface2);
+      border:1px solid var(--border); border-radius:3px; color:var(--text-muted);
+      cursor:pointer; font-size:13px; text-align:center; transition:all .2s;
+      -webkit-tap-highlight-color:transparent; line-height:1.3;
+    }
+    .motivo-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,.08); }
+    .ausencia-item {
+      background:var(--surface); border:1px solid var(--border-wine);
+      border-radius:4px; padding:14px; margin-bottom:10px;
+    }
+    .ausencia-data { font-family:'Sora',sans-serif; font-size:13px; color:var(--text); margin-bottom:4px; }
+    .ausencia-meta { font-size:12px; color:var(--text-muted); }
+    .equipe-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); }
+    .equipe-row-info { flex:1; }
+    .equipe-row-nome { font-size:13px; color:var(--text); margin-bottom:2px; }
+    .equipe-row-meta { font-size:11px; color:var(--text-muted); }
+    .view-toggle { display:flex; gap:8px; margin-bottom:16px; }
+    .view-btn {
+      padding:8px 16px; min-height:40px; background:var(--surface2);
+      border:1px solid var(--border); color:var(--text-muted); border-radius:2px;
+      cursor:pointer; font-family:'Sora',sans-serif; font-size:11px; letter-spacing:1px;
+      text-transform:uppercase; transition:all .2s; -webkit-tap-highlight-color:transparent;
+    }
+    .view-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,.08); }
+    .aus-cel-box { max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; border:1px solid var(--border-wine); border-radius:6px; padding:8px; }
+    .aus-cel-row { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text); cursor:pointer; padding:3px 4px; }
+    .aus-cel-row input[type=checkbox] { width:18px; height:18px; flex:none; accent-color:var(--gold); }
+    .aus-cel-row.sel-all { font-weight:700; color:var(--gold); margin:4px 0 2px; }
+  </style>
+  <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
+  <script src="/projetos/acolitos/solicitacoes-core.js"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+<div class="main" id="main-content">
+  <span class="loading">Carregando...</span>
+</div>
+
+<script src="navegacao-core.js"></script>
+<script src="acesso-core.js"></script>
+<script src="shared.js"></script>
+<script src="gerador-substituto.js"></script>
+<script>
+const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+// FUNCAO_LABEL/dataLabel/comLabel copiados de ausencias.html — usados pelos cards da Caixa
+// (rótulo de função e de missa nas solicitações pendentes).
+const FUNCAO_LABEL = { cred_altar:'Cerimonial de Altar', cred_credencia:'Cerimonial de Credência', missal:'Missal', turibulo:'Turíbulo', naveta:'Naveta', altar:'Altar', cruz:'Cruz', vela:'Vela', sineta:'Sineta', sinao:'Sinão', apoio:'Apoio', mitra:'Mitra', baculo:'Báculo' };
+function dataLabel(d) { const x = new Date(d+'T00:00:00'); return DIAS[x.getDay()] + ' ' + x.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}); }
+function comLabel(c) { return c==='matriz'?'Matriz':'Sto. Antônio'; }
+
+let ctx = null;
+let rosterMembrosAus = null, rosterMapAus = {}, rosterHabsAus = [];
+// Roster seguro (security-definer) — cobre o cerimoniário, que não lê acolitos_membros por RLS.
+async function carregarRosterAus() {
+  if (rosterMembrosAus) return rosterMembrosAus;
+  const { data } = await sb.rpc('acolitos_roster_substituicao');
+  rosterMembrosAus = (data && data.membros) || [];
+  rosterHabsAus = (data && data.habs) || [];
+  rosterMapAus = {}; rosterMembrosAus.forEach(m => { rosterMapAus[m.id] = m; });
+  return rosterMembrosAus;
+}
+
+// ── Motor único (GeradorSubstituto) — auto-troca ao APROVAR ausência pública ──
+// Espelha carregarCargaHistorica/dispMapDe/horKeyDe da escala.html (mesma janela/regra).
+async function carregarCargaAus(refData) {
+  const _ger = (typeof cfg === 'function') ? (cfg('gerador', {}) || {}) : {};
+  const dias = Number(_ger.janela_dias) || 42;
+  const ini = new Date(refData + 'T00:00:00'); ini.setDate(ini.getDate() - dias);
+  const iniStr = ini.toISOString().slice(0, 10);
+  const base = {};
+  try {
+    const { data: cels } = await sb.from('acolitos_celebracoes').select('id').gte('data', iniStr).lte('data', refData);
+    const ids = (cels || []).map(c => c.id);
+    if (!ids.length) return base;
+    const { data } = await sb.from('acolitos_escalas').select('membro_id').in('celebracao_id', ids).limit(5000);
+    (data || []).forEach(e => { base[e.membro_id] = (base[e.membro_id] || 0) + 1; });
+  } catch (err) { console.error('carga histórica (caixa) falhou', err); }
+  return base;
+}
+function dispMapDeAus(rows) { const m = {}; (rows || []).forEach(r => { (m[r.membro_id] = m[r.membro_id] || []).push(r.dia + '_' + r.horario); }); return m; }
+function horKeyDeCelAus(c) { const dow = new Date(c.data + 'T00:00:00').getDay(); const diaK = dow===0?'domingo':dow===6?'sabado':null; return diaK ? diaK + '_' + c.horario : null; }
+
+// Aplica a auto-troca (motor único GeradorSubstituto) para os itens recém-APROVADOS da fila pública.
+// `itens`: objetos vindos de acolitos_ausencia_pendente_listar() — {membro_id,data,horario,comunidade,celebracao_id,...}.
+// Migration 010 passou a devolver celebracao_id direto na RPC: usamos ele como identidade (não mais
+// o casamento frágil por data+horario+comunidade). Itens com celebracao_id null são "data avulsa"
+// (sem celebração única) e ficam de fora, igual ao caminho de Registrar Ausência (enviarAusencia) só
+// chama acolitos_substituir_ausente ali.
+async function autoTrocaAprovadas(itens) {
+  const comCel = (itens || []).filter(p => p.celebracao_id != null);
+  if (!comCel.length) return;
+  await carregarRosterAus();
+  if (!rosterMembrosAus || !rosterMembrosAus.length) return;
+
+  const habMap = {}; (rosterHabsAus || []).forEach(h => { (habMap[h.membro_id] = habMap[h.membro_id] || {})[h.funcao] = h.proficiencia; });
+  const { data: dispRows } = await sb.from('acolitos_disponibilidade').select('membro_id,dia,horario');
+  const dispMap = dispMapDeAus(dispRows);
+  const config = { gerador: (typeof cfg === 'function' ? cfg('gerador', {}) : {}), funcoes_maiores: (typeof cfg === 'function' ? cfg('funcoes_maiores', null) : null) };
+
+  // A RPC já devolve data/horario/comunidade junto (pro rótulo na tela) — usamos direto de `p`.
+  // Só busca no banco por id os que vierem incompletos (defesa contra RPC antiga/parcial).
+  const idsFaltantes = [...new Set(comCel.filter(p => !p.data || !p.comunidade).map(p => p.celebracao_id))];
+  let celsPorId = {};
+  if (idsFaltantes.length) {
+    const { data: cels } = await sb.from('acolitos_celebracoes').select('id,data,horario,comunidade').in('id', idsFaltantes);
+    (cels || []).forEach(c => { celsPorId[c.id] = c; });
+  }
+  const celDe = (p) => {
+    if (p.data && p.comunidade) return { id: p.celebracao_id, data: p.data, horario: p.horario, comunidade: p.comunidade };
+    const c = celsPorId[p.celebracao_id];
+    return c ? { id: c.id, data: c.data, horario: c.horario, comunidade: c.comunidade } : null;
+  };
+
+  const cargaPorData = {}; // cacheia a carga (janela de 42d) por data — evita 1 query por item aprovado
+  const trocas = [];
+  const falhas = [];
+  for (const p of comCel) {
+    const cel = celDe(p);
+    if (!cel || !cel.id) continue; // não achou a celebração — não força nada
+    try {
+      if (!cargaPorData[cel.data]) cargaPorData[cel.data] = await carregarCargaAus(cel.data);
+      const carga = cargaPorData[cel.data];
+      const t = await GeradorSubstituto.aplicarTrocaEscala(sb,
+        { celebracao_id: cel.id, comunidade: cel.comunidade, data: cel.data, membroAusenteId: p.membro_id },
+        (funcao, usadosNaMissa, usadoFds) => ({
+          funcao, comunidade: cel.comunidade, horKey: horKeyDeCelAus(cel), membroAusenteId: p.membro_id,
+          roster: rosterMembrosAus, habMap, dispMap, cargaMap: carga,
+          usadosNaMissa, usadoFds: new Set(), config
+        }));
+      if (t) trocas.push(t);
+      if(t && t.entrou){ try{ apiPost('/api/enviar-push',{tipo:'escalado',membros:[t.entrou],titulo:'Você entrou na escala ⛪',texto:'Você cobriu uma vaga na escala. Confira no app.'}); }catch(_){} }
+    } catch (e) {
+      console.error('auto-troca item falhou', p, e);
+      falhas.push(p);
+    }
+  }
+  if (trocas.length) {
+    const nomes = {}; rosterMembrosAus.forEach(m => { nomes[m.id] = m.apelido || m.nome; });
+    GeradorSubstituto.abrirResumoTrocas(trocas, nomes, (t) => GeradorSubstituto.desfazerTroca(sb, t));
+  }
+  if (falhas.length) {
+    // A aprovação em si já foi salva — isso só avisa que a troca automática pode ter
+    // ficado incompleta para 1+ item.
+    const err = new Error('auto-troca falhou para ' + falhas.length + ' item(ns) aprovado(s)');
+    err.falhas = falhas;
+    throw err;
+  }
+}
+// Constrói o ctx do motor p/ UMA solicitação de cobertura (espelha autoTrocaAprovadas)
+async function construirCtxMotor(it){
+  await carregarRosterAus();
+  const habMap = {}; (rosterHabsAus||[]).forEach(h => { (habMap[h.membro_id]=habMap[h.membro_id]||{})[h.funcao]=h.proficiencia; });
+  const { data: dispRows } = await sb.from('acolitos_disponibilidade').select('membro_id,dia,horario');
+  const dispMap = dispMapDeAus(dispRows);
+  const carga = await carregarCargaAus(it.data);
+  const config = { gerador: (typeof cfg==='function'?cfg('gerador',{}):{}), funcoes_maiores: (typeof cfg==='function'?cfg('funcoes_maiores',null):null) };
+  const { data: linhas } = await sb.from('acolitos_escalas').select('membro_id,status').eq('celebracao_id', it.celebracao_id);
+  const usadosNaMissa = new Set((linhas||[]).filter(e => e.status==='escalado'||e.status==='presente'||e.status==='atrasado').map(e => e.membro_id));
+  usadosNaMissa.add(it.membro_id);
+  return { funcao: it.funcao, comunidade: it.comunidade, horKey: horKeyDeCelAus({ data: it.data, horario: it.horario }),
+           membroAusenteId: it.membro_id, roster: rosterMembrosAus, habMap, dispMap, cargaMap: carga,
+           usadosNaMissa, usadoFds: new Set(), config };
+}
+function nomeDoMembro(id){ const m = rosterMapAus && rosterMapAus[id]; return m ? (m.apelido||m.nome) : id; }
+
+// ── Caixa de Aprovações — grupos Trocas / Candidaturas + Cobrir ──
+// Cópia de ausencias.html (renderCaixaSolicitacoes), com UMA mudança de assinatura:
+// devolve quantos itens desenhou no total (trocas + candidaturas + cobrir + novos
+// cadastros) — é isso que decide se a Caixa mostra "Tudo em dia". Sem essa contagem
+// a tela mostraria "Tudo em dia" por cima de pendências reais.
+async function renderCaixaSolicitacoes(container){
+  const { data } = await sb.rpc('acolitos_solicitacoes_pendentes');
+  const trocas=(data&&data.trocas)||[]; const cand=(data&&data.candidaturas)||[]; const cobrir=(data&&data.cobrir)||[];
+  let total = trocas.length + cand.length;
+
+  function grupo(titulo, itens, montarItem){
+    if(!itens.length) return;
+    const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
+    h.textContent=titulo+' ('+itens.length+')'; container.appendChild(h);
+    itens.forEach(it=>container.appendChild(montarItem(it)));
+  }
+  function fmt(it){ return dataLabel(it.data)+' · '+it.horario+' · '+comLabel(it.comunidade); }
+  function card(){ const c=document.createElement('div'); c.style.cssText='background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:12px;margin-bottom:8px;'; return c; }
+  function acoes(){ const a=document.createElement('div'); a.style.cssText='display:flex;gap:8px;margin-top:10px;'; return a; }
+
+  async function decidir(id, acao, substituto, onOk){
+    const { data:res } = await sb.rpc('acolitos_solicitacao_decidir', { p_solicitacao_id:id, p_acao:acao, p_substituto_id:substituto||null });
+    if(res && res.ok){ toast('Feito.','success'); onOk(); } else { toast('Não foi possível decidir.','error'); }
+  }
+
+  // 🔄 Trocas aguardando homologação (colega já aceitou)
+  grupo('🔄 Trocas aguardando você', trocas, (it)=>{
+    const c=card();
+    const t=document.createElement('div'); t.style.fontWeight='700'; t.textContent=(it.de_nome||'?')+' → '+(it.alvo_nome||'?');
+    const s=document.createElement('div'); s.style.cssText='font-size:12px;color:var(--gold);'; s.textContent=fmt(it)+' · '+(FUNCAO_LABEL[it.funcao]||it.funcao);
+    const a=acoes();
+    const ok=document.createElement('button'); ok.className='btn-sm'; ok.style.flex='1'; ok.textContent='Homologar';
+    const no=document.createElement('button'); no.className='btn-sm gray'; no.style.flex='1'; no.textContent='Negar';
+    ok.onclick=()=>decidir(it.id,'homologar',null,()=>c.remove());
+    no.onclick=()=>decidir(it.id,'negar',null,()=>c.remove());
+    a.append(ok,no); c.append(t,s,a); return c;
+  });
+
+  // 🙋 Candidaturas a vaga
+  grupo('🙋 Candidaturas a vaga', cand, (it)=>{
+    const c=card();
+    const t=document.createElement('div'); t.style.fontWeight='700'; t.textContent=(it.de_nome||'?')+' quer '+(FUNCAO_LABEL[it.funcao]||it.funcao);
+    const s=document.createElement('div'); s.style.cssText='font-size:12px;color:var(--gold);'; s.textContent=fmt(it);
+    const a=acoes();
+    const ok=document.createElement('button'); ok.className='btn-sm'; ok.style.flex='1'; ok.textContent='Aprovar';
+    const no=document.createElement('button'); no.className='btn-sm gray'; no.style.flex='1'; no.textContent='Negar';
+    ok.onclick=()=>decidir(it.id,'aprovar_candidatura',null,()=>c.remove());
+    no.onclick=()=>decidir(it.id,'negar',null,()=>c.remove());
+    a.append(ok,no); c.append(t,s,a); return c;
+  });
+
+  // 🛟 Cobrir (auto-troca) — devolve quantos itens desenhou; soma ao total
+  total += await renderCaixaCobrir(container, cobrir);
+
+  // 🆕 Novos cadastros aguardando aprovação (fonte: CRM) — também pendência, entra no total
+  try {
+    const { data: novos } = await sb.from('acolitos_crm')
+      .select('membro_id, etapa, acolitos_membros(nome)')
+      .eq('etapa','aprovacao_cadastro');
+    if ((novos||[]).length){
+      const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
+      h.textContent='🆕 Novos cadastros ('+novos.length+')'; container.appendChild(h);
+      novos.forEach(n=>{
+        const c=document.createElement('div'); c.style.cssText='background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;';
+        const t=document.createElement('div'); t.style.fontWeight='700'; t.textContent=(n.acolitos_membros && n.acolitos_membros.nome) || '(sem nome)';
+        const b=document.createElement('a'); b.className='btn-sm'; b.href='crm.html'; b.textContent='Abrir no CRM →';
+        c.append(t,b); container.appendChild(c);
+      });
+      total += novos.length;
+    }
+  } catch(e){ console.error('novos cadastros (caixa) falhou', e); }
+
+  return total;
+}
+async function renderCaixaCobrir(container, cobrir){
+  if(!cobrir.length) return 0;
+  const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
+  h.textContent='🛟 Cobrir / auto-troca ('+cobrir.length+')'; container.appendChild(h);
+  for (const it of cobrir){
+    const c=document.createElement('div'); c.style.cssText='background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:12px;margin-bottom:8px;';
+    const t=document.createElement('div'); t.style.fontWeight='700'; t.textContent='Vaga de '+(it.de_nome||'?')+' — '+(FUNCAO_LABEL[it.funcao]||it.funcao);
+    const s=document.createElement('div'); s.style.cssText='font-size:12px;color:var(--gold);'; s.textContent=dataLabel(it.data)+' · '+it.horario+' · '+comLabel(it.comunidade);
+    c.append(t,s);
+    const sug=document.createElement('div'); sug.style.cssText='font-size:13px;margin-top:8px;'; sug.textContent='Calculando sugestão...'; c.appendChild(sug);
+    let sugeridoId=null;
+    try {
+      const ctxMotor = await construirCtxMotor(it);
+      const r = GeradorSubstituto.escolherSubstituto(ctxMotor);
+      sugeridoId = r.membroId || null;
+      sug.textContent = sugeridoId ? ('Sugerido: '+nomeDoMembro(sugeridoId)) : 'Sem candidato disponível (vaga ficará vazia)';
+    } catch(e){ console.error('sugestão cobertura falhou', e); sug.textContent='Não foi possível calcular sugestão.'; }
+    const a=document.createElement('div'); a.style.cssText='display:flex;gap:8px;margin-top:10px;';
+    const ok=document.createElement('button'); ok.className='btn-sm'; ok.style.flex='1'; ok.textContent=sugeridoId?'Confirmar':'Deixar vago';
+    const no=document.createElement('button'); no.className='btn-sm gray'; no.style.flex='1'; no.textContent='Negar';
+    ok.onclick=async()=>{ ok.disabled=no.disabled=true; const { data:res }=await sb.rpc('acolitos_solicitacao_decidir',{p_solicitacao_id:it.id,p_acao:'confirmar_cobertura',p_substituto_id:sugeridoId});
+      if(res&&res.ok){ toast('Cobertura confirmada.','success'); c.remove(); } else { toast('Não foi possível confirmar.','error'); ok.disabled=no.disabled=false; } };
+    no.onclick=async()=>{ ok.disabled=no.disabled=true; const { data:res }=await sb.rpc('acolitos_solicitacao_decidir',{p_solicitacao_id:it.id,p_acao:'negar',p_substituto_id:null});
+      if(res&&res.ok){ toast('Negado.','success'); c.remove(); } else { toast('Não foi possível negar.','error'); ok.disabled=no.disabled=false; } };
+    a.append(ok,no); c.appendChild(a); container.appendChild(c);
+  }
+  return cobrir.length;
+}
+
+// Avisos recebidos pela página pública (/ausencias), aguardando confirmação.
+// Card fino (só a contagem) → toca para expandir → "Aprovar todas" de uma vez.
+// Cópia de ausencias.html (renderPendentesPublicas), com DUAS mudanças de assinatura:
+// recebe o container por argumento (em vez de buscar #main-content sozinha) e devolve
+// quantos itens desenhou — mesma razão da mudança em renderCaixaSolicitacoes.
+async function renderPendentesPublicas(container){
+  const { data } = await sb.rpc('acolitos_ausencia_pendente_listar');
+  const pend = (data && data.pendentes) || [];
+  if(!pend.length) return 0;
+  const fmt = d => { const [y,m,da]=String(d).split('-'); return da+'/'+m+'/'+y; };
+
+  const card = document.createElement('div'); card.className='section-card';
+  card.style.cssText = (card.style.cssText||'') + ';border:1px solid var(--gold);';
+
+  // Cabeçalho fino clicável (toggle)
+  const head = document.createElement('div');
+  head.style.cssText='display:flex;align-items:center;gap:8px;cursor:pointer;font-family:Sora,sans-serif;font-weight:700;font-size:14px;color:var(--gold);';
+  const ht = document.createElement('span'); ht.style.flex='1';
+  const chev = document.createElement('span'); chev.textContent='▾'; chev.style.cssText='transition:transform .15s;font-size:12px;';
+  head.append(ht, chev); card.appendChild(head);
+
+  // Corpo (oculto por padrão)
+  const body = document.createElement('div'); body.style.cssText='display:none;margin-top:10px;'; card.appendChild(body);
+
+  const restantes = ()=>body.querySelectorAll('div[data-pend]').length;
+  const atualiza = ()=>{
+    const n = restantes();
+    ht.textContent = '📋 Avisos recebidos (' + n + ')';
+    bAll.textContent = '✓ Aprovar todas (' + n + ')';
+    if(!n) card.remove();
+  };
+  const decidir = async (ids, acao, onOk)=>{
+    const { data:r } = await sb.rpc('acolitos_ausencia_pendente_decidir',{ p_ids:ids, p_acao:acao });
+    if(r && r.ok){
+      try { const _it=pend.filter(p=>ids.includes(p.id)); const _al=[...new Set(_it.map(i=>i.membro_id).filter(Boolean))]; if(_al.length){ const _ok=acao==='aprovar'; apiPost('/api/enviar-push',{tipo:'ausencia',membros:_al,titulo:_ok?'Ausência aprovada ✅':'Ausência recusada',texto:'Sua ausência foi '+(_ok?'APROVADA':'recusada')+'. Veja no app.'}); } } catch(_){}
+      onOk();
+      // Auto-troca: só ao aprovar, e só para os itens desta chamada (o RPC já gravou
+      // a ausência real com celebracao_id). `pend` é o array completo carregado no topo desta função.
+      if (acao === 'aprovar') {
+        const itens = pend.filter(p => ids.includes(p.id));
+        try { await autoTrocaAprovadas(itens); }
+        catch (e) {
+          console.error('auto-troca (aprovação) falhou', e);
+          // Ausência já foi aprovada (não desfaz) — só avisa que a troca automática não foi
+          // garantida, pro coordenador conferir a escala manualmente.
+          await uiAlert('Ausência aprovada, mas a troca automática não foi concluída para 1 ou mais item(ns). Confira a escala manualmente.');
+        }
+      }
+    } else { await uiAlert('Erro ao processar.'); }
+  };
+
+  // Ação em massa
+  const bAll = document.createElement('button');
+  bAll.style.cssText='width:100%;font-size:12.5px;font-weight:800;padding:10px;border-radius:8px;cursor:pointer;border:none;margin-bottom:10px;background:linear-gradient(160deg,var(--gold-light,#ffd97a),var(--gold,#8a6a24));color:#2a1500;';
+  bAll.onclick = async ()=>{
+    const rows = Array.from(body.querySelectorAll('div[data-pend]'));
+    const ids = rows.map(r=>r.dataset.id); if(!ids.length) return;
+    bAll.disabled=true; bAll.textContent='Aprovando...';
+    await decidir(ids,'aprovar', ()=>{ rows.forEach(r=>r.remove()); });
+    bAll.disabled=false; atualiza();
+  };
+  body.appendChild(bAll);
+
+  pend.forEach(p=>{
+    const row=document.createElement('div'); row.dataset.id=p.id; row.setAttribute('data-pend','1');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--border);';
+    const info=document.createElement('div'); info.style.cssText='flex:1;min-width:0;';
+    const nm=document.createElement('div'); nm.style.cssText='font-weight:700;font-size:13px;color:var(--text);';
+    nm.textContent = p.nome + ' · ' + fmt(p.data) + (p.horario ? ' ' + p.horario : '')
+      + (p.comunidade ? ' · ' + (p.comunidade==='matriz'?'Matriz':'Sto. Antônio') : '');
+    const sub=document.createElement('div'); sub.style.cssText='font-size:11px;color:var(--text-muted);word-break:break-word;';
+    const partes=[]; if(p.informante_nome) partes.push('por '+p.informante_nome);
+    if(p.informante_contato) partes.push(p.informante_contato);
+    if(p.motivo) partes.push(p.motivo);
+    sub.textContent = partes.join(' · ') || 'sem detalhes';
+    info.append(nm,sub);
+    const bOk=document.createElement('button'); bOk.textContent='Aprovar';
+    bOk.style.cssText='font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;border:1px solid var(--gold-dim);background:var(--surface2);color:var(--gold-light);';
+    const bNo=document.createElement('button'); bNo.textContent='Rejeitar';
+    bNo.style.cssText='font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;border:1px solid var(--danger);background:var(--surface2);color:var(--danger-text);';
+    const one = async (acao)=>{ bOk.disabled=true; bNo.disabled=true;
+      await decidir([p.id], acao, ()=>{ row.remove(); atualiza(); });
+      bOk.disabled=false; bNo.disabled=false; };
+    bOk.onclick=()=>one('aprovar'); bNo.onclick=()=>one('rejeitar');
+    row.append(info,bOk,bNo); body.appendChild(row);
+  });
+
+  let aberto=false;
+  head.onclick = ()=>{ aberto=!aberto; body.style.display=aberto?'block':'none'; chev.style.transform=aberto?'rotate(180deg)':'none'; };
+
+  atualiza();
+  container.insertBefore(card, container.firstChild);
+  return pend.length;
+}
+
+// A Caixa vazia é o estado COMUM, não a exceção: das 16 solicitações que
+// existem no banco, todas já foram decididas. Então é esta tela que a
+// coordenação mais vê — e por isso ela precisa estar certa.
+function renderTudoEmDia(main) {
+  const box = document.createElement('div');
+  box.style.cssText = 'text-align:center;padding:42px 16px;color:var(--text-muted);';
+  const ic = document.createElement('div');
+  ic.style.cssText = 'width:44px;height:44px;margin:0 auto 12px;';
+  ic.innerHTML = _svgIcon('inbox');   // SVG, nunca emoji
+  const svg = ic.firstChild;
+  if (svg) svg.setAttribute('style','width:44px;height:44px;fill:none;stroke:var(--success-text);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;');
+  const t = document.createElement('div');
+  t.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:16px;color:var(--text);';
+  t.textContent = 'Tudo em dia';
+  const s = document.createElement('div');
+  s.style.cssText = 'font-size:13px;margin-top:4px;';
+  s.textContent = 'Não há nada esperando decisão sua.';
+  box.append(ic, t, s);
+  main.appendChild(box);
+}
+
+// "Enviar aviso" veio do Acesso Rápido do Início: é ação da coordenação (manda notificação
+// a todos), não uma pendência — por isso fica fora do fluxo de decisão e sempre visível
+// pra quem é admin. avisarTodos() mora no shared.js, que esta tela já carrega.
+function botaoEnviarAviso() {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'margin-top:16px;';
+  const btnAviso = document.createElement('button'); btnAviso.className = 'btn-sm gray';
+  btnAviso.style.cssText = 'display:inline-flex;align-items:center;gap:6px;';
+  const icAviso = document.createElement('span');
+  icAviso.style.cssText = 'width:15px;height:15px;display:flex;';
+  icAviso.innerHTML = _svgIcon('message-circle');  // SVG hardcoded — seguro (sem emoji)
+  const svgA = icAviso.firstChild;
+  if (svgA) svgA.setAttribute('style', 'width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;');
+  btnAviso.append(icAviso, document.createTextNode('Enviar aviso'));
+  btnAviso.onclick = () => avisarTodos();
+  wrap.appendChild(btnAviso);
+  return wrap;
+}
+
+async function renderCaixa() {
+  const main = document.getElementById('main-content'); main.textContent = '';
+  const t = document.createElement('h1'); t.className = 'page-title';
+  t.textContent = 'Caixa'; main.appendChild(t);
+
+  const box = document.createElement('div'); main.appendChild(box);
+  const houve = await renderCaixaSolicitacoes(box);   // devolve quantas pendências desenhou
+  const houvePub = await renderPendentesPublicas(box);
+  if (!houve && !houvePub) renderTudoEmDia(main);
+
+  // "Enviar aviso" fica sempre visível: é ação da coordenação, não pendência.
+  if (navCaps(ctx).isAdmin) main.appendChild(botaoEnviarAviso());
+}
+
+async function init() {
+  ctx = await initModulo();
+  if (!ctx) return;
+  renderHeader(ctx, 'caixa');
+  renderBottomNav(ctx, 'caixa');
+  const caps = navCaps(ctx);
+  const role = ctx.membership ? ctx.membership.role : null;
+  // A tela inteira é da coordenação — diferente da ausencias.html antiga, que
+  // precisava abrir para todo membro. Ver a spec de 17/08.
+  if (!podeVerTela({ tela: 'caixa', role, caps })) { semAcesso(); return; }
+  await renderCaixa();
+}
+function semAcesso() {
+  const main = document.getElementById('main-content'); main.textContent = '';
+  const p = document.createElement('p'); p.className = 'empty';
+  p.textContent = 'Esta tela é da coordenação.';
+  main.appendChild(p);
+}
+
+init();
+</script>
+</body>
+</html>
