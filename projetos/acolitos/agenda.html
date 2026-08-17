@@ -68,7 +68,11 @@
     .evt-form label { display:block; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin:10px 0 4px; }
     .evt-row { display:flex; gap:8px; }
     .evt-row > div { flex:1; }
-    .fab { position:fixed; right:16px; bottom:calc(var(--nav-h) + 16px); z-index:48; height:50px; padding:0 18px; border-radius:26px; border:1px solid var(--gold); background:linear-gradient(165deg, var(--wine), var(--surface)); color:var(--gold-light); font-family:'Sora',sans-serif; font-weight:700; font-size:14px; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 6px 22px rgba(0,0,0,.55), 0 0 16px var(--red-glow); }
+    /* A barra de abas cresce com a faixa de segurança do aparelho (a área da barrinha
+       do gesto, ~34px no iPhone); o botão precisa crescer junto, senão fica 18px baixo
+       demais e a barra — que é pintada por cima — o esconde. No computador a faixa
+       vale 0 e o defeito não aparece, por isso ele só se via no celular. */
+    .fab { position:fixed; right:16px; bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px); z-index:48; height:50px; padding:0 18px; border-radius:26px; border:1px solid var(--gold); background:linear-gradient(165deg, var(--wine), var(--surface)); color:var(--gold-light); font-family:'Sora',sans-serif; font-weight:700; font-size:14px; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 6px 22px rgba(0,0,0,.55), 0 0 16px var(--red-glow); }
     .fab svg { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2.2; stroke-linecap:round; }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
