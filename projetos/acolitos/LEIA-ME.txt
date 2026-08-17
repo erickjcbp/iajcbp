@@ -29,6 +29,17 @@ Por baixo usa o Supabase (banco de dados + login na nuvem).
     alertas-core.js     -> quais alertas de frequência aparecem no
                            Início, em que ordem, e quando um alerta
                            que você dispensou volta a aparecer.
+    kits-core.js        -> quem pode servir em cada função. Um "kit" é
+                           um grupo de funções com regra própria, e ele
+                           tem dois modos:
+                             LIBERA -> a idade já basta, mesmo sem a
+                                       habilitação (ex.: Sto. Antônio,
+                                       cruz e vela a partir dos 7).
+                             TRAVA  -> quem está fora do critério NÃO
+                                       serve, nem sendo apto (ex.: o kit
+                                       processional da Matriz, 14 anos ou
+                                       liberado nome a nome).
+                           Os kits são editados em Config › Gerador.
 
   Para conferir essas regras, rode no terminal, dentro da pasta do
   projeto:

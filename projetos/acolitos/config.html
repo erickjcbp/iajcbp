@@ -49,6 +49,7 @@
 <div class="main" id="main-content"><span class="loading">Carregando...</span></div>
 
 <script src="navegacao-core.js"></script>
+<script src="kits-core.js"></script>
 <script src="shared.js"></script>
 <script>
 // A seção inicial PRECISA existir em SECOES — senão o painel abre numa tela
@@ -224,23 +225,122 @@ async function renderFuncoes(b){
   bt.onclick=async()=>{ const v=inp.value.trim(); if(!v)return; const slug=v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''); await sb.from('acolitos_listas').insert({tipo:'funcao',valor:slug,label:v}); inp.value=''; renderFuncoes(b); };
   add.append(inp,bt); b.appendChild(add);
 }
-function renderGerador(b){
+// KITS: conjuntos de funções com critério próprio de quem pode servir.
+//
+// Antes existia UM "kit leve", com a comunidade escrita no código (santo_antonio/matriz)
+// — o que impedia usar o app em outra paróquia. Agora são vários kits, e as comunidades
+// vêm do próprio Config (aba Comunidades).
+//
+// Cada kit tem um MODO, e a diferença é o ponto todo:
+//   LIBERA — a idade concede a função mesmo sem habilitação (ex.: Sto. Antônio, 7+).
+//   TRAVA  — fora do critério a pessoa NÃO serve, nem sendo apta (ex.: o processional
+//            da Matriz, 14+ ou liberado nome a nome).
+let _kitsEdit = null;      // rascunho em edição (só vai pro banco no "Salvar")
+let _membrosKit = null;    // cache da lista de membros p/ o seletor de liberados
+
+async function renderGerador(b){
   b.textContent='';
   const ger = cfg('gerador', {}) || {};
-  const kit = ger.kit_leve || { comunidade:'santo_antonio', funcoes:['cruz','vela'], idade_min:7 };
-  const mk=(label)=>{ const L=document.createElement('label'); L.style.cssText='display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px;'; L.textContent=label; b.appendChild(L); };
+  if (!_kitsEdit) _kitsEdit = normalizarKits(ger);
+  if (!_membrosKit) {
+    const { data } = await sb.from('acolitos_membros').select('id,nome,comunidade').eq('status','ativo').order('nome');
+    _membrosKit = data || [];
+  }
+  const comunidades = (() => {
+    const c = cfg('comunidades', null);
+    if (Array.isArray(c) && c.length) return c.map(x => [x.slug, x.label]);
+    return [['matriz','Matriz'],['santo_antonio','Sto. Antônio']];
+  })();
+
+  const mk=(label)=>{ const L=document.createElement('label'); L.style.cssText='display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px;'; L.textContent=label; b.appendChild(L); return L; };
   mk('Janela do rodízio (dias) — quanto histórico o gerador considera');
   const iJ=document.createElement('input'); iJ.className='form-input'; iJ.type='number'; iJ.min='7'; iJ.value=ger.janela_dias||42; b.appendChild(iJ);
-  const sep=document.createElement('div'); sep.style.cssText='margin-top:16px;font-family:Sora,sans-serif;font-weight:700;color:var(--gold-light);font-size:12px;'; sep.textContent='Kit leve (funções liberadas por idade numa comunidade)'; b.appendChild(sep);
-  mk('Comunidade');
-  const sC=document.createElement('select'); sC.className='form-input';
-  [['santo_antonio','Santo Antônio'],['matriz','Matriz']].forEach(([v,l])=>{ const o=document.createElement('option'); o.value=v; o.textContent=l; if(kit.comunidade===v)o.selected=true; sC.appendChild(o); }); b.appendChild(sC);
-  mk('Funções liberadas (slugs separados por vírgula: cruz, vela, sineta…)');
-  const iF=document.createElement('input'); iF.className='form-input'; iF.value=(kit.funcoes||['cruz','vela']).join(', '); b.appendChild(iF);
-  mk('Idade mínima');
-  const iI=document.createElement('input'); iI.className='form-input'; iI.type='number'; iI.min='0'; iI.value=(kit.idade_min!=null?kit.idade_min:7); b.appendChild(iI);
-  const save=document.createElement('button'); save.className='btn gold'; save.style.marginTop='16px'; save.textContent='Salvar regras';
-  save.onclick=async()=>{ await setConfig('gerador', { janela_dias:Number(iJ.value)||42, kit_leve:{ comunidade:sC.value, funcoes:iF.value.split(',').map(s=>s.trim()).filter(Boolean), idade_min:Number(iI.value)||0 } }); };
+
+  const sep=document.createElement('div'); sep.style.cssText='margin-top:20px;font-family:Sora,sans-serif;font-weight:700;color:var(--gold-light);font-size:12px;'; sep.textContent='Kits (funções com regra própria de quem pode servir)'; b.appendChild(sep);
+  const dica=document.createElement('p'); dica.style.cssText='font-size:11px;color:var(--text-muted);margin:4px 0 10px;line-height:1.5;';
+  dica.textContent='LIBERA: a idade já basta, mesmo sem habilitação. TRAVA: quem está fora do critério não serve, nem sendo apto — use para funções que exigem porte, como o kit processional.';
+  b.appendChild(dica);
+
+  const lista=document.createElement('div'); b.appendChild(lista);
+  const repintar=()=>{ b.textContent=''; renderGerador(b); };
+
+  _kitsEdit.forEach((kit, idx) => {
+    const card=document.createElement('div');
+    card.style.cssText='border:1px solid '+(kit.ativo?'var(--border-wine)':'var(--border)')+';border-radius:8px;padding:12px;margin-bottom:10px;background:var(--surface2);'+(kit.ativo?'':'opacity:.6;');
+
+    const topo=document.createElement('div'); topo.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:8px;';
+    const iNome=document.createElement('input'); iNome.className='form-input'; iNome.style.flex='1'; iNome.value=kit.nome; iNome.placeholder='Nome do kit';
+    iNome.oninput=()=>{ kit.nome=iNome.value; };
+    const bLiga=document.createElement('button'); bLiga.className='btn-sm '+(kit.ativo?'gold':'gray'); bLiga.textContent=kit.ativo?'Ligado':'Desligado';
+    bLiga.onclick=()=>{ kit.ativo=!kit.ativo; repintar(); };
+    const bDel=document.createElement('button'); bDel.className='btn-sm gray'; bDel.textContent='Remover';
+    bDel.onclick=async()=>{ if(await uiConfirm('Remover o kit "'+kit.nome+'"?')){ _kitsEdit.splice(idx,1); repintar(); } };
+    topo.append(iNome,bLiga,bDel); card.appendChild(topo);
+
+    const linha=document.createElement('div'); linha.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;';
+    const campo=(rot,el)=>{ const w=document.createElement('div'); w.style.flex='1'; w.style.minWidth='120px'; const L=document.createElement('label'); L.style.cssText='display:block;font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;'; L.textContent=rot; w.append(L,el); linha.appendChild(w); };
+
+    const sModo=document.createElement('select'); sModo.className='form-input';
+    [['libera','LIBERA por idade'],['trava','TRAVA por idade']].forEach(([v,l])=>{ const o=document.createElement('option'); o.value=v; o.textContent=l; if(kit.modo===v)o.selected=true; sModo.appendChild(o); });
+    sModo.onchange=()=>{ kit.modo=sModo.value; repintar(); };
+    campo('Modo', sModo);
+
+    const iIdade=document.createElement('input'); iIdade.className='form-input'; iIdade.type='number'; iIdade.min='0'; iIdade.value=kit.idade_min;
+    iIdade.oninput=()=>{ kit.idade_min=Number(iIdade.value)||0; };
+    campo('Idade mínima', iIdade);
+    card.appendChild(linha);
+
+    const lCom=document.createElement('label'); lCom.style.cssText='display:block;font-size:10px;color:var(--text-muted);text-transform:uppercase;margin:10px 0 4px;'; lCom.textContent='Comunidades onde vale'; card.appendChild(lCom);
+    const boxCom=document.createElement('div'); boxCom.style.cssText='display:flex;flex-wrap:wrap;gap:6px;';
+    comunidades.forEach(([slug,label])=>{
+      const on=kit.comunidades.includes(slug);
+      const chip=document.createElement('button'); chip.type='button'; chip.textContent=label;
+      chip.style.cssText='padding:5px 10px;border-radius:14px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid '+(on?'var(--gold)':'var(--border-wine)')+';background:'+(on?'rgba(232,185,74,.18)':'var(--surface)')+';color:'+(on?'var(--gold-light)':'var(--text-muted)')+';';
+      chip.onclick=()=>{ const i=kit.comunidades.indexOf(slug); if(i>=0)kit.comunidades.splice(i,1); else kit.comunidades.push(slug); repintar(); };
+      boxCom.appendChild(chip);
+    });
+    card.appendChild(boxCom);
+
+    const lFun=document.createElement('label'); lFun.style.cssText='display:block;font-size:10px;color:var(--text-muted);text-transform:uppercase;margin:10px 0 4px;'; lFun.textContent='Funções do kit (slugs separados por vírgula)'; card.appendChild(lFun);
+    const iFun=document.createElement('input'); iFun.className='form-input'; iFun.value=(kit.funcoes||[]).join(', ');
+    iFun.oninput=()=>{ kit.funcoes=iFun.value.split(',').map(s=>s.trim()).filter(Boolean); };
+    card.appendChild(iFun);
+
+    // Liberados: só faz sentido quando o kit PROÍBE. É a saída pra quem consegue
+    // servir mas o sistema não sabe a idade (ou é mais novo e mesmo assim dá conta).
+    if (kit.modo === 'trava') {
+      const lLib=document.createElement('label'); lLib.style.cssText='display:block;font-size:10px;color:var(--text-muted);text-transform:uppercase;margin:12px 0 4px;';
+      lLib.textContent='Liberados nome a nome ('+kit.liberados.length+') — entram mesmo sem a idade';
+      card.appendChild(lLib);
+      const boxLib=document.createElement('div'); boxLib.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;';
+      kit.liberados.forEach(id=>{
+        const m=_membrosKit.find(x=>x.id===id);
+        const chip=document.createElement('button'); chip.type='button'; chip.textContent=(m?m.nome:'(removido)')+' ×';
+        chip.style.cssText='padding:5px 10px;border-radius:14px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--gold);background:rgba(232,185,74,.18);color:var(--gold-light);';
+        chip.onclick=()=>{ kit.liberados=kit.liberados.filter(x=>x!==id); repintar(); };
+        boxLib.appendChild(chip);
+      });
+      card.appendChild(boxLib);
+      const sAdd=document.createElement('select'); sAdd.className='form-input';
+      const o0=document.createElement('option'); o0.value=''; o0.textContent='+ liberar alguém…'; sAdd.appendChild(o0);
+      _membrosKit.filter(m=>!kit.liberados.includes(m.id)).forEach(m=>{ const o=document.createElement('option'); o.value=m.id; o.textContent=m.nome; sAdd.appendChild(o); });
+      sAdd.onchange=()=>{ if(sAdd.value){ kit.liberados.push(sAdd.value); repintar(); } };
+      card.appendChild(sAdd);
+    }
+    lista.appendChild(card);
+  });
+
+  const bNovo=document.createElement('button'); bNovo.className='btn-sm gray'; bNovo.textContent='+ Novo kit';
+  bNovo.onclick=()=>{ _kitsEdit.push({ id:'kit'+Date.now(), nome:'Novo kit', ativo:true, modo:'libera', comunidades:[], funcoes:[], idade_min:0, liberados:[] }); repintar(); };
+  b.appendChild(bNovo);
+
+  const save=document.createElement('button'); save.className='btn gold'; save.style.cssText='margin-top:16px;display:block;width:100%;'; save.textContent='Salvar regras';
+  save.onclick=async()=>{
+    // kit_leve some do salvamento: quem lê já aceita os dois formatos (normalizarKits),
+    // então guardar os dois só criaria duas verdades pro mesmo assunto.
+    const ok = await setConfig('gerador', { janela_dias:Number(iJ.value)||42, kits:_kitsEdit });
+    if (ok) _kitsEdit = null;   // falhou = guarda o rascunho, senão o trabalho some junto com o erro
+  };
   b.appendChild(save);
 }
 function renderComunidades(b){

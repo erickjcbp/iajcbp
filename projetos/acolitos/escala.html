@@ -294,6 +294,7 @@
 </div>
 
 <script src="navegacao-core.js"></script>
+<script src="kits-core.js"></script>
 <script src="shared.js"></script>
 <script src="gerador-substituto.js"></script>
 <script>
@@ -864,19 +865,25 @@ async function carregarAusenciasFresh(celebs) {
 }
 
 // Funções MAIORES (especializadas) — reservadas p/ cerimoniários; o resto é menor (altar/cruz/vela/apoio...)
-// Elegibilidade numa função: habilitação (apto+) OU kit leve do Santo Antônio (cruz/vela liberados p/ coroinhas 7+).
-// Na Matriz vale só a habilitação (kit pesado — você controla por apto). Sem idade preenchida → cai no nível (coroinha+).
+//
+// Quem pode servir numa função é regra pura e mora em kits-core.js (testada em node).
+// Aqui só se junta o que a tela sabe da pessoa. Dois tipos de kit, e a diferença importa:
+//   'libera' — a idade CONCEDE a função mesmo sem habilitação (é o Sto. Antônio, 7+).
+//   'trava'  — estar fora do critério PROÍBE, mesmo com habilitação (é o processional
+//              da Matriz, 14+ ou liberado nome a nome). Isto inverte o comportamento
+//              antigo, em que ser "apto" atropelava qualquer idade.
 function elegivelFuncao(m, f, comKey) {
   const h = (habMap[m.id]||{})[f];
-  if (h && ['apto','experiente','referencia'].includes(h)) return true;
   const ger = (typeof cfg === 'function') ? (cfg('gerador', {}) || {}) : {};
-  const kit = ger.kit_leve || { comunidade:'santo_antonio', funcoes:['cruz','vela'], idade_min:7 };
-  if (kit && comKey === kit.comunidade && (kit.funcoes||[]).includes(f)) {
-    const idade = m.data_nascimento ? calcIdade(m.data_nascimento) : null;
-    if (idade != null) return idade >= (kit.idade_min != null ? kit.idade_min : 7);
-    return nivelInfo(m.nivel||'aspirante').int >= 1;   // sem idade → coroinha pra cima
-  }
-  return false;
+  return podeNaFuncao({
+    kits: normalizarKits(ger),
+    comunidade: comKey,
+    funcao: f,
+    membroId: m.id,
+    temHabilitacao: ['apto','experiente','referencia'].includes(h),
+    idade: m.data_nascimento ? calcIdade(m.data_nascimento) : null,
+    nivelInt: nivelInfo(m.nivel||'aspirante').int,
+  });
 }
 
 // Carga histórica p/ rodízio: consulta DIRETO no banco quantas vezes cada membro já foi escalado
