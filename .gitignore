@@ -9,3 +9,6 @@ midia/landing/*.jpg
 midia/landing/*.JPEG
 midia/landing/*.jpeg
 !midia/landing/web/
+
+# Brasões das casas: originais de ~3 MB ficam fora; as versões web (webp/png) entram
+midia/brasoes/originais/

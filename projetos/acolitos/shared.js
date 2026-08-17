@@ -1579,8 +1579,30 @@ function _svgIcon(name) {
 
 // ── BRASÕES DAS CASAS (SVG próprio, sem emoji) ────────────────
 const CASA_COR = { sanctaris:'#c0392b', seraphim:'#e67e22', veritatis:'#2980b9', templaris:'#27ae60', consilium:'#7d3c98' };
+// Casas que já têm BRASÃO OFICIAL (arte enviada pela coordenação, em midia/brasoes/).
+// A Consilium ainda não tem o dela; enquanto não chegar, continua com o escudo desenhado
+// aqui embaixo — por isso a lista, e não uma troca cega para todas.
+//
+// O arquivo é servido em dois formatos: .webp (77 KB, o que todo celular atual baixa) e
+// .png de reserva (200 KB, só usado por aparelho antigo que não entende webp). O original
+// de 3 MB fica em midia/brasoes/originais/, fora do repositório.
+//
+// A arte vem com FUNDO PRETO chapado; o preto foi recortado por inundação a partir das
+// bordas (não por cor, senão furaria os contornos escuros de dentro do brasão), senão
+// cada casa viraria um retângulo preto — gritante no modo claro do app.
+const CASA_BRASAO_OFICIAL = ['sanctaris', 'seraphim', 'veritatis', 'templaris'];
+
 function getCasaBrasao(slug, size) {
   size = size || 80;
+  if (CASA_BRASAO_OFICIAL.indexOf(slug) >= 0) {
+    const s = String(size);
+    const base = '/midia/brasoes/' + slug;
+    return '<picture>'
+      + '<source srcset="' + base + '.webp" type="image/webp">'
+      + '<img src="' + base + '.png" width="' + s + '" height="' + s + '" alt="Brasão da casa ' + slug + '"'
+      + ' style="object-fit:contain;display:block;" loading="lazy">'
+      + '</picture>';
+  }
   const cor = CASA_COR[slug] || '#8a6a24';
   const uid = 'cb' + Math.random().toString(36).slice(2, 8);
   const simbolos = {

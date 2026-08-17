@@ -41,6 +41,33 @@ Arquivos de som (na raiz da pasta)
                       primeira interação do usuário.
 
 
+brasoes/  -> BRASÕES DAS CASAS (a arte oficial de cada casa)
+-----------------------------------------------------------
+  brasoes/originais/   -> a arte como veio, ~3 MB cada. NÃO vai
+                          para o GitHub (é pesada demais). Fica só
+                          no seu computador.
+  brasoes/<casa>.webp  -> a versão que o app usa (77 KB). É esta
+                          que todo celular atual baixa.
+  brasoes/<casa>.png   -> reserva, para aparelho antigo que não
+                          entende o formato webp. Só é baixada se
+                          a de cima falhar.
+
+  Hoje existem: sanctaris, seraphim, veritatis e templaris.
+  FALTA A CONSILIUM. Enquanto ela não chega, a casa continua com o
+  escudo desenhado por código (o mesmo de antes) — por isso ela
+  aparece diferente das outras nas telas de Casas.
+
+  PARA ACRESCENTAR A CONSILIUM (ou trocar alguma):
+   1. coloque a arte em midia/brasoes/originais/consilium.png
+   2. me peça para gerar as versões web
+   3. o nome da casa precisa entrar na lista CASA_BRASAO_OFICIAL,
+      no arquivo projetos/acolitos/shared.js
+
+  OBSERVAÇÃO: a arte veio com FUNDO PRETO chapado (não transparente).
+  O preto foi recortado; sem isso cada brasão viraria um retângulo
+  preto na tela — bem visível no modo claro do app.
+
+
 Para iniciante: por que ter foto "original" e foto "web"?
 ---------------------------------------------------------
 Foto de celular é enorme (vários MB). Se subir assim, o site fica
