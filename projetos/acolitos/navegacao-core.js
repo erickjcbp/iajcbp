@@ -82,6 +82,25 @@
     return opts.salvo === 'coordenacao' ? 'coordenacao' : 'jornada';
   }
 
+  // ── Qual botão acende numa tela que não tem botão próprio ──────────────────
+  // Ausências e Chamada não estão na barra: abrem por dentro de outra seção (o menu
+  // "⋯ Mais" da Escala, ou o botão nas Escalas do membro). A Ausências acendia o id
+  // 'caixa' emprestado — a pessoa abria as Ausências e a barra dizia Caixa. Emprestar
+  // o id de uma tela vizinha é mentir sobre onde a pessoa está; a barra passa a acender
+  // a SEÇÃO de onde a tela sai, que é para onde o Voltar também leva.
+  var SECAO_DA_TELA = {
+    ausencias: { coordenacao:'escala', jornada:'escalas-membro' },
+    chamada:   { coordenacao:'escala', jornada:'escalas-membro' },
+  };
+
+  // Se a seção não estiver na barra da pessoa (cerimoniário sem a permissão 'escala',
+  // por exemplo), nada acende — que é o certo, e renderBottomNav aguenta sem quebrar.
+  function idNaBarra(tela, modo) {
+    var secao = SECAO_DA_TELA[tela];
+    if (!secao) return tela;                 // tela com botão próprio: acende ela mesma
+    return modo === 'coordenacao' ? secao.coordenacao : secao.jornada;
+  }
+
   function ordenarPorConfig(itens, ord) {
     if (!Array.isArray(ord) || !ord.length) return itens;
     var padrao = itens.map(function (x) { return x.id; });          // ordem padrão do código
@@ -102,7 +121,7 @@
     }).filter(Boolean);
   }
 
-  var api = { montarItensNav: montarItensNav, modoDaBarra: modoDaBarra, temAcessoCoordenacao: temAcessoCoordenacao };
+  var api = { montarItensNav: montarItensNav, modoDaBarra: modoDaBarra, temAcessoCoordenacao: temAcessoCoordenacao, idNaBarra: idNaBarra };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  else { global.montarItensNav = montarItensNav; global.modoDaBarra = modoDaBarra; global.temAcessoCoordenacao = temAcessoCoordenacao; }
+  else { global.montarItensNav = montarItensNav; global.modoDaBarra = modoDaBarra; global.temAcessoCoordenacao = temAcessoCoordenacao; global.idNaBarra = idNaBarra; }
 })(typeof globalThis !== 'undefined' ? globalThis : this);

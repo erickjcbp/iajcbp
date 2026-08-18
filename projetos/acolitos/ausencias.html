@@ -292,10 +292,10 @@ async function init() {
   ctx = await initModulo();
   if (!ctx) return;
   renderHeader(ctx, 'ausencias');
-  // Esta tela tem dois ids na barra: 'ausencias' pro membro ("Faltar") e 'caixa' pra
-  // coordenação. Sem escolher o id do modo atual, nenhum item acende e a barra não
-  // rola até ele.
-  renderBottomNav(ctx, navMode(ctx) === 'coordenacao' ? 'caixa' : 'ausencias');
+  // A Ausências não tem botão próprio na barra: ela abre por dentro da Escala (menu
+  // "⋯ Mais") ou das Escalas do membro. Acendia o id 'caixa' emprestado, e a barra
+  // dizia Caixa com a Ausências na tela. Quem decide o id é o navegacao-core, testado.
+  renderBottomNav(ctx, idNaBarra('ausencias', navMode(ctx)));
   await carregarMotivos(); // motivos do Config (fallback: padrões)
   // equipe E cerimoniários podem registrar ausência de outros (a RLS libera os dois)
   const _r = ctx.membership.role;

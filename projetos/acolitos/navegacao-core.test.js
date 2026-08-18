@@ -208,3 +208,33 @@ test('lista de permissões ausente ou torta não quebra', () => {
   assert.strictEqual(modoDaBarra({ ehEquipe:false, serve:true, ordemModulos:BASE_MOD }), 'jornada');
   assert.strictEqual(modoDaBarra({ ehEquipe:false, serve:true, perms:null, ordemModulos:BASE_MOD }), 'jornada');
 });
+
+// ── Qual botão da barra acende numa tela que NÃO tem botão próprio ────────────
+// A Ausências acendia o botão da Caixa: você abria as Ausências e a barra dizia
+// que você estava na Caixa. A barra passa a acender a SEÇÃO de onde a tela sai.
+const { idNaBarra } = require('./navegacao-core.js');
+
+test('Ausências acende a Escala na coordenação — nunca a Caixa', () => {
+  assert.strictEqual(idNaBarra('ausencias', 'coordenacao'), 'escala');
+  assert.notStrictEqual(idNaBarra('ausencias', 'coordenacao'), 'caixa');
+});
+
+test('Ausências acende as Escalas do membro no modo jornada', () => {
+  assert.strictEqual(idNaBarra('ausencias', 'jornada'), 'escalas-membro');
+});
+
+test('Chamada segue a mesma regra: ela mora dentro da Escala', () => {
+  assert.strictEqual(idNaBarra('chamada', 'coordenacao'), 'escala');
+  assert.strictEqual(idNaBarra('chamada', 'jornada'), 'escalas-membro');
+});
+
+test('tela que TEM botão próprio acende ela mesma', () => {
+  assert.strictEqual(idNaBarra('escala', 'coordenacao'), 'escala');
+  assert.strictEqual(idNaBarra('caixa', 'coordenacao'), 'caixa');
+  assert.strictEqual(idNaBarra('membros', 'coordenacao'), 'membros');
+});
+
+test('modo ausente ou torto não acende a barra da coordenação por engano', () => {
+  assert.strictEqual(idNaBarra('ausencias', undefined), 'escalas-membro');
+  assert.strictEqual(idNaBarra('ausencias', 'coisa-torta'), 'escalas-membro');
+});

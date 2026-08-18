@@ -94,7 +94,9 @@ async function init() {
   ctx = await initModulo(['coord_admin','subadmin','membro_equipe','cerimonario'], { perm: 'escala', livres: ['cerimonario'] });
   if (!ctx) return;
   renderHeader(ctx, 'chamada');
-  renderBottomNav(ctx, 'chamada');
+  // 'chamada' deixou de existir como item da barra quando a Chamada foi fundida na
+  // Escala: nada acendia. Ela mora dentro da Escala, então é a Escala que acende.
+  renderBottomNav(ctx, idNaBarra('chamada', navMode(ctx)));
   const celId = new URLSearchParams(location.search).get('celeb');
   if (celId) {
     const { data: cel } = await sb.from('acolitos_celebracoes').select('*').eq('id', celId).maybeSingle();
