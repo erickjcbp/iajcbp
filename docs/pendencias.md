@@ -5,23 +5,14 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ---
 
-## 1. Só o dono consegue
+## 1. Pendente
 
-- **Abrir a aba Tarefas uma vez.** É o único pedaço da trava de 18/08 que não deu para medir
-  daqui: a prova de que quem ESTÁ logado continua carregando. Se abrir — mesmo vazia, sem a
-  mensagem "não foi possível carregar as tarefas" — está certo.
-- **A conta do Vercel.** O CLI e o acesso automático estão presos em OUTRA conta
-  (`vercel whoami` → "Not authorized"). Quando a Vercel não dispara o build sozinha — aconteceu
-  uma vez em 18/08 — não dá para disparar daqui; o jeito é um commit vazio para reempurrar o
-  gatilho. Apontar para a conta `erickjcbp` resolve, do mesmo jeito que a senha do banco resolveu.
-- **F7 "São Tarcísio"** — está na trilha antiga como pendente, mas só existe o NOME. Precisa o
-  dono dizer o que é, senão não dá para planejar.
+**Nada.** A lista está vazia em 18/08/2026.
 
----
-
-## 2. Backlog sem prazo
-
-*(vazio)*
+O dono dispensou dois itens que estavam aqui: a **conta do Vercel** (o CLI e o acesso automático
+seguem presos em outra conta — quando a Vercel não dispara o build sozinha, o jeito é um commit
+vazio para reempurrar o gatilho) e o **F7 "São Tarcísio"** (só existe o nome). Não são esquecimento:
+são decisão. Só voltam se ele pedir.
 
 ---
 
@@ -58,6 +49,8 @@ sozinha, porque ela não sabe a idade.
 - **Kits e "Leitura B" fechados:** Enrico liberado no Kit processional (de 8 para 9 liberados).
 
 **Telas**
+- **A aba Tarefas confirmada pelo dono** — carrega normal para quem está logado. Era o último
+  pedaço da trava de 18/08 que não dava para medir daqui.
 - **Permissão de módulo passou a valer na barra**, não só na URL — valia para todos os módulos.
 - **Times viraram uma porta só** (`Config › As pessoas › Times`), com a gente dentro; a regra de
   entrar/sair virou `times-core.js`, compartilhada com as Casas.
