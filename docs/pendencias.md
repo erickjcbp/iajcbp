@@ -5,115 +5,80 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ---
 
-## 1. Acesso ao banco — ✔ RESOLVIDO em 18/08/2026
-
-A senha estava numa pasta vazia em `~/Downloads`, cujo NOME era a senha. O `.env` foi atualizado.
-(O `psql` existia o tempo todo, em `/opt/homebrew/opt/libpq/bin/` — fora do caminho. Minha
-checagem anterior dizia "não instalado" e estava errada.)
-
-**O que isso destravou, tudo conferido no banco de verdade:**
-
-- ✔ **A fotografia da estrutura** está em `db/estrutura-completa.sql`. Rodando num banco vazio,
-  ela devolve a estrutura inteira: 40 tabelas, 92 funções, 75 regras de acesso, proteção de linha
-  nas 40 tabelas. **As 31 mudanças perdidas continuam perdidas uma a uma** — o que se recuperou
-  foi o resultado delas, que é o que permite reconstruir. Numeração segue da 055 em diante.
-- ✔ **052, 053 e 054 conferidas lendo a estrutura**, não por dedução: `vaga_cheia` e o bloqueio
-  contra dois coordenadores simultâneos estão na função; `eh_equipe` sumiu da lista de
-  responsáveis; `origem_id` e seu índice existem. E a 051 continua de pé — `anon` sem permissão
-  na tabela, `authenticated` com ela.
-- ✔ **O kit em modo trava EXISTE** ("Kit processional", ativo, matriz, idade mínima 14), com
-  **8 liberados**. A combinação eram 9: falta **Lucas Bernardo** — que está `nao_treinado` em
-  cruz e vela, ou seja, fora por duas vias. Pode ter sido decisão do dono; não está registrado.
-- ✔ **A "Leitura B" encolheu sozinha.** Eram ~40; hoje são **2**: André de Souza Ribeiro e
-  Enrico Pompeu Secherini. E nenhum dos dois por idade — os dois estão **sem data de
-  nascimento**, então a regra não consegue dizer se têm 14 anos. É problema de dado, não de regra.
-
-- ✔ **A varredura das 40 tabelas.** Proteção de linha ligada nas 40 de 40. O defeito que a 051
-  fechou estava em mais **11**: nenhuma vazava linha, mas todas devolviam `[]` com HTTP 200 em vez
-  de recusar — e entre elas estavam as chaves de notificação do celular, os nomes de usuário e o
-  contato de quem avisa ausência pelo formulário público. Fechadas pelas **055** e **056**, que eu
-  mesmo apliquei e conferi. A tela pública continua inteira.
-
-**Nada sobrou daqui.** O **Lucas Bernardo** e o **André de Souza Ribeiro** estão fora por opção do
-dono (o André tem menos de 14 mesmo), e o **Enrico Pompeu Secherini** foi liberado no Kit
-processional em 18/08/2026 — a lista de liberados foi de 8 para 9. A "Leitura B" está fechada.
-
-*Observação, não pendência:* o André é barrado por `data_nascimento` em branco, não por idade
-conhecida. O resultado é o certo por coincidência — e quando ele fizer 14 a trava não vai soltá-lo
-sozinha, porque ela não sabe a idade dele.
-
-**As duas datas:** `André de Souza Ribeiro` e `Enrico Pompeu Secherini` — aptos em cruz e vela,
-sem `data_nascimento`. O Kit processional exige 14 anos, e sem a data a regra barra na dúvida.
-Pelos níveis deles (Acólito Guardião e Aspirante a Cerimoniário) quase certamente passam dos 14.
-Preenchendo em **Membros › Pessoal**, voltam a poder ser escalados. Não se mexe no kit.
-
-## 2. Melhorias já decididas — ✔ TODAS FEITAS em 18/08/2026
-
-- **Uma regra só: estar num time.** Permissão de módulo passou a valer na barra, não só na URL.
-- **Tarefas: editar, apagar e desfazer.** O Reabrir resolve a próxima recorrência perguntando na
-  hora, com o prazo dela no texto.
-- **Times viraram uma porta só** (`Config › As pessoas › Times`), com a gente dentro. A regra de
-  entrar/sair virou `times-core.js`, compartilhada com as Casas.
-
-**O candidato seguinte, se quiser continuar por aqui:** as **nove listas** de
-`A paróquia › Listas` ainda são um saco de gatos — Tesouraria, Agenda, Jornada e liturgia no mesmo
-lugar. O dono escolheu não mexer nisso quando os times saíram de lá; a pergunta continua aberta.
-
-## 3. Brasões — NÃO refazer os 4 antigos
-
-Cheguei a propor refazer os quatro brasões antigos, porque eles têm uma franja preta serrilhada
-no modo claro. **Tentei, e estava errado: o recorte novo destrói a arte deles.** No `templaris`
-a capa verde e o cabelo sumiram — a inundação vaza para dentro pelas regiões escuras que encostam
-no fundo. Os arquivos que estão no ar são melhores. A franja fica; é o preço de um recorte
-conservador, e é menos ruim que buraco no meio do bordado.
-
-**A regra que ficou (vale para todo brasão novo):** limite de recorte **6**, suavização de borda
-**0,5**, e conferir a saída **composta sobre magenta** antes de subir — foi só assim que apareceu
-que a faixa do CONSILIUM tinha ficado transparente com o limite 40. Sobre o fundo escuro do app
-o buraco é quase invisível.
-
----
-
-## 4. Backlog sem prazo
-
-- **Missões F2 e F3** — avaliação automática e temporadas/ranking. F1 e F4 estão no ar.
-- **F7 "São Tarcísio"** — está na trilha antiga como pendente, mas só existe o nome. Precisa o
-  dono dizer o que é.
-- **Landing `/pastoral`** — o WhatsApp já é o número real (conferido em 18/08); falta conferir os
-  dias das missas e os textos.
-
----
-
-## 5. Só o dono consegue
+## 1. Só o dono consegue
 
 - **Abrir a aba Tarefas uma vez.** É o único pedaço da trava de 18/08 que não deu para medir
   daqui: a prova de que quem ESTÁ logado continua carregando. Se abrir — mesmo vazia, sem a
   mensagem "não foi possível carregar as tarefas" — está certo.
+- **A conta do Vercel.** O CLI e o acesso automático estão presos em OUTRA conta
+  (`vercel whoami` → "Not authorized"). Quando a Vercel não dispara o build sozinha — aconteceu
+  uma vez em 18/08 — não dá para disparar daqui; o jeito é um commit vazio para reempurrar o
+  gatilho. Apontar para a conta `erickjcbp` resolve, do mesmo jeito que a senha do banco resolveu.
+- **F7 "São Tarcísio"** — está na trilha antiga como pendente, mas só existe o NOME. Precisa o
+  dono dizer o que é, senão não dá para planejar.
+
+---
+
+## 2. Backlog sem prazo
+
+- **Missões F2 e F3** — avaliação automática (o que faz o XP andar sozinho, em vez de depender de
+  alguém marcar na mão) e temporadas/ranking. F1 e F4 estão no ar. F2 é grande o bastante para
+  merecer spec escrita antes.
+- **Landing `/pastoral`** — o WhatsApp já é o número real (conferido em 18/08); falta conferir os
+  dias das missas e os textos.
+- **Central do Servo** — candidatar-se a vaga não revalida do lado do servidor na hora de APROVAR
+  (a 052 fechou o caso da escala; este é o irmão dele, em outro fluxo).
+
+---
+
+## 3. Coisas que NÃO se deve fazer (registro, para não repetir)
+
+**Não refazer os 4 brasões antigos.** Cheguei a propor, porque eles têm franja preta serrilhada no
+modo claro. **Tentei, e estava errado: o recorte destrói a arte deles** — no `templaris` a capa
+verde e o cabelo sumiram. Os arquivos no ar são melhores. A franja fica.
+
+**A regra do recorte, para todo brasão novo:** limite **6**, suavização de borda **0,5**, e
+conferir a saída **composta sobre magenta** antes de subir — foi só assim que apareceu que a faixa
+do CONSILIUM tinha ficado transparente com o limite 40.
+
+**Não reabrir o kit do Lucas Bernardo nem do André de Souza Ribeiro** — os dois estão fora por
+opção do dono (o André tem menos de 14 mesmo). *Observação:* o André é barrado por
+`data_nascimento` em branco, não por idade conhecida; quando ele fizer 14 a trava não vai soltá-lo
+sozinha, porque ela não sabe a idade.
 
 ---
 
 ## Fechados em 18/08/2026
 
-- Migrations **048, 049, 050 e 051** aplicadas, e a trava **provada rodando**, não por leitura.
-- Organograma das Casas lia uma lista paralela; e falha ao carregar os times passou a avisar.
-- Brasão da **Consilium** no ar — as 5 casas com a mesma arte.
-- A recusa nas telas de decisão passou a **dizer o motivo** em vez de "Não foi possível decidir".
-- **Dívida de fuso quitada**: `hojeLocal()` nas 7 telas, nada mais monta "hoje" em UTC.
-- **Push** testado no aparelho do dono. Frente fechada.
-- **Permissão de módulo passou a valer na barra**, não só na URL: liberar um módulo para quem não
-  é da equipe abria a tela e escondia o botão. Vale para todos os módulos, não só Tarefas.
-- **Brasão da Consilium** — subiu com a faixa transparente e foi corrigido no mesmo dia.
-- **A lista de responsáveis estava SEMPRE vazia** — a tela exigia um campo que a RPC nunca
-  devolve. Não era o banco. Junto: lista vazia passou a dizer o motivo.
-- **Tarefas: editar, apagar e o Reabrir resolvendo a próxima recorrência.**
+**Banco**
+- **Acesso ao banco resolvido** — a senha estava numa pasta vazia em `~/Downloads` cujo NOME era a
+  senha. E o `psql` existia o tempo todo em `/opt/homebrew/opt/libpq/bin/`, fora do PATH.
+- **A estrutura completa virou arquivo** (`db/estrutura-completa.sql`): 40 tabelas, 92 funções, 75
+  regras de acesso, proteção de linha nas 40. **Dá para reconstruir o banco do zero de novo** — era
+  o risco mais sério da lista. As 31 migrations perdidas seguem perdidas uma a uma; recuperou-se o
+  resultado.
+- **Migrations 048 a 056** aplicadas e conferidas rodando, não por leitura.
+- **A varredura das 40 tabelas:** proteção de linha em 40 de 40, e **11 tabelas** que devolviam
+  lista vazia em vez de recusar (entre elas as chaves de notificação do celular, os nomes de
+  usuário e o contato de quem avisa ausência pelo formulário público). Fechadas pelas 055 e 056.
+- **Kits e "Leitura B" fechados:** Enrico liberado no Kit processional (de 8 para 9 liberados).
+
+**Telas**
+- **Permissão de módulo passou a valer na barra**, não só na URL — valia para todos os módulos.
+- **Times viraram uma porta só** (`Config › As pessoas › Times`), com a gente dentro; a regra de
+  entrar/sair virou `times-core.js`, compartilhada com as Casas.
+- **A seção "Listas" acabou** — cada lista foi para o módulo a que serve; "Os módulos" passou de
+  um item para seis. 21 editores conferidos um a um.
+- **A Configuração no celular** — lista que abre em tela cheia, com voltar; e o conteúdo parou de
+  estourar a borda (a caixinha "Maior" aparecia cortada).
+- **Todo ícone do app virava mancha preta** fora da barra de navegação. Uma regra no `shared.css`
+  resolveu para todas as telas; botões de ação ganharam NOME junto do ícone.
+- **Tarefas:** a lista de responsáveis estava SEMPRE vazia (a tela exigia um campo que a função
+  nunca devolve); editar, apagar, e o Reabrir resolvendo a próxima recorrência.
 - **Remover um time avisa** quantas tarefas e pessoas ainda dependem dele.
-- **A seção "Listas" acabou** — cada lista foi para o módulo a que serve, e "Os módulos" passou
-  de um item para seis. 21 editores conferidos um a um.
-- **A Configuração no celular** — vira lista que abre em tela cheia, com voltar. E o conteúdo
-  parou de estourar a borda (a caixinha "Maior" aparecia cortada).
-- **Todo ícone do app estava virando mancha preta** fora da barra de navegação: `_svgIcon` não
-  dizia que o desenho é traçado, e só a barra tinha a regra. Uma regra no `shared.css` resolveu
-  para todas as telas. Botões de ação ganharam NOME junto do ícone — no celular o texto de ajuda
-  nunca aparece.
-- **Migrations 052, 053 e 054** aplicadas pelo dono e conferidas (`docs/CONFERIR-NO-BANCO.sql`
-  deu OK nas três; de fora, confirmei `origem_id` e que nada foi aberto sem querer).
+- **Organograma das Casas** lia uma lista paralela; falha ao carregar os times passou a avisar.
+- **Brasão da Consilium** no ar — as 5 casas com a mesma arte (subiu com a faixa transparente e
+  foi corrigido no mesmo dia).
+- **A recusa nas telas de decisão** passou a dizer o MOTIVO, em vez de "não foi possível decidir".
+- **Dívida de fuso quitada** — `hojeLocal()` nas 7 telas.
+- **Push** testado no aparelho do dono.
