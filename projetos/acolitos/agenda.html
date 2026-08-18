@@ -88,10 +88,10 @@
 <script>
 const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 let TIPO_CELEB = { missa_comum:'Missa', solene:'Missa Solene', solenidade:'Solenidade', pontifical:'Pontifical (Bispo)', festa:'Festa Litúrgica', vigilia:'Vigília', crisma:'Crisma', casamento:'Casamento', batizado:'Batizado', ordenacao:'Ordenação', funeral:'Exéquias' };
-// Os tipos de evento eram FIXOS aqui: criar "Procissao" ou "Mutirao" exigia mexer no codigo,
-// e outra paroquia nao conseguiria usar o app do jeito dela. Agora estes sao so o PADRAO --
-// o que estiver em Config > Listas > Tipos de evento sobrepoe e amplia (override-com-fallback,
-// o mesmo padrao que o resto do Config ja usa).
+// Os tipos de evento eram FIXOS aqui: criar "Procissão" ou "Mutirão" exigia mexer no código,
+// e outra paróquia não conseguiria usar o app do jeito dela. Agora estes são só o PADRÃO —
+// o que estiver em Config › Listas › Tipos de evento sobrepõe e amplia (override-com-fallback,
+// o mesmo padrão que o resto do Config já usa).
 const EVT_PADRAO = {
   ensaio:           { label:'Ensaio',           cor:'#d35400' },
   reuniao:          { label:'Reunião',          cor:'#2980b9' },
@@ -103,25 +103,30 @@ const EVT_PADRAO = {
   outro:            { label:'Outro',             cor:'#7f8c8d' },
 };
 let EVT = { ...EVT_PADRAO };
+let tiposIncompletos = false;
 function evtInfo(t) { return EVT[t] || EVT.outro || { label:'Evento', cor:'#7f8c8d' }; }
 
-// Le os tipos configurados e junta com os padroes. Falha de consulta NAO derruba a Agenda:
-// sem os tipos configurados ela ainda funciona com os padroes, entao o certo e registrar o
-// erro e seguir -- mas nunca fingir que a paroquia nao configurou nada.
+// Lê os tipos configurados e junta com os padrões. Falha de consulta NÃO derruba a Agenda:
+// sem eles ela ainda funciona com os padrões, então o certo é registrar o erro e seguir —
+// mas nunca fingir que a paróquia não configurou nada.
 async function carregarTiposConfiguraveis() {
   const [{ data: ev, error: e1 }, { data: cel, error: e2 }] = await Promise.all([
     sb.from('acolitos_listas').select('valor,label,meta').eq('tipo','tipo_evento'),
     sb.from('acolitos_listas').select('valor,label').eq('tipo','tipo_celebracao'),
   ]);
+  // Falhar aqui e voltar aos padrões EM SILÊNCIO seria mentir: um tipo que a paróquia criou
+  // sumiria da lista, e alguém cadastraria o evento com o tipo errado sem desconfiar. A tela
+  // segue funcionando com os padrões, mas diz que está incompleta.
+  tiposIncompletos = !!(e1 || e2);
   if (e1) console.error('Agenda: tipos de evento falharam', e1);
-  if (e2) console.error('Agenda: tipos de celebracao falharam', e2);
+  if (e2) console.error('Agenda: tipos de celebração falharam', e2);
   EVT = { ...EVT_PADRAO };
   (ev || []).forEach(x => {
     const cor = (x.meta && x.meta.cor) || (EVT_PADRAO[x.valor] && EVT_PADRAO[x.valor].cor) || '#7f8c8d';
     EVT[x.valor] = { label: x.label || x.valor, cor };
   });
-  // Os tipos de celebracao JA eram configuraveis no Config, e esta tela ignorava: um tipo
-  // criado pela paroquia aparecia aqui como "Celebracao" generica. Agora ela le a lista.
+  // Os tipos de celebração JÁ eram configuráveis no Config, e esta tela ignorava: um tipo
+  // criado pela paróquia aparecia aqui como "Celebração" genérica. Agora ela lê a lista.
   (cel || []).forEach(x => { TIPO_CELEB[x.valor] = x.label || x.valor; });
 }
 
@@ -170,6 +175,13 @@ async function init() {
   const hoje = new Date();
   curY = hoje.getFullYear(); curM = hoje.getMonth(); selDate = ymd(hoje);
   await reload();
+  // Depois do reload, não antes: o desenho da tela limpa o #main-content e o aviso sumiria.
+  if (tiposIncompletos) {
+    const av = document.createElement('div'); av.className = 'empty'; av.style.margin = '0 0 10px';
+    av.textContent = 'Não foi possível carregar os tipos configurados. A Agenda está mostrando só os tipos padrão — recarregue a página.';
+    const alvo = document.getElementById('main-content') || document.body;
+    alvo.insertBefore(av, alvo.firstChild);
+  }
 }
 
 function reload() { return viewMode === 'cal' ? loadMes() : loadTimeline(); }
