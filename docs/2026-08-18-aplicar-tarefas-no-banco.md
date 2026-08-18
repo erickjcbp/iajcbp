@@ -5,12 +5,19 @@ velha (a conexão chega no projeto certo e é recusada com `password authenticat
 do Supabase está logado na conta do iamundi e não enxerga o projeto dos acólitos, e o Docker está
 parado. Testei os três.
 
+## Estado
+
+- ✅ **048** e **049** — aplicadas por você em 18/08/2026, e conferidas: a tabela recusa escrita
+  sem login (`42501`) e a função de convocar por time recusa execução sem login.
+- ⏳ **050** — pendente. Acrescenta o estado "em andamento" das tarefas (para o quadro Kanban) e
+  a função que lista quem pode ser responsável: só quem é da equipe **E** está em algum time.
+
 ## O que fazer
 
 1. Abra o painel do Supabase no projeto dos acólitos, em **SQL Editor**.
-2. Cole o conteúdo inteiro de **`docs/migrations/048_tarefas.sql`** e rode.
-   O arquivo é fechado em si mesmo e **idempotente** — rodar duas vezes não quebra nada.
-3. Cole o conteúdo inteiro de **`docs/migrations/049_convocar_por_time.sql`** e rode.
+2. Cole o conteúdo inteiro de **`docs/APLICAR-NO-BANCO.sql`** e clique em Run.
+   Esse arquivo sempre contém **só o que ainda falta** — hoje, a migration 050.
+   É idempotente: rodar duas vezes não quebra nada.
 
 ## O que cada uma faz
 
