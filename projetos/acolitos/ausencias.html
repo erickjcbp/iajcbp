@@ -74,6 +74,7 @@ function comLabel(c) { return c==='matriz'?'Matriz':'Sto. Antônio'; }
 
 let ctx = null;
 let podeAprovar = false;
+let abaAusencias = 'avisos';   // qual aba da tela de Ausências está aberta
 let rosterMembrosAus = null, rosterMapAus = {}, rosterHabsAus = [];
 // Roster seguro (security-definer) — cobre o cerimoniário, que não lê acolitos_membros por RLS.
 async function carregarRosterAus() {
@@ -590,6 +591,42 @@ async function enviarAusencia() {
 }
 
 // ── VIEW EQUIPE ───────────────────────────────────────────────
+// Aba "Faltas" — quem NÃO APARECEU, apurado na chamada depois da missa. Veio do modal
+// que vivia no menu da Escala. Diferente do original, esta LÊ o error: sem isso uma falha
+// de consulta viraria "nenhuma falta registrada", que é dizer que está tudo certo quando
+// na verdade não se conseguiu perguntar.
+async function renderAbaFaltas(main) {
+  main.textContent = '';
+  const ld = document.createElement('span'); ld.className = 'loading';
+  ld.textContent = 'Carregando...'; main.appendChild(ld);
+  const { data, error } = await sb.rpc('acolitos_faltas_recentes');
+  main.textContent = '';
+  if (error) {
+    console.error('Faltas: consulta falhou', error);
+    const e = document.createElement('span'); e.className = 'empty';
+    e.textContent = 'Não foi possível carregar as faltas. Tente de novo.';
+    main.appendChild(e); return;
+  }
+  if (!data || !data.length) {
+    const em = document.createElement('span'); em.className = 'empty';
+    em.textContent = 'Nenhuma falta registrada ainda.'; main.appendChild(em); return;
+  }
+  data.forEach(a => {
+    const row = document.createElement('div'); row.className = 'equipe-row';
+    const left = document.createElement('div'); left.className = 'equipe-row-info';
+    const nm = document.createElement('div'); nm.className = 'equipe-row-nome'; nm.textContent = a.membro || '—';
+    const wh = document.createElement('div'); wh.style.cssText = 'font-size:12px;color:var(--gold);';
+    wh.textContent = (a.data ? dataLabel(a.data) : '—') + (a.horario ? ' ' + a.horario : '') + ' · ' + comLabel(a.comunidade);
+    const fn = document.createElement('div'); fn.className = 'equipe-row-meta';
+    fn.textContent = (FUNCAO_LABEL[a.funcao] || a.funcao) + (a.substituto ? ' · coberto por ' + a.substituto : ' · vaga aberta');
+    left.append(nm, wh, fn);
+    const badge = document.createElement('span'); badge.className = 'badge';
+    badge.style.cssText = 'flex:none;color:var(--danger-text);font-weight:700;font-size:11px;';
+    badge.textContent = 'faltou';
+    row.append(left, badge); main.appendChild(row);
+  });
+}
+
 async function renderViewEquipe() {
   const main = document.getElementById('main-content');
   main.textContent = '';
@@ -627,6 +664,22 @@ async function renderViewEquipe() {
     btnAviso.onclick = () => avisarTodos(); acoes.appendChild(btnAviso);
   }
   main.appendChild(acoes);
+
+  // Aviso de ausência e falta são coisas OPOSTAS: uma é "avisou antes", a outra é "não
+  // apareceu", apurada na chamada. Ficam na mesma tela porque tratam do mesmo assunto, e
+  // em abas separadas porque misturá-las apagaria a diferença entre quem foi responsável e
+  // quem sumiu — que é o que alimenta a frequência de cada um.
+  const abas = document.createElement('div'); abas.className = 'view-toggle';
+  [['avisos','Avisos de ausência'], ['faltas','Faltas']].forEach(([id, rot]) => {
+    const b = document.createElement('button');
+    b.className = 'view-btn' + (id === abaAusencias ? ' active' : '');
+    b.textContent = rot;
+    b.onclick = () => { abaAusencias = id; renderViewEquipe(); };
+    abas.appendChild(b);
+  });
+  const alvoAba = document.createElement('div');
+  main.append(abas, alvoAba);
+  if (abaAusencias === 'faltas') { await renderAbaFaltas(alvoAba); return; }
 
   // KPIs
   const { count: totalAus } = await sb.from('acolitos_ausencias')
