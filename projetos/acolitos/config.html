@@ -56,16 +56,20 @@
 // A seção inicial PRECISA existir em SECOES — senão o painel abre numa tela
 // que não tem botão no menu e, ao sair dela, não há como voltar sem recarregar.
 let ctx = null, secaoAtual = 'identidade';
-// 'listas' agora é UMA seção com as oito listas dentro (era Competências, Tipos de celebração,
-// Funções litúrgicas, Categorias da Tesouraria, Times — cinco entradas para o mesmo editor —
+// As seções em quatro grupos. Antes eram 13 botões soltos, sem nenhuma pista do que era o quê:
+// quem procurava onde se edita um time olhava um por um. O agrupamento é só visual — nenhuma
+// seção sumiu e nenhum id mudou.
+//
+// 'listas' é UMA seção com as oito listas dentro (era Competências, Tipos de celebração,
+// Funções litúrgicas, Categorias da Tesouraria e Times — cinco entradas para o mesmo editor —
 // mais os Motivos de ausência, que viviam fora do Config, no fim da tela de Ausências).
-const SECOES = [
-  ['identidade','Identidade'], ['navegacao','Navegação'], ['equipe','Equipe & Permissões'],
-  ['listas','Listas'], ['modelos','Modelos de escala'],
-  ['gerador','Regras do gerador'], ['comunidades','Comunidades & horários'],
-  ['cadastro','Campos do cadastro'], ['crm','Etapas do CRM'], ['niveis','Níveis / Jornada'],
-  ['missoes','Missões & XP'], ['logins','Logins (usuário/senha)'], ['admins','Admins & superadmin'],
+const GRUPOS = [
+  ['A paróquia',        [['identidade','Identidade'], ['comunidades','Comunidades & horários'], ['listas','Listas']]],
+  ['As pessoas',        [['equipe','Equipe & Permissões'], ['admins','Admins & superadmin'], ['logins','Logins (usuário/senha)'], ['cadastro','Campos do cadastro']]],
+  ['Como o app funciona',[['navegacao','Navegação'], ['gerador','Regras do gerador'], ['modelos','Modelos de escala'], ['niveis','Níveis / Jornada'], ['missoes','Missões & XP']]],
+  ['Os módulos',        [['crm','Etapas do CRM']]],
 ];
+const SECOES = GRUPOS.flatMap(([,itens]) => itens);
 async function init(){
   ctx = await initModulo();
   if (!ctx) return;
@@ -78,7 +82,12 @@ function render(){
   const t = document.createElement('h1'); t.className='page-title'; t.textContent='Configuração'; main.appendChild(t);
   const wrap = document.createElement('div'); wrap.className='cfg-wrap';
   const side = document.createElement('div'); side.className='cfg-side';
-  SECOES.forEach(([id,label])=>{ const b=document.createElement('button'); b.className='cfg-item'+(id===secaoAtual?' on':''); b.textContent=label; b.onclick=()=>{secaoAtual=id;render();}; side.appendChild(b); });
+  GRUPOS.forEach(([titulo,itens])=>{
+    const h=document.createElement('div');
+    h.style.cssText='font-family:Sora,sans-serif;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text-muted);margin:14px 0 5px;padding-left:2px;';
+    h.textContent=titulo; side.appendChild(h);
+    itens.forEach(([id,label])=>{ const b=document.createElement('button'); b.className='cfg-item'+(id===secaoAtual?' on':''); b.textContent=label; b.onclick=()=>{secaoAtual=id;render();}; side.appendChild(b); });
+  });
   const body = document.createElement('div'); body.id='cfg-body'; body.className='cfg-body';
   wrap.append(side, body); main.appendChild(wrap);
   // 'modelos' não entra aqui: vive dentro de 'tipos' (Tipos & Modelos).
