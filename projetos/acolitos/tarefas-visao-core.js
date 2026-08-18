@@ -18,11 +18,15 @@
   // trazia os 176 membros, e escolher alguém de fora do time criava uma cobrança que a pessoa
   // nem sabia que existia.
   //
-  // ATENÇÃO ao usar: hoje só 4 das 176 pessoas estão em algum time. A lista vai ser curta, e
-  // isso é o dado, não um defeito da regra — preencher os times é o que a destrava.
+  // ATENÇÃO ao usar: a lista é curta enquanto pouca gente estiver em algum time. Lista curta
+  // é o DADO, não defeito da regra — quem a destrava é pôr gente nos times, no organograma
+  // das Casas. Lista VAZIA, porém, já foi defeito: ver o comentário dentro da função.
   function podeSerResponsavel(m, timeSlug) {
     if (!m) return false;
-    if (!m.eh_equipe) return false;
+    // NÃO se olha `eh_equipe` aqui. A RPC `acolitos_responsaveis_de_tarefa` devolve só
+    // {id, nome, apelido, setores} — o campo nunca chega, ficava `undefined`, e a lista de
+    // responsáveis saía SEMPRE vazia no ar, qualquer que fosse o dado no banco. Quem decide
+    // é estar num time, que é a regra do dono e a mesma da migration 053.
     var setores = Array.isArray(m.setores) ? m.setores : [];
     if (!setores.length) return false;
     // Sem time informado, basta estar em ALGUM. Com time, tem de estar NAQUELE — não faz

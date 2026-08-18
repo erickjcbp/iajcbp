@@ -20,31 +20,41 @@ test('tarefa inexistente não quebra', () => {
 });
 
 // ── quem pode ser responsável ───────────────────────────────────────
-const naEquipeEmTime  = { id:'a', eh_equipe:true,  setores:['formacao','escala'] };
-const naEquipeSemTime = { id:'b', eh_equipe:true,  setores:[] };
-const emTimeSemEquipe = { id:'c', eh_equipe:false, setores:['formacao'] };
+// ATENÇÃO: estes objetos têm de ter A MESMA FORMA do que a RPC `acolitos_responsaveis_de_tarefa`
+// devolve — `{id, nome, apelido, setores}`, e MAIS NADA. Foi por não respeitar isso que a tela
+// ficou com a lista de responsáveis vazia no ar: a regra exigia `m.eh_equipe`, a RPC nunca
+// devolveu esse campo, e os testes passavam porque as amostras aqui o traziam à mão.
+const emTime     = { id:'a', nome:'Ana',   apelido:'Ana',   setores:['formacao','escala'] };
+const semTime    = { id:'b', nome:'Bruno', apelido:'Bruno', setores:[] };
+const outroTime  = { id:'c', nome:'Caio',  apelido:'Caio',  setores:['almoxarifado'] };
 
-test('está num time E é da equipe: pode', () => {
-  assert.strictEqual(podeSerResponsavel(naEquipeEmTime), true);
+test('o objeto que o BANCO realmente devolve passa na regra', () => {
+  // regressão: sem eh_equipe nenhum, como vem da RPC
+  assert.strictEqual(podeSerResponsavel(emTime), true);
 });
-test('é da equipe mas não está em time nenhum: NÃO pode', () => {
-  assert.strictEqual(podeSerResponsavel(naEquipeSemTime), false);
-});
-test('está num time mas não é da equipe: NÃO pode', () => {
-  assert.strictEqual(podeSerResponsavel(emTimeSemEquipe), false);
+test('não está em time nenhum: NÃO pode', () => {
+  assert.strictEqual(podeSerResponsavel(semTime), false);
 });
 test('com time informado, tem de estar NAQUELE time', () => {
-  assert.strictEqual(podeSerResponsavel(naEquipeEmTime, 'formacao'), true);
-  assert.strictEqual(podeSerResponsavel(naEquipeEmTime, 'almoxarifado'), false);
+  assert.strictEqual(podeSerResponsavel(emTime, 'formacao'), true);
+  assert.strictEqual(podeSerResponsavel(emTime, 'almoxarifado'), false);
 });
 test('setores ausente ou nulo não quebra', () => {
-  assert.strictEqual(podeSerResponsavel({ id:'d', eh_equipe:true }), false);
-  assert.strictEqual(podeSerResponsavel({ id:'e', eh_equipe:true, setores:null }), false);
+  assert.strictEqual(podeSerResponsavel({ id:'d', nome:'D' }), false);
+  assert.strictEqual(podeSerResponsavel({ id:'e', nome:'E', setores:null }), false);
   assert.strictEqual(podeSerResponsavel(null), false);
 });
-test('a lista de possíveis filtra os três casos de uma vez', () => {
-  const r = responsaveisPossiveis([naEquipeEmTime, naEquipeSemTime, emTimeSemEquipe], 'formacao');
+test('eh_equipe, se vier, é IGNORADO — quem manda é estar no time', () => {
+  // o campo não vem da RPC; se algum dia vier, não pode voltar a barrar ninguém
+  assert.strictEqual(podeSerResponsavel({ id:'f', setores:['formacao'], eh_equipe:false }), true);
+});
+test('a lista de possíveis filtra por time', () => {
+  const r = responsaveisPossiveis([emTime, semTime, outroTime], 'formacao');
   assert.deepStrictEqual(r.map(m => m.id), ['a']);
+});
+test('sem time informado, entra quem está em QUALQUER time', () => {
+  const r = responsaveisPossiveis([emTime, semTime, outroTime], null);
+  assert.deepStrictEqual(r.map(m => m.id), ['a','c']);
 });
 
 // ── filtro ──────────────────────────────────────────────────────────

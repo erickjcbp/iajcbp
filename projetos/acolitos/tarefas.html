@@ -595,8 +595,23 @@ async function abrirFormTarefa() {
     });
   }
   preencherResponsaveis();
-  sTime.onchange = preencherResponsaveis;
   mk('Responsável (opcional)', sResp);
+  // Lista vazia sem falha nenhuma tem um motivo concreto, e a pessoa não tem como adivinhar:
+  // ou ninguém foi posto num time ainda, ou ninguém foi posto NAQUELE time. Sem esta linha o
+  // campo só oferece "Ninguém (fica com o time)" e parece defeito.
+  const dicaResp = document.createElement('div');
+  dicaResp.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-8px 0 12px;';
+  function atualizarDicaResp() {
+    const n = responsaveisPossiveis(membros, sTime.value || null).length;
+    if (falhouMembros || n) { dicaResp.textContent = ''; dicaResp.style.display = 'none'; return; }
+    dicaResp.style.display = '';
+    dicaResp.textContent = sTime.value
+      ? 'Ninguém está neste time ainda. Ponha gente nos times pelo organograma, em Casas.'
+      : 'Ninguém está em nenhum time ainda. Ponha gente nos times pelo organograma, em Casas.';
+  }
+  atualizarDicaResp();
+  sResp.parentNode.appendChild(dicaResp);
+  sTime.onchange = () => { preencherResponsaveis(); atualizarDicaResp(); };
 
   const iPrazo = document.createElement('input'); iPrazo.className = 'form-input'; iPrazo.type = 'date';
   mk('Prazo (opcional)', iPrazo);
