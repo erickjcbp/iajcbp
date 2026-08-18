@@ -21,8 +21,7 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ## 2. Backlog sem prazo
 
-- **Central do Servo** — aprovar candidatura a vaga não revalida do lado do servidor. É o irmão
-  do problema que a 052 fechou, em outro fluxo. Pequeno.
+*(vazio)*
 
 ---
 
@@ -80,3 +79,9 @@ sozinha, porque ela não sabe a idade.
 - **Missões F2 e F3 já estavam no ar** — minha anotação de "pendentes" estava velha. Conferido no
   banco (as funções existem) e no código (as telas chamam). F1 a F4 completas.
 - **Landing** conferida pelo dono.
+- **Central do Servo** — a anotação de "aprovar candidatura não revalida a vaga" também estava
+  velha: a **052** fechou isso. Conferido o fluxo inteiro: a lista de Vagas já mostrava só as
+  realmente abertas (compara o modelo com quem está escalado e esconde missa onde a pessoa já
+  serve), aprovar recusa quando encheu, e a tela diz o motivo. Sobra só a fresta de a vaga encher
+  ENTRE ver a lista e se candidatar — o pedido é recusado com motivo certo. Desconforto, não
+  defeito.
