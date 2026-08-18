@@ -97,5 +97,13 @@ o buraco é quase invisível.
   devolve. Não era o banco. Junto: lista vazia passou a dizer o motivo.
 - **Tarefas: editar, apagar e o Reabrir resolvendo a próxima recorrência.**
 - **Remover um time avisa** quantas tarefas e pessoas ainda dependem dele.
+- **A seção "Listas" acabou** — cada lista foi para o módulo a que serve, e "Os módulos" passou
+  de um item para seis. 21 editores conferidos um a um.
+- **A Configuração no celular** — vira lista que abre em tela cheia, com voltar. E o conteúdo
+  parou de estourar a borda (a caixinha "Maior" aparecia cortada).
+- **Todo ícone do app estava virando mancha preta** fora da barra de navegação: `_svgIcon` não
+  dizia que o desenho é traçado, e só a barra tinha a regra. Uma regra no `shared.css` resolveu
+  para todas as telas. Botões de ação ganharam NOME junto do ícone — no celular o texto de ajuda
+  nunca aparece.
 - **Migrations 052, 053 e 054** aplicadas pelo dono e conferidas (`docs/CONFERIR-NO-BANCO.sql`
   deu OK nas três; de fora, confirmei `origem_id` e que nada foi aberto sem querer).
