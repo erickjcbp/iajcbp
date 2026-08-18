@@ -5,31 +5,31 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ---
 
-## 1. Travado no acesso ao banco
+## 1. Acesso ao banco — ✔ RESOLVIDO em 18/08/2026
 
-**Nada pendente para colar** — 048 a 054 estão todas aplicadas e conferidas. O que continua
-travado é o meu ACESSO: a senha no `.env` está velha, o `psql` não está instalado nesta máquina,
-o Docker está parado, e o acesso do Supabase enxerga só o projeto do iamundi
-(`dashboard-instagram`). Retestado em 18/08.
+A senha estava numa pasta vazia em `~/Downloads`, cujo NOME era a senha. O `.env` foi atualizado.
+(O `psql` existia o tempo todo, em `/opt/homebrew/opt/libpq/bin/` — fora do caminho. Minha
+checagem anterior dizia "não instalado" e estava errada.)
 
-**Destrava com uma coisa só:** a senha do banco atualizada no `.env`, **ou** o acesso do Supabase
-apontado para a conta `erickjcbp`.
+**O que isso destravou, tudo conferido no banco de verdade:**
 
-| o que | por que importa |
-|---|---|
-| **As 31 migrations que faltam** | `docs/migrations/` vai de 001 a 011 e pula para 043: as **012 a 042 não existem em arquivo**. Não dá para reconstruir o banco do zero. **É o risco mais sério da lista.** |
-| **Conferir os kits** | Saber se o kit em modo *trava* já existe no Config. Enquanto não existir, o código está inerte e as **9 liberações acordadas** não estão gravadas em lugar nenhum. |
-| **Conferir a "Leitura B"** | 40 pessoas ainda constam aptas em cruz e vela mas são barradas pela regra. Saber se já foram marcadas. |
+- ✔ **A fotografia da estrutura** está em `db/estrutura-completa.sql`. Rodando num banco vazio,
+  ela devolve a estrutura inteira: 40 tabelas, 92 funções, 75 regras de acesso, proteção de linha
+  nas 40 tabelas. **As 31 mudanças perdidas continuam perdidas uma a uma** — o que se recuperou
+  foi o resultado delas, que é o que permite reconstruir. Numeração segue da 055 em diante.
+- ✔ **052, 053 e 054 conferidas lendo a estrutura**, não por dedução: `vaga_cheia` e o bloqueio
+  contra dois coordenadores simultâneos estão na função; `eh_equipe` sumiu da lista de
+  responsáveis; `origem_id` e seu índice existem. E a 051 continua de pé — `anon` sem permissão
+  na tabela, `authenticated` com ela.
+- ✔ **O kit em modo trava EXISTE** ("Kit processional", ativo, matriz, idade mínima 14), com
+  **8 liberados**. A combinação eram 9: falta **Lucas Bernardo** — que está `nao_treinado` em
+  cruz e vela, ou seja, fora por duas vias. Pode ter sido decisão do dono; não está registrado.
+- ✔ **A "Leitura B" encolheu sozinha.** Eram ~40; hoje são **2**: André de Souza Ribeiro e
+  Enrico Pompeu Secherini. E nenhum dos dois por idade — os dois estão **sem data de
+  nascimento**, então a regra não consegue dizer se têm 14 anos. É problema de dado, não de regra.
 
-**Isto custa caro no dia a dia, não só no papel:** para escrever a 052 eu precisei das colunas de
-`acolitos_modelos`, que vieram na migration **022** — bem no meio das que faltam. Tive de descobrir
-lendo o `config.html`. Acontece toda vez.
-
-**E custa na conferência:** desde a 051 eu não consigo mais medir de fora o comportamento de
-função atrás de login — a trava que eu mesmo pedi fechou a porta que eu usava. Sobrou
-`docs/CONFERIR-NO-BANCO.sql` (só leitura), que o dono cola e me diz o resultado.
-
----
+**Sobrou daqui:** decidir o que fazer com o Lucas Bernardo e com as duas datas de nascimento que
+faltam. Nenhum dos dois é trabalho meu — são decisões e dados.
 
 ## 2. Melhorias já decididas — ✔ TODAS FEITAS em 18/08/2026
 
