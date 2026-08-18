@@ -83,6 +83,7 @@
 <div class="main" id="main-content"><span class="loading">Carregando...</span></div>
 
 <script src="navegacao-core.js"></script>
+<script src="eventos-repetidos-core.js"></script>
 <script src="shared.js"></script>
 <script>
 const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
@@ -152,6 +153,7 @@ function dataCurta(ds) { const x = parseD(ds); return DIAS[x.getDay()] + ', ' + 
 
 function ymd(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
 function parseD(s) { return new Date(s + 'T00:00:00'); }
+function fmtBR(d) { const p=String(d||'').split('-'); return p.length===3 ? p[2]+'/'+p[1] : d; }
 function horaFmt(h) { return h ? h.slice(0,5).replace(':','h') : ''; }
 function comLabel(c) { return c === 'matriz' ? 'Matriz' : (c === 'santo_antonio' ? 'Sto. Antônio' : (c || '')); }
 
@@ -521,6 +523,33 @@ function abrirFormEvento(ev) {
   convWrap.append(convLbl, convBox); m.appendChild(convWrap);
   const iData = document.createElement('input'); iData.className = 'form-input'; iData.type = 'date'; iData.value = ev ? ev.data : selDate;
   mk('Data', iData);
+
+  // Repetição: cria os eventos DE VERDADE, um por data. Um evento precisa existir no
+  // calendário antes de acontecer — as pessoas confirmam presença e a chamada é por ocorrência.
+  // Só ao CRIAR: repetir na edição mexeria em eventos que já têm presença confirmada.
+  const repWrap = document.createElement('div'); repWrap.style.display = editando ? 'none' : '';
+  const sRep = document.createElement('select'); sRep.className = 'form-input';
+  [['nenhuma','Não se repete'],['semanal','Toda semana'],['quinzenal','A cada 15 dias'],['mensal','Todo mês']]
+    .forEach(([v,l])=>{ const o=document.createElement('option'); o.value=v; o.textContent=l; sRep.appendChild(o); });
+  const iAte = document.createElement('input'); iAte.className='form-input'; iAte.type='date'; iAte.style.display='none';
+  const avisoRep = document.createElement('p'); avisoRep.style.cssText='font-size:11px;color:var(--text-muted);margin:6px 0 0;';
+  const atualizaAviso = () => {
+    if (sRep.value === 'nenhuma') { avisoRep.textContent=''; iAte.style.display='none'; return; }
+    iAte.style.display='';
+    const datas = datasDoEvento({ inicio:iData.value, repete:sRep.value, ate:iAte.value });
+    avisoRep.textContent = !iAte.value
+      ? 'Escolha até quando repetir — sem isso, só o primeiro será criado.'
+      : (datas.length === 1 ? 'Só o dia escolhido entra nesse período.'
+         : 'Serão criados ' + datas.length + ' eventos, de ' + fmtBR(datas[0]) + ' a ' + fmtBR(datas[datas.length-1])
+           + (datas.length >= LIMITE_REPETICAO ? ' (o teto é ' + LIMITE_REPETICAO + ' de uma vez).' : '.'));
+  };
+  sRep.onchange = atualizaAviso; iAte.onchange = atualizaAviso; iData.addEventListener('change', atualizaAviso);
+  const repLbl = document.createElement('label'); repLbl.textContent='Repete';
+  const ateLbl = document.createElement('label'); ateLbl.textContent='Repetir até';
+  repWrap.append(repLbl, sRep, ateLbl, iAte, avisoRep);
+  ateLbl.style.display='none';
+  sRep.addEventListener('change', ()=>{ ateLbl.style.display = sRep.value==='nenhuma' ? 'none' : ''; });
+  m.appendChild(repWrap);
   const rowH = document.createElement('div'); rowH.className = 'evt-row';
   const wH1 = document.createElement('div'); const lH1 = document.createElement('label'); lH1.textContent = 'Início'; const iH = document.createElement('input'); iH.className = 'form-input'; iH.type = 'time'; iH.value = ev && ev.hora ? ev.hora.slice(0,5) : ''; wH1.append(lH1, iH);
   const wH2 = document.createElement('div'); const lH2 = document.createElement('label'); lH2.textContent = 'Fim (opcional)'; const iHf = document.createElement('input'); iHf.className = 'form-input'; iHf.type = 'time'; iHf.value = ev && ev.hora_fim ? ev.hora_fim.slice(0,5) : ''; wH2.append(lH2, iHf);
@@ -546,11 +575,23 @@ function abrirFormEvento(ev) {
       // "não convoca ninguém".
       convocados: convSel.size ? Array.from(convSel) : null,
     };
-    let error;
+    let error, criados = 1;
     if (editando) { ({ error } = await sb.from('acolitos_eventos').update(payload).eq('id', ev.id)); }
-    else { payload.created_by = ctx.user.id; ({ error } = await sb.from('acolitos_eventos').insert(payload)); }
+    else {
+      payload.created_by = ctx.user.id;
+      const datas = datasDoEvento({ inicio: iData.value, repete: sRep.value, ate: iAte.value });
+      if (!datas.length) { toast('Data inválida.', 'error'); save.disabled = false; save.textContent = 'Criar'; return; }
+      // Confirma antes quando for mais de um: criar 30 eventos sem avisar é o tipo de coisa
+      // que só se descobre olhando o calendário depois, e desfazer seria 30 exclusões.
+      if (datas.length > 1 && !await uiConfirm('Criar ' + datas.length + ' eventos, de ' + fmtBR(datas[0]) + ' a ' + fmtBR(datas[datas.length-1]) + '?')) {
+        save.disabled = false; save.textContent = 'Criar'; return;
+      }
+      const linhas = datas.map(d => ({ ...payload, data: d }));
+      ({ error } = await sb.from('acolitos_eventos').insert(linhas));
+      criados = datas.length;
+    }
     if (error) { toast('Erro ao salvar.', 'error'); save.disabled = false; save.textContent = editando ? 'Salvar' : 'Criar'; return; }
-    toast('✓ Evento salvo!'); selDate = iData.value;
+    toast(criados > 1 ? '✓ ' + criados + ' eventos criados!' : '✓ Evento salvo!'); selDate = iData.value;
     const d = parseD(iData.value); curY = d.getFullYear(); curM = d.getMonth();
     ov.remove(); await reload();
   };
