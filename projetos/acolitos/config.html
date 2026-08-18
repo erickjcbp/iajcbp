@@ -547,11 +547,20 @@ async function renderEquipe(b){
 // acolitos_tarefas). Aparece na tela Tarefas, no topo do grupo de cada time.
 async function renderSetorLista(b){
   b.textContent='';
-  const [{ data }, { data: cfgResp, error: errResp }] = await Promise.all([
+  const [{ data, error: errSet }, { data: cfgResp, error: errResp }] = await Promise.all([
     sb.from('acolitos_listas').select('id,valor,label').eq('tipo','setor').order('label'),
     sb.from('acolitos_config').select('valor').eq('chave','responsabilidades').maybeSingle(),
   ]);
   if (errResp) console.error('Setores: carregar responsabilidades falhou', errResp);
+  // Falha ao buscar os setores NÃO pode virar lista vazia: o supabase-js não lança exceção,
+  // devolve {data:null, error}, e `(data||[])` desenharia zero linha — indistinguível de
+  // "não há time cadastrado". Quem visse isso poderia sair criando os 11 times de novo.
+  if (errSet) {
+    console.error('Setores: carregar a lista falhou', errSet);
+    const e=document.createElement('div'); e.className='empty';
+    e.textContent='Não foi possível carregar os times. Isto é falha de carregamento, não ausência de time — recarregue a página.';
+    b.appendChild(e); return;
+  }
   // Sem saber o que já está salvo, editar aqui e salvar apagaria a responsabilidade dos
   // OUTROS times (o valor inteiro é um único objeto). Por isso, se a leitura falhar, o
   // campo fica travado — em vez de deixar editar em cima de um mapa que pode estar vazio
