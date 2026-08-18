@@ -1,0 +1,121 @@
+PROVAS DE TELA — o que é isto, e para que serve
+================================================
+
+Em uma frase: abre cada tela do app num navegador de verdade, fingindo que uma pessoa
+entrou, e confere o que apareceu.
+
+
+POR QUE EXISTE
+--------------
+
+O projeto já tinha testes (`npm run provar-regras`). Eles provam as REGRAS — quem pode
+ver o quê, como a escala é gerada, quem entra em cada time. São rápidos e bons.
+
+Só que eles não abrem tela nenhuma. E a maior parte deste app mora dentro de arquivos
+.html com o código junto, onde aquele tipo de teste não alcança.
+
+Em 17/08/2026 isso cobrou caro: uma revisão achou SEIS defeitos graves que a suíte
+inteira não via. Eram todos do mesmo tipo — código que só quebra na hora de rodar, com
+a escrita perfeitamente correta. E pior: nem abrir a tela no navegador mostrava, porque
+quem abria não estava logado, e sem sessão a tela desiste na primeira linha, antes de
+chegar no pedaço quebrado. Foi dito "zero erro" duas vezes, e as duas estavam erradas.
+
+Esta ferramenta faz justamente a coisa que faltava: SIMULA A SESSÃO e dá a partida na
+tela de verdade. Depois pergunta ao próprio navegador o que ficou escrito ali.
+
+
+COMO RODAR
+----------
+
+    npm run provar-telas              todas as telas
+    npm run provar-telas -- caixa.html   só uma tela (só a fumaça)
+
+    npm run provar-regras             os testes rápidos, sem navegador
+    npm test                          os dois
+
+Leva cerca de 1 minuto. Precisa do Google Chrome instalado (usa o que você já tem —
+não baixa navegador nenhum). Se o Chrome estiver em outro lugar:
+
+    CHROME_PARA_PROVAS="/caminho/do/chrome" npm run provar-telas
+
+Se faltar a biblioteca que dirige o navegador, rode `npm install` uma vez. Ela é só de
+desenvolvimento: não vai para o site publicado.
+
+
+O QUE ELE CONFERE
+-----------------
+
+FUMAÇA — as 19 telas com login abrem em quatro papéis (membro, cerimoniário, equipe e
+admin), sem erro de programação e sem vir em branco. É exigente o bastante para pegar
+os seis defeitos de 17/08, e barato: uma linha por tela.
+
+E confere a tranca: o Config é do superadmin, então a prova EXIGE que os outros três
+sejam mandados embora. Se um dia a tranca cair, aparece aqui.
+
+PROVAS — perguntas específicas, uma por defeito que já aconteceu de verdade:
+
+  · a barra de baixo acende o lugar onde a pessoa está (a Ausências acendia "Caixa");
+  · o Config › Navegação mostra os mesmos itens da barra (faltava a Tarefas);
+  · função criada por você entra nos Modelos de escala, na tela E no que é gravado.
+
+REGRA: defeito que o dono encontrar usando o app vira prova aqui. É assim que a lista
+cresce — não por imaginação, por cicatriz.
+
+
+O QUE ELE **NÃO** PROVA (para ninguém confiar demais)
+-----------------------------------------------------
+
+· Não toca no banco de verdade. As respostas do banco são de mentira, e por padrão
+  vazias. Uma tela pode passar aqui e mostrar coisa errada com dado real.
+
+· Não prova a permissão de módulo. A prova substitui o `initModulo`, que é justamente
+  quem gateia a porta na vida real. A única tranca conferida é a do Config, que a
+  própria tela faz. Quem quiser provar as outras terá de mexer nisto primeiro.
+
+· Não prova aparência. Ele lê o texto que ficou na tela, não se está bonito, alinhado
+  ou legível no celular.
+
+· Não clica em tudo. Cada prova faz o caminho que ela declara e nada mais.
+
+· "Passou" quer dizer: abriu, não estourou, e o que a prova perguntou está lá.
+
+
+DOIS CUIDADOS QUE ESTÃO NO CÓDIGO, E O MOTIVO
+---------------------------------------------
+
+1. Erro de rede causado pela própria prova NÃO conta como defeito. A prova corta tudo
+   que é de fora (fontes do Google, por exemplo) para não depender de internet — e isso
+   fazia o navegador reclamar. Contar essa reclamação seria INVENTAR defeito, e um
+   verificador que inventa defeito é pior do que nenhum: ninguém acredita mais nele.
+
+2. Passo que não acha o que procura APARECE como falha. Se a prova ia clicar em
+   "Modelos de escala" e o botão não existe mais, ela não segue em silêncio — senão
+   diria "está tudo certo" sobre uma tela que nunca chegou a abrir.
+
+
+ARQUIVOS
+--------
+
+  abrir-tela.mjs     o motor: sobe um servidor local, simula a sessão, dá a partida na
+                     tela e devolve o que apareceu (texto, erros, barra, e o que um
+                     botão MANDARIA gravar no banco).
+  telas.prova.mjs    o que se exige de cada tela. É aqui que se acrescenta prova nova.
+
+
+COMO ACRESCENTAR UMA PROVA
+--------------------------
+
+Abra `telas.prova.mjs` e escreva uma função no mesmo formato das que já estão lá:
+
+    const r = await provas.abrir('caixa.html', {
+      papel: PAPEIS.equipe,
+      rpcs: { acolitos_solicitacoes_pendentes: { error: { message: 'recusado' } } },
+      passos: [{ clicar: 'Ver pendências' }],
+    });
+    exigir(/não consegui/i.test(r.texto), 'consulta recusada não vira "tudo em dia"');
+
+Repare no `error:` — dá para mandar o banco FALHAR. Vale usar: o erro mais caro deste
+projeto é consulta que falha e a tela dizendo "não há nada" em vez de "não consegui
+perguntar". Foi assim que uma tela escondeu pendência de verdade.
+
+Depois de escrever, chame a função lá embaixo, junto das outras.

@@ -53,6 +53,15 @@ certo; sem ela, alguém tem de lembrar.
   usuário e o contato de quem avisa ausência pelo formulário público). Fechadas pelas 055 e 056.
 - **Kits e "Leitura B" fechados:** Enrico liberado no Kit processional (de 8 para 9 liberados).
 
+**Ferramenta**
+- **As provas de tela viraram parte do projeto** (`projetos/acolitos/provas/`). O verificador
+  que simula a sessão e dá a partida na tela existia solto, refeito a cada sessão; agora é
+  `npm run provar-telas`: 19 telas em 4 papéis, mais as provas dos defeitos que já aconteceram
+  — 32 provas em ~1 minuto. **Provado que ele fica vermelho quando o app quebra**: sabotei a
+  Escala com uma função inexistente e desfiz a correção da barra; ele acusou as duas, e os
+  arquivos voltaram sem diferença. O LEIA-ME da pasta diz também o que ele NÃO prova (banco
+  de verdade, permissão de módulo, aparência) — para ninguém confiar demais no verde.
+
 **Telas**
 - **A barra dizia o lugar errado.** Abrir Escala › ⋯ Mais › Ausências levava à tela certa, mas
   a barra de baixo acendia **Caixa**: a Ausências não tem botão próprio e o código emprestava o

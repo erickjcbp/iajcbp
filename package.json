@@ -7,7 +7,9 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npm run provar-regras && npm run provar-telas",
+    "provar-regras": "node --test projetos/acolitos/*.test.js",
+    "provar-telas": "node projetos/acolitos/provas/telas.prova.mjs"
   },
   "repository": {
     "type": "git",
@@ -23,5 +25,8 @@
   "homepage": "https://github.com/erickjcbp/iajcbp#readme",
   "dependencies": {
     "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.8.0"
   }
 }
