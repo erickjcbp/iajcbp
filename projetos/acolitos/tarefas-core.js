@@ -16,12 +16,23 @@
   }
   function ultimoDia(a, m) { return new Date(Date.UTC(a, m, 0)).getUTCDate(); }
 
+  // Valida se a data está no formato 'AAAA-MM-DD' com mês 1-12 e dia 1-31.
+  // Trata dados ausentes ou malformados de frente: evita que NaN atravesse o cálculo.
+  function ehDataValida(d) {
+    if (!d || typeof d !== 'string') return false;
+    var p = partes(d);
+    if (isNaN(p.a) || isNaN(p.m) || isNaN(p.d)) return false;
+    if (p.a < 1 || p.m < 1 || p.m > 12 || p.d < 1 || p.d > 31) return false;
+    return true;
+  }
+
   function somarMeses(data, n) {
     var p = partes(data);
     var total = p.a * 12 + (p.m - 1) + n;
     var a = Math.floor(total / 12), m = (total % 12) + 1;
     // 31/01 + 1 mês não é 31/02: cai no último dia de fevereiro. Sem isto o JS
-    // empurraria para março, que é o tipo de surpresa que ninguém confere.
+    // empurraria para março, que é o tipo de surpresa que ninguém confere. O anual
+    // herda essa mesma regra — 29/02/2028 + 1 ano vira 28/02/2029.
     return texto(a, m, Math.min(p.d, ultimoDia(a, m)));
   }
   function somarDias(data, n) {
@@ -33,14 +44,30 @@
   function proximaTarefa(o) {
     o = o || {};
     var base = o.prazo || o.hoje;
+    var prazo;
+
+    // Base inutilizável (null, undefined, malformada, etc.) devolve {prazo:null}.
+    // Devolver null apagaria a recorrência — a corrente de tarefas morreria em
+    // silêncio, que é pior do que a data errada. {prazo:null} diz a verdade: existe
+    // uma próxima tarefa, e não deu para calcular a data dela. É exatamente o que
+    // fazemos em celebração sem celebração futura, então a garantia passa a valer
+    // para as quatro recorrências em vez de só uma.
     switch (o.recorrencia) {
-      case 'semanal':    return { prazo: somarDias(base, 7) };
-      case 'mensal':     return { prazo: somarMeses(base, 1) };
-      case 'anual':      return { prazo: somarMeses(base, 12) };
+      case 'semanal':
+        if (!ehDataValida(base)) return { prazo: null };
+        return { prazo: somarDias(base, 7) };
+      case 'mensal':
+        if (!ehDataValida(base)) return { prazo: null };
+        return { prazo: somarMeses(base, 1) };
+      case 'anual':
+        if (!ehDataValida(base)) return { prazo: null };
+        return { prazo: somarMeses(base, 12) };
       // Sem celebração futura cadastrada, a próxima nasce SEM prazo. Inventar uma data
       // seria pior: cobraria a pessoa por um dia que ninguém marcou.
-      case 'celebracao': return { prazo: o.proximaCelebracao || null };
-      default:           return null;
+      case 'celebracao':
+        return { prazo: o.proximaCelebracao || null };
+      default:
+        return null;
     }
   }
 

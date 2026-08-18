@@ -40,3 +40,19 @@ test('a cada celebração SEM celebração futura nasce sem prazo, não com data
 test('recorrência desconhecida não gera próxima', () => {
   assert.strictEqual(proximaTarefa({ recorrencia:'quinzenal', prazo:'2026-08-23', hoje:'2026-08-17' }), null);
 });
+
+test('base ausente em semanal devolve objeto, não null (recorrência não se perde)', () => {
+  assert.deepStrictEqual(proximaTarefa({ recorrencia:'semanal' }), { prazo: null });
+});
+
+test('prazo null e hoje indefinido em mensal devolve objeto com prazo null', () => {
+  assert.deepStrictEqual(proximaTarefa({ recorrencia:'mensal', prazo:null }), { prazo: null });
+});
+
+test('data malformada (barra em vez de traço) devolve objeto com prazo null', () => {
+  assert.deepStrictEqual(proximaTarefa({ recorrencia:'semanal', prazo:'2026/08/23', hoje:'2026-08-17' }), { prazo: null });
+});
+
+test('Date object em vez de string devolve objeto com prazo null', () => {
+  assert.deepStrictEqual(proximaTarefa({ recorrencia:'mensal', prazo:new Date('2026-08-23'), hoje:'2026-08-17' }), { prazo: null });
+});
