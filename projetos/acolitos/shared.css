@@ -172,6 +172,15 @@ body.has-switch { padding-top: calc(var(--header-h) + 46px + env(safe-area-inset
   -webkit-tap-highlight-color: transparent;
 }
 .nav-item span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Todo ícone desenhado por _svgIcon. Sem isto o SVG é PREENCHIDO pelo navegador e vira mancha
+   preta — era o que acontecia em todo lugar fora da barra de navegação. Tamanho em `em` para
+   acompanhar o texto do botão; regras mais específicas (.nav-item svg, .fab svg, .tf-mover svg…)
+   continuam mandando onde já existiam. */
+.ico { width: 1.15em; height: 1.15em; flex: none; fill: none; stroke: currentColor;
+       stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+/* Botões que são SÓ o ícone: o `em` os deixaria miúdos demais para o dedo. */
+.cfg-mini .ico, .mini-add .ico, .mini-del .ico { width: 15px; height: 15px; }
+
 .nav-item svg { width: 23px; height: 23px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; transition: filter .2s; }
 .nav-item.active { color: var(--gold); }
 .nav-item.active svg { stroke: var(--gold); filter: drop-shadow(0 0 6px rgba(232,185,74,.7)); }

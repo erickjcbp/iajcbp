@@ -420,11 +420,13 @@ async function apagarTarefa(t, btn) {
 // Editar e Apagar acompanham a tarefa nas duas visões — em cinza, para não competir com o
 // botão de mover, que é o gesto do dia a dia.
 function botoesEditarApagar(t) {
+  // Com NOME, não só ícone: num celular não há como passar o mouse por cima para descobrir o
+  // que um desenho faz, e o `title` nunca aparece.
   const ed = document.createElement('button'); ed.className = 'btn-sm gray';
-  ed.innerHTML = _svgIcon('editar'); ed.title = 'Editar tarefa'; // ícone fixo — seguro
+  ed.innerHTML = _svgIcon('editar') + ' Editar'; // ícone fixo — seguro
   ed.onclick = () => abrirFormTarefa(t);
-  const ap = document.createElement('button'); ap.className = 'btn-sm gray';
-  ap.innerHTML = _svgIcon('lixeira'); ap.title = 'Apagar tarefa'; // ícone fixo — seguro
+  const ap = document.createElement('button'); ap.className = 'btn-sm red';
+  ap.innerHTML = _svgIcon('lixeira') + ' Apagar'; // ícone fixo — seguro
   ap.onclick = () => apagarTarefa(t, ap);
   return [ed, ap];
 }

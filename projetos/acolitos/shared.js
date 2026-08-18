@@ -1661,7 +1661,11 @@ function _svgIcon(name) {
     'seta-esq':     'M19 12H5 M12 19l-7-7 7-7',
     'seta-dir':     'M5 12h14 M12 5l7 7-7 7',
   };
-  return `<svg viewBox="0 0 24 24"><path d="${d[name] || ''}"/></svg>`;
+  // A classe `ico` é o que faz o desenho ser TRAÇADO. Sem ela o SVG cai no padrão do navegador,
+  // que é preencher — e o ícone vira uma mancha preta. Isso acontecia em todo lugar menos na
+  // barra de navegação: cada tela que precisou de ícone escreveu a própria regra de CSS, e quem
+  // não lembrou ficou com a mancha. Agora a regra é uma só, em shared.css.
+  return `<svg class="ico" viewBox="0 0 24 24"><path d="${d[name] || ''}"/></svg>`;
 }
 
 // ── BRASÕES DAS CASAS (SVG próprio, sem emoji) ────────────────

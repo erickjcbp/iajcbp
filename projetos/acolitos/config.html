@@ -1109,8 +1109,8 @@ async function renderTimes(b) {
     const gente = doTime(t.valor);
     const row = document.createElement('div');
     row.style.cssText = 'border-bottom:1px solid var(--border);padding:9px 2px;';
-    const top = document.createElement('div'); top.style.cssText = 'display:flex;align-items:center;gap:8px;';
-    const info = document.createElement('div'); info.style.cssText = 'flex:1;min-width:0;cursor:pointer;';
+    const top = document.createElement('div'); top.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;';
+    const info = document.createElement('div'); info.style.cssText = 'flex:1 1 150px;min-width:0;cursor:pointer;';
     const nm = document.createElement('div'); nm.style.cssText = 'font-weight:700;font-size:13px;'; nm.textContent = t.label || t.valor;
     const sub = document.createElement('div'); sub.style.cssText = 'font-size:11px;color:var(--text-muted);';
     // Sem os membros carregados NÃO se escreve nada sobre gente: "sem ninguém ainda" seria
@@ -1122,8 +1122,10 @@ async function renderTimes(b) {
     sub.textContent = partes.join(' · ');
     info.append(nm, sub);
 
-    const bEd = document.createElement('button'); bEd.className = 'cfg-mini';
-    bEd.innerHTML = _svgIcon('editar'); bEd.title = 'Renomear time'; // ícone fixo — seguro
+    // Com NOME, não só ícone: num celular não há como passar o mouse por cima para descobrir o
+    // que um desenho faz. Dois botões mudos lado a lado deixam a pessoa sem saber em qual tocar.
+    const bEd = document.createElement('button'); bEd.className = 'btn-sm gray';
+    bEd.innerHTML = _svgIcon('editar') + ' Renomear'; // ícone fixo — seguro
     bEd.onclick = async () => {
       const nv = await uiPrompt('Novo nome para "' + (t.label || t.valor) + '":', { value: t.label || t.valor });
       if (nv == null) return;
@@ -1132,8 +1134,8 @@ async function renderTimes(b) {
       if (error) { console.error('Times: renomear falhou', error); toast('Não foi possível renomear.','error'); return; }
       renderTimes(b);
     };
-    const bDel = document.createElement('button'); bDel.className = 'cfg-mini danger';
-    bDel.innerHTML = _svgIcon('lixeira'); bDel.title = 'Remover time'; // ícone fixo — seguro
+    const bDel = document.createElement('button'); bDel.className = 'btn-sm red';
+    bDel.innerHTML = _svgIcon('lixeira') + ' Remover'; // ícone fixo — seguro
     bDel.onclick = async () => {
       const extra = await avisoDeTimeEmUso(t.valor);
       if (!await uiConfirm('Remover "' + (t.label || t.valor) + '"?' + extra)) return;
@@ -1141,7 +1143,11 @@ async function renderTimes(b) {
       if (error) { console.error('Times: remover falhou', error); toast('Não foi possível remover.','error'); return; }
       renderTimes(b);
     };
-    top.append(info, bEd, bDel); row.appendChild(top);
+    // Os dois andam JUNTOS: soltos, um cabia na primeira linha e o outro caía sozinho na
+    // segunda, e o par parecia acidente. Assim eles cabem os dois ou descem os dois.
+    const acoes = document.createElement('div'); acoes.style.cssText = 'display:flex;gap:8px;flex:0 0 auto;';
+    acoes.append(bEd, bDel);
+    top.append(info, acoes); row.appendChild(top);
 
     // O corpo abre por toque no nome — a tela mostra os times de relance e só desce no que
     // interessa. Sem isto, dez times com gente dentro viram uma parede de nomes.
