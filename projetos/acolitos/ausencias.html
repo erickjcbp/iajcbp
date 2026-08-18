@@ -55,6 +55,7 @@
 </div>
 
 <script src="navegacao-core.js"></script>
+<script src="acesso-core.js"></script>
 <script src="shared.js"></script>
 <script src="gerador-substituto.js"></script>
 <script>
@@ -304,7 +305,10 @@ async function init() {
   // precisa dela pra informar ausência. Não troque isto por initModulo({perm:'caixa'}).
   const _caps = navCaps(ctx);
   podeAprovar = _caps.isAdmin || _caps.perms.includes('caixa');
-  if (EQUIPE_ROLES.includes(_r) || _r === 'cerimonario') {
+  // Quem vê a visão da coordenação passa a ser decidido por acesso-core.js, testado em
+  // node. Medido no banco antes de trocar: a regra nova e a antiga dão o MESMO resultado
+  // para todo o cadastro de hoje — 0 pessoas de diferença.
+  if (podeVerTela({ tela: 'ausencias', role: _r, caps: _caps })) {
     await renderViewEquipe();
     if (podeAprovar) renderPendentesPublicas();
   }
