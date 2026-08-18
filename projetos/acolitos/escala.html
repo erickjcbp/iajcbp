@@ -293,6 +293,7 @@
 
 <script src="navegacao-core.js"></script>
 <script src="kits-core.js"></script>
+<script src="confirmar-escala-core.js"></script>
 <script src="shared.js"></script>
 <script src="gerador-substituto.js"></script>
 <script>
@@ -604,8 +605,12 @@ function renderCards() {
     const d=new Date(c.data+'T00:00:00');
     const mon=new Date(d);mon.setDate(d.getDate()-((d.getDay()+6)%7));
     const key=mon.toISOString().slice(0,10);
-    if(!semanas[key])semanas[key]={label:'Semana de '+mon.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}),items:[]};
+    if(!semanas[key])semanas[key]={label:'Semana de '+mon.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}),items:[],key:c.data};
     semanas[key].items.push(c);
+    // A chave da semana sai da MENOR data das celebrações dela: é texto 'AAAA-MM-DD' puro,
+    // sem passar por fuso. O `key` do agrupamento acima usa toISOString(), que é UTC e cai no
+    // dia anterior — serve para agrupar, não serve para guardar.
+    if(c.data < semanas[key].key) semanas[key].key = c.data;
   });
   Object.values(semanas).forEach(sem=>{
     const grp=document.createElement('div');grp.className='semana-grupo';
@@ -615,7 +620,9 @@ function renderCards() {
     const bGer=document.createElement('button');bGer.className='btn-sm wine';bGer.style.flexShrink='0';bGer.textContent='⚡ Gerar escala da semana';bGer.onclick=()=>gerarEscalaSemana(sem.items,bGer);
     const bLimp=document.createElement('button');bLimp.className='btn-sm gray';bLimp.style.flexShrink='0';bLimp.textContent='🧹 Limpar semana';bLimp.onclick=()=>limparEscalaSemana(sem.items,bLimp);
     const bExp=document.createElement('button');bExp.className='btn-sm';bExp.style.cssText='flex-shrink:0;background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2));border:1px solid var(--gold-dim);color:var(--gold-light);';bExp.textContent='📤 Exportar';bExp.onclick=()=>exportarSemana(sem.items,sem.label);
-    acoesSem.append(bGer,bLimp,bExp);
+    const bConf=document.createElement('button');bConf.className='btn-sm';bConf.style.cssText='flex-shrink:0;background:linear-gradient(165deg,rgba(46,139,87,.20),var(--surface2));border:1px solid rgba(46,139,87,.55);color:#8fdCa8;';
+    bConf.textContent='Confirmar escala da semana';bConf.onclick=()=>confirmarEscalaSemana(sem.items,sem.key,bConf);
+    acoesSem.append(bGer,bConf,bLimp,bExp);
     head.append(tit,acoesSem);
     const grid=document.createElement('div');grid.className='celebracoes-grid';
     sem.items.forEach(c=>{
@@ -1075,6 +1082,68 @@ async function trocarPosicao(pe) {
 }
 
 // Gera e SALVA a escala de todas as missas de um fim de semana (preenche só as vagas ainda vazias)
+// ── Confirmar a escala da semana (é o ÚNICO lugar que avisa quem está escalado) ──
+// Guarda quem já foi avisado em acolitos_config, chave 'escala_avisados', no formato
+// { 'AAAA-MM-DD da semana': [membro_id, ...] }. Não há coluna no banco para isto e não houve
+// como aplicar migration nesta sessão; a lista é podada para não crescer para sempre.
+async function confirmarEscalaSemana(celebs, chaveSemana, btnEl) {
+  const ids = (celebs || []).map(c => c.id);
+  const escalados = [];
+  ids.forEach(cid => (escalasMap[cid] || []).forEach(e => { if (e.membro_id) escalados.push(e.membro_id); }));
+  if (!escalados.length) { await uiAlert('Não há ninguém escalado nesta semana ainda.'); return; }
+
+  const { data: cfgRow, error: errCfg } = await sb.from('acolitos_config')
+    .select('valor').eq('chave', 'escala_avisados').maybeSingle();
+  if (errCfg) {
+    // Sem saber quem já foi avisado, confirmar avisaria todo mundo de novo. Melhor não fazer
+    // nada e dizer o motivo do que encher o celular do pessoal com aviso repetido.
+    console.error('Confirmar escala: ler avisados falhou', errCfg);
+    await uiAlert('Não foi possível conferir quem já foi avisado. Tente de novo daqui a pouco — confirmar agora poderia avisar todo mundo duas vezes.');
+    return;
+  }
+  const mapa = (cfgRow && cfgRow.valor && typeof cfgRow.valor === 'object') ? { ...cfgRow.valor } : {};
+  const novos = aNotificar({ escalados, jaAvisados: mapa[chaveSemana] || [] });
+  if (!novos.length) { await uiAlert('Todo mundo desta semana já foi avisado. Ninguém recebeu aviso repetido.'); return; }
+
+  const nomes = novos.map(id => { const m = membros.find(x => x.id === id); return m ? (m.apelido || m.nome) : '—'; });
+  const lista = nomes.slice(0, 8).join(', ') + (nomes.length > 8 ? ' e mais ' + (nomes.length - 8) : '');
+  if (!await uiConfirm('Avisar ' + novos.length + (novos.length === 1 ? ' pessoa' : ' pessoas') + ' de que estão escaladas?\n\n' + lista)) return;
+
+  const txt0 = btnEl ? btnEl.textContent : '';
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Avisando...'; }
+  let enviou = false;
+  try {
+    const r = await apiPost('/api/enviar-push', { tipo: 'escalado', membros: novos,
+      titulo: 'Você foi escalado ⛪', texto: 'Você está na escala deste fim de semana. Confira suas missas no app.' });
+    enviou = !!(r && r.ok !== false);
+  } catch (e) { console.error('Confirmar escala: envio falhou', e); }
+  if (!enviou) {
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = txt0; }
+    await uiAlert('Não foi possível enviar os avisos. Ninguém foi marcado como avisado, então é só tentar de novo.');
+    return;
+  }
+
+  // Só marca como avisado DEPOIS de o envio dar certo: marcar antes faria a pessoa nunca
+  // receber, porque o botão passaria a ignorá-la.
+  mapa[chaveSemana] = [...(mapa[chaveSemana] || []), ...novos];
+  const podado = podarAvisados({ mapa, hoje: hojeLocalStr() });
+  const { error: errSalvar } = await sb.from('acolitos_config')
+    .upsert({ chave: 'escala_avisados', valor: podado, updated_at: new Date().toISOString() }, { onConflict: 'chave' });
+  if (btnEl) { btnEl.disabled = false; btnEl.textContent = txt0; }
+  if (errSalvar) {
+    console.error('Confirmar escala: gravar avisados falhou', errSalvar);
+    await uiAlert('Os avisos foram enviados, mas não consegui registrar quem já recebeu. Se apertar Confirmar de novo, essas pessoas receberão o aviso outra vez.');
+    return;
+  }
+  toast('✓ ' + novos.length + (novos.length === 1 ? ' pessoa avisada' : ' pessoas avisadas'));
+}
+
+// Data de hoje no fuso de quem está usando. toISOString() é UTC e vira o dia seguinte às 21h.
+function hojeLocalStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 async function gerarEscalaSemana(celebs, btnEl) {
   if (!celebs || !celebs.length) return;
   if (!await uiConfirm('Gerar a escala de ' + celebs.length + ' missa(s) deste fim de semana?\n(Preenche as vagas ainda vazias, mantendo o que já estiver montado.)')) return;
@@ -1147,7 +1216,9 @@ async function gerarEscalaSemana(celebs, btnEl) {
   if (novas.length) {
     const { error } = await sb.from('acolitos_escalas').insert(novas);
     if (error) { await uiAlert('Erro ao salvar: ' + error.message); if (btnEl) { btnEl.disabled = false; btnEl.textContent = txt0; } return; }
-    try { const _al=[...new Set((novas||[]).map(x=>x.membro_id))]; if(_al.length) apiPost('/api/enviar-push',{tipo:'escalado',membros:_al,titulo:'Você foi escalado ⛪',texto:'Você está na escala deste fim de semana. Confira suas missas no app.'}); } catch(_){}
+    // NÃO avisa ninguém aqui, de propósito. Gerar é rascunho: antes, a notificação saía no
+    // instante da geração e o celular de todo mundo recebia uma escala que ainda ia mudar.
+    // Quem avisa é o botão "Confirmar escala da semana", por decisão do dono em 18/08/2026.
   }
   await loadDados();
 }
@@ -1361,7 +1432,9 @@ async function salvarEscala() {
     novasLinhas = ins.data || [];
     gravadas = novasLinhas.length;
   }
-  try { const _novos=[...new Set((novasLinhas||[]).map(e=>e.membro_id).filter(id=>!_antigos.has(id)))]; if(_novos.length && typeof celAtual!=='undefined' && celAtual){ const _d=new Date(celAtual.data+'T00:00:00'); const _dia=_d.toLocaleDateString('pt-BR',{weekday:'short'}); const _com=celAtual.comunidade==='matriz'?'Matriz':'Sto. Antônio'; apiPost('/api/enviar-push',{tipo:'escalado',membros:_novos,titulo:'Você foi escalado ⛪',texto:_dia+' '+celAtual.horario+' — '+_com+'. Confira sua escala.'}); } } catch(_){}
+  // NÃO avisa aqui, de propósito: editar uma missa é ajuste, e o dono decidiu em 18/08/2026
+  // que nada sai sozinho. Quem entrar numa escala já confirmada é avisado quando ele apertar
+  // "Confirmar escala da semana" de novo — o botão alcança só quem ainda não foi avisado.
   if(novas.length && gravadas===0){
     salvandoEscala=false; btn.disabled=false; btn.textContent='Salvar Escala';
     toast('⚠ Nada foi gravado (0 de '+novas.length+') — sem permissão de escrita na escala.','error'); return;
