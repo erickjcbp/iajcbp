@@ -115,3 +115,34 @@ test('coordenação: caixa desconhecida pela ordem salva cai logo após jornada'
     perms:['jornada','caixa','membros','escala','crm','tesouraria','casas'], isAdmin:false, ordemCfg: salva });
   assert.strictEqual(ids(r)[ids(r).indexOf('jornada') + 1], 'caixa');
 });
+
+// ── O MAPA REAL, não o fabricado por este arquivo ────────────────────────────
+// Os testes acima montam o próprio `MODULOS` e verificam que montarItensNav repassa
+// o que recebeu. Isso NÃO prova que o destino gravado no shared.js está certo — e em
+// 17/08 a Caixa mudou de arquivo sem que nenhum teste pudesse notar se a troca falhasse.
+// Este teste lê o shared.js como TEXTO, que é a única forma de alcançar um mapa que
+// vive dentro de um arquivo de navegador, cheio de DOM, impossível de importar aqui.
+const fs = require('node:fs');
+const path = require('node:path');
+const SHARED = fs.readFileSync(path.join(__dirname, 'shared.js'), 'utf8');
+
+// Destino de cada módulo da barra da coordenação, como está gravado hoje.
+// Mudou um destino de propósito? Atualize aqui junto — é este o lembrete.
+const DESTINOS_ESPERADOS = {
+  jornada: 'jornada-admin.html',
+  caixa: 'caixa.html',
+  escala: 'escala.html',
+  membros: 'membros.html',
+  crm: 'crm.html',
+  tesouraria: 'tesouraria.html',
+  casas: 'casas.html',
+};
+
+test('o mapa REAL do shared.js aponta cada módulo para o arquivo certo', () => {
+  Object.entries(DESTINOS_ESPERADOS).forEach(([chave, destino]) => {
+    const linha = SHARED.split('\n').find(l => new RegExp('^\\s*' + chave + ':\\s*\\{').test(l));
+    assert.ok(linha, 'não achei a entrada "' + chave + '" no mapa de módulos do shared.js');
+    const href = (linha.match(/href:\s*'([^']+)'/) || [])[1];
+    assert.strictEqual(href, destino, 'o módulo "' + chave + '" aponta para ' + href);
+  });
+});
