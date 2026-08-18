@@ -735,35 +735,12 @@ async function renderViewEquipe() {
     };
     row.append(info,badge,del);main.appendChild(row);
   });
-  if (EQUIPE_ROLES.includes(ctx.membership.role)) renderMotivosAdmin(main);
+  // O editor de motivos saiu daqui: agora vive em Config › Listas › Motivos de ausência,
+  // junto das outras sete listas. Ficava no fim desta tela, que é o último lugar onde alguém
+  // procuraria por uma configuração.
 }
 
 // ── GESTÃO DA LISTA DE MOTIVOS (movida do Config) — só equipe ──
-async function renderMotivosAdmin(main) {
-  const card = document.createElement('div'); card.style.cssText = 'background:var(--surface);border:1px solid var(--border-wine);border-radius:6px;padding:14px;margin-top:20px;';
-  const h = document.createElement('div'); h.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);margin-bottom:4px;'; h.textContent = '⚙ Motivos de ausência (gerir)'; card.appendChild(h);
-  const sub = document.createElement('div'); sub.style.cssText = 'font-size:11px;color:var(--text-muted);margin-bottom:8px;'; sub.textContent = 'Crie ou exclua os motivos que aparecem ao registrar uma ausência.'; card.appendChild(sub);
-  const box = document.createElement('div'); card.appendChild(box);
-  const miniBtn = (txt, danger) => { const b = document.createElement('button'); b.textContent = txt; b.style.cssText = 'width:30px;height:30px;border-radius:6px;cursor:pointer;font-weight:700;border:1px solid ' + (danger ? 'var(--danger)' : 'var(--gold-dim)') + ';background:var(--surface2);color:' + (danger ? 'var(--danger-text)' : 'var(--gold-light)') + ';'; return b; };
-  async function pinta() {
-    box.textContent = '';
-    const { data } = await sb.from('acolitos_listas').select('id,valor,label').eq('tipo', 'motivo').order('label');
-    (data || []).forEach(item => {
-      const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
-      const nm = document.createElement('span'); nm.style.cssText = 'flex:1;font-size:13px;color:var(--text);'; nm.textContent = item.label || item.valor;
-      const del = miniBtn('−', true);
-      del.onclick = async () => { if (!await uiConfirm('Remover motivo "' + (item.label || item.valor) + '"?')) return; await sb.from('acolitos_listas').delete().eq('id', item.id); pinta(); };
-      row.append(nm, del); box.appendChild(row);
-    });
-    const add = document.createElement('div'); add.style.cssText = 'display:flex;gap:8px;margin-top:10px;';
-    const inp = document.createElement('input'); inp.className = 'form-input'; inp.placeholder = 'Novo motivo (ex.: 🏫 Prova)';
-    const bt = miniBtn('+', false);
-    bt.onclick = async () => { const v = inp.value.trim(); if (!v) return; const slug = v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '_').replace(/^_|_$/g, ''); await sb.from('acolitos_listas').insert({ tipo: 'motivo', valor: slug, label: v }); inp.value = ''; pinta(); };
-    add.append(inp, bt); box.appendChild(add);
-  }
-  pinta();
-  main.appendChild(card);
-}
 
 // ── REGISTRAR AUSÊNCIA (equipe/admin, em nome de um membro) ───
 async function abrirRegistroAusencia() {

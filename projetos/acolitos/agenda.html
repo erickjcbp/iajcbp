@@ -83,11 +83,16 @@
 <div class="main" id="main-content"><span class="loading">Carregando...</span></div>
 
 <script src="navegacao-core.js"></script>
+<script src="eventos-repetidos-core.js"></script>
 <script src="shared.js"></script>
 <script>
 const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-const TIPO_CELEB = { missa_comum:'Missa', solene:'Missa Solene', solenidade:'Solenidade', pontifical:'Pontifical (Bispo)', festa:'Festa Litúrgica', vigilia:'Vigília', crisma:'Crisma', casamento:'Casamento', batizado:'Batizado', ordenacao:'Ordenação', funeral:'Exéquias' };
-const EVT = {
+let TIPO_CELEB = { missa_comum:'Missa', solene:'Missa Solene', solenidade:'Solenidade', pontifical:'Pontifical (Bispo)', festa:'Festa Litúrgica', vigilia:'Vigília', crisma:'Crisma', casamento:'Casamento', batizado:'Batizado', ordenacao:'Ordenação', funeral:'Exéquias' };
+// Os tipos de evento eram FIXOS aqui: criar "Procissão" ou "Mutirão" exigia mexer no código,
+// e outra paróquia não conseguiria usar o app do jeito dela. Agora estes são só o PADRÃO —
+// o que estiver em Config › Listas › Tipos de evento sobrepõe e amplia (override-com-fallback,
+// o mesmo padrão que o resto do Config já usa).
+const EVT_PADRAO = {
   ensaio:           { label:'Ensaio',           cor:'#d35400' },
   reuniao:          { label:'Reunião',          cor:'#2980b9' },
   formacao:         { label:'Formação',         cor:'#8e44ad' },
@@ -97,7 +102,33 @@ const EVT = {
   evento:           { label:'Evento',           cor:'#c79f3e' },
   outro:            { label:'Outro',             cor:'#7f8c8d' },
 };
-function evtInfo(t) { return EVT[t] || EVT.outro; }
+let EVT = { ...EVT_PADRAO };
+let tiposIncompletos = false;
+function evtInfo(t) { return EVT[t] || EVT.outro || { label:'Evento', cor:'#7f8c8d' }; }
+
+// Lê os tipos configurados e junta com os padrões. Falha de consulta NÃO derruba a Agenda:
+// sem eles ela ainda funciona com os padrões, então o certo é registrar o erro e seguir —
+// mas nunca fingir que a paróquia não configurou nada.
+async function carregarTiposConfiguraveis() {
+  const [{ data: ev, error: e1 }, { data: cel, error: e2 }] = await Promise.all([
+    sb.from('acolitos_listas').select('valor,label,meta').eq('tipo','tipo_evento'),
+    sb.from('acolitos_listas').select('valor,label').eq('tipo','tipo_celebracao'),
+  ]);
+  // Falhar aqui e voltar aos padrões EM SILÊNCIO seria mentir: um tipo que a paróquia criou
+  // sumiria da lista, e alguém cadastraria o evento com o tipo errado sem desconfiar. A tela
+  // segue funcionando com os padrões, mas diz que está incompleta.
+  tiposIncompletos = !!(e1 || e2);
+  if (e1) console.error('Agenda: tipos de evento falharam', e1);
+  if (e2) console.error('Agenda: tipos de celebração falharam', e2);
+  EVT = { ...EVT_PADRAO };
+  (ev || []).forEach(x => {
+    const cor = (x.meta && x.meta.cor) || (EVT_PADRAO[x.valor] && EVT_PADRAO[x.valor].cor) || '#7f8c8d';
+    EVT[x.valor] = { label: x.label || x.valor, cor };
+  });
+  // Os tipos de celebração JÁ eram configuráveis no Config, e esta tela ignorava: um tipo
+  // criado pela paróquia aparecia aqui como "Celebração" genérica. Agora ela lê a lista.
+  (cel || []).forEach(x => { TIPO_CELEB[x.valor] = x.label || x.valor; });
+}
 
 let ctx, ehEquipe = false, meuId = null;
 let curY, curM, selDate;                 // mês visível + dia selecionado (YYYY-MM-DD)
@@ -127,6 +158,7 @@ function dataCurta(ds) { const x = parseD(ds); return DIAS[x.getDay()] + ', ' + 
 
 function ymd(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
 function parseD(s) { return new Date(s + 'T00:00:00'); }
+function fmtBR(d) { const p=String(d||'').split('-'); return p.length===3 ? p[2]+'/'+p[1] : d; }
 function horaFmt(h) { return h ? h.slice(0,5).replace(':','h') : ''; }
 function comLabel(c) { return c === 'matriz' ? 'Matriz' : (c === 'santo_antonio' ? 'Sto. Antônio' : (c || '')); }
 
@@ -137,9 +169,19 @@ async function init() {
   meuId = ctx.membro ? ctx.membro.id : (ctx.conta ? ctx.conta.id : null);
   renderHeader(ctx, 'agenda');
   renderBottomNav(ctx, 'agenda');
+  // Os tipos vem ANTES de desenhar: sem eles a tela pintaria os eventos com a cor e o nome
+  // errados por um instante, e um tipo criado pela paroquia apareceria como "Evento" generico.
+  await carregarTiposConfiguraveis();
   const hoje = new Date();
   curY = hoje.getFullYear(); curM = hoje.getMonth(); selDate = ymd(hoje);
   await reload();
+  // Depois do reload, não antes: o desenho da tela limpa o #main-content e o aviso sumiria.
+  if (tiposIncompletos) {
+    const av = document.createElement('div'); av.className = 'empty'; av.style.margin = '0 0 10px';
+    av.textContent = 'Não foi possível carregar os tipos configurados. A Agenda está mostrando só os tipos padrão — recarregue a página.';
+    const alvo = document.getElementById('main-content') || document.body;
+    alvo.insertBefore(av, alvo.firstChild);
+  }
 }
 
 function reload() { return viewMode === 'cal' ? loadMes() : loadTimeline(); }
@@ -404,8 +446,8 @@ function abrirEvento(e) {
       m.appendChild(ch);
     }
     const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:16px;border-top:1px solid var(--border);padding-top:12px;';
-    const ed = document.createElement('button'); ed.className = 'btn'; ed.style.flex = '1'; ed.textContent = '✎ Editar'; ed.onclick = () => { ov.remove(); abrirFormEvento(e); };
-    const del = document.createElement('button'); del.className = 'btn'; del.style.cssText = 'flex:1;border-color:#c0392b;color:#f0a499;'; del.textContent = '🗑 Excluir'; del.onclick = () => excluirEvento(e, ov);
+    const ed = document.createElement('button'); ed.className = 'btn'; ed.style.flex = '1'; ed.innerHTML = _svgIcon('editar') + ' Editar'; ed.onclick = () => { ov.remove(); abrirFormEvento(e); };
+    const del = document.createElement('button'); del.className = 'btn'; del.style.cssText = 'flex:1;border-color:#c0392b;color:#f0a499;'; del.innerHTML = _svgIcon('lixeira') + ' Excluir'; del.onclick = () => excluirEvento(e, ov);
     acts.append(ed, del); m.appendChild(acts);
   }
 
@@ -443,22 +485,83 @@ function abrirFormEvento(ev) {
   const sTipo = document.createElement('select'); sTipo.className = 'form-input';
   Object.keys(EVT).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = EVT[k].label; if (ev && ev.tipo === k) o.selected = true; sTipo.appendChild(o); });
   mk('Tipo', sTipo);
-  // Ensaio: convocar níveis (seleção manual)
+  // Convocar: por NÍVEL (como sempre foi) e agora também por TIME da pastoral.
+  // Os times entram na MESMA lista, com o prefixo 'time:'. Assim o que já está gravado
+  // continua valendo sem precisar mexer em nada — nível é o slug pelado, time vem marcado.
   const convSel = new Set(ev && ev.convocados ? ev.convocados : []);
-  const convWrap = document.createElement('div'); convWrap.style.display = (sTipo.value === 'ensaio') ? '' : 'none';
-  const convLbl = document.createElement('label'); convLbl.textContent = 'Convocar níveis (quem deve vir)';
+  // Antes só 'ensaio' podia convocar, escrito no código. Com os tipos configuráveis isso
+  // barraria qualquer tipo novo: quem criasse "Mutirão" não conseguiria chamar ninguém.
+  // Agora vale para todos — o tipo que não precisa disso é só deixar em branco.
+  const convWrap = document.createElement('div');
+  const convLbl = document.createElement('label'); convLbl.textContent = 'Convocar (quem deve vir) — opcional';
   const convBox = document.createElement('div'); convBox.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;';
-  (typeof NIVEIS !== 'undefined' ? NIVEIS : []).forEach(n => {
+
+  const fazChip = (chave, rotulo) => {
     const chip = document.createElement('button'); chip.type = 'button';
-    const paint = () => { const on = convSel.has(n.slug); chip.style.cssText = 'padding:5px 10px;border-radius:14px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid ' + (on ? 'var(--gold)' : 'var(--border-wine)') + ';background:' + (on ? 'rgba(232,185,74,.18)' : 'var(--surface2)') + ';color:' + (on ? 'var(--gold-light)' : 'var(--text-muted)') + ';'; };
-    chip.textContent = n.label; paint();
-    chip.onclick = () => { if (convSel.has(n.slug)) convSel.delete(n.slug); else convSel.add(n.slug); paint(); };
-    convBox.appendChild(chip);
-  });
+    const paint = () => { const on = convSel.has(chave); chip.style.cssText = 'padding:5px 10px;border-radius:14px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid ' + (on ? 'var(--gold)' : 'var(--border-wine)') + ';background:' + (on ? 'rgba(232,185,74,.18)' : 'var(--surface2)') + ';color:' + (on ? 'var(--gold-light)' : 'var(--text-muted)') + ';'; };
+    chip.textContent = rotulo; paint();
+    chip.onclick = () => { if (convSel.has(chave)) convSel.delete(chave); else convSel.add(chave); paint(); };
+    return chip;
+  };
+
+  const gNiv = document.createElement('div'); gNiv.style.cssText='font-size:11px;color:var(--text-muted);margin:2px 0 4px;'; gNiv.textContent='Por nível';
+  convBox.appendChild(gNiv);
+  const linhaNiv = document.createElement('div'); linhaNiv.style.cssText='display:flex;flex-wrap:wrap;gap:6px;width:100%;';
+  (typeof NIVEIS !== 'undefined' ? NIVEIS : []).forEach(n => linhaNiv.appendChild(fazChip(n.slug, n.label)));
+  convBox.appendChild(linhaNiv);
+
+  const gTim = document.createElement('div'); gTim.style.cssText='font-size:11px;color:var(--text-muted);margin:10px 0 4px;'; gTim.textContent='Por time da pastoral';
+  convBox.appendChild(gTim);
+  const linhaTim = document.createElement('div'); linhaTim.style.cssText='display:flex;flex-wrap:wrap;gap:6px;width:100%;';
+  convBox.appendChild(linhaTim);
+  // Os times vêm do Config, nunca de uma lista escrita aqui — foi lista escrita no código
+  // que impediu usar o kit processional em outra paróquia.
+  sb.from('acolitos_listas').select('valor,label').eq('tipo','setor').order('label')
+    .then(({ data, error }) => {
+      if (error) {
+        console.error('Agenda: carregar times falhou', error);
+        const av=document.createElement('span'); av.style.cssText='font-size:11px;color:var(--text-muted);';
+        av.textContent='Não foi possível carregar os times. Convocar por nível continua funcionando.';
+        linhaTim.appendChild(av); return;
+      }
+      if (!(data||[]).length) {
+        const av=document.createElement('span'); av.style.cssText='font-size:11px;color:var(--text-muted);';
+        av.textContent='Nenhum time cadastrado ainda (Config › Listas › Times da pastoral).';
+        linhaTim.appendChild(av); return;
+      }
+      (data||[]).forEach(t => linhaTim.appendChild(fazChip('time:'+t.valor, t.label||t.valor)));
+    });
+
   convWrap.append(convLbl, convBox); m.appendChild(convWrap);
-  sTipo.onchange = () => { convWrap.style.display = (sTipo.value === 'ensaio') ? '' : 'none'; };
   const iData = document.createElement('input'); iData.className = 'form-input'; iData.type = 'date'; iData.value = ev ? ev.data : selDate;
   mk('Data', iData);
+
+  // Repetição: cria os eventos DE VERDADE, um por data. Um evento precisa existir no
+  // calendário antes de acontecer — as pessoas confirmam presença e a chamada é por ocorrência.
+  // Só ao CRIAR: repetir na edição mexeria em eventos que já têm presença confirmada.
+  const repWrap = document.createElement('div'); repWrap.style.display = editando ? 'none' : '';
+  const sRep = document.createElement('select'); sRep.className = 'form-input';
+  [['nenhuma','Não se repete'],['semanal','Toda semana'],['quinzenal','A cada 15 dias'],['mensal','Todo mês']]
+    .forEach(([v,l])=>{ const o=document.createElement('option'); o.value=v; o.textContent=l; sRep.appendChild(o); });
+  const iAte = document.createElement('input'); iAte.className='form-input'; iAte.type='date'; iAte.style.display='none';
+  const avisoRep = document.createElement('p'); avisoRep.style.cssText='font-size:11px;color:var(--text-muted);margin:6px 0 0;';
+  const atualizaAviso = () => {
+    if (sRep.value === 'nenhuma') { avisoRep.textContent=''; iAte.style.display='none'; return; }
+    iAte.style.display='';
+    const datas = datasDoEvento({ inicio:iData.value, repete:sRep.value, ate:iAte.value });
+    avisoRep.textContent = !iAte.value
+      ? 'Escolha até quando repetir — sem isso, só o primeiro será criado.'
+      : (datas.length === 1 ? 'Só o dia escolhido entra nesse período.'
+         : 'Serão criados ' + datas.length + ' eventos, de ' + fmtBR(datas[0]) + ' a ' + fmtBR(datas[datas.length-1])
+           + (datas.length >= LIMITE_REPETICAO ? ' (o teto é ' + LIMITE_REPETICAO + ' de uma vez).' : '.'));
+  };
+  sRep.onchange = atualizaAviso; iAte.onchange = atualizaAviso; iData.addEventListener('change', atualizaAviso);
+  const repLbl = document.createElement('label'); repLbl.textContent='Repete';
+  const ateLbl = document.createElement('label'); ateLbl.textContent='Repetir até';
+  repWrap.append(repLbl, sRep, ateLbl, iAte, avisoRep);
+  ateLbl.style.display='none';
+  sRep.addEventListener('change', ()=>{ ateLbl.style.display = sRep.value==='nenhuma' ? 'none' : ''; });
+  m.appendChild(repWrap);
   const rowH = document.createElement('div'); rowH.className = 'evt-row';
   const wH1 = document.createElement('div'); const lH1 = document.createElement('label'); lH1.textContent = 'Início'; const iH = document.createElement('input'); iH.className = 'form-input'; iH.type = 'time'; iH.value = ev && ev.hora ? ev.hora.slice(0,5) : ''; wH1.append(lH1, iH);
   const wH2 = document.createElement('div'); const lH2 = document.createElement('label'); lH2.textContent = 'Fim (opcional)'; const iHf = document.createElement('input'); iHf.className = 'form-input'; iHf.type = 'time'; iHf.value = ev && ev.hora_fim ? ev.hora_fim.slice(0,5) : ''; wH2.append(lH2, iHf);
@@ -480,13 +583,27 @@ function abrirFormEvento(ev) {
       titulo, tipo: sTipo.value, data: iData.value,
       hora: iH.value || null, hora_fim: iHf.value || null,
       local: iLoc.value.trim() || null, descricao: iDesc.value.trim() || null,
-      convocados: sTipo.value === 'ensaio' ? Array.from(convSel) : null,
+      // Vale para qualquer tipo agora; vazio vira null, que é como o banco já guardava
+      // "não convoca ninguém".
+      convocados: convSel.size ? Array.from(convSel) : null,
     };
-    let error;
+    let error, criados = 1;
     if (editando) { ({ error } = await sb.from('acolitos_eventos').update(payload).eq('id', ev.id)); }
-    else { payload.created_by = ctx.user.id; ({ error } = await sb.from('acolitos_eventos').insert(payload)); }
+    else {
+      payload.created_by = ctx.user.id;
+      const datas = datasDoEvento({ inicio: iData.value, repete: sRep.value, ate: iAte.value });
+      if (!datas.length) { toast('Data inválida.', 'error'); save.disabled = false; save.textContent = 'Criar'; return; }
+      // Confirma antes quando for mais de um: criar 30 eventos sem avisar é o tipo de coisa
+      // que só se descobre olhando o calendário depois, e desfazer seria 30 exclusões.
+      if (datas.length > 1 && !await uiConfirm('Criar ' + datas.length + ' eventos, de ' + fmtBR(datas[0]) + ' a ' + fmtBR(datas[datas.length-1]) + '?')) {
+        save.disabled = false; save.textContent = 'Criar'; return;
+      }
+      const linhas = datas.map(d => ({ ...payload, data: d }));
+      ({ error } = await sb.from('acolitos_eventos').insert(linhas));
+      criados = datas.length;
+    }
     if (error) { toast('Erro ao salvar.', 'error'); save.disabled = false; save.textContent = editando ? 'Salvar' : 'Criar'; return; }
-    toast('✓ Evento salvo!'); selDate = iData.value;
+    toast(criados > 1 ? '✓ ' + criados + ' eventos criados!' : '✓ Evento salvo!'); selDate = iData.value;
     const d = parseD(iData.value); curY = d.getFullYear(); curM = d.getMonth();
     ov.remove(); await reload();
   };
@@ -497,9 +614,33 @@ function abrirFormEvento(ev) {
 
 // ── Chamada de presença do ensaio (coordenação) ──
 async function abrirChamadaEnsaio(e) {
-  const { data } = await sb.rpc('acolitos_ensaio_convocados', { p_evento: e.id });
-  const lista = data || [];
-  if (!lista.length) { toast('Nenhum nível convocado (edite o ensaio e convoque).', 'error'); return; }
+  // Os NÍVEIS convocados vêm da função que já existia; os TIMES são resolvidos por uma função
+  // nova e ADITIVA (migration 049), que pode ainda não estar aplicada — por isso a falha dela
+  // não derruba a chamada: perde-se os times, não a tela, e a pessoa é avisada do que faltou.
+  const timesConv = (e.convocados || []).filter(c => String(c).startsWith('time:')).map(c => String(c).slice(5));
+  const [{ data, error: errNiv }, porTime] = await Promise.all([
+    sb.rpc('acolitos_ensaio_convocados', { p_evento: e.id }),
+    timesConv.length ? sb.rpc('acolitos_membros_por_setor', { p_setores: timesConv })
+                     : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (errNiv) {
+    // Falha de consulta NÃO pode virar "ninguém foi convocado": seria dizer que o coordenador
+    // esqueceu de convocar quando na verdade não se conseguiu perguntar.
+    console.error('Agenda: convocados falhou', errNiv);
+    await uiAlert('Não foi possível carregar os convocados. Isto é falha de carregamento, não ausência de convocação — tente de novo.');
+    return;
+  }
+  if (porTime.error) console.error('Agenda: convocados por time falhou', porTime.error);
+
+  const vistos = new Set(); const lista = [];
+  [...(data || []), ...((porTime.data) || [])].forEach(p => {
+    if (!p || !p.id || vistos.has(p.id)) return;   // quem é do time E do nível conta uma vez só
+    vistos.add(p.id); lista.push(p);
+  });
+  if (timesConv.length && porTime.error) {
+    toast('Os times convocados não puderam ser carregados; mostrando só quem veio por nível.', 'error');
+  }
+  if (!lista.length) { toast('Ninguém convocado (edite o evento e convoque por nível ou por time).', 'error'); return; }
   const presentes = new Set(lista.filter(x => x.presente).map(x => x.id));
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e2) => { if (e2.target === ov) ov.remove(); };
   const m = document.createElement('div'); m.className = 'modal'; m.style.maxWidth = '440px';
