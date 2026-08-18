@@ -164,7 +164,11 @@ async function setConfig(chave, valor){
 const LISTAS_CFG = [
   { tipo:'competencia',    nome:'Competências',            dica:'O plano de desenvolvimento — aparecem na Jornada, em Competências de cada membro.', novo:'Nova competência…' },
   { tipo:'habilidade',     nome:'Habilidades',             dica:'O que a pessoa sabe fazer. É o mesmo que as funções litúrgicas veem como habilitação.', novo:'Nova habilidade…' },
-  { tipo:'funcao',         nome:'Funções litúrgicas',      dica:'As funções da celebração. A marca “Maior” reserva a função para cerimoniário no gerador.', novo:'Nova função (ex.: Báculo Auxiliar)', slug:true,
+  { tipo:'funcao',         nome:'Funções litúrgicas',      dica:'As funções da celebração. A marca “Maior” reserva a função para cerimoniário no gerador. As do sistema não podem ser removidas — só as que você criar.', novo:'Nova função (ex.: Báculo Auxiliar)', slug:true,
+    // As 13 do sistema aparecem junto das criadas aqui. Sem isto, elas sumiriam da tela e não
+    // haveria como marcar "Maior" nelas — que é justamente onde essa marca costuma valer.
+    // É função e não lista pronta porque FUNCOES_MODELO é declarada mais abaixo no arquivo.
+    padroes: () => (typeof FUNCOES_MODELO !== 'undefined' ? FUNCOES_MODELO : []),
     extra:{ modo:'interruptor', chave:'funcoes_maiores', rotulo:'Maior' } },
   { tipo:'tipo_evento',    nome:'Tipos de evento',        dica:'Ficam disponíveis ao criar um evento na Agenda (ensaio, retiro, procissão…). A cor é a bolinha no calendário.', novo:'Novo tipo de evento (ex.: Procissão)', slug:true,
     extra:{ modo:'cor', rotulo:'Cor no calendário' } },
@@ -238,10 +242,19 @@ async function renderListaUnica(b){
     toast('✓ Salvo!'); return true;
   }
 
-  (data||[]).forEach(item=>{
+  // Padrões do sistema primeiro, depois os que a paróquia criou. O padrão não tem `id`, e é
+  // isso que impede removê-lo: ele vive no código, não numa linha do banco.
+  const doSistema = (typeof conf.padroes === 'function' ? conf.padroes() : [])
+    .map(([valor,label]) => ({ valor, label, doSistema:true }));
+  const criados = (data||[]).map(x => ({ ...x, doSistema:false }));
+  const jaTem = new Set(criados.map(x => x.valor));
+  const itens = [...doSistema.filter(x => !jaTem.has(x.valor)), ...criados];
+
+  itens.forEach(item=>{
     const row=document.createElement('div'); row.style.cssText='padding:8px 2px;border-bottom:1px solid var(--border);';
     const top=document.createElement('div'); top.style.cssText='display:flex;align-items:center;gap:8px;';
     const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=item.label||item.valor;
+    if (item.doSistema) { const et=document.createElement('span'); et.style.cssText='font-size:10px;color:var(--text-muted);margin-left:6px;'; et.textContent='do sistema'; nm.appendChild(et); }
     top.appendChild(nm);
     if (conf.slug) { const sl=document.createElement('span'); sl.style.cssText='font-size:11px;color:var(--text-muted);'; sl.textContent=item.valor; top.appendChild(sl); }
 
@@ -259,12 +272,27 @@ async function renderListaUnica(b){
       lb.append(ck,tx); top.appendChild(lb);
     }
 
-    const del=document.createElement('button'); del.className='mini-del'; del.textContent='−';
-    del.onclick=async()=>{ if(!await uiConfirm('Remover "'+(item.label||item.valor)+'"?'))return;
-      const { error } = await sb.from('acolitos_listas').delete().eq('id',item.id);
-      if (error) { console.error('Listas: remover falhou', error); toast('Não foi possível remover.','error'); return; }
-      renderListaUnica(b); };
-    top.appendChild(del); row.appendChild(top);
+    if (!item.doSistema) {
+      // Renomear existia no editor antigo das funções e faz falta: um erro de digitação no
+      // nome obrigaria a apagar e recriar, e apagar perde a marca de "Maior" junto.
+      const ed=document.createElement('button'); ed.className='mini-add'; ed.innerHTML=_svgIcon('editar');
+      ed.title='Renomear'; ed.style.cssText='width:26px;height:26px;padding:0;display:inline-flex;align-items:center;justify-content:center;';
+      ed.onclick=async()=>{
+        const nv=await uiPrompt('Novo nome para "'+(item.label||item.valor)+'":', { value:item.label||item.valor });
+        if (nv==null) return;
+        const t=String(nv).trim(); if (!t) return;
+        const { error } = await sb.from('acolitos_listas').update({ label:t }).eq('id',item.id);
+        if (error) { console.error('Listas: renomear falhou', error); toast('Não foi possível renomear.','error'); return; }
+        renderListaUnica(b); };
+      top.appendChild(ed);
+      const del=document.createElement('button'); del.className='mini-del'; del.textContent='−';
+      del.onclick=async()=>{ if(!await uiConfirm('Remover "'+(item.label||item.valor)+'"?'))return;
+        const { error } = await sb.from('acolitos_listas').delete().eq('id',item.id);
+        if (error) { console.error('Listas: remover falhou', error); toast('Não foi possível remover.','error'); return; }
+        renderListaUnica(b); };
+      top.appendChild(del);
+    }
+    row.appendChild(top);
 
     if (conf.extra && conf.extra.modo==='cor') {
       // A cor mora no `meta` da própria linha, não em acolitos_config: é um dado DE CADA item,
