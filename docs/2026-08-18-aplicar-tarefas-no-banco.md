@@ -7,40 +7,54 @@ parado. Testei os três.
 
 ## Estado
 
-- ✅ **048** e **049** — aplicadas por você em 18/08/2026, e conferidas: a tabela recusa escrita
-  sem login (`42501`) e a função de convocar por time recusa execução sem login.
-- ⏳ **050** — pendente. Acrescenta o estado "em andamento" das tarefas (para o quadro Kanban) e
-  a função que lista quem pode ser responsável: só quem é da equipe **E** está em algum time.
+- ✅ **048**, **049** e **050** — aplicadas por você em 18/08/2026 e **conferidas rodando**, não
+  por leitura (veja abaixo).
+- ⏳ **051** — pendente. Uma linha só, e é a diferença entre "recusado" e "não há nada".
 
 ## O que fazer
 
 1. Abra o painel do Supabase no projeto dos acólitos, em **SQL Editor**.
 2. Cole o conteúdo inteiro de **`docs/APLICAR-NO-BANCO.sql`** e clique em Run.
-   Esse arquivo sempre contém **só o que ainda falta** — hoje, a migration 050.
+   Esse arquivo sempre contém **só o que ainda falta** — hoje, a migration 051.
    É idempotente: rodar duas vezes não quebra nada.
+3. Me avise que eu confiro de novo, do mesmo jeito.
 
-## O que cada uma faz
+## A conferência que estava pendente — feita em 18/08/2026
 
-**048 — a tabela das Tarefas dos times.** Sem ela, a aba Tarefas mostra "Não foi possível
-carregar as tarefas" (que é a mensagem certa para uma tabela que não existe, mas não é a
-estreia que você quer). **Esta é a urgente: a aba já está no ar.**
+Feita de fora, pela chave pública do site, **sem sessão nenhuma** — que é exatamente a situação
+que a trava precisa recusar. Resultado literal:
 
-**049 — convocar um evento por time da pastoral.** Cria uma função nova e **não toca em
-nenhuma existente**: se der errado, é só não usar. Sem ela, convocar por nível continua
-funcionando normalmente e os times aparecem como "não foi possível carregar" — nunca somem
-calados.
+| o que foi tentado sem login | resposta | veredito |
+|---|---|---|
+| ler `acolitos_tarefas` | `[]` com HTTP 200 | ⚠️ **não recusa** — é a 051 |
+| gravar em `acolitos_tarefas` | `42501` — *new row violates row-level security policy* | ✅ recusa |
+| executar `acolitos_membros_por_setor` (049) | `42501` — *permission denied for function* | ✅ recusa |
+| executar `acolitos_responsaveis_de_tarefa` (050) | `42501` — *permission denied for function* | ✅ recusa |
 
-## A conferência que ficou pendente
+As colunas da 050 (`andamento_em`, `andamento_por`) existem: a consulta a elas passa, e o
+controle com uma coluna inventada reclama com `42703`. Ou seja, o teste é capaz de acusar
+ausência — não é um "passou" vazio.
 
-A trava da tabela (quem não está logado não pode ler nem escrever) foi conferida **por leitura**,
-comparada linha a linha com as migrations 003 e 046 — mesmos papéis, mesmo `acolitos_get_role`,
-leitura e escrita separadas, nada alcançando quem não fez login. Mas **não foi provada rodando**,
-porque a tabela ainda não existe.
+**Nada foi gravado nesta conferência.** A tentativa de escrita levou um `responsavel_id` que não
+existe justamente para que, se a trava estivesse aberta, a linha ainda assim não entrasse.
 
-Depois de aplicar, a prova é rápida: tentar ler `acolitos_tarefas` com a chave anônima (sem login)
-e confirmar que é recusado. A 049 também: a função foi revogada de `public` e de `anon`, então
-quem não fez login não pode executá-la. Se voltar lista vazia em vez de recusa, me chame — lista vazia e recusa
-se parecem, e a diferença importa.
+## O que a 051 conserta
+
+As quatro tabelas irmãs (`acolitos_membros`, `acolitos_escalas`, `acolitos_ausencias`,
+`acolitos_listas`) **recusam** quem não fez login, com `42501`. A `acolitos_tarefas` devolvia
+lista vazia com sucesso — o mesmo que uma tabela vazia de verdade.
+
+Não é vazamento: nenhuma linha sai por ali. O problema é a resposta se parecer com "não há nada",
+porque é essa diferença que decide o que a tela escreve: *"não foi possível carregar as tarefas"*
+ou *"nenhuma tarefa por aqui"*. Dizer "está tudo em dia" quando não se conseguiu perguntar é o
+defeito que mais se repete neste projeto.
+
+A causa é pequena: as políticas da 048 são `to authenticated`, então para quem não fez login não
+existe política nenhuma, o banco não chega a consultar o `acolitos_get_role` — que é justamente
+quem recusa nas irmãs — e devolve zero linha calado. A 051 tira a permissão da tabela de quem não
+fez login, e aí a recusa acontece na porta.
+
+Quem fez login não muda nada.
 
 ## O que vem junto
 
