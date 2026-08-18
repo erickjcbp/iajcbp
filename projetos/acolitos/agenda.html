@@ -471,20 +471,54 @@ function abrirFormEvento(ev) {
   const sTipo = document.createElement('select'); sTipo.className = 'form-input';
   Object.keys(EVT).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = EVT[k].label; if (ev && ev.tipo === k) o.selected = true; sTipo.appendChild(o); });
   mk('Tipo', sTipo);
-  // Ensaio: convocar níveis (seleção manual)
+  // Convocar: por NÍVEL (como sempre foi) e agora também por TIME da pastoral.
+  // Os times entram na MESMA lista, com o prefixo 'time:'. Assim o que já está gravado
+  // continua valendo sem precisar mexer em nada — nível é o slug pelado, time vem marcado.
   const convSel = new Set(ev && ev.convocados ? ev.convocados : []);
-  const convWrap = document.createElement('div'); convWrap.style.display = (sTipo.value === 'ensaio') ? '' : 'none';
-  const convLbl = document.createElement('label'); convLbl.textContent = 'Convocar níveis (quem deve vir)';
+  // Antes só 'ensaio' podia convocar, escrito no código. Com os tipos configuráveis isso
+  // barraria qualquer tipo novo: quem criasse "Mutirão" não conseguiria chamar ninguém.
+  // Agora vale para todos — o tipo que não precisa disso é só deixar em branco.
+  const convWrap = document.createElement('div');
+  const convLbl = document.createElement('label'); convLbl.textContent = 'Convocar (quem deve vir) — opcional';
   const convBox = document.createElement('div'); convBox.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;';
-  (typeof NIVEIS !== 'undefined' ? NIVEIS : []).forEach(n => {
+
+  const fazChip = (chave, rotulo) => {
     const chip = document.createElement('button'); chip.type = 'button';
-    const paint = () => { const on = convSel.has(n.slug); chip.style.cssText = 'padding:5px 10px;border-radius:14px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid ' + (on ? 'var(--gold)' : 'var(--border-wine)') + ';background:' + (on ? 'rgba(232,185,74,.18)' : 'var(--surface2)') + ';color:' + (on ? 'var(--gold-light)' : 'var(--text-muted)') + ';'; };
-    chip.textContent = n.label; paint();
-    chip.onclick = () => { if (convSel.has(n.slug)) convSel.delete(n.slug); else convSel.add(n.slug); paint(); };
-    convBox.appendChild(chip);
-  });
+    const paint = () => { const on = convSel.has(chave); chip.style.cssText = 'padding:5px 10px;border-radius:14px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid ' + (on ? 'var(--gold)' : 'var(--border-wine)') + ';background:' + (on ? 'rgba(232,185,74,.18)' : 'var(--surface2)') + ';color:' + (on ? 'var(--gold-light)' : 'var(--text-muted)') + ';'; };
+    chip.textContent = rotulo; paint();
+    chip.onclick = () => { if (convSel.has(chave)) convSel.delete(chave); else convSel.add(chave); paint(); };
+    return chip;
+  };
+
+  const gNiv = document.createElement('div'); gNiv.style.cssText='font-size:11px;color:var(--text-muted);margin:2px 0 4px;'; gNiv.textContent='Por nível';
+  convBox.appendChild(gNiv);
+  const linhaNiv = document.createElement('div'); linhaNiv.style.cssText='display:flex;flex-wrap:wrap;gap:6px;width:100%;';
+  (typeof NIVEIS !== 'undefined' ? NIVEIS : []).forEach(n => linhaNiv.appendChild(fazChip(n.slug, n.label)));
+  convBox.appendChild(linhaNiv);
+
+  const gTim = document.createElement('div'); gTim.style.cssText='font-size:11px;color:var(--text-muted);margin:10px 0 4px;'; gTim.textContent='Por time da pastoral';
+  convBox.appendChild(gTim);
+  const linhaTim = document.createElement('div'); linhaTim.style.cssText='display:flex;flex-wrap:wrap;gap:6px;width:100%;';
+  convBox.appendChild(linhaTim);
+  // Os times vêm do Config, nunca de uma lista escrita aqui — foi lista escrita no código
+  // que impediu usar o kit processional em outra paróquia.
+  sb.from('acolitos_listas').select('valor,label').eq('tipo','setor').order('label')
+    .then(({ data, error }) => {
+      if (error) {
+        console.error('Agenda: carregar times falhou', error);
+        const av=document.createElement('span'); av.style.cssText='font-size:11px;color:var(--text-muted);';
+        av.textContent='Não foi possível carregar os times. Convocar por nível continua funcionando.';
+        linhaTim.appendChild(av); return;
+      }
+      if (!(data||[]).length) {
+        const av=document.createElement('span'); av.style.cssText='font-size:11px;color:var(--text-muted);';
+        av.textContent='Nenhum time cadastrado ainda (Config › Listas › Times da pastoral).';
+        linhaTim.appendChild(av); return;
+      }
+      (data||[]).forEach(t => linhaTim.appendChild(fazChip('time:'+t.valor, t.label||t.valor)));
+    });
+
   convWrap.append(convLbl, convBox); m.appendChild(convWrap);
-  sTipo.onchange = () => { convWrap.style.display = (sTipo.value === 'ensaio') ? '' : 'none'; };
   const iData = document.createElement('input'); iData.className = 'form-input'; iData.type = 'date'; iData.value = ev ? ev.data : selDate;
   mk('Data', iData);
   const rowH = document.createElement('div'); rowH.className = 'evt-row';
@@ -508,7 +542,9 @@ function abrirFormEvento(ev) {
       titulo, tipo: sTipo.value, data: iData.value,
       hora: iH.value || null, hora_fim: iHf.value || null,
       local: iLoc.value.trim() || null, descricao: iDesc.value.trim() || null,
-      convocados: sTipo.value === 'ensaio' ? Array.from(convSel) : null,
+      // Vale para qualquer tipo agora; vazio vira null, que é como o banco já guardava
+      // "não convoca ninguém".
+      convocados: convSel.size ? Array.from(convSel) : null,
     };
     let error;
     if (editando) { ({ error } = await sb.from('acolitos_eventos').update(payload).eq('id', ev.id)); }
@@ -525,9 +561,33 @@ function abrirFormEvento(ev) {
 
 // ── Chamada de presença do ensaio (coordenação) ──
 async function abrirChamadaEnsaio(e) {
-  const { data } = await sb.rpc('acolitos_ensaio_convocados', { p_evento: e.id });
-  const lista = data || [];
-  if (!lista.length) { toast('Nenhum nível convocado (edite o ensaio e convoque).', 'error'); return; }
+  // Os NÍVEIS convocados vêm da função que já existia; os TIMES são resolvidos por uma função
+  // nova e ADITIVA (migration 049), que pode ainda não estar aplicada — por isso a falha dela
+  // não derruba a chamada: perde-se os times, não a tela, e a pessoa é avisada do que faltou.
+  const timesConv = (e.convocados || []).filter(c => String(c).startsWith('time:')).map(c => String(c).slice(5));
+  const [{ data, error: errNiv }, porTime] = await Promise.all([
+    sb.rpc('acolitos_ensaio_convocados', { p_evento: e.id }),
+    timesConv.length ? sb.rpc('acolitos_membros_por_setor', { p_setores: timesConv })
+                     : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (errNiv) {
+    // Falha de consulta NÃO pode virar "ninguém foi convocado": seria dizer que o coordenador
+    // esqueceu de convocar quando na verdade não se conseguiu perguntar.
+    console.error('Agenda: convocados falhou', errNiv);
+    await uiAlert('Não foi possível carregar os convocados. Isto é falha de carregamento, não ausência de convocação — tente de novo.');
+    return;
+  }
+  if (porTime.error) console.error('Agenda: convocados por time falhou', porTime.error);
+
+  const vistos = new Set(); const lista = [];
+  [...(data || []), ...((porTime.data) || [])].forEach(p => {
+    if (!p || !p.id || vistos.has(p.id)) return;   // quem é do time E do nível conta uma vez só
+    vistos.add(p.id); lista.push(p);
+  });
+  if (timesConv.length && porTime.error) {
+    toast('Os times convocados não puderam ser carregados; mostrando só quem veio por nível.', 'error');
+  }
+  if (!lista.length) { toast('Ninguém convocado (edite o evento e convoque por nível ou por time).', 'error'); return; }
   const presentes = new Set(lista.filter(x => x.presente).map(x => x.id));
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e2) => { if (e2.target === ov) ov.remove(); };
   const m = document.createElement('div'); m.className = 'modal'; m.style.maxWidth = '440px';
