@@ -166,6 +166,8 @@ const LISTAS_CFG = [
   { tipo:'habilidade',     nome:'Habilidades',             dica:'O que a pessoa sabe fazer. É o mesmo que as funções litúrgicas veem como habilitação.', novo:'Nova habilidade…' },
   { tipo:'funcao',         nome:'Funções litúrgicas',      dica:'As funções da celebração. A marca “Maior” reserva a função para cerimoniário no gerador.', novo:'Nova função (ex.: Báculo Auxiliar)', slug:true,
     extra:{ modo:'interruptor', chave:'funcoes_maiores', rotulo:'Maior' } },
+  { tipo:'tipo_evento',    nome:'Tipos de evento',        dica:'Ficam disponíveis ao criar um evento na Agenda (ensaio, retiro, procissão…). A cor é a bolinha no calendário.', novo:'Novo tipo de evento (ex.: Procissão)', slug:true,
+    extra:{ modo:'cor', rotulo:'Cor no calendário' } },
   { tipo:'tipo_celebracao',nome:'Tipos de celebração',     dica:'Ficam disponíveis ao criar uma celebração e aparecem na Agenda.', novo:'Novo tipo (ex.: Missa de Formatura)', slug:true },
   { tipo:'setor',          nome:'Times da pastoral',       dica:'Os times (Almoxarifado, Formação…). O texto abaixo de cada um aparece na aba Tarefas.', novo:'Novo time (ex.: Logística)',
     extra:{ modo:'texto', chave:'responsabilidades', rotulo:'Do que este time cuida, ano após ano (aparece em Tarefas) — opcional' } },
@@ -196,8 +198,8 @@ async function renderListaUnica(b){
   dica.textContent=conf.dica; b.appendChild(dica);
 
   const [{ data, error:errLista }, { data:cfgRow, error:errExtra }] = await Promise.all([
-    sb.from('acolitos_listas').select('id,valor,label').eq('tipo',conf.tipo).order('label'),
-    conf.extra ? sb.from('acolitos_config').select('valor').eq('chave',conf.extra.chave).maybeSingle()
+    sb.from('acolitos_listas').select('id,valor,label,meta').eq('tipo',conf.tipo).order('label'),
+    (conf.extra && conf.extra.chave) ? sb.from('acolitos_config').select('valor').eq('chave',conf.extra.chave).maybeSingle()
                : Promise.resolve({ data:null, error:null }),
   ]);
 
@@ -263,6 +265,27 @@ async function renderListaUnica(b){
       if (error) { console.error('Listas: remover falhou', error); toast('Não foi possível remover.','error'); return; }
       renderListaUnica(b); };
     top.appendChild(del); row.appendChild(top);
+
+    if (conf.extra && conf.extra.modo==='cor') {
+      // A cor mora no `meta` da própria linha, não em acolitos_config: é um dado DE CADA item,
+      // e a coluna já existia vazia em todas as linhas. Assim não há segundo lugar para
+      // desencontrar do primeiro.
+      const cor=document.createElement('input'); cor.type='color'; cor.title=conf.extra.rotulo;
+      cor.style.cssText='width:34px;height:26px;padding:0;border:1px solid var(--border);border-radius:6px;background:transparent;cursor:pointer;';
+      cor.value=(item.meta && item.meta.cor) || '#7f8c8d';
+      cor.onchange=async()=>{
+        const novaCor=cor.value, corAnterior=(item.meta&&item.meta.cor)||'#7f8c8d';
+        cor.disabled=true;
+        const { error } = await sb.from('acolitos_listas')
+          .update({ meta: { ...(item.meta||{}), cor: novaCor } }).eq('id', item.id);
+        cor.disabled=false;
+        // Volta à cor anterior se a gravação falhar: deixar a cor nova na tela faria a pessoa
+        // acreditar num ajuste que a Agenda não vai mostrar.
+        if (error) { console.error('Listas: gravar cor falhou', error); toast('Não foi possível salvar a cor.','error'); cor.value=corAnterior; return; }
+        item.meta = { ...(item.meta||{}), cor: novaCor }; toast('✓ Salvo!');
+      };
+      top.insertBefore(cor, del);
+    }
 
     if (conf.extra && conf.extra.modo==='texto') {
       const ta=document.createElement('textarea'); ta.className='form-input'; ta.rows=2;

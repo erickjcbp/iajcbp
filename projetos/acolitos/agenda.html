@@ -86,8 +86,12 @@
 <script src="shared.js"></script>
 <script>
 const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-const TIPO_CELEB = { missa_comum:'Missa', solene:'Missa Solene', solenidade:'Solenidade', pontifical:'Pontifical (Bispo)', festa:'Festa Litúrgica', vigilia:'Vigília', crisma:'Crisma', casamento:'Casamento', batizado:'Batizado', ordenacao:'Ordenação', funeral:'Exéquias' };
-const EVT = {
+let TIPO_CELEB = { missa_comum:'Missa', solene:'Missa Solene', solenidade:'Solenidade', pontifical:'Pontifical (Bispo)', festa:'Festa Litúrgica', vigilia:'Vigília', crisma:'Crisma', casamento:'Casamento', batizado:'Batizado', ordenacao:'Ordenação', funeral:'Exéquias' };
+// Os tipos de evento eram FIXOS aqui: criar "Procissao" ou "Mutirao" exigia mexer no codigo,
+// e outra paroquia nao conseguiria usar o app do jeito dela. Agora estes sao so o PADRAO --
+// o que estiver em Config > Listas > Tipos de evento sobrepoe e amplia (override-com-fallback,
+// o mesmo padrao que o resto do Config ja usa).
+const EVT_PADRAO = {
   ensaio:           { label:'Ensaio',           cor:'#d35400' },
   reuniao:          { label:'Reunião',          cor:'#2980b9' },
   formacao:         { label:'Formação',         cor:'#8e44ad' },
@@ -97,7 +101,28 @@ const EVT = {
   evento:           { label:'Evento',           cor:'#c79f3e' },
   outro:            { label:'Outro',             cor:'#7f8c8d' },
 };
-function evtInfo(t) { return EVT[t] || EVT.outro; }
+let EVT = { ...EVT_PADRAO };
+function evtInfo(t) { return EVT[t] || EVT.outro || { label:'Evento', cor:'#7f8c8d' }; }
+
+// Le os tipos configurados e junta com os padroes. Falha de consulta NAO derruba a Agenda:
+// sem os tipos configurados ela ainda funciona com os padroes, entao o certo e registrar o
+// erro e seguir -- mas nunca fingir que a paroquia nao configurou nada.
+async function carregarTiposConfiguraveis() {
+  const [{ data: ev, error: e1 }, { data: cel, error: e2 }] = await Promise.all([
+    sb.from('acolitos_listas').select('valor,label,meta').eq('tipo','tipo_evento'),
+    sb.from('acolitos_listas').select('valor,label').eq('tipo','tipo_celebracao'),
+  ]);
+  if (e1) console.error('Agenda: tipos de evento falharam', e1);
+  if (e2) console.error('Agenda: tipos de celebracao falharam', e2);
+  EVT = { ...EVT_PADRAO };
+  (ev || []).forEach(x => {
+    const cor = (x.meta && x.meta.cor) || (EVT_PADRAO[x.valor] && EVT_PADRAO[x.valor].cor) || '#7f8c8d';
+    EVT[x.valor] = { label: x.label || x.valor, cor };
+  });
+  // Os tipos de celebracao JA eram configuraveis no Config, e esta tela ignorava: um tipo
+  // criado pela paroquia aparecia aqui como "Celebracao" generica. Agora ela le a lista.
+  (cel || []).forEach(x => { TIPO_CELEB[x.valor] = x.label || x.valor; });
+}
 
 let ctx, ehEquipe = false, meuId = null;
 let curY, curM, selDate;                 // mês visível + dia selecionado (YYYY-MM-DD)
@@ -137,6 +162,9 @@ async function init() {
   meuId = ctx.membro ? ctx.membro.id : (ctx.conta ? ctx.conta.id : null);
   renderHeader(ctx, 'agenda');
   renderBottomNav(ctx, 'agenda');
+  // Os tipos vem ANTES de desenhar: sem eles a tela pintaria os eventos com a cor e o nome
+  // errados por um instante, e um tipo criado pela paroquia apareceria como "Evento" generico.
+  await carregarTiposConfiguraveis();
   const hoje = new Date();
   curY = hoje.getFullYear(); curM = hoje.getMonth(); selDate = ymd(hoje);
   await reload();
@@ -404,8 +432,8 @@ function abrirEvento(e) {
       m.appendChild(ch);
     }
     const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:16px;border-top:1px solid var(--border);padding-top:12px;';
-    const ed = document.createElement('button'); ed.className = 'btn'; ed.style.flex = '1'; ed.textContent = '✎ Editar'; ed.onclick = () => { ov.remove(); abrirFormEvento(e); };
-    const del = document.createElement('button'); del.className = 'btn'; del.style.cssText = 'flex:1;border-color:#c0392b;color:#f0a499;'; del.textContent = '🗑 Excluir'; del.onclick = () => excluirEvento(e, ov);
+    const ed = document.createElement('button'); ed.className = 'btn'; ed.style.flex = '1'; ed.innerHTML = _svgIcon('editar') + ' Editar'; ed.onclick = () => { ov.remove(); abrirFormEvento(e); };
+    const del = document.createElement('button'); del.className = 'btn'; del.style.cssText = 'flex:1;border-color:#c0392b;color:#f0a499;'; del.innerHTML = _svgIcon('lixeira') + ' Excluir'; del.onclick = () => excluirEvento(e, ov);
     acts.append(ed, del); m.appendChild(acts);
   }
 
