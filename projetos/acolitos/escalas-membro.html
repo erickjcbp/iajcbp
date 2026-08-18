@@ -93,7 +93,6 @@ const FUNCAO_ORDEM = { cred_altar:10, cred_credencia:11, missal:12, altar:20, cr
 
 function dataLabel(d) { const x = new Date(d+'T00:00:00'); return DIAS[x.getDay()] + ' ' + x.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}); }
 function comLabel(c) { return c==='matriz'?'Matriz':'Sto. Antônio'; }
-function hojeStr() { return new Date().toISOString().slice(0,10); }
 
 let ctx = null;   // o formulário de ausência (abaixo) precisa alcançar o ctx
 async function init() {
@@ -180,7 +179,7 @@ async function carregarMinhasMissas(body, ctx){
   const { data, error } = await sb.from('acolitos_escalas')
     .select('id,funcao, acolitos_celebracoes!inner(id,data,horario,comunidade,tipo)')
     .eq('membro_id', m.id).eq('status','escalado')
-    .gte('acolitos_celebracoes.data', hojeStr());
+    .gte('acolitos_celebracoes.data', hojeLocal());
   body.textContent='';
   if(error){ const e=document.createElement('span'); e.className='empty'; e.textContent='Não foi possível carregar.'; body.appendChild(e); return; }
   const linhas = (data||[]).filter(e=>e.acolitos_celebracoes)
@@ -499,7 +498,7 @@ async function abrirInformarAusencia() {
   hint.textContent = 'Marque as missas em que você NÃO poderá servir. A escala vai considerar isso automaticamente.';
   main.appendChild(hint);
 
-  const hoje = new Date().toISOString().slice(0,10);
+  const hoje = hojeLocal();
   const { data: cels, error: errCels } = await sb.from('acolitos_celebracoes')
     .select('id,data,horario,comunidade').gte('data', hoje).order('data').order('horario');
   if (errCels) {

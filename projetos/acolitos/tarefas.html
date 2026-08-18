@@ -58,15 +58,6 @@
 
 let ctx = null;
 
-// Data local, não UTC. `toISOString()` devolve UTC, e como estamos em UTC-3 ele vira o dia
-// seguinte às 21h — o que faria uma tarefa que vence HOJE aparecer como atrasada três horas
-// antes de vencer, todo dia. O prazo é digitado pela pessoa no fuso dela, então a comparação
-// tem de ser no fuso dela também.
-function hojeStr() {
-  const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
-                         + '-' + String(d.getDate()).padStart(2, '0');
-}
 
 function prazoLabel(prazo) {
   if (!prazo) return 'sem prazo';
@@ -166,7 +157,7 @@ async function renderLista(main) {
   // eles — "não há tarefa, e aqui está do que cada time cuida" é uma frase honesta.
   if (!tarefas.length) renderNadaAqui(main);
 
-  const hoje = hojeStr();
+  const hoje = hojeLocal();
   const atrasadas = tarefas.filter(t => t.prazo && t.prazo < hoje);
   const idsAtrasadas = new Set(atrasadas.map(t => t.id));
   const resto = tarefas.filter(t => !idsAtrasadas.has(t.id));
@@ -218,7 +209,7 @@ async function criarProxima(t) {
   let proximaCelebracao = null;
   let falhaCelebracao = false;
   if (t.recorrencia === 'celebracao') {
-    const { data, error } = await sb.from('acolitos_celebracoes').select('data').gte('data', hojeStr()).order('data').limit(1);
+    const { data, error } = await sb.from('acolitos_celebracoes').select('data').gte('data', hojeLocal()).order('data').limit(1);
     if (error) {
       // Sem isto, uma consulta que falhou vira, em silêncio, "não há celebração futura":
       // a próxima nasce sem prazo do mesmo jeito que nasceria se a agenda estivesse REALMENTE
@@ -229,7 +220,7 @@ async function criarProxima(t) {
       proximaCelebracao = (data && data[0]) ? data[0].data : null;
     }
   }
-  const prox = proximaTarefa({ recorrencia: t.recorrencia, prazo: t.prazo, hoje: hojeStr(), proximaCelebracao });
+  const prox = proximaTarefa({ recorrencia: t.recorrencia, prazo: t.prazo, hoje: hojeLocal(), proximaCelebracao });
   if (!prox) return { ok: true, falhaCelebracao: false }; // recorrência sem próxima calculável: nada a criar, nada a avisar
   const payload = {
     titulo: t.titulo, time_slug: t.time_slug, responsavel_id: t.responsavel_id || null,

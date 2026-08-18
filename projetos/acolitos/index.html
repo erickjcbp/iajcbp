@@ -133,7 +133,6 @@ const TIPO_LABEL = { missa_comum:'Missa', solenidade:'Solenidade', casamento:'Ca
 const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const MES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 
-const hojeStr = () => new Date().toISOString().slice(0,10);
 const elDate = d => { const dt = new Date(d+'T00:00:00'); return { dia: dt.getDate(), mes: MES[dt.getMonth()], dow: DIAS[dt.getDay()] }; };
 
 let moduloId = null;
@@ -624,7 +623,7 @@ async function renderDashboardMembro(ctx) {
     const { data: esc } = await sb.from('acolitos_escalas')
       .select('id,funcao, acolitos_celebracoes!inner(data,horario,comunidade)')
       .eq('membro_id', m.id).eq('status','escalado')
-      .gte('acolitos_celebracoes.data', hojeStr());
+      .gte('acolitos_celebracoes.data', hojeLocal());
     const prox = (esc||[]).filter(e=>e.acolitos_celebracoes)
       .sort((a,b)=> (a.acolitos_celebracoes.data+a.acolitos_celebracoes.horario).localeCompare(b.acolitos_celebracoes.data+b.acolitos_celebracoes.horario))
       .slice(0,3);
@@ -664,7 +663,7 @@ async function renderDashboardEquipe(ctx) {
   // duas vezes na mesma tela. Ficou só a tarja, que ainda por cima alcança os dois modos.
 
   // Carrega dados
-  const hoje = hojeStr();
+  const hoje = hojeLocal();
   const ini = new Date(); ini.setDate(1); const iniMes = ini.toISOString().slice(0,10);
   const fimMes = new Date(ini.getFullYear(), ini.getMonth()+1, 0).toISOString().slice(0,10);
   const seis = new Date(); seis.setMonth(seis.getMonth()-5); seis.setDate(1); const seisStr = seis.toISOString().slice(0,10);
@@ -973,7 +972,7 @@ async function renderAgenda(main, titulo, limit, comCobertura, prefetched) {
   } else {
     const sel = comCobertura ? 'id,data,horario,comunidade,tipo, acolitos_escalas(id)' : 'id,data,horario,comunidade,tipo';
     const { data } = await sb.from('acolitos_celebracoes').select(sel)
-      .gte('data', hojeStr()).order('data').order('horario').limit(limit);
+      .gte('data', hojeLocal()).order('data').order('horario').limit(limit);
     celebs = data;
   }
   if (!celebs?.length) {

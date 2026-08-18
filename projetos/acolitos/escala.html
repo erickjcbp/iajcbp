@@ -895,7 +895,7 @@ function elegivelFuncao(m, f, comKey) {
 // nas ~6 semanas até o fim de semana de referência (NÃO depende do que está carregado na tela —
 // considera o histórico real, inclusive semanas passadas que a tela não traz).
 async function carregarCargaHistorica(refData) {
-  const ref = refData || new Date().toISOString().slice(0,10);
+  const ref = refData || hojeLocal();
   const _gerJ = (typeof cfg === 'function') ? (cfg('gerador', {}) || {}) : {};
   const _dias = Number(_gerJ.janela_dias) || 42;
   const ini = new Date(ref + 'T00:00:00'); ini.setDate(ini.getDate() - _dias); // janela móvel (config, default 6 semanas)
@@ -1126,7 +1126,7 @@ async function confirmarEscalaSemana(celebs, chaveSemana, btnEl) {
   // Só marca como avisado DEPOIS de o envio dar certo: marcar antes faria a pessoa nunca
   // receber, porque o botão passaria a ignorá-la.
   mapa[chaveSemana] = [...(mapa[chaveSemana] || []), ...novos];
-  const podado = podarAvisados({ mapa, hoje: hojeLocalStr() });
+  const podado = podarAvisados({ mapa, hoje: hojeLocal() });
   const { error: errSalvar } = await sb.from('acolitos_config')
     .upsert({ chave: 'escala_avisados', valor: podado, updated_at: new Date().toISOString() }, { onConflict: 'chave' });
   if (btnEl) { btnEl.disabled = false; btnEl.textContent = txt0; }
@@ -1138,11 +1138,6 @@ async function confirmarEscalaSemana(celebs, chaveSemana, btnEl) {
   toast('✓ ' + novos.length + (novos.length === 1 ? ' pessoa avisada' : ' pessoas avisadas'));
 }
 
-// Data de hoje no fuso de quem está usando. toISOString() é UTC e vira o dia seguinte às 21h.
-function hojeLocalStr() {
-  const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-}
 
 async function gerarEscalaSemana(celebs, btnEl) {
   if (!celebs || !celebs.length) return;
@@ -1581,7 +1576,7 @@ function renderPlanilha() {
 function abrirNovaCeleb(){
   editCelebId=null;
   document.getElementById('nc-title').textContent='Nova Celebração';
-  document.getElementById('nc-data').value=new Date().toISOString().slice(0,10);
+  document.getElementById('nc-data').value=hojeLocal();
   document.getElementById('nc-horario').value='17h';
   document.getElementById('nc-com').value='matriz';
   document.getElementById('nc-tipo').value='missa_comum';
@@ -1631,7 +1626,7 @@ function dataCurta(d){ const x=new Date(d+'T00:00:00'); return DIAS[x.getDay()]+
 async function abrirRegistrarAusenciaCoord(){
   let motivos=[['doenca','🤒 Doença'],['viagem','✈️ Viagem'],['familia','👨‍👩‍👧 Família'],['outro','📌 Outro']];
   try{ const {data}=await sb.from('acolitos_listas').select('valor,label').eq('tipo','motivo').order('label'); if(data&&data.length) motivos=data.map(r=>[r.valor,r.label]); }catch(e){}
-  const hoje=new Date().toISOString().slice(0,10);
+  const hoje=hojeLocal();
   const futuras=(celebracoes||[]).filter(c=>c.data>=hoje).sort((a,b)=>(a.data+a.horario).localeCompare(b.data+b.horario));
   const ov=document.createElement('div');ov.className='modal-overlay open';ov.onclick=e=>{if(e.target===ov)ov.remove();};
   const md=document.createElement('div');md.className='modal';md.style.maxWidth='460px';
