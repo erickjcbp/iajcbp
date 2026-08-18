@@ -164,7 +164,7 @@ function renderContinuar(ctx){
   let u; try{ u = JSON.parse(localStorage.getItem('ultima-tela')||'null'); }catch(e){ u=null; }
   if(!u || !u.href || !u.label) return;
   const caps = (typeof navCaps==='function') ? navCaps(ctx) : null;
-  const COORD = { 'membros.html':'membros','escala.html':'escala','crm.html':'crm','tesouraria.html':'tesouraria','casas.html':'casas' };
+  const COORD = { 'membros.html':'membros','escala.html':'escala','crm.html':'crm','tesouraria.html':'tesouraria','casas.html':'casas','tarefas.html':'tarefas' };
   const permKey = COORD[u.href];
   if(permKey){                              // tela de coordenação: exige permissão
     if(!caps || !caps.perms || caps.perms.indexOf(permKey)===-1) return;

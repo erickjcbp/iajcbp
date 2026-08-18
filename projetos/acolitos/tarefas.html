@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Tarefas dos times — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#150a0d">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <script>window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__bip=e;});</script>
+  <style>
+    /* Rótulos de grupo: "Atrasadas" some fora do agrupamento por time, em vermelho —
+       é o que transforma a lista em acompanhamento em vez de anotação solta. */
+    .tf-grupo-titulo { font-family:'Sora',sans-serif; font-weight:800; font-size:13px; color:var(--gold-light); letter-spacing:.5px; margin:18px 0 8px; text-transform:uppercase; }
+    .tf-grupo-titulo.tf-atraso { color:var(--danger-text); }
+    /* O que o time É responsável por, ano após ano — não é tarefa, é a descrição fixa
+       do time (editada em Config → Equipe & Permissões). Time sem texto não mostra
+       nada aqui; se a consulta falhar, o aviso troca de cor pra não passar por "em dia". */
+    .tf-resp { font-size:12px; color:var(--text-muted); font-style:italic; margin:-2px 0 10px; line-height:1.4; }
+    .tf-resp.tf-resp-erro { color:var(--danger-text); font-style:normal; font-weight:600; }
+    .tf-item { display:flex; gap:10px; align-items:stretch; background:var(--surface); border:1px solid var(--border-wine); border-radius:10px; padding:11px 12px; margin-bottom:8px; }
+    .tf-item.tf-atrasada { border-color:var(--danger); }
+    .tf-bar { width:4px; border-radius:3px; flex:none; background:var(--gold); }
+    .tf-item.tf-atrasada .tf-bar { background:var(--danger); }
+    .tf-body { flex:1; min-width:0; }
+    .tf-tit { font-family:'Sora',sans-serif; font-weight:700; font-size:14px; color:var(--text); }
+    .tf-meta { font-size:12px; color:var(--text-muted); margin-top:3px; }
+    .tf-meta.tf-atrasada-txt { color:var(--danger-text); font-weight:700; }
+    .tf-obs { font-size:12px; color:var(--text-muted); margin-top:4px; font-style:italic; }
+    .tf-acoes { display:flex; align-items:center; }
+    /* FAB "Nova tarefa" — mesma régua do FAB de Agenda (a barra de baixo cresce com a
+       faixa de segurança do aparelho, e o botão precisa acompanhar). */
+    .fab { position:fixed; right:16px; bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px); z-index:48; height:50px; padding:0 18px; border-radius:26px; border:1px solid var(--gold); background:linear-gradient(165deg, var(--wine), var(--surface)); color:var(--gold-light); font-family:'Sora',sans-serif; font-weight:700; font-size:14px; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 6px 22px rgba(0,0,0,.55), 0 0 16px var(--red-glow); }
+    .fab svg { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2.2; stroke-linecap:round; }
+    .tf-form label { display:block; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin:10px 0 4px; }
+  </style>
+  <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+<div class="main" id="main-content">
+  <span class="loading">Carregando...</span>
+</div>
+
+<script src="navegacao-core.js"></script>
+<script src="tarefas-core.js"></script>
+<script src="shared.js"></script>
+<script>
+// Tarefas dos times: cada time (Almoxarifado, Formação, Ordem e Disciplina...) tem sua
+// lista de afazeres, com prazo, responsável opcional e recorrência. proximaTarefa
+// (tarefas-core.js) decide a data da próxima quando uma recorrente é concluída — essa
+// tela só CHAMA a função, nunca reimplementa a conta.
+
+let ctx = null;
+
+// Data local, não UTC. `toISOString()` devolve UTC, e como estamos em UTC-3 ele vira o dia
+// seguinte às 21h — o que faria uma tarefa que vence HOJE aparecer como atrasada três horas
+// antes de vencer, todo dia. O prazo é digitado pela pessoa no fuso dela, então a comparação
+// tem de ser no fuso dela também.
+function hojeStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+                         + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function prazoLabel(prazo) {
+  if (!prazo) return 'sem prazo';
+  const DIAS = ['dom','seg','ter','qua','qui','sex','sáb'];
+  const d = new Date(prazo + 'T00:00:00');
+  return 'vence ' + DIAS[d.getDay()] + ' ' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+function nomeResponsavel(t) {
+  // Nunca em branco: sem responsável, a linha diz "do time" — em branco a pessoa não
+  // sabe se a tarefa é dela ou se ninguém pegou ainda.
+  if (t.responsavel) return t.responsavel.apelido || t.responsavel.nome;
+  return 'do time';
+}
+
+// Nenhum time tem tarefa hoje: a tela sem tarefa nenhuma é a que a coordenação vai ver
+// primeiro, então é a que precisa estar mais certa.
+function renderNadaAqui(main) {
+  const box = document.createElement('div');
+  box.style.cssText = 'text-align:center;padding:42px 16px;color:var(--text-muted);';
+  const t = document.createElement('div');
+  t.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:16px;color:var(--text);';
+  t.textContent = 'Nenhuma tarefa por aqui';
+  const s = document.createElement('div');
+  s.style.cssText = 'font-size:13px;margin-top:4px;';
+  s.textContent = 'Crie a primeira e ela aparece no time escolhido.';
+  box.append(t, s); main.appendChild(box);
+}
+
+function linhaTarefa(t, atrasada, labelTime) {
+  const row = document.createElement('div'); row.className = 'tf-item' + (atrasada ? ' tf-atrasada' : '');
+  const bar = document.createElement('div'); bar.className = 'tf-bar';
+  const body = document.createElement('div'); body.className = 'tf-body';
+  const tit = document.createElement('div'); tit.className = 'tf-tit'; tit.textContent = t.titulo;
+  const meta = document.createElement('div'); meta.className = 'tf-meta' + (atrasada ? ' tf-atrasada-txt' : '');
+  // No bloco Atrasadas não há cabeçalho de grupo (o time some junto), então a linha
+  // carrega o rótulo do time ela mesma — senão ninguém sabe a quem cobrar. Nas linhas
+  // agrupadas isso seria repetir o cabeçalho, por isso só entra quando atrasada=true.
+  const partes = [prazoLabel(t.prazo)];
+  if (atrasada) partes.push((labelTime && labelTime[t.time_slug]) || t.time_slug);
+  partes.push(nomeResponsavel(t));
+  meta.textContent = partes.join(' · ');
+  body.append(tit, meta);
+  if (t.observacao) {
+    const obs = document.createElement('div'); obs.className = 'tf-obs'; obs.textContent = t.observacao;
+    body.appendChild(obs);
+  }
+  const acoes = document.createElement('div'); acoes.className = 'tf-acoes';
+  const ok = document.createElement('button'); ok.className = 'btn-sm gold'; ok.textContent = 'Concluir';
+  ok.onclick = () => concluirTarefa(t, ok);
+  acoes.appendChild(ok);
+  row.append(bar, body, acoes);
+  return row;
+}
+
+// Busca as tarefas em aberto e desenha a lista: atrasadas primeiro (fora do
+// agrupamento), depois um grupo por time — e um time entra no grupo se tiver
+// responsabilidade escrita OU tarefa não atrasada (as duas fontes são independentes:
+// a responsabilidade vive em acolitos_config e não depende de existir tarefa nenhuma).
+async function renderLista(main) {
+  const { data, error } = await sb.from('acolitos_tarefas')
+    .select('*, responsavel:acolitos_membros!responsavel_id(nome,apelido)')
+    .is('concluida_em', null).order('prazo', { nullsFirst: false });
+  if (error) {
+    // Falha de consulta NÃO pode virar "nenhuma tarefa": seria dizer que está tudo em
+    // dia quando na verdade não se conseguiu perguntar. Já aconteceu duas vezes neste
+    // projeto (a Caixa, um 500 virando "R$ 0,00" por 17h noutro app daqui).
+    console.error('Tarefas: consulta falhou', error);
+    const e = document.createElement('span'); e.className = 'empty';
+    e.textContent = 'Não foi possível carregar as tarefas. Tente de novo.';
+    main.appendChild(e);
+    return;
+  }
+  const tarefas = data || [];
+
+  // Rótulos amigáveis dos times (acolitos_listas tipo='setor'). Falha aqui não impede
+  // a lista de aparecer — só faz a linha mostrar o slug cru em vez do nome bonito.
+  const { data: listas, error: errListas } = await sb.from('acolitos_listas').select('valor,label').eq('tipo', 'setor');
+  if (errListas) console.error('Tarefas: rótulos de time falharam', errListas);
+  const labelTime = {};
+  (listas || []).forEach(l => { labelTime[l.valor] = l.label; });
+
+  // O que cada time É responsável por (fixo, editado em Config → Equipe & Permissões,
+  // guardado em acolitos_config chave='responsabilidades'). Diferente do rótulo acima:
+  // aqui uma falha na consulta NÃO pode virar silêncio — silêncio é indistinguível de
+  // "nenhum time tem responsabilidade escrita". Por isso, ao falhar, cada grupo com
+  // tarefa avisa que não deu pra carregar, em vez de simplesmente não mostrar nada — e
+  // times que só teriam grupo POR CAUSA da responsabilidade não aparecem (não temos
+  // como saber quais são), o que é o comportamento seguro possível quando essa
+  // consulta específica falha.
+  const { data: cfgResp, error: errResp } = await sb.from('acolitos_config').select('valor').eq('chave', 'responsabilidades').maybeSingle();
+  if (errResp) console.error('Tarefas: responsabilidades dos times falharam', errResp);
+  const responsabilidades = (!errResp && cfgResp && cfgResp.valor) ? cfgResp.valor : {};
+
+  // Tabela vazia não é mais motivo para sair da função: os grupos de responsabilidade
+  // (abaixo) não dependem de tarefa nenhuma existir, e o estado vazio pode conviver com
+  // eles — "não há tarefa, e aqui está do que cada time cuida" é uma frase honesta.
+  if (!tarefas.length) renderNadaAqui(main);
+
+  const hoje = hojeStr();
+  const atrasadas = tarefas.filter(t => t.prazo && t.prazo < hoje);
+  const idsAtrasadas = new Set(atrasadas.map(t => t.id));
+  const resto = tarefas.filter(t => !idsAtrasadas.has(t.id));
+
+  if (atrasadas.length) {
+    const h = document.createElement('div'); h.className = 'tf-grupo-titulo tf-atraso';
+    h.textContent = 'Atrasadas (' + atrasadas.length + ')';
+    main.appendChild(h);
+    atrasadas.forEach(t => main.appendChild(linhaTarefa(t, true, labelTime)));
+  }
+
+  const porTime = {};
+  resto.forEach(t => { (porTime[t.time_slug] = porTime[t.time_slug] || []).push(t); });
+
+  // Um grupo por time com responsabilidade escrita OU tarefa não atrasada — nunca só por
+  // ter caído em "Atrasadas" (bloco próprio, já cuidado acima) e nunca só por existir na
+  // lista de setores (time sem os dois não aparece). Sem isso: (a) o dono escreve as 11
+  // responsabilidades no Config, abre Tarefas com a tabela vazia e não vê NENHUMA — parece
+  // que o Config não salvou; (b) a única tarefa de um time atrasa, sobe pro bloco Atrasadas,
+  // e o cabeçalho do time (com a responsabilidade dele) some junto — some justamente do
+  // time que está mais devendo.
+  const slugsComGrupo = new Set(Object.keys(porTime));
+  if (!errResp) Object.keys(responsabilidades).forEach(s => slugsComGrupo.add(s));
+
+  Array.from(slugsComGrupo).sort((a, b) => (labelTime[a] || a).localeCompare(labelTime[b] || b, 'pt-BR')).forEach(slug => {
+    const h = document.createElement('div'); h.className = 'tf-grupo-titulo';
+    h.textContent = labelTime[slug] || slug;
+    main.appendChild(h);
+    if (errResp) {
+      // Não fingir que o time não tem responsabilidade: dizer que não conseguiu perguntar.
+      const av = document.createElement('div'); av.className = 'tf-resp tf-resp-erro';
+      av.textContent = 'Não foi possível carregar a responsabilidade deste time.';
+      main.appendChild(av);
+    } else if (responsabilidades[slug]) {
+      const resp = document.createElement('div'); resp.className = 'tf-resp';
+      resp.textContent = responsabilidades[slug];
+      main.appendChild(resp);
+    }
+    (porTime[slug] || []).forEach(t => main.appendChild(linhaTarefa(t, false)));
+  });
+}
+
+// Ao concluir uma recorrente, cria a próxima com o prazo que proximaTarefa (tarefas-core.js)
+// devolver. Só dispara na conclusão — nunca pelo relógio (decisão do dono: ver o
+// comentário de topo de tarefas-core.js).
+// Devolve { ok, falhaCelebracao } em vez de decidir o toast sozinha — concluirTarefa é
+// quem sabe o quadro inteiro (se a conclusão em si deu certo) e escreve UMA mensagem.
+async function criarProxima(t) {
+  let proximaCelebracao = null;
+  let falhaCelebracao = false;
+  if (t.recorrencia === 'celebracao') {
+    const { data, error } = await sb.from('acolitos_celebracoes').select('data').gte('data', hojeStr()).order('data').limit(1);
+    if (error) {
+      // Sem isto, uma consulta que falhou vira, em silêncio, "não há celebração futura":
+      // a próxima nasce sem prazo do mesmo jeito que nasceria se a agenda estivesse REALMENTE
+      // vazia, e ninguém fica sabendo que a pergunta nem chegou a ser respondida.
+      console.error('Tarefas: buscar próxima celebração falhou', error);
+      falhaCelebracao = true;
+    } else {
+      proximaCelebracao = (data && data[0]) ? data[0].data : null;
+    }
+  }
+  const prox = proximaTarefa({ recorrencia: t.recorrencia, prazo: t.prazo, hoje: hojeStr(), proximaCelebracao });
+  if (!prox) return { ok: true, falhaCelebracao: false }; // recorrência sem próxima calculável: nada a criar, nada a avisar
+  const payload = {
+    titulo: t.titulo, time_slug: t.time_slug, responsavel_id: t.responsavel_id || null,
+    prazo: prox.prazo, observacao: t.observacao || null, recorrencia: t.recorrencia,
+    criada_por: ctx.membro ? ctx.membro.id : null,
+  };
+  const { error } = await sb.from('acolitos_tarefas').insert(payload);
+  // Ler o error das DUAS gravações (conclusão + próxima): sem isso, a corrente de
+  // tarefas recorrentes morre em silêncio — a coordenação acha que continua rodando.
+  if (error) {
+    console.error('Tarefas: criar a próxima falhou', error);
+    return { ok: false, falhaCelebracao };
+  }
+  return { ok: true, falhaCelebracao };
+}
+
+async function concluirTarefa(t, btn) {
+  // Desabilita ANTES do confirm: sem isso, um segundo clique (dedo trêmulo, ou toque
+  // duplo por acidente) enfileira uma segunda concluirTarefa que reabriria o confirm.
+  // Reabilita se a pessoa cancelar ou se a gravação falhar — nesses casos nada mudou.
+  if (btn) btn.disabled = true;
+  const confirmou = await uiConfirm('Concluir "' + t.titulo + '"?');
+  if (!confirmou) { if (btn) btn.disabled = false; return; }
+  // .is('concluida_em', null) condiciona o UPDATE: só altera se AINDA estiver aberta.
+  // .select('id') diz se alguma linha foi mesmo alterada. Sem os dois, dois cliques (o
+  // mesmo dedo duas vezes, ou dois coordenadores com a tela aberta ao mesmo tempo — a
+  // tela não se atualiza sozinha) fazem dois UPDATE "bem-sucedidos" e duas próximas
+  // tarefas recorrentes iguais nascem no banco, em silêncio.
+  const { data: linhas, error } = await sb.from('acolitos_tarefas')
+    .update({ concluida_em: new Date().toISOString(), concluida_por: ctx.membro ? ctx.membro.id : null })
+    .eq('id', t.id).is('concluida_em', null).select('id');
+  if (error) {
+    // Sem ler este error, a tarefa some da TELA (se a gente tirasse ela do DOM na mão)
+    // mas continua aberta no banco — exatamente o defeito que este projeto já cometeu.
+    console.error('Tarefas: concluir falhou', error);
+    toast('Não foi possível concluir. Tente de novo.', 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  if (!linhas || !linhas.length) {
+    // Zero linhas alteradas: outra pessoa (ou outro clique) já tinha concluído esta
+    // tarefa. NÃO cria a próxima de novo — é exatamente o passo que duplicaria a corrente.
+    toast('Essa tarefa já tinha sido concluída por outra pessoa.', 'error');
+    await renderTudo();
+    return;
+  }
+  let msg = 'Tarefa concluída.', tipo;
+  if (t.recorrencia && t.recorrencia !== 'nenhuma') {
+    const r = await criarProxima(t);
+    if (!r.ok) { msg = 'Concluída, mas não foi possível criar a próxima. Avise a coordenação.'; tipo = 'error'; }
+    else if (r.falhaCelebracao) { msg = 'Concluída — mas não foi possível consultar a agenda, então a próxima ficou sem prazo.'; tipo = 'error'; }
+  }
+  toast(msg, tipo);
+  await renderTudo();  // recarrega do banco — nunca remove otimista do DOM
+}
+
+// ── Criar tarefa ──
+// As duas devolvem { data, error } — quem chama decide o que fazer com a falha. Um
+// catálogo vazio por FALHA (RLS, 500, rede) não pode se comportar como um catálogo
+// vazio DE VERDADE: o primeiro bloqueia o formulário e avisa; o segundo é só "ninguém
+// cadastrado ainda" e deixaria salvar "do time" numa opção legítima.
+async function carregarSetores() {
+  const { data, error } = await sb.from('acolitos_listas').select('valor,label').eq('tipo', 'setor').order('label');
+  if (error) console.error('Tarefas: carregar times falhou', error);
+  return { data: data || [], error };
+}
+async function carregarRoster() {
+  const { data, error } = await sb.rpc('acolitos_roster_nomes');
+  if (error) console.error('Tarefas: carregar responsáveis falhou', error);
+  return { data: data || [], error };
+}
+
+async function abrirFormTarefa() {
+  const [setoresR, rosterR] = await Promise.all([carregarSetores(), carregarRoster()]);
+  const setores = setoresR.data, roster = rosterR.data;
+  const falhouCarga = !!(setoresR.error || rosterR.error);
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const m = document.createElement('div'); m.className = 'modal tf-form'; m.style.maxWidth = '440px';
+  const h = document.createElement('h2'); h.style.cssText = 'font-family:Sora,sans-serif;font-size:18px;margin:0 0 4px;color:var(--text);';
+  h.textContent = 'Nova tarefa'; m.appendChild(h);
+
+  if (falhouCarga) {
+    // Time é campo obrigatório: se a lista falhou, o select fica só com "Escolha o
+    // time..." e a validação de campo vazio já bloqueia — mas com uma mensagem que
+    // parece "você esqueceu de escolher", não "isto não carregou". Este aviso separa
+    // os dois, e o botão Criar fica travado até fechar e tentar de novo (não dá pra
+    // saber se o Responsável escolhido — ou a falta dele — reflete a realidade).
+    const av = document.createElement('div'); av.className = 'empty'; av.style.cssText = 'margin-bottom:10px;';
+    av.textContent = setoresR.error && rosterR.error
+      ? 'Não foi possível carregar os times nem as pessoas. Feche e tente de novo.'
+      : setoresR.error
+        ? 'Não foi possível carregar os times. Feche e tente de novo.'
+        : 'Não foi possível carregar as pessoas para Responsável. Feche e tente de novo.';
+    m.appendChild(av);
+  }
+
+  const mk = (lbl, el) => { const L = document.createElement('label'); L.textContent = lbl; m.append(L, el); return el; };
+
+  const iTit = document.createElement('input'); iTit.className = 'form-input'; iTit.placeholder = 'Ex.: conferir estoque de velas';
+  mk('Título', iTit);
+
+  const sTime = document.createElement('select'); sTime.className = 'form-input';
+  const optVazio = document.createElement('option'); optVazio.value = ''; optVazio.textContent = 'Escolha o time...'; sTime.appendChild(optVazio);
+  setores.forEach(s => { const o = document.createElement('option'); o.value = s.valor; o.textContent = s.label || s.valor; sTime.appendChild(o); });
+  mk('Time', sTime);
+
+  const sResp = document.createElement('select'); sResp.className = 'form-input';
+  const optNinguem = document.createElement('option'); optNinguem.value = ''; optNinguem.textContent = 'Ninguém (fica com o time)'; sResp.appendChild(optNinguem);
+  roster.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.apelido || p.nome; sResp.appendChild(o); });
+  mk('Responsável (opcional)', sResp);
+
+  const iPrazo = document.createElement('input'); iPrazo.className = 'form-input'; iPrazo.type = 'date';
+  mk('Prazo (opcional)', iPrazo);
+
+  const sRec = document.createElement('select'); sRec.className = 'form-input';
+  [['nenhuma','Não se repete'], ['semanal','Toda semana'], ['mensal','Todo mês'], ['anual','Todo ano'], ['celebracao','A cada celebração']]
+    .forEach(([v,l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; sRec.appendChild(o); });
+  mk('Recorrência', sRec);
+
+  const iObs = document.createElement('textarea'); iObs.className = 'form-input'; iObs.rows = 3; iObs.placeholder = 'Detalhes, o que levar, a quem avisar...';
+  mk('Observação (opcional)', iObs);
+
+  const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:16px;';
+  const cancel = document.createElement('button'); cancel.className = 'btn'; cancel.style.flex = '1'; cancel.textContent = 'Cancelar'; cancel.onclick = () => ov.remove();
+  const save = document.createElement('button'); save.className = 'btn gold'; save.style.flex = '1'; save.textContent = 'Criar';
+  save.disabled = falhouCarga;  // não deixa salvar meia tarefa em cima de um catálogo que pode estar incompleto por falha
+  save.onclick = async () => {
+    const titulo = iTit.value.trim();
+    if (!titulo) { toast('Dê um título à tarefa.', 'error'); return; }
+    if (!sTime.value) { toast('Escolha o time.', 'error'); return; }
+    save.disabled = true; save.textContent = 'Salvando...';
+    const payload = {
+      titulo, time_slug: sTime.value, responsavel_id: sResp.value || null,
+      prazo: iPrazo.value || null, observacao: iObs.value.trim() || null,
+      recorrencia: sRec.value, criada_por: ctx.membro ? ctx.membro.id : null,
+    };
+    const { error } = await sb.from('acolitos_tarefas').insert(payload);
+    if (error) {
+      console.error('Tarefas: criar falhou', error);
+      toast('Não foi possível criar a tarefa. Tente de novo.', 'error');
+      save.disabled = false; save.textContent = 'Criar';
+      return;
+    }
+    toast('✓ Tarefa criada!');
+    ov.remove();
+    await renderTudo();
+  };
+  acts.append(cancel, save); m.appendChild(acts);
+  ov.appendChild(m); document.body.appendChild(ov);
+  iTit.focus();
+}
+
+async function renderTudo() {
+  document.querySelectorAll('.fab').forEach(x => x.remove());  // evita FAB duplicado a cada reload
+  const main = document.getElementById('main-content'); main.textContent = '';
+  const t = document.createElement('h1'); t.className = 'page-title'; t.textContent = 'Tarefas dos times'; main.appendChild(t);
+  const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;';
+  hint.textContent = 'Atrasadas aparecem primeiro; o resto, agrupado por time.';
+  main.appendChild(hint);
+
+  await renderLista(main);
+
+  const fab = document.createElement('button'); fab.className = 'fab';
+  // "+" hardcoded, no padrão do FAB de agenda.html — SVG, nunca emoji.
+  fab.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 5v14 M5 12h14"/></svg><span>Nova tarefa</span>';
+  fab.onclick = () => abrirFormTarefa();
+  document.body.appendChild(fab);
+}
+
+async function init() {
+  ctx = await initModulo(['coord_admin','subadmin','membro_equipe'], { perm: 'tarefas' });
+  if (!ctx) return;
+  renderHeader(ctx, 'tarefas');
+  renderBottomNav(ctx, 'tarefas');
+  try {
+    await renderTudo();
+  } catch (e) {
+    // Rede-fora-do-ar de vez ou qualquer falha que escapou do try/catch interno de
+    // renderLista: sem esta rede de segurança a tela ficava só com o título, sem dizer
+    // que algo deu errado (mesmo gotcha já corrigido na Caixa).
+    console.error('Tarefas: init falhou ao renderizar', e);
+    document.querySelectorAll('.fab').forEach(x => x.remove());
+    const main = document.getElementById('main-content'); main.textContent = '';
+    const t = document.createElement('h1'); t.className = 'page-title'; t.textContent = 'Tarefas dos times'; main.appendChild(t);
+    const err = document.createElement('span'); err.className = 'empty';
+    err.textContent = 'Não foi possível carregar as tarefas. Tente de novo.';
+    main.appendChild(err);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
