@@ -34,8 +34,13 @@ checagem anterior dizia "não instalado" e estava errada.)
   contato de quem avisa ausência pelo formulário público. Fechadas pelas **055** e **056**, que eu
   mesmo apliquei e conferi. A tela pública continua inteira.
 
-**Sobrou daqui:** decidir o que fazer com o Lucas Bernardo e com as duas datas de nascimento que
-faltam. Nenhum dos dois é trabalho meu — são decisões e dados.
+**Sobrou daqui:** duas datas de nascimento em branco. O **Lucas Bernardo** está fora por opção do
+dono (confirmado em 18/08/2026) — **não é pendência**.
+
+**As duas datas:** `André de Souza Ribeiro` e `Enrico Pompeu Secherini` — aptos em cruz e vela,
+sem `data_nascimento`. O Kit processional exige 14 anos, e sem a data a regra barra na dúvida.
+Pelos níveis deles (Acólito Guardião e Aspirante a Cerimoniário) quase certamente passam dos 14.
+Preenchendo em **Membros › Pessoal**, voltam a poder ser escalados. Não se mexe no kit.
 
 ## 2. Melhorias já decididas — ✔ TODAS FEITAS em 18/08/2026
 
