@@ -149,6 +149,7 @@ const DESTINOS_ESPERADOS = {
   crm: 'crm.html',
   tesouraria: 'tesouraria.html',
   casas: 'casas.html',
+  tarefas: 'tarefas.html',
 };
 
 test('o mapa REAL do shared.js aponta cada módulo para o arquivo certo', () => {

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Tarefas dos times — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#150a0d">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <script>window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__bip=e;});</script>
+  <style>
+    /* Rótulos de grupo: "Atrasadas" some fora do agrupamento por time, em vermelho —
+       é o que transforma a lista em acompanhamento em vez de anotação solta. */
+    .tf-grupo-titulo { font-family:'Sora',sans-serif; font-weight:800; font-size:13px; color:var(--gold-light); letter-spacing:.5px; margin:18px 0 8px; text-transform:uppercase; }
+    .tf-grupo-titulo.tf-atraso { color:var(--danger-text); }
+    .tf-item { display:flex; gap:10px; align-items:stretch; background:var(--surface); border:1px solid var(--border-wine); border-radius:10px; padding:11px 12px; margin-bottom:8px; }
+    .tf-item.tf-atrasada { border-color:var(--danger); }
+    .tf-bar { width:4px; border-radius:3px; flex:none; background:var(--gold); }
+    .tf-item.tf-atrasada .tf-bar { background:var(--danger); }
+    .tf-body { flex:1; min-width:0; }
+    .tf-tit { font-family:'Sora',sans-serif; font-weight:700; font-size:14px; color:var(--text); }
+    .tf-meta { font-size:12px; color:var(--text-muted); margin-top:3px; }
+    .tf-meta.tf-atrasada-txt { color:var(--danger-text); font-weight:700; }
+    .tf-obs { font-size:12px; color:var(--text-muted); margin-top:4px; font-style:italic; }
+    .tf-acoes { display:flex; align-items:center; }
+    /* FAB "Nova tarefa" — mesma régua do FAB de Agenda (a barra de baixo cresce com a
+       faixa de segurança do aparelho, e o botão precisa acompanhar). */
+    .fab { position:fixed; right:16px; bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px); z-index:48; height:50px; padding:0 18px; border-radius:26px; border:1px solid var(--gold); background:linear-gradient(165deg, var(--wine), var(--surface)); color:var(--gold-light); font-family:'Sora',sans-serif; font-weight:700; font-size:14px; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 6px 22px rgba(0,0,0,.55), 0 0 16px var(--red-glow); }
+    .fab svg { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2.2; stroke-linecap:round; }
+    .tf-form label { display:block; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin:10px 0 4px; }
+  </style>
+  <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+<div class="main" id="main-content">
+  <span class="loading">Carregando...</span>
+</div>
+
+<script src="navegacao-core.js"></script>
+<script src="tarefas-core.js"></script>
+<script src="shared.js"></script>
+<script>
+// Tarefas dos times: cada time (Almoxarifado, Formação, Ordem e Disciplina...) tem sua
+// lista de afazeres, com prazo, responsável opcional e recorrência. proximaTarefa
+// (tarefas-core.js) decide a data da próxima quando uma recorrente é concluída — essa
+// tela só CHAMA a função, nunca reimplementa a conta.
+
+let ctx = null;
+
+// 'hoje' no mesmo formato AAAA-MM-DD usado no resto do app (escalas-membro.html,
+// caixa.html etc.) — consistência com o app inteiro, não invenção nova aqui.
+function hojeStr() { return new Date().toISOString().slice(0, 10); }
+
+function prazoLabel(prazo) {
+  if (!prazo) return 'sem prazo';
+  const DIAS = ['dom','seg','ter','qua','qui','sex','sáb'];
+  const d = new Date(prazo + 'T00:00:00');
+  return 'vence ' + DIAS[d.getDay()] + ' ' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+function nomeResponsavel(t) {
+  // Nunca em branco: sem responsável, a linha diz "do time" — em branco a pessoa não
+  // sabe se a tarefa é dela ou se ninguém pegou ainda.
+  if (t.responsavel) return t.responsavel.apelido || t.responsavel.nome;
+  return 'do time';
+}
+
+// Nenhum time tem tarefa hoje: a tela sem tarefa nenhuma é a que a coordenação vai ver
+// primeiro, então é a que precisa estar mais certa.
+function renderNadaAqui(main) {
+  const box = document.createElement('div');
+  box.style.cssText = 'text-align:center;padding:42px 16px;color:var(--text-muted);';
+  const t = document.createElement('div');
+  t.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:16px;color:var(--text);';
+  t.textContent = 'Nenhuma tarefa por aqui';
+  const s = document.createElement('div');
+  s.style.cssText = 'font-size:13px;margin-top:4px;';
+  s.textContent = 'Crie a primeira e ela aparece no time escolhido.';
+  box.append(t, s); main.appendChild(box);
+}
+
+function linhaTarefa(t, atrasada) {
+  const row = document.createElement('div'); row.className = 'tf-item' + (atrasada ? ' tf-atrasada' : '');
+  const bar = document.createElement('div'); bar.className = 'tf-bar';
+  const body = document.createElement('div'); body.className = 'tf-body';
+  const tit = document.createElement('div'); tit.className = 'tf-tit'; tit.textContent = t.titulo;
+  const meta = document.createElement('div'); meta.className = 'tf-meta' + (atrasada ? ' tf-atrasada-txt' : '');
+  meta.textContent = prazoLabel(t.prazo) + ' · ' + nomeResponsavel(t);
+  body.append(tit, meta);
+  if (t.observacao) {
+    const obs = document.createElement('div'); obs.className = 'tf-obs'; obs.textContent = t.observacao;
+    body.appendChild(obs);
+  }
+  const acoes = document.createElement('div'); acoes.className = 'tf-acoes';
+  const ok = document.createElement('button'); ok.className = 'btn-sm gold'; ok.textContent = 'Concluir';
+  ok.onclick = () => concluirTarefa(t);
+  acoes.appendChild(ok);
+  row.append(bar, body, acoes);
+  return row;
+}
+
+// Busca as tarefas em aberto e desenha a lista: atrasadas primeiro (fora do
+// agrupamento), depois o resto agrupado por time.
+async function renderLista(main) {
+  const { data, error } = await sb.from('acolitos_tarefas')
+    .select('*, responsavel:acolitos_membros!responsavel_id(nome,apelido)')
+    .is('concluida_em', null).order('prazo', { nullsFirst: false });
+  if (error) {
+    // Falha de consulta NÃO pode virar "nenhuma tarefa": seria dizer que está tudo em
+    // dia quando na verdade não se conseguiu perguntar. Já aconteceu duas vezes neste
+    // projeto (a Caixa, um 500 virando "R$ 0,00" por 17h noutro app daqui).
+    console.error('Tarefas: consulta falhou', error);
+    const e = document.createElement('span'); e.className = 'empty';
+    e.textContent = 'Não foi possível carregar as tarefas. Tente de novo.';
+    main.appendChild(e);
+    return;
+  }
+  const tarefas = data || [];
+  if (!tarefas.length) { renderNadaAqui(main); return; }
+
+  // Rótulos amigáveis dos times (acolitos_listas tipo='setor'). Falha aqui não impede
+  // a lista de aparecer — só faz a linha mostrar o slug cru em vez do nome bonito.
+  const { data: listas, error: errListas } = await sb.from('acolitos_listas').select('valor,label').eq('tipo', 'setor');
+  if (errListas) console.error('Tarefas: rótulos de time falharam', errListas);
+  const labelTime = {};
+  (listas || []).forEach(l => { labelTime[l.valor] = l.label; });
+
+  const hoje = hojeStr();
+  const atrasadas = tarefas.filter(t => t.prazo && t.prazo < hoje);
+  const idsAtrasadas = new Set(atrasadas.map(t => t.id));
+  const resto = tarefas.filter(t => !idsAtrasadas.has(t.id));
+
+  if (atrasadas.length) {
+    const h = document.createElement('div'); h.className = 'tf-grupo-titulo tf-atraso';
+    h.textContent = 'Atrasadas (' + atrasadas.length + ')';
+    main.appendChild(h);
+    atrasadas.forEach(t => main.appendChild(linhaTarefa(t, true)));
+  }
+
+  const porTime = {};
+  resto.forEach(t => { (porTime[t.time_slug] = porTime[t.time_slug] || []).push(t); });
+  Object.keys(porTime).sort((a, b) => (labelTime[a] || a).localeCompare(labelTime[b] || b, 'pt-BR')).forEach(slug => {
+    const h = document.createElement('div'); h.className = 'tf-grupo-titulo';
+    h.textContent = labelTime[slug] || slug;
+    main.appendChild(h);
+    porTime[slug].forEach(t => main.appendChild(linhaTarefa(t, false)));
+  });
+}
+
+// Ao concluir uma recorrente, cria a próxima com o prazo que proximaTarefa (tarefas-core.js)
+// devolver. Só dispara na conclusão — nunca pelo relógio (decisão do dono: ver o
+// comentário de topo de tarefas-core.js).
+async function criarProxima(t) {
+  let proximaCelebracao = null;
+  if (t.recorrencia === 'celebracao') {
+    const { data, error } = await sb.from('acolitos_celebracoes').select('data').gte('data', hojeStr()).order('data').limit(1);
+    if (error) console.error('Tarefas: buscar próxima celebração falhou', error);
+    else proximaCelebracao = (data && data[0]) ? data[0].data : null;
+  }
+  const prox = proximaTarefa({ recorrencia: t.recorrencia, prazo: t.prazo, hoje: hojeStr(), proximaCelebracao });
+  if (!prox) return; // recorrência 'nenhuma' ou desconhecida: sem próxima
+  const payload = {
+    titulo: t.titulo, time_slug: t.time_slug, responsavel_id: t.responsavel_id || null,
+    prazo: prox.prazo, observacao: t.observacao || null, recorrencia: t.recorrencia,
+    criada_por: ctx.membro ? ctx.membro.id : null,
+  };
+  const { error } = await sb.from('acolitos_tarefas').insert(payload);
+  // Ler o error das DUAS gravações (conclusão + próxima): sem isso, a corrente de
+  // tarefas recorrentes morre em silêncio — a coordenação acha que continua rodando.
+  if (error) {
+    console.error('Tarefas: criar a próxima falhou', error);
+    toast('Concluída, mas não foi possível criar a próxima. Avise a coordenação.', 'error');
+  }
+}
+
+async function concluirTarefa(t) {
+  if (!await uiConfirm('Concluir "' + t.titulo + '"?')) return;
+  const { error } = await sb.from('acolitos_tarefas')
+    .update({ concluida_em: new Date().toISOString(), concluida_por: ctx.membro ? ctx.membro.id : null })
+    .eq('id', t.id);
+  if (error) {
+    // Sem ler este error, a tarefa some da TELA (se a gente tirasse ela do DOM na mão)
+    // mas continua aberta no banco — exatamente o defeito que este projeto já cometeu.
+    console.error('Tarefas: concluir falhou', error);
+    toast('Não foi possível concluir. Tente de novo.', 'error');
+    return;
+  }
+  if (t.recorrencia && t.recorrencia !== 'nenhuma') await criarProxima(t);
+  toast('Tarefa concluída.');
+  await renderTudo();  // recarrega do banco — nunca remove otimista do DOM
+}
+
+// ── Criar tarefa ──
+async function carregarSetores() {
+  const { data, error } = await sb.from('acolitos_listas').select('valor,label').eq('tipo', 'setor').order('label');
+  if (error) { console.error('Tarefas: carregar times falhou', error); return []; }
+  return data || [];
+}
+async function carregarRoster() {
+  const { data, error } = await sb.rpc('acolitos_roster_nomes');
+  if (error) { console.error('Tarefas: carregar responsáveis falhou', error); return []; }
+  return data || [];
+}
+
+async function abrirFormTarefa() {
+  const [setores, roster] = await Promise.all([carregarSetores(), carregarRoster()]);
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const m = document.createElement('div'); m.className = 'modal tf-form'; m.style.maxWidth = '440px';
+  const h = document.createElement('h2'); h.style.cssText = 'font-family:Sora,sans-serif;font-size:18px;margin:0 0 4px;color:var(--text);';
+  h.textContent = 'Nova tarefa'; m.appendChild(h);
+
+  const mk = (lbl, el) => { const L = document.createElement('label'); L.textContent = lbl; m.append(L, el); return el; };
+
+  const iTit = document.createElement('input'); iTit.className = 'form-input'; iTit.placeholder = 'Ex.: conferir estoque de velas';
+  mk('Título', iTit);
+
+  const sTime = document.createElement('select'); sTime.className = 'form-input';
+  const optVazio = document.createElement('option'); optVazio.value = ''; optVazio.textContent = 'Escolha o time...'; sTime.appendChild(optVazio);
+  setores.forEach(s => { const o = document.createElement('option'); o.value = s.valor; o.textContent = s.label || s.valor; sTime.appendChild(o); });
+  mk('Time', sTime);
+
+  const sResp = document.createElement('select'); sResp.className = 'form-input';
+  const optNinguem = document.createElement('option'); optNinguem.value = ''; optNinguem.textContent = 'Ninguém (fica com o time)'; sResp.appendChild(optNinguem);
+  roster.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.apelido || p.nome; sResp.appendChild(o); });
+  mk('Responsável (opcional)', sResp);
+
+  const iPrazo = document.createElement('input'); iPrazo.className = 'form-input'; iPrazo.type = 'date';
+  mk('Prazo (opcional)', iPrazo);
+
+  const sRec = document.createElement('select'); sRec.className = 'form-input';
+  [['nenhuma','Não se repete'], ['semanal','Toda semana'], ['mensal','Todo mês'], ['anual','Todo ano'], ['celebracao','A cada celebração']]
+    .forEach(([v,l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; sRec.appendChild(o); });
+  mk('Recorrência', sRec);
+
+  const iObs = document.createElement('textarea'); iObs.className = 'form-input'; iObs.rows = 3; iObs.placeholder = 'Detalhes, o que levar, a quem avisar...';
+  mk('Observação (opcional)', iObs);
+
+  const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:16px;';
+  const cancel = document.createElement('button'); cancel.className = 'btn'; cancel.style.flex = '1'; cancel.textContent = 'Cancelar'; cancel.onclick = () => ov.remove();
+  const save = document.createElement('button'); save.className = 'btn gold'; save.style.flex = '1'; save.textContent = 'Criar';
+  save.onclick = async () => {
+    const titulo = iTit.value.trim();
+    if (!titulo) { toast('Dê um título à tarefa.', 'error'); return; }
+    if (!sTime.value) { toast('Escolha o time.', 'error'); return; }
+    save.disabled = true; save.textContent = 'Salvando...';
+    const payload = {
+      titulo, time_slug: sTime.value, responsavel_id: sResp.value || null,
+      prazo: iPrazo.value || null, observacao: iObs.value.trim() || null,
+      recorrencia: sRec.value, criada_por: ctx.membro ? ctx.membro.id : null,
+    };
+    const { error } = await sb.from('acolitos_tarefas').insert(payload);
+    if (error) {
+      console.error('Tarefas: criar falhou', error);
+      toast('Não foi possível criar a tarefa. Tente de novo.', 'error');
+      save.disabled = false; save.textContent = 'Criar';
+      return;
+    }
+    toast('✓ Tarefa criada!');
+    ov.remove();
+    await renderTudo();
+  };
+  acts.append(cancel, save); m.appendChild(acts);
+  ov.appendChild(m); document.body.appendChild(ov);
+  iTit.focus();
+}
+
+async function renderTudo() {
+  document.querySelectorAll('.fab').forEach(x => x.remove());  // evita FAB duplicado a cada reload
+  const main = document.getElementById('main-content'); main.textContent = '';
+  const t = document.createElement('h1'); t.className = 'page-title'; t.textContent = 'Tarefas dos times'; main.appendChild(t);
+  const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;';
+  hint.textContent = 'Atrasadas aparecem primeiro; o resto, agrupado por time.';
+  main.appendChild(hint);
+
+  await renderLista(main);
+
+  const fab = document.createElement('button'); fab.className = 'fab';
+  // "+" hardcoded, no padrão do FAB de agenda.html — SVG, nunca emoji.
+  fab.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 5v14 M5 12h14"/></svg><span>Nova tarefa</span>';
+  fab.onclick = () => abrirFormTarefa();
+  document.body.appendChild(fab);
+}
+
+async function init() {
+  ctx = await initModulo(['coord_admin','subadmin','membro_equipe'], { perm: 'tarefas' });
+  if (!ctx) return;
+  renderHeader(ctx, 'tarefas');
+  renderBottomNav(ctx, 'tarefas');
+  try {
+    await renderTudo();
+  } catch (e) {
+    // Rede-fora-do-ar de vez ou qualquer falha que escapou do try/catch interno de
+    // renderLista: sem esta rede de segurança a tela ficava só com o título, sem dizer
+    // que algo deu errado (mesmo gotcha já corrigido na Caixa).
+    console.error('Tarefas: init falhou ao renderizar', e);
+    document.querySelectorAll('.fab').forEach(x => x.remove());
+    const main = document.getElementById('main-content'); main.textContent = '';
+    const t = document.createElement('h1'); t.className = 'page-title'; t.textContent = 'Tarefas dos times'; main.appendChild(t);
+    const err = document.createElement('span'); err.className = 'empty';
+    err.textContent = 'Não foi possível carregar as tarefas. Tente de novo.';
+    main.appendChild(err);
+  }
+}
+
+init();
+</script>
+</body>
+</html>

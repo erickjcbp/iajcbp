@@ -1490,6 +1490,7 @@ const MODULOS_LIBERAVEIS = [
   ['escala','Escala','escala.html'], ['membros','Membros','membros.html'],
   ['crm','Integração (CRM)','crm.html'],
   ['tesouraria','Tesouraria','tesouraria.html'], ['casas','Casas','casas.html'],
+  ['tarefas','Tarefas dos times','tarefas.html'],
 ]; // 'chamada' foi fundida na Escala (botão por card) — não é mais um módulo de nav separado,
    // então a Chamada é gateada pela permissão 'escala' (ver chamada.html)
 
@@ -1505,18 +1506,21 @@ const NAV_COORD_MODULOS = {
   crm:        { label:'CRM',        href:'crm.html',        icon:'shuffle' },
   tesouraria: { label:'Tesouraria', href:'tesouraria.html', icon:'dollar' },
   casas:      { label:'Casas',      href:'casas.html',      icon:'shield' },
+  tarefas:    { label:'Tarefas',    href:'tarefas.html',    icon:'tarefas' },
 };
 // 'jornada' vem primeiro pra manter o lugar que ela já ocupava na barra (logo após Agenda).
 // Ela saiu dos itens fixos: aprovar XP e promover não é pra qualquer um da equipe.
 // 'caixa' vem logo em seguida porque é o trabalho diário da coordenação: aprovar
 // trocas, cadastros e ausências — o que mais se acessa depois da Jornada.
-const ORDEM_MODULOS = ['jornada','caixa','membros','escala','crm','tesouraria','casas'];
+// 'tarefas' entra no FIM: id novo pode entrar, mas mexer na posição das outras mudaria
+// a barra de todo mundo (contrato com acolitos_config.nav_ordem_coord).
+const ORDEM_MODULOS = ['jornada','caixa','membros','escala','crm','tesouraria','casas','tarefas'];
 
 // Rótulos amigáveis por arquivo, p/ o chip "Continuar" da Home (Fase 4).
 // Cobre telas de coordenação (NAV_COORD_MODULOS) e de jornada.
 const TELA_LABEL = {
   'membros.html':'Membros', 'escala.html':'Escala', 'crm.html':'CRM',
-  'tesouraria.html':'Tesouraria', 'casas.html':'Casas',
+  'tesouraria.html':'Tesouraria', 'casas.html':'Casas', 'tarefas.html':'Tarefas',
   'missoes.html':'Quests', 'escalas-membro.html':'Minhas Escalas', 'agenda.html':'Agenda',
   'destaques.html':'Destaques', 'minha-casa.html':'Minha Casa', 'ausencias.html':'Ausências',
   'jornada-admin.html':'Jornada', 'conquistas.html':'Conquistas'
@@ -1572,6 +1576,8 @@ function _svgIcon(name) {
     award:          'M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14z M8.21 13.89L7 23l5-3 5 3-1.21-9.12',
     // ícone de Alerta: triângulo com exclamação — usado nos alertas de frequência do Início
     alerta:         'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z M12 9v4 M12 17h.01',
+    // ícone de Tarefas: prancheta com um "visto" — a lista de afazeres de cada time
+    tarefas:        'M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1z M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2 M9 14l2 2 4-4',
     settings:       'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
   };
   return `<svg viewBox="0 0 24 24"><path d="${d[name] || ''}"/></svg>`;
