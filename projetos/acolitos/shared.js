@@ -1637,7 +1637,7 @@ const CASA_COR = { sanctaris:'#c0392b', seraphim:'#e67e22', veritatis:'#2980b9',
 // A arte vem com FUNDO PRETO chapado; o preto foi recortado por inundação a partir das
 // bordas (não por cor, senão furaria os contornos escuros de dentro do brasão), senão
 // cada casa viraria um retângulo preto — gritante no modo claro do app.
-const CASA_BRASAO_OFICIAL = ['sanctaris', 'seraphim', 'veritatis', 'templaris'];
+const CASA_BRASAO_OFICIAL = ['sanctaris', 'seraphim', 'veritatis', 'templaris', 'consilium'];
 
 function getCasaBrasao(slug, size) {
   size = size || 80;
