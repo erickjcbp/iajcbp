@@ -34,8 +34,13 @@ checagem anterior dizia "não instalado" e estava errada.)
   contato de quem avisa ausência pelo formulário público. Fechadas pelas **055** e **056**, que eu
   mesmo apliquei e conferi. A tela pública continua inteira.
 
-**Sobrou daqui:** duas datas de nascimento em branco. O **Lucas Bernardo** está fora por opção do
-dono (confirmado em 18/08/2026) — **não é pendência**.
+**Nada sobrou daqui.** O **Lucas Bernardo** e o **André de Souza Ribeiro** estão fora por opção do
+dono (o André tem menos de 14 mesmo), e o **Enrico Pompeu Secherini** foi liberado no Kit
+processional em 18/08/2026 — a lista de liberados foi de 8 para 9. A "Leitura B" está fechada.
+
+*Observação, não pendência:* o André é barrado por `data_nascimento` em branco, não por idade
+conhecida. O resultado é o certo por coincidência — e quando ele fizer 14 a trava não vai soltá-lo
+sozinha, porque ela não sabe a idade dele.
 
 **As duas datas:** `André de Souza Ribeiro` e `Enrico Pompeu Secherini` — aptos em cruz e vela,
 sem `data_nascimento`. O Kit processional exige 14 anos, e sem a data a regra barra na dúvida.
