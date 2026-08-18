@@ -4,18 +4,25 @@
 --
 -- NADA PENDENTE. Não há o que colar hoje.
 --
--- Aplicado pelo dono em 18/08/2026:
---   048_tarefas.sql                    — a tabela das Tarefas dos times
---   049_convocar_por_time.sql          — convocar evento por time da pastoral
---   050_tarefas_andamento.sql          — o estado "em andamento" e a lista de responsáveis
---   051_tarefas_recusa_sem_login.sql   — a leitura recusa quem não fez login, como as irmãs
---   052_candidatura_confere_vaga.sql   — aprovar candidatura confere a vaga no servidor
---   053_responsaveis_sem_eh_equipe.sql — ser responsável exige só estar num time
---   054_tarefa_origem.sql              — a recorrente sabe de qual conclusão nasceu
+-- Aplicadas em 18/08/2026:
+--   048_tarefas.sql                    — a tabela das Tarefas dos times          (dono)
+--   049_convocar_por_time.sql          — convocar evento por time da pastoral    (dono)
+--   050_tarefas_andamento.sql          — o estado "em andamento" e os responsáveis (dono)
+--   051_tarefas_recusa_sem_login.sql   — a leitura recusa quem não fez login     (dono)
+--   052_candidatura_confere_vaga.sql   — aprovar candidatura confere a vaga      (dono)
+--   053_responsaveis_sem_eh_equipe.sql — ser responsável exige só estar num time (dono)
+--   054_tarefa_origem.sql              — a recorrente sabe de onde nasceu        (dono)
+--   055_tres_tabelas_recusam_sem_login.sql        — push_subs, escala_artes, liturgia_override
+--   056_tabelas_so_por_funcao_recusam_sem_login.sql — as 8 que só se alcança por função
 --
--- Conferido de fora, sem sessão: `origem_id` existe (054), e as funções mexidas seguem
--- recusando quem não fez login. O COMPORTAMENTO da 052 e da 053 fica atrás de login e não
--- dá para medir daqui — para isso existe `docs/CONFERIR-NO-BANCO.sql`, que é só leitura.
+-- As 055 e 056 foram aplicadas e conferidas por mim, depois que a senha do banco apareceu.
+-- Tudo conferido RODANDO, não por leitura.
 --
--- Quando houver migration nova, este arquivo volta a ter só o que ainda falta.
+-- ⚠️ Este arquivo NÃO é mais o único caminho. Desde 18/08 eu alcanço o banco pelo `.env`
+-- (`psql` e `pg_dump` ficam em /opt/homebrew/opt/libpq/bin/, fora do PATH). Migration nova pode
+-- ser aplicada e conferida por mim; este arquivo passa a existir para quando VOCÊ quiser aplicar
+-- à mão, ou quando o acesso quebrar de novo.
+--
+-- Para RECONSTRUIR o banco do zero: `db/estrutura-completa.sql` primeiro, depois as migrations
+-- da 057 em diante.
 -- ============================================================
