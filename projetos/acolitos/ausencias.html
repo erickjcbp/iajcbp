@@ -73,7 +73,6 @@ function dataLabel(d) { const x = new Date(d+'T00:00:00'); return DIAS[x.getDay(
 function comLabel(c) { return c==='matriz'?'Matriz':'Sto. Antônio'; }
 
 let ctx = null;
-let podeAprovar = false;
 let abaAusencias = 'avisos';   // qual aba da tela de Ausências está aberta
 let rosterMembrosAus = null, rosterMapAus = {}, rosterHabsAus = [];
 // Roster seguro (security-definer) — cobre o cerimoniário, que não lê acolitos_membros por RLS.
@@ -194,72 +193,6 @@ let datasAvulsasSel = []; // datas (YYYY-MM-DD) informadas sem celebração cada
 
 function fmtDataBR(d) { const x = new Date(d + 'T00:00:00'); return DIAS[x.getDay()] + ' ' + x.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }); }
 
-// ── Caixa de Aprovações — grupos Trocas / Candidaturas (Task 10) + Cobrir (Task 11) ──
-async function renderCaixaSolicitacoes(container){
-  const { data } = await sb.rpc('acolitos_solicitacoes_pendentes');
-  const trocas=(data&&data.trocas)||[]; const cand=(data&&data.candidaturas)||[]; const cobrir=(data&&data.cobrir)||[];
-
-  function grupo(titulo, itens, montarItem){
-    if(!itens.length) return;
-    const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
-    h.textContent=titulo+' ('+itens.length+')'; container.appendChild(h);
-    itens.forEach(it=>container.appendChild(montarItem(it)));
-  }
-  function fmt(it){ return dataLabel(it.data)+' · '+it.horario+' · '+comLabel(it.comunidade); }
-  function card(){ const c=document.createElement('div'); c.style.cssText='background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:12px;margin-bottom:8px;'; return c; }
-  function acoes(){ const a=document.createElement('div'); a.style.cssText='display:flex;gap:8px;margin-top:10px;'; return a; }
-
-  async function decidir(id, acao, substituto, onOk){
-    const { data:res } = await sb.rpc('acolitos_solicitacao_decidir', { p_solicitacao_id:id, p_acao:acao, p_substituto_id:substituto||null });
-    if(res && res.ok){ toast('Feito.','success'); onOk(); } else { toast(motivoDaRecusa(res,'Não foi possível decidir.'),'error'); }
-  }
-
-  // 🔄 Trocas aguardando homologação (colega já aceitou)
-  grupo('🔄 Trocas aguardando você', trocas, (it)=>{
-    const c=card();
-    const t=document.createElement('div'); t.style.fontWeight='700'; t.textContent=(it.de_nome||'?')+' → '+(it.alvo_nome||'?');
-    const s=document.createElement('div'); s.style.cssText='font-size:12px;color:var(--gold);'; s.textContent=fmt(it)+' · '+(FUNCAO_LABEL[it.funcao]||it.funcao);
-    const a=acoes();
-    const ok=document.createElement('button'); ok.className='btn-sm'; ok.style.flex='1'; ok.textContent='Homologar';
-    const no=document.createElement('button'); no.className='btn-sm gray'; no.style.flex='1'; no.textContent='Negar';
-    ok.onclick=()=>decidir(it.id,'homologar',null,()=>c.remove());
-    no.onclick=()=>decidir(it.id,'negar',null,()=>c.remove());
-    a.append(ok,no); c.append(t,s,a); return c;
-  });
-
-  // 🙋 Candidaturas a vaga
-  grupo('🙋 Candidaturas a vaga', cand, (it)=>{
-    const c=card();
-    const t=document.createElement('div'); t.style.fontWeight='700'; t.textContent=(it.de_nome||'?')+' quer '+(FUNCAO_LABEL[it.funcao]||it.funcao);
-    const s=document.createElement('div'); s.style.cssText='font-size:12px;color:var(--gold);'; s.textContent=fmt(it);
-    const a=acoes();
-    const ok=document.createElement('button'); ok.className='btn-sm'; ok.style.flex='1'; ok.textContent='Aprovar';
-    const no=document.createElement('button'); no.className='btn-sm gray'; no.style.flex='1'; no.textContent='Negar';
-    ok.onclick=()=>decidir(it.id,'aprovar_candidatura',null,()=>c.remove());
-    no.onclick=()=>decidir(it.id,'negar',null,()=>c.remove());
-    a.append(ok,no); c.append(t,s,a); return c;
-  });
-
-  // 🛟 Cobrir — tratado na Task 11 (auto-troca)
-  renderCaixaCobrir(container, cobrir);
-
-  // 🆕 Novos cadastros aguardando aprovação (fonte: CRM)
-  try {
-    const { data: novos } = await sb.from('acolitos_crm')
-      .select('membro_id, etapa, acolitos_membros(nome)')
-      .eq('etapa','aprovacao_cadastro');
-    if ((novos||[]).length){
-      const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
-      h.textContent='🆕 Novos cadastros ('+novos.length+')'; container.appendChild(h);
-      novos.forEach(n=>{
-        const c=document.createElement('div'); c.style.cssText='background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;';
-        const t=document.createElement('div'); t.style.fontWeight='700'; t.textContent=(n.acolitos_membros && n.acolitos_membros.nome) || '(sem nome)';
-        const b=document.createElement('a'); b.className='btn-sm'; b.href='crm.html'; b.textContent='Abrir no CRM →';
-        c.append(t,b); container.appendChild(c);
-      });
-    }
-  } catch(e){ console.error('novos cadastros (caixa) falhou', e); }
-}
 async function renderCaixaCobrir(container, cobrir){
   if(!cobrir.length) return;
   const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
@@ -299,13 +232,11 @@ async function init() {
   await carregarMotivos(); // motivos do Config (fallback: padrões)
   // equipe E cerimoniários podem registrar ausência de outros (a RLS libera os dois)
   const _r = ctx.membership.role;
-  // renderPendentesPublicas sem await de propósito: carrega em background e prepende
-  // o card após a view de equipe já ter montado (ela limpa #main-content no início).
-  // ATENÇÃO: o gate de 'caixa' é sobre o BLOCO DE APROVAÇÕES, nunca sobre a tela.
-  // Esta tela é a única do app com dois públicos no mesmo arquivo: todo membro
-  // precisa dela pra informar ausência. Não troque isto por initModulo({perm:'caixa'}).
+  // ATENÇÃO: esta tela serve DOIS públicos no mesmo arquivo — todo membro precisa dela
+  // para informar a própria ausência, e a coordenação usa a mesma tela para registrar a de
+  // outros. Não troque isto por initModulo({perm:'caixa'}): trancaria os membros fora da
+  // própria ausência. Quem aprova pendência é a caixa.html, não aqui.
   const _caps = navCaps(ctx);
-  podeAprovar = _caps.isAdmin || _caps.perms.includes('caixa');
   // Quem vê a visão da coordenação passa a ser decidido por acesso-core.js, testado em
   // node. Medido no banco antes de trocar: a regra nova e a antiga dão o MESMO resultado
   // para todo o cadastro de hoje — 0 pessoas de diferença.
@@ -314,98 +245,6 @@ async function init() {
     // os avisos da página pública a confirmar também são da Caixa agora (ver acima)
   }
   else renderViewMembro();
-}
-
-// Avisos recebidos pela página pública (/ausencias), aguardando confirmação.
-// Card fino (só a contagem) → toca para expandir → "Aprovar todas" de uma vez.
-async function renderPendentesPublicas(){
-  const { data } = await sb.rpc('acolitos_ausencia_pendente_listar');
-  const pend = (data && data.pendentes) || [];
-  if(!pend.length) return;
-  const main = document.getElementById('main-content');
-  const fmt = d => { const [y,m,da]=String(d).split('-'); return da+'/'+m+'/'+y; };
-
-  const card = document.createElement('div'); card.className='section-card';
-  card.style.cssText = (card.style.cssText||'') + ';border:1px solid var(--gold);';
-
-  // Cabeçalho fino clicável (toggle)
-  const head = document.createElement('div');
-  head.style.cssText='display:flex;align-items:center;gap:8px;cursor:pointer;font-family:Sora,sans-serif;font-weight:700;font-size:14px;color:var(--gold);';
-  const ht = document.createElement('span'); ht.style.flex='1';
-  const chev = document.createElement('span'); chev.textContent='▾'; chev.style.cssText='transition:transform .15s;font-size:12px;';
-  head.append(ht, chev); card.appendChild(head);
-
-  // Corpo (oculto por padrão)
-  const body = document.createElement('div'); body.style.cssText='display:none;margin-top:10px;'; card.appendChild(body);
-
-  const restantes = ()=>body.querySelectorAll('div[data-pend]').length;
-  const atualiza = ()=>{
-    const n = restantes();
-    ht.textContent = '📋 Avisos recebidos (' + n + ')';
-    bAll.textContent = '✓ Aprovar todas (' + n + ')';
-    if(!n) card.remove();
-  };
-  const decidir = async (ids, acao, onOk)=>{
-    const { data:r } = await sb.rpc('acolitos_ausencia_pendente_decidir',{ p_ids:ids, p_acao:acao });
-    if(r && r.ok){
-      try { const _it=pend.filter(p=>ids.includes(p.id)); const _al=[...new Set(_it.map(i=>i.membro_id).filter(Boolean))]; if(_al.length){ const _ok=acao==='aprovar'; apiPost('/api/enviar-push',{tipo:'ausencia',membros:_al,titulo:_ok?'Ausência aprovada ✅':'Ausência recusada',texto:'Sua ausência foi '+(_ok?'APROVADA':'recusada')+'. Veja no app.'}); } } catch(_){}
-      onOk();
-      // Auto-troca (Task 5): só ao aprovar, e só para os itens desta chamada (o RPC já gravou
-      // a ausência real com celebracao_id). `pend` é o array completo carregado no topo desta função.
-      if (acao === 'aprovar') {
-        const itens = pend.filter(p => ids.includes(p.id));
-        try { await autoTrocaAprovadas(itens); }
-        catch (e) {
-          console.error('auto-troca (aprovação) falhou', e);
-          // Ausência já foi aprovada (não desfaz) — só avisa que a troca automática não foi
-          // garantida, pro coordenador conferir a escala manualmente.
-          await uiAlert('Ausência aprovada, mas a troca automática não foi concluída para 1 ou mais item(ns). Confira a escala manualmente.');
-        }
-      }
-    } else { await uiAlert('Erro ao processar.'); }
-  };
-
-  // Ação em massa
-  const bAll = document.createElement('button');
-  bAll.style.cssText='width:100%;font-size:12.5px;font-weight:800;padding:10px;border-radius:8px;cursor:pointer;border:none;margin-bottom:10px;background:linear-gradient(160deg,var(--gold-light,#ffd97a),var(--gold,#8a6a24));color:#2a1500;';
-  bAll.onclick = async ()=>{
-    const rows = Array.from(body.querySelectorAll('div[data-pend]'));
-    const ids = rows.map(r=>r.dataset.id); if(!ids.length) return;
-    bAll.disabled=true; bAll.textContent='Aprovando...';
-    await decidir(ids,'aprovar', ()=>{ rows.forEach(r=>r.remove()); });
-    bAll.disabled=false; atualiza();
-  };
-  body.appendChild(bAll);
-
-  pend.forEach(p=>{
-    const row=document.createElement('div'); row.dataset.id=p.id; row.setAttribute('data-pend','1');
-    row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--border);';
-    const info=document.createElement('div'); info.style.cssText='flex:1;min-width:0;';
-    const nm=document.createElement('div'); nm.style.cssText='font-weight:700;font-size:13px;color:var(--text);';
-    nm.textContent = p.nome + ' · ' + fmt(p.data) + (p.horario ? ' ' + p.horario : '')
-      + (p.comunidade ? ' · ' + (p.comunidade==='matriz'?'Matriz':'Sto. Antônio') : '');
-    const sub=document.createElement('div'); sub.style.cssText='font-size:11px;color:var(--text-muted);word-break:break-word;';
-    const partes=[]; if(p.informante_nome) partes.push('por '+p.informante_nome);
-    if(p.informante_contato) partes.push(p.informante_contato);
-    if(p.motivo) partes.push(p.motivo);
-    sub.textContent = partes.join(' · ') || 'sem detalhes';
-    info.append(nm,sub);
-    const bOk=document.createElement('button'); bOk.textContent='Aprovar';
-    bOk.style.cssText='font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;border:1px solid var(--gold-dim);background:var(--surface2);color:var(--gold-light);';
-    const bNo=document.createElement('button'); bNo.textContent='Rejeitar';
-    bNo.style.cssText='font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;border:1px solid var(--danger);background:var(--surface2);color:var(--danger-text);';
-    const one = async (acao)=>{ bOk.disabled=true; bNo.disabled=true;
-      await decidir([p.id], acao, ()=>{ row.remove(); atualiza(); });
-      bOk.disabled=false; bNo.disabled=false; };
-    bOk.onclick=()=>one('aprovar'); bNo.onclick=()=>one('rejeitar');
-    row.append(info,bOk,bNo); body.appendChild(row);
-  });
-
-  let aberto=false;
-  head.onclick = ()=>{ aberto=!aberto; body.style.display=aberto?'block':'none'; chev.style.transform=aberto?'rotate(180deg)':'none'; };
-
-  atualiza();
-  main.insertBefore(card, main.firstChild);
 }
 
 // Rótulo amigável de uma celebração (missa)

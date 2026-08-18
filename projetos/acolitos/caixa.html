@@ -150,8 +150,9 @@ async function construirCtxMotor(it){
 function nomeDoMembro(id){ const m = rosterMapAus && rosterMapAus[id]; return m ? (m.apelido||m.nome) : id; }
 
 // ── Caixa de Aprovações — grupos Trocas / Candidaturas + Cobrir ──
-// Cópia de ausencias.html (renderCaixaSolicitacoes), com várias mudanças em relação ao
-// original: (1) devolve quantos itens desenhou no total (trocas + candidaturas + cobrir +
+// Nasceu como cópia da ausencias.html — a cópia LÁ foi apagada em 18/08/2026 (ninguém a
+// alcançava, e ela guardava a versão velha do defeito abaixo). Esta é a única viva.
+// Mudanças em relação àquela original: (1) devolve quantos itens desenhou no total (trocas + candidaturas + cobrir +
 // novos cadastros) — é isso que decide se a Caixa mostra "Tudo em dia" — somado em três
 // pontos diferentes desta função; (2) o `await` novo em `renderCaixaCobrir` pra poder somar
 // o retorno dela ao total; (3) agora também LÊ o `error` de cada chamada ao Supabase — se
@@ -271,7 +272,8 @@ async function renderCaixaCobrir(container, cobrir){
 
 // Avisos recebidos pela página pública (/ausencias), aguardando confirmação.
 // Card fino (só a contagem) → toca para expandir → "Aprovar todas" de uma vez.
-// Cópia de ausencias.html (renderPendentesPublicas), com mudanças em relação ao original:
+// Nasceu como cópia da ausencias.html — a de lá foi apagada em 18/08/2026 por não ter
+// chamador. Mudanças em relação àquela original:
 // recebe o container por argumento (em vez de buscar #main-content sozinha), devolve
 // quantos itens desenhou — mesma razão da mudança em renderCaixaSolicitacoes — e agora
 // também lê o `error` da chamada ao Supabase, jogando-o pra cima em vez de tratar

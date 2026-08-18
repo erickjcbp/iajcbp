@@ -266,30 +266,6 @@
   </div>
 </div>
 
-<!-- Modal últimas ausências -->
-<div class="modal-overlay" id="modal-ausencias">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Últimas ausências</div>
-    <div id="aus-body"><span class="loading">Carregando...</span></div>
-    <div class="modal-actions">
-      <button class="btn-sm gray" onclick="fecharModal('modal-ausencias')">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal últimas faltas (ausentes na chamada) -->
-<div class="modal-overlay" id="modal-faltas">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Últimas faltas</div>
-    <div style="font-size:12px;color:var(--text-muted);margin:-6px 0 10px;">Escalados que foram marcados ausentes na chamada.</div>
-    <div id="faltas-body"><span class="loading">Carregando...</span></div>
-    <div class="modal-actions">
-      <button class="btn-sm gray" onclick="fecharModal('modal-faltas')">Fechar</button>
-    </div>
-  </div>
-</div>
 
 <script src="navegacao-core.js"></script>
 <script src="kits-core.js"></script>
@@ -1622,80 +1598,6 @@ async function salvarNovaCeleb(){
   }, 1100);
 }
 function dataCurta(d){ const x=new Date(d+'T00:00:00'); return DIAS[x.getDay()]+' '+x.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}); }
-// Registrar ausência de um membro pela coordenação (self-contained na escala)
-async function abrirRegistrarAusenciaCoord(){
-  let motivos=[['doenca','🤒 Doença'],['viagem','✈️ Viagem'],['familia','👨‍👩‍👧 Família'],['outro','📌 Outro']];
-  try{ const {data}=await sb.from('acolitos_listas').select('valor,label').eq('tipo','motivo').order('label'); if(data&&data.length) motivos=data.map(r=>[r.valor,r.label]); }catch(e){}
-  const hoje=hojeLocal();
-  const futuras=(celebracoes||[]).filter(c=>c.data>=hoje).sort((a,b)=>(a.data+a.horario).localeCompare(b.data+b.horario));
-  const ov=document.createElement('div');ov.className='modal-overlay open';ov.onclick=e=>{if(e.target===ov)ov.remove();};
-  const md=document.createElement('div');md.className='modal';md.style.maxWidth='460px';
-  const tt=document.createElement('div');tt.className='modal-title';tt.textContent='Registrar Ausência';md.appendChild(tt);
-  const lM=document.createElement('label');lM.style.cssText='font-size:12px;color:var(--text-muted);display:block;margin:8px 0 4px;';lM.textContent='Membro';md.appendChild(lM);
-  const selMembro=document.createElement('select');selMembro.className='form-select';selMembro.style.width='100%';
-  const o0=document.createElement('option');o0.value='';o0.textContent='— escolha —';selMembro.appendChild(o0);
-  (membros||[]).slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.apelido||m.nome;selMembro.appendChild(o);});
-  md.appendChild(selMembro);
-  const lC=document.createElement('label');lC.style.cssText='font-size:12px;color:var(--text-muted);display:block;margin:12px 0 4px;';lC.textContent='Missas (marque uma ou mais)';md.appendChild(lC);
-  const box=document.createElement('div');box.style.cssText='max-height:30vh;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:6px;';
-  if(!futuras.length){const e=document.createElement('div');e.style.cssText='font-size:12px;color:var(--text-muted);';e.textContent='Nenhuma missa futura cadastrada.';box.appendChild(e);}
-  futuras.forEach(c=>{
-    const r=document.createElement('label');r.style.cssText='display:flex;align-items:center;gap:8px;padding:5px 2px;font-size:12px;color:var(--text);cursor:pointer;';
-    const chk=document.createElement('input');chk.type='checkbox';chk.className='aus-cel';chk.value=c.id;
-    const sp=document.createElement('span');sp.textContent=dataCurta(c.data)+' '+c.horario+' · '+(c.comunidade==='matriz'?'Matriz':'Sto. Antônio');
-    r.append(chk,sp);box.appendChild(r);
-  });
-  md.appendChild(box);
-  const lAv=document.createElement('label');lAv.style.cssText='font-size:12px;color:var(--text-muted);display:block;margin:12px 0 4px;';lAv.textContent='Ou uma data avulsa (sem missa cadastrada)';md.appendChild(lAv);
-  const avInp=document.createElement('input');avInp.type='date';avInp.className='form-input';avInp.min=hoje;avInp.style.width='100%';md.appendChild(avInp);
-  const lMo=document.createElement('label');lMo.style.cssText='font-size:12px;color:var(--text-muted);display:block;margin:12px 0 4px;';lMo.textContent='Motivo';md.appendChild(lMo);
-  const selMotivo=document.createElement('select');selMotivo.className='form-select';selMotivo.style.width='100%';
-  motivos.forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;selMotivo.appendChild(o);});
-  md.appendChild(selMotivo);
-  const obsInp=document.createElement('input');obsInp.className='form-input';obsInp.placeholder='Observação (opcional)';obsInp.style.cssText='width:100%;margin-top:10px;';md.appendChild(obsInp);
-  const msg=document.createElement('div');msg.style.cssText='font-size:12px;color:var(--danger-text);margin-top:8px;min-height:16px;';md.appendChild(msg);
-  const acts=document.createElement('div');acts.style.cssText='display:flex;gap:8px;margin-top:8px;';
-  const cancel=document.createElement('button');cancel.className='btn-sm gray';cancel.style.flex='1';cancel.textContent='Cancelar';cancel.onclick=()=>ov.remove();
-  const salvar=document.createElement('button');salvar.className='btn-sm gold';salvar.style.flex='1';salvar.textContent='Salvar';
-  salvar.onclick=async()=>{
-    const mid=selMembro.value; if(!mid){msg.textContent='Escolha um membro.';return;}
-    const ids=[...box.querySelectorAll('.aus-cel:checked')].map(c=>c.value);
-    const dataAvulsa=avInp.value;
-    if(!ids.length && !dataAvulsa){msg.textContent='Escolha ao menos uma missa ou uma data.';return;}
-    const motivo=selMotivo.value; const obs=obsInp.value.trim()||null;
-    salvar.disabled=true; salvar.textContent='Salvando...';
-    if(ids.length){
-      const { error }=await sb.from('acolitos_ausencias').upsert(ids.map(cid=>({membro_id:mid,celebracao_id:cid,motivo,observacao:obs})),{onConflict:'membro_id,celebracao_id'});
-      if(error){msg.textContent='Erro ao salvar (missas).';salvar.disabled=false;salvar.textContent='Salvar';return;}
-      ids.forEach(cid=>{ (ausMap[cid]=ausMap[cid]||new Set()).add(mid); });
-    }
-    if(dataAvulsa){
-      await sb.from('acolitos_ausencias').delete().eq('membro_id',mid).eq('data',dataAvulsa).is('celebracao_id',null);
-      const { error }=await sb.from('acolitos_ausencias').insert([{membro_id:mid,data:dataAvulsa,celebracao_id:null,motivo,observacao:obs}]);
-      if(error){msg.textContent='Erro ao salvar (data avulsa).';salvar.disabled=false;salvar.textContent='Salvar';return;}
-    }
-    toast('✓ Ausência registrada'); ov.remove();
-    // Auto-troca: p/ cada missa cadastrada (celebracao_id definido) onde o membro estava
-    // escalado, o motor escolhe substituto e a RPC grava atômico (Task 4).
-    const trocas=[];
-    for(const cid of ids){
-      const celeb=futuras.find(c=>c.id===cid);
-      if(!celeb) continue;
-      const t=await GeradorSubstituto.aplicarTrocaEscala(sb,
-        { celebracao_id:cid, comunidade:celeb.comunidade, data:celeb.data, membroAusenteId:mid },
-        (funcao,usadosNaMissa,usadoFds)=>montarCtxSub(celeb,funcao,mid,usadosNaMissa,usadoFds));
-      if(t) trocas.push(t);
-      if(t && t.entrou){ try{ apiPost('/api/enviar-push',{tipo:'escalado',membros:[t.entrou],titulo:'Você entrou na escala ⛪',texto:'Você cobriu uma vaga na escala. Confira no app.'}); }catch(_){} }
-    }
-    if(trocas.length){
-      const nomes={}; membros.forEach(m=>{ nomes[m.id]=m.apelido||m.nome; });
-      GeradorSubstituto.abrirResumoTrocas(trocas, nomes, (t)=>GeradorSubstituto.desfazerTroca(sb,t));
-    }
-    await loadDados();
-  };
-  acts.append(cancel,salvar);md.appendChild(acts);
-  ov.appendChild(md);document.body.appendChild(ov);
-}
 // ── Relatório de Frequência (acumulado via view OU por período) ──
 function _freqComLabel(c){ return c==='matriz'?'Matriz':c==='santo_antonio'?'Sto. Antônio':'Outra'; }
 function _freqPeriodoLabel(de,ate){ const f=d=>new Date(d+'T00:00:00').toLocaleDateString('pt-BR'); if(de&&ate)return 'de '+f(de)+' a '+f(ate); if(de)return 'a partir de '+f(de); if(ate)return 'até '+f(ate); return 'Acumulado (histórico total)'; }
@@ -1757,46 +1659,6 @@ function abrirRelatorioFrequencia(){
   md.querySelector('#freq-pdf').onclick=freqPDF;
   md.querySelector('#freq-csv').onclick=freqCSV;
   md.querySelector('#freq-x').onclick=()=>ov.remove();
-}
-async function abrirAusencias(){
-  document.getElementById('modal-ausencias').classList.add('open');
-  const body=document.getElementById('aus-body'); body.textContent=''; const ld=document.createElement('span'); ld.className='loading'; ld.textContent='Carregando...'; body.appendChild(ld);
-  const { data }=await sb.from('acolitos_ausencias')
-    .select('*, acolitos_membros(nome,apelido), acolitos_celebracoes(data,horario,comunidade)')
-    .order('created_at',{ascending:false}).limit(80);
-  body.textContent='';
-  if(!data||!data.length){ const em=document.createElement('span'); em.className='empty'; em.textContent='Nenhuma ausência registrada.'; body.appendChild(em); return; }
-  data.forEach(a=>{
-    const m=a.acolitos_membros, c=a.acolitos_celebracoes;
-    const row=document.createElement('div'); row.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);';
-    const left=document.createElement('div'); left.style.cssText='min-width:0;flex:1;';
-    const nm=document.createElement('div'); nm.style.cssText='font-weight:700;font-size:14px;color:var(--text);'; nm.textContent=m?(m.apelido||m.nome):'—';
-    const wh=document.createElement('div'); wh.style.cssText='font-size:12px;color:var(--gold);';
-    wh.textContent = c ? (dataCurta(c.data)+' '+c.horario+' · '+(c.comunidade==='matriz'?'Matriz':'Sto. Antônio')) : (a.data ? dataCurta(a.data)+' · dia todo' : '—');
-    const mo=document.createElement('div'); mo.style.cssText='font-size:11px;color:var(--text-muted);'; mo.textContent=(MOTIVO_LABEL[a.motivo]||a.motivo)+(a.observacao?' · '+a.observacao:'');
-    left.append(nm,wh,mo);
-    const del=document.createElement('button'); del.className='mini-del'; del.textContent='🗑'; del.title='Remover ausência';
-    del.onclick=async()=>{ if(!await uiConfirm('Remover esta ausência?'))return; await sb.from('acolitos_ausencias').delete().eq('id',a.id); abrirAusencias(); loadDados(); };
-    row.append(left,del); body.appendChild(row);
-  });
-}
-async function abrirFaltas(){
-  document.getElementById('modal-faltas').classList.add('open');
-  const body=document.getElementById('faltas-body'); body.textContent=''; const ld=document.createElement('span'); ld.className='loading'; ld.textContent='Carregando...'; body.appendChild(ld);
-  const { data }=await sb.rpc('acolitos_faltas_recentes');
-  body.textContent='';
-  if(!data||!data.length){ const em=document.createElement('span'); em.className='empty'; em.textContent='Nenhuma falta registrada ainda.'; body.appendChild(em); return; }
-  data.forEach(a=>{
-    const row=document.createElement('div'); row.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);';
-    const left=document.createElement('div'); left.style.cssText='min-width:0;flex:1;';
-    const nm=document.createElement('div'); nm.style.cssText='font-weight:700;font-size:14px;color:var(--text);'; nm.textContent=a.membro||'—';
-    const wh=document.createElement('div'); wh.style.cssText='font-size:12px;color:var(--gold);';
-    wh.textContent = (a.data?dataCurta(a.data):'—')+(a.horario?' '+a.horario:'')+' · '+(a.comunidade==='matriz'?'Matriz':'Sto. Antônio');
-    const fn=document.createElement('div'); fn.style.cssText='font-size:11px;color:var(--text-muted);'; fn.textContent=(FUNCAO_LABEL[a.funcao]||a.funcao)+(a.substituto?' · 🔄 coberto por '+a.substituto:' · vaga aberta');
-    left.append(nm,wh,fn);
-    const badge=document.createElement('span'); badge.style.cssText='font-size:11px;font-weight:700;color:var(--danger-text);flex:none;'; badge.textContent='❌ faltou';
-    row.append(left,badge); body.appendChild(row);
-  });
 }
 init();
 </script>
