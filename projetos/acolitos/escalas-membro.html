@@ -500,16 +500,30 @@ async function abrirInformarAusencia() {
   main.appendChild(hint);
 
   const hoje = new Date().toISOString().slice(0,10);
-  const { data: cels } = await sb.from('acolitos_celebracoes')
+  const { data: cels, error: errCels } = await sb.from('acolitos_celebracoes')
     .select('id,data,horario,comunidade').gte('data', hoje).order('data').order('horario');
+  if (errCels) {
+    // Falha de consulta NÃO é 'não há missas': o membro avisaria a data errada por isso.
+    console.error('Informar ausência: consulta de missas falhou', errCels);
+    const e = document.createElement('p'); e.className = 'empty';
+    e.textContent = 'Não foi possível carregar as missas. Tente de novo.';
+    main.appendChild(e); return;
+  }
   let futuras = cels || [];
   if (ctx.membro.comunidade && !ctx.membro.pode_outras_comunidades) {
     futuras = futuras.filter(c => c.comunidade === ctx.membro.comunidade);
   }
 
-  const { data: aus } = await sb.from('acolitos_ausencias')
+  const { data: aus, error: errAus } = await sb.from('acolitos_ausencias')
     .select('*, acolitos_celebracoes(data,horario,comunidade)')
     .eq('membro_id', ctx.membro.id).order('created_at',{ascending:false});
+  if (errAus) {
+    // Sem esta lista o membro reofereceria missas que já avisou — e avisaria duas vezes.
+    console.error('Informar ausência: consulta das já declaradas falhou', errAus);
+    const e = document.createElement('p'); e.className = 'empty';
+    e.textContent = 'Não foi possível carregar suas ausências. Tente de novo.';
+    main.appendChild(e); return;
+  }
   const declaredIds = new Set((aus||[]).map(a => a.celebracao_id));
   const disponiveis = futuras.filter(c => !declaredIds.has(c.id));
 
@@ -655,7 +669,7 @@ async function enviarAusencia() {
   const subTxt = nSub ? ' Já substituí ' + nSub + ' posição(ões) na escala.' : '';
   msg.className='msg success'; msg.textContent = total + (total>1 ? ' ausências registradas!' : ' ausência registrada!') + extra + subTxt;
   btn.disabled=true; btn.textContent='Registrado ✓';
-  setTimeout(()=>(document.querySelectorAll(".modal-overlay").forEach(x=>x.remove()), abrirInformarAusencia()), 1600);
+  setTimeout(()=>{ document.querySelectorAll(".modal-overlay").forEach(x=>x.remove()); location.reload(); }, 1600);   // recarrega: as missas atrás do modal mudaram
 }
 
 init();

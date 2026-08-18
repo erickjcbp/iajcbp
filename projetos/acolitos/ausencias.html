@@ -311,7 +311,7 @@ async function init() {
   // para todo o cadastro de hoje — 0 pessoas de diferença.
   if (podeVerTela({ tela: 'ausencias', role: _r, caps: _caps })) {
     await renderViewEquipe();
-    if (podeAprovar) renderPendentesPublicas();
+    // os avisos da página pública a confirmar também são da Caixa agora (ver acima)
   }
   else renderViewMembro();
 }
@@ -636,11 +636,11 @@ async function renderViewEquipe() {
   // main.textContent='' acima limpa qualquer container anterior.
   // Só quem tem a permissão 'caixa' aprova. Cerimoniário continua com o resto da
   // tela (registrar ausência de outro, KPIs, lista) — a RLS já libera isso pra ele.
-  if (podeAprovar) {
-    const caixaBox = document.createElement('div');
-    main.appendChild(caixaBox);
-    renderCaixaSolicitacoes(caixaBox);
-  }
+  // A fila de pendências (trocas, candidaturas, cobrir, novos cadastros) NÃO é mais
+  // desta tela: quem decide é a caixa.html. Manter as duas mostrando a mesma fila custou
+  // caro — a correção que fez a Caixa parar de dizer 'não há nada' quando a CONSULTA falha
+  // foi aplicada só lá, e esta continuou com a cópia velha, escondendo pendência de verdade.
+  // As funções continuam definidas abaixo, sem uso, até uma sessão que consiga provar a tela.
 
   const title = document.createElement('h1'); title.className = 'page-title';
   title.textContent = 'Ausências Informadas'; main.appendChild(title);
@@ -719,7 +719,21 @@ async function renderViewEquipe() {
     m.textContent=(d?DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' · '+c.horario:'—')+' · '+(MOTIVOS[a.motivo]||a.motivo);
     info.append(n,m);
     const badge=document.createElement('span');badge.className='badge coroinha';badge.textContent='AJ';
-    row.append(info,badge);main.appendChild(row);
+    // A lixeira vivia no modal do menu da Escala, que saiu — e era o ÚNICO lugar do app
+    // que desfazia uma ausência. Sem ela, a coordenação registra para os 135 membros sem
+    // login, erra o nome ou a missa, e ninguém corrige — enquanto a ausência errada segue
+    // tirando a pessoa da escala.
+    const del=document.createElement('button'); del.className='btn-sm gray';
+    del.style.cssText='flex:none;margin-left:8px;'; del.textContent='Remover';
+    del.onclick=async()=>{
+      const nome=(a.acolitos_membros&&(a.acolitos_membros.apelido||a.acolitos_membros.nome))||rm.nome||'esta pessoa';
+      if(!(await uiConfirm('Remover a ausência de '+nome+'?'))) return;
+      del.disabled=true;
+      const { error }=await sb.from('acolitos_ausencias').delete().eq('id',a.id);
+      if(error){ del.disabled=false; toast('Não foi possível remover.','error'); return; }
+      row.remove();
+    };
+    row.append(info,badge,del);main.appendChild(row);
   });
   if (EQUIPE_ROLES.includes(ctx.membership.role)) renderMotivosAdmin(main);
 }
