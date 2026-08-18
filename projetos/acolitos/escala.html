@@ -164,12 +164,10 @@
         <button class="btn-sm gray" id="btn-mais" onclick="toggleMaisMenu(event)" aria-haspopup="true" aria-expanded="false" title="Mais ações">⋯ Mais</button>
         <div class="escala-mais-menu" id="escala-mais-menu" role="menu">
           <button class="mais-item" role="menuitem" onclick="maisAcao(abrirModelos)">⚙️ Modelos</button>
-          <button class="mais-item" role="menuitem" onclick="maisAcao(abrirAusencias)">🚫 Ausências</button>
-          <button class="mais-item" role="menuitem" onclick="maisAcao(abrirFaltas)">❌ Faltas</button>
+          <button class="mais-item" role="menuitem" onclick="maisAcao(function(){ location.href='ausencias.html'; })">Ausências</button>
           <button class="mais-item" role="menuitem" onclick="maisAcao(abrirRelatorioFrequencia)">📊 Frequência</button>
           <button class="mais-item" role="menuitem" onclick="maisAcao(escalaPDF)">🖨 Escala PDF</button>
           <button class="mais-item" role="menuitem" id="btn-arte-semana" style="display:none" onclick="maisAcao(arteSemana)">🎨 Arte da semana</button>
-          <button class="mais-item" role="menuitem" onclick="maisAcao(abrirRegistrarAusenciaCoord)">📅 Registrar ausência</button>
         </div>
       </div>
     </div>
