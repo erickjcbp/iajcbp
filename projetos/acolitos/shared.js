@@ -1611,14 +1611,24 @@ function navCaps(ctx) {
   const nivel = (m && m.nivel) || nivelFromRole(role || 'aspirante');
   const isCerimo = nivelInfo(nivel).base === 'cerimonario';
   const perms = isAdmin ? ORDEM_MODULOS.slice() : ((m && Array.isArray(m.permissoes)) ? m.permissoes : []);
-  return { isAdmin, ehEquipe, serve, isCerimo, perms, nivel };
+  // Quem alcança a Coordenação: ser da equipe OU ter permissão de algum módulo. A regra mora
+  // no navegacao-core (testada em node). O login.html não carrega esse arquivo — daí a
+  // reserva, que é o comportamento de antes.
+  const podeCoordenar = (typeof temAcessoCoordenacao === 'function')
+    ? temAcessoCoordenacao({ ehEquipe, perms, ordemModulos: ORDEM_MODULOS })
+    : ehEquipe;
+  return { isAdmin, ehEquipe, podeCoordenar, serve, isCerimo, perms, nivel };
 }
 // Modo atual: 'jornada' | 'coordenacao'
 function navMode(ctx) {
   const c = navCaps(ctx);
-  if (c.serve && c.ehEquipe) return localStorage.getItem('nav-mode') || 'jornada';
-  if (c.ehEquipe && !c.serve) return 'coordenacao';
-  return 'jornada';
+  let salvo = null; try { salvo = localStorage.getItem('nav-mode'); } catch (e) {}
+  if (typeof modoDaBarra !== 'function') {   // login.html não carrega o navegacao-core
+    if (c.serve && c.ehEquipe) return salvo || 'jornada';
+    return c.ehEquipe ? 'coordenacao' : 'jornada';
+  }
+  return modoDaBarra({ ehEquipe: c.ehEquipe, serve: c.serve, perms: c.perms,
+                       ordemModulos: ORDEM_MODULOS, salvo });
 }
 
 function _svgIcon(name) {
@@ -1808,7 +1818,9 @@ function setupNavArrows(el) {
 function renderModeSwitch(ctx) {
   let bar = document.getElementById('mode-switch');
   const c = navCaps(ctx);
-  if (!(c.serve && c.ehEquipe)) { if (bar) bar.remove(); document.body.classList.remove('has-switch'); return; }
+  // Mesma regra da barra: sem o alternador, quem ganhou um módulo por permissão cairia na
+  // jornada e não teria como chegar na coordenação — a tela abriria só pela URL.
+  if (!(c.serve && c.podeCoordenar)) { if (bar) bar.remove(); document.body.classList.remove('has-switch'); return; }
   const mode = navMode(ctx);
   if (!bar) {
     bar = document.createElement('div'); bar.id = 'mode-switch'; bar.className = 'mode-switch';

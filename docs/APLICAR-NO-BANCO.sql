@@ -3,11 +3,15 @@
 -- Atualizado em 18/08/2026.
 --
 -- PENDENTE — cole tudo abaixo de uma vez e clique em Run.
--- É seguro rodar duas vezes (a função é `create or replace`).
+-- É seguro rodar duas vezes (as duas são `create or replace`).
 --
 -- 052 — aprovar candidatura passa a conferir a vaga no servidor.
---       Hoje aprovar insere na escala sem olhar nada: duas pessoas na mesma vaga, ou a mesma
---       pessoa duas vezes na mesma missa. Detalhes no cabeçalho abaixo.
+--       Hoje aprovar insere na escala sem olhar nada: dá para superlotar uma função e para
+--       escalar a mesma pessoa duas vezes na mesma missa.
+--
+-- 053 — ser responsável por uma tarefa passa a exigir só "estar num time".
+--       Hoje exige também `eh_equipe`, que só 4 dos 176 têm. Vai junto com a mudança da barra
+--       de navegação que já está no ar: sem a 053, a pessoa vê a aba e não pode ser responsável.
 --
 -- Já aplicado e conferido rodando: 048, 049, 050, 051.
 -- ============================================================
@@ -118,3 +122,42 @@ begin
 
   return jsonb_build_object('erro','acao_invalida','tipo',s.tipo,'status',s.status);
 end; $$;
+
+
+-- ============================================================
+
+-- Acólitos — quem pode ser responsável por uma tarefa: basta estar num time
+--
+-- A 050 exigia `eh_equipe is true` E estar num time. Só 4 dos 176 membros têm `eh_equipe`, então
+-- na prática dava para responsabilizar quatro pessoas — num recurso feito para 11 times. Quem o
+-- dono pusesse num time pelo organograma das Casas continuava fora da lista, sem explicação.
+--
+-- A decisão do dono em 18/08/2026 foi "só quem está DE FATO num time". `eh_equipe` não é isso:
+-- é a marca de coordenação, usada para outra coisa no resto do app. Estar num time é ter
+-- `setores` preenchido, que é exatamente o que o organograma das Casas grava.
+--
+-- Vai junto com a mudança da barra de navegação (navegacao-core.js, mesma data): permissão de
+-- módulo passou a valer também na barra, então liberar "Tarefas dos times" para alguém que não é
+-- da equipe finalmente faz alguma coisa. As duas pontas tinham de mudar juntas — arrumar só uma
+-- deixaria a pessoa vendo a aba e não podendo ser responsável, ou o contrário.
+create or replace function public.acolitos_responsaveis_de_tarefa()
+returns table (id uuid, nome text, apelido text, setores text[])
+language sql
+security definer
+set search_path = public
+as $$
+  select m.id, m.nome, m.apelido, m.setores
+  from public.acolitos_membros m
+  where m.status = 'ativo'
+    and m.setores is not null
+    and array_length(m.setores, 1) > 0
+  order by coalesce(m.apelido, m.nome);
+$$;
+
+-- As permissões não vêm junto do `create or replace`: reaplicadas como na 050.
+revoke all on function public.acolitos_responsaveis_de_tarefa() from public, anon;
+grant execute on function public.acolitos_responsaveis_de_tarefa() to authenticated;
+
+-- Conferência: tem de devolver bem mais que 4. Se devolver 4, a coluna `setores` está vazia
+-- para quase todo mundo — e aí o problema é outro (ninguém foi posto num time ainda).
+select count(*) as podem_ser_responsaveis from public.acolitos_responsaveis_de_tarefa();

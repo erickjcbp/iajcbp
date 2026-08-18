@@ -2,7 +2,7 @@
 // Rodar: node --test projetos/acolitos/navegacao-core.test.js
 const test = require('node:test');
 const assert = require('node:assert');
-const { montarItensNav } = require('./navegacao-core.js');
+const { montarItensNav, modoDaBarra } = require('./navegacao-core.js');
 
 const MODULOS = {
   jornada:    { label:'Jornada',    href:'jornada-admin.html', icon:'star' },
@@ -165,4 +165,46 @@ test('a barra do membro não tem mais o item Faltar — a função vive nas Esca
   const r = montarItensNav({ ...base, modo: 'jornada' });
   assert.strictEqual(r.find(x => x.id === 'ausencias'), undefined);
   assert.ok(ids(r).includes('escalas-membro'), 'o caminho do membro é pelas Escalas');
+});
+
+// ── Quem alcança o modo Coordenação ─────────────────────────────────────────
+// Antes disto, o modo Coordenação exigia `eh_equipe`, que só 4 dos 176 têm. A permissão de
+// módulo era marcável e INERTE: o initModulo (shared.js:264) já libera a PÁGINA só pela
+// permissão, então a pessoa entrava digitando o endereço e não achava o botão na barra.
+const BASE_MOD = ['jornada','caixa','membros','escala','crm','tesouraria','casas','tarefas'];
+
+test('equipe que serve escolhe o modo, e o padrão é jornada', () => {
+  assert.strictEqual(modoDaBarra({ ehEquipe:true, serve:true, perms:[], ordemModulos:BASE_MOD }), 'jornada');
+  assert.strictEqual(modoDaBarra({ ehEquipe:true, serve:true, perms:[], ordemModulos:BASE_MOD, salvo:'coordenacao' }), 'coordenacao');
+});
+
+test('equipe que NÃO serve vai direto para coordenação', () => {
+  assert.strictEqual(modoDaBarra({ ehEquipe:true, serve:false, perms:[], ordemModulos:BASE_MOD }), 'coordenacao');
+});
+
+test('sem equipe e sem permissão nenhuma NUNCA alcança coordenação', () => {
+  assert.strictEqual(modoDaBarra({ ehEquipe:false, serve:true, perms:[], ordemModulos:BASE_MOD }), 'jornada');
+  assert.strictEqual(modoDaBarra({ ehEquipe:false, serve:true, perms:[], ordemModulos:BASE_MOD, salvo:'coordenacao' }), 'jornada');
+});
+
+test('permissão de módulo já dá acesso ao modo coordenação, sem eh_equipe', () => {
+  // o caso que estava quebrado: liberar "Tarefas dos times" não fazia nada
+  assert.strictEqual(modoDaBarra({ ehEquipe:false, serve:true, perms:['tarefas'], ordemModulos:BASE_MOD, salvo:'coordenacao' }), 'coordenacao');
+  // e quem não serve, com permissão, cai direto na coordenação
+  assert.strictEqual(modoDaBarra({ ehEquipe:false, serve:false, perms:['tarefas'], ordemModulos:BASE_MOD }), 'coordenacao');
+});
+
+test('quem serve continua começando na jornada, mesmo com permissão', () => {
+  // a permissão ABRE a porta; não empurra ninguém para dentro
+  assert.strictEqual(modoDaBarra({ ehEquipe:false, serve:true, perms:['tarefas'], ordemModulos:BASE_MOD }), 'jornada');
+});
+
+test('permissão que não é de módulo não vale como passe', () => {
+  // permissões antigas/lixo no cadastro não podem virar acesso à coordenação
+  assert.strictEqual(modoDaBarra({ ehEquipe:false, serve:true, perms:['coisa_que_nao_existe'], ordemModulos:BASE_MOD, salvo:'coordenacao' }), 'jornada');
+});
+
+test('lista de permissões ausente ou torta não quebra', () => {
+  assert.strictEqual(modoDaBarra({ ehEquipe:false, serve:true, ordemModulos:BASE_MOD }), 'jornada');
+  assert.strictEqual(modoDaBarra({ ehEquipe:false, serve:true, perms:null, ordemModulos:BASE_MOD }), 'jornada');
 });

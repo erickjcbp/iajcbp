@@ -53,6 +53,35 @@
     return ordenarPorConfig(itens, opts.ordemCfg);
   }
 
+  // ── Quem alcança o modo Coordenação ───────────────────────────────────────
+  // Antes isto exigia `eh_equipe`, que só 4 dos 176 têm — e a permissão de módulo ficava
+  // marcável e INERTE. Incoerente com o resto: o initModulo (shared.js) já libera a PÁGINA
+  // só pela permissão, então liberar um módulo para quem não é da equipe abria a tela e
+  // escondia o botão. A pessoa entrava digitando o endereço e não achava o caminho de volta.
+  // Agora a permissão vale nos dois lugares.
+  function temAcessoCoordenacao(opts) {
+    if (opts.ehEquipe) return true;
+    var mods = opts.ordemModulos || [];
+    var perms = Array.isArray(opts.perms) ? opts.perms : [];
+    // Só conta permissão que corresponde a um módulo de verdade: cadastro antigo pode ter
+    // chave que não existe mais, e isso não pode virar passe para a coordenação.
+    for (var i = 0; i < perms.length; i++) {
+      if (mods.indexOf(perms[i]) >= 0) return true;
+    }
+    return false;
+  }
+
+  // 'jornada' | 'coordenacao'. `salvo` é a escolha da pessoa (localStorage 'nav-mode').
+  function modoDaBarra(opts) {
+    opts = opts || {};
+    if (!temAcessoCoordenacao(opts)) return 'jornada';
+    // Quem não serve na escala não tem jornada para ver: a coordenação é a casa dela.
+    if (!opts.serve) return 'coordenacao';
+    // Quem serve começa na jornada e alterna quando quiser — a permissão ABRE a porta,
+    // não empurra ninguém para dentro. Valor torto no localStorage cai na jornada.
+    return opts.salvo === 'coordenacao' ? 'coordenacao' : 'jornada';
+  }
+
   function ordenarPorConfig(itens, ord) {
     if (!Array.isArray(ord) || !ord.length) return itens;
     var padrao = itens.map(function (x) { return x.id; });          // ordem padrão do código
@@ -73,7 +102,7 @@
     }).filter(Boolean);
   }
 
-  var api = { montarItensNav: montarItensNav };
+  var api = { montarItensNav: montarItensNav, modoDaBarra: modoDaBarra, temAcessoCoordenacao: temAcessoCoordenacao };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  else { global.montarItensNav = montarItensNav; }
+  else { global.montarItensNav = montarItensNav; global.modoDaBarra = modoDaBarra; global.temAcessoCoordenacao = temAcessoCoordenacao; }
 })(typeof globalThis !== 'undefined' ? globalThis : this);
