@@ -21,13 +21,8 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ## 2. Backlog sem prazo
 
-- **Missões F2 e F3** — avaliação automática (o que faz o XP andar sozinho, em vez de depender de
-  alguém marcar na mão) e temporadas/ranking. F1 e F4 estão no ar. F2 é grande o bastante para
-  merecer spec escrita antes.
-- **Landing `/pastoral`** — o WhatsApp já é o número real (conferido em 18/08); falta conferir os
-  dias das missas e os textos.
-- **Central do Servo** — candidatar-se a vaga não revalida do lado do servidor na hora de APROVAR
-  (a 052 fechou o caso da escala; este é o irmão dele, em outro fluxo).
+- **Central do Servo** — aprovar candidatura a vaga não revalida do lado do servidor. É o irmão
+  do problema que a 052 fechou, em outro fluxo. Pequeno.
 
 ---
 
@@ -82,3 +77,6 @@ sozinha, porque ela não sabe a idade.
 - **A recusa nas telas de decisão** passou a dizer o MOTIVO, em vez de "não foi possível decidir".
 - **Dívida de fuso quitada** — `hojeLocal()` nas 7 telas.
 - **Push** testado no aparelho do dono.
+- **Missões F2 e F3 já estavam no ar** — minha anotação de "pendentes" estava velha. Conferido no
+  banco (as funções existem) e no código (as telas chamam). F1 a F4 completas.
+- **Landing** conferida pelo dono.
