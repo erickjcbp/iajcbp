@@ -27,9 +27,14 @@ conferir a saída **composta sobre magenta** antes de subir — foi só assim qu
 do CONSILIUM tinha ficado transparente com o limite 40.
 
 **Não reabrir o kit do Lucas Bernardo nem do André de Souza Ribeiro** — os dois estão fora por
-opção do dono (o André tem menos de 14 mesmo). *Observação:* o André é barrado por
-`data_nascimento` em branco, não por idade conhecida; quando ele fizer 14 a trava não vai soltá-lo
-sozinha, porque ela não sabe a idade.
+opção do dono (o André tem menos de 14 mesmo).
+
+*Sobre o André, para quando o assunto voltar:* ele **serve normalmente em Santo Antônio** — o Kit
+leve é modo `libera`, e modo `libera` nunca impede: quem já tem habilitação passa direto. Fica
+barrado só na **Matriz**, pelo Kit processional. O dono decidiu que **quando ele fizer 14 pode
+liberar** — mas isso **não acontece sozinho** com a `data_nascimento` em branco, porque a regra
+recusa por não saber a idade, não por compará-la. Preencher a data faz o sistema liberá-lo no dia
+certo; sem ela, alguém tem de lembrar.
 
 ---
 
