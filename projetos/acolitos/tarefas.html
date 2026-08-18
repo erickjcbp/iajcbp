@@ -116,14 +116,16 @@ function linhaTarefa(t, atrasada, labelTime) {
   }
   const acoes = document.createElement('div'); acoes.className = 'tf-acoes';
   const ok = document.createElement('button'); ok.className = 'btn-sm gold'; ok.textContent = 'Concluir';
-  ok.onclick = () => concluirTarefa(t);
+  ok.onclick = () => concluirTarefa(t, ok);
   acoes.appendChild(ok);
   row.append(bar, body, acoes);
   return row;
 }
 
 // Busca as tarefas em aberto e desenha a lista: atrasadas primeiro (fora do
-// agrupamento), depois o resto agrupado por time.
+// agrupamento), depois um grupo por time — e um time entra no grupo se tiver
+// responsabilidade escrita OU tarefa não atrasada (as duas fontes são independentes:
+// a responsabilidade vive em acolitos_config e não depende de existir tarefa nenhuma).
 async function renderLista(main) {
   const { data, error } = await sb.from('acolitos_tarefas')
     .select('*, responsavel:acolitos_membros!responsavel_id(nome,apelido)')
@@ -139,7 +141,6 @@ async function renderLista(main) {
     return;
   }
   const tarefas = data || [];
-  if (!tarefas.length) { renderNadaAqui(main); return; }
 
   // Rótulos amigáveis dos times (acolitos_listas tipo='setor'). Falha aqui não impede
   // a lista de aparecer — só faz a linha mostrar o slug cru em vez do nome bonito.
@@ -151,12 +152,19 @@ async function renderLista(main) {
   // O que cada time É responsável por (fixo, editado em Config → Equipe & Permissões,
   // guardado em acolitos_config chave='responsabilidades'). Diferente do rótulo acima:
   // aqui uma falha na consulta NÃO pode virar silêncio — silêncio é indistinguível de
-  // "nenhum time tem responsabilidade escrita", que é o estado que a coordenação vai
-  // ver primeiro hoje (nenhum time ainda tem texto). Por isso, ao falhar, cada grupo
-  // avisa que não deu pra carregar, em vez de simplesmente não mostrar nada.
+  // "nenhum time tem responsabilidade escrita". Por isso, ao falhar, cada grupo com
+  // tarefa avisa que não deu pra carregar, em vez de simplesmente não mostrar nada — e
+  // times que só teriam grupo POR CAUSA da responsabilidade não aparecem (não temos
+  // como saber quais são), o que é o comportamento seguro possível quando essa
+  // consulta específica falha.
   const { data: cfgResp, error: errResp } = await sb.from('acolitos_config').select('valor').eq('chave', 'responsabilidades').maybeSingle();
   if (errResp) console.error('Tarefas: responsabilidades dos times falharam', errResp);
   const responsabilidades = (!errResp && cfgResp && cfgResp.valor) ? cfgResp.valor : {};
+
+  // Tabela vazia não é mais motivo para sair da função: os grupos de responsabilidade
+  // (abaixo) não dependem de tarefa nenhuma existir, e o estado vazio pode conviver com
+  // eles — "não há tarefa, e aqui está do que cada time cuida" é uma frase honesta.
+  if (!tarefas.length) renderNadaAqui(main);
 
   const hoje = hojeStr();
   const atrasadas = tarefas.filter(t => t.prazo && t.prazo < hoje);
@@ -172,7 +180,18 @@ async function renderLista(main) {
 
   const porTime = {};
   resto.forEach(t => { (porTime[t.time_slug] = porTime[t.time_slug] || []).push(t); });
-  Object.keys(porTime).sort((a, b) => (labelTime[a] || a).localeCompare(labelTime[b] || b, 'pt-BR')).forEach(slug => {
+
+  // Um grupo por time com responsabilidade escrita OU tarefa não atrasada — nunca só por
+  // ter caído em "Atrasadas" (bloco próprio, já cuidado acima) e nunca só por existir na
+  // lista de setores (time sem os dois não aparece). Sem isso: (a) o dono escreve as 11
+  // responsabilidades no Config, abre Tarefas com a tabela vazia e não vê NENHUMA — parece
+  // que o Config não salvou; (b) a única tarefa de um time atrasa, sobe pro bloco Atrasadas,
+  // e o cabeçalho do time (com a responsabilidade dele) some junto — some justamente do
+  // time que está mais devendo.
+  const slugsComGrupo = new Set(Object.keys(porTime));
+  if (!errResp) Object.keys(responsabilidades).forEach(s => slugsComGrupo.add(s));
+
+  Array.from(slugsComGrupo).sort((a, b) => (labelTime[a] || a).localeCompare(labelTime[b] || b, 'pt-BR')).forEach(slug => {
     const h = document.createElement('div'); h.className = 'tf-grupo-titulo';
     h.textContent = labelTime[slug] || slug;
     main.appendChild(h);
@@ -186,22 +205,32 @@ async function renderLista(main) {
       resp.textContent = responsabilidades[slug];
       main.appendChild(resp);
     }
-    porTime[slug].forEach(t => main.appendChild(linhaTarefa(t, false)));
+    (porTime[slug] || []).forEach(t => main.appendChild(linhaTarefa(t, false)));
   });
 }
 
 // Ao concluir uma recorrente, cria a próxima com o prazo que proximaTarefa (tarefas-core.js)
 // devolver. Só dispara na conclusão — nunca pelo relógio (decisão do dono: ver o
 // comentário de topo de tarefas-core.js).
+// Devolve { ok, falhaCelebracao } em vez de decidir o toast sozinha — concluirTarefa é
+// quem sabe o quadro inteiro (se a conclusão em si deu certo) e escreve UMA mensagem.
 async function criarProxima(t) {
   let proximaCelebracao = null;
+  let falhaCelebracao = false;
   if (t.recorrencia === 'celebracao') {
     const { data, error } = await sb.from('acolitos_celebracoes').select('data').gte('data', hojeStr()).order('data').limit(1);
-    if (error) console.error('Tarefas: buscar próxima celebração falhou', error);
-    else proximaCelebracao = (data && data[0]) ? data[0].data : null;
+    if (error) {
+      // Sem isto, uma consulta que falhou vira, em silêncio, "não há celebração futura":
+      // a próxima nasce sem prazo do mesmo jeito que nasceria se a agenda estivesse REALMENTE
+      // vazia, e ninguém fica sabendo que a pergunta nem chegou a ser respondida.
+      console.error('Tarefas: buscar próxima celebração falhou', error);
+      falhaCelebracao = true;
+    } else {
+      proximaCelebracao = (data && data[0]) ? data[0].data : null;
+    }
   }
   const prox = proximaTarefa({ recorrencia: t.recorrencia, prazo: t.prazo, hoje: hojeStr(), proximaCelebracao });
-  if (!prox) return; // recorrência 'nenhuma' ou desconhecida: sem próxima
+  if (!prox) return { ok: true, falhaCelebracao: false }; // recorrência sem próxima calculável: nada a criar, nada a avisar
   const payload = {
     titulo: t.titulo, time_slug: t.time_slug, responsavel_id: t.responsavel_id || null,
     prazo: prox.prazo, observacao: t.observacao || null, recorrencia: t.recorrencia,
@@ -212,46 +241,91 @@ async function criarProxima(t) {
   // tarefas recorrentes morre em silêncio — a coordenação acha que continua rodando.
   if (error) {
     console.error('Tarefas: criar a próxima falhou', error);
-    toast('Concluída, mas não foi possível criar a próxima. Avise a coordenação.', 'error');
+    return { ok: false, falhaCelebracao };
   }
+  return { ok: true, falhaCelebracao };
 }
 
-async function concluirTarefa(t) {
-  if (!await uiConfirm('Concluir "' + t.titulo + '"?')) return;
-  const { error } = await sb.from('acolitos_tarefas')
+async function concluirTarefa(t, btn) {
+  // Desabilita ANTES do confirm: sem isso, um segundo clique (dedo trêmulo, ou toque
+  // duplo por acidente) enfileira uma segunda concluirTarefa que reabriria o confirm.
+  // Reabilita se a pessoa cancelar ou se a gravação falhar — nesses casos nada mudou.
+  if (btn) btn.disabled = true;
+  const confirmou = await uiConfirm('Concluir "' + t.titulo + '"?');
+  if (!confirmou) { if (btn) btn.disabled = false; return; }
+  // .is('concluida_em', null) condiciona o UPDATE: só altera se AINDA estiver aberta.
+  // .select('id') diz se alguma linha foi mesmo alterada. Sem os dois, dois cliques (o
+  // mesmo dedo duas vezes, ou dois coordenadores com a tela aberta ao mesmo tempo — a
+  // tela não se atualiza sozinha) fazem dois UPDATE "bem-sucedidos" e duas próximas
+  // tarefas recorrentes iguais nascem no banco, em silêncio.
+  const { data: linhas, error } = await sb.from('acolitos_tarefas')
     .update({ concluida_em: new Date().toISOString(), concluida_por: ctx.membro ? ctx.membro.id : null })
-    .eq('id', t.id);
+    .eq('id', t.id).is('concluida_em', null).select('id');
   if (error) {
     // Sem ler este error, a tarefa some da TELA (se a gente tirasse ela do DOM na mão)
     // mas continua aberta no banco — exatamente o defeito que este projeto já cometeu.
     console.error('Tarefas: concluir falhou', error);
     toast('Não foi possível concluir. Tente de novo.', 'error');
+    if (btn) btn.disabled = false;
     return;
   }
-  if (t.recorrencia && t.recorrencia !== 'nenhuma') await criarProxima(t);
-  toast('Tarefa concluída.');
+  if (!linhas || !linhas.length) {
+    // Zero linhas alteradas: outra pessoa (ou outro clique) já tinha concluído esta
+    // tarefa. NÃO cria a próxima de novo — é exatamente o passo que duplicaria a corrente.
+    toast('Essa tarefa já tinha sido concluída por outra pessoa.', 'error');
+    await renderTudo();
+    return;
+  }
+  let msg = 'Tarefa concluída.', tipo;
+  if (t.recorrencia && t.recorrencia !== 'nenhuma') {
+    const r = await criarProxima(t);
+    if (!r.ok) { msg = 'Concluída, mas não foi possível criar a próxima. Avise a coordenação.'; tipo = 'error'; }
+    else if (r.falhaCelebracao) { msg = 'Concluída — mas não foi possível consultar a agenda, então a próxima ficou sem prazo.'; tipo = 'error'; }
+  }
+  toast(msg, tipo);
   await renderTudo();  // recarrega do banco — nunca remove otimista do DOM
 }
 
 // ── Criar tarefa ──
+// As duas devolvem { data, error } — quem chama decide o que fazer com a falha. Um
+// catálogo vazio por FALHA (RLS, 500, rede) não pode se comportar como um catálogo
+// vazio DE VERDADE: o primeiro bloqueia o formulário e avisa; o segundo é só "ninguém
+// cadastrado ainda" e deixaria salvar "do time" numa opção legítima.
 async function carregarSetores() {
   const { data, error } = await sb.from('acolitos_listas').select('valor,label').eq('tipo', 'setor').order('label');
-  if (error) { console.error('Tarefas: carregar times falhou', error); return []; }
-  return data || [];
+  if (error) console.error('Tarefas: carregar times falhou', error);
+  return { data: data || [], error };
 }
 async function carregarRoster() {
   const { data, error } = await sb.rpc('acolitos_roster_nomes');
-  if (error) { console.error('Tarefas: carregar responsáveis falhou', error); return []; }
-  return data || [];
+  if (error) console.error('Tarefas: carregar responsáveis falhou', error);
+  return { data: data || [], error };
 }
 
 async function abrirFormTarefa() {
-  const [setores, roster] = await Promise.all([carregarSetores(), carregarRoster()]);
+  const [setoresR, rosterR] = await Promise.all([carregarSetores(), carregarRoster()]);
+  const setores = setoresR.data, roster = rosterR.data;
+  const falhouCarga = !!(setoresR.error || rosterR.error);
   const ov = document.createElement('div'); ov.className = 'modal-overlay open';
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   const m = document.createElement('div'); m.className = 'modal tf-form'; m.style.maxWidth = '440px';
   const h = document.createElement('h2'); h.style.cssText = 'font-family:Sora,sans-serif;font-size:18px;margin:0 0 4px;color:var(--text);';
   h.textContent = 'Nova tarefa'; m.appendChild(h);
+
+  if (falhouCarga) {
+    // Time é campo obrigatório: se a lista falhou, o select fica só com "Escolha o
+    // time..." e a validação de campo vazio já bloqueia — mas com uma mensagem que
+    // parece "você esqueceu de escolher", não "isto não carregou". Este aviso separa
+    // os dois, e o botão Criar fica travado até fechar e tentar de novo (não dá pra
+    // saber se o Responsável escolhido — ou a falta dele — reflete a realidade).
+    const av = document.createElement('div'); av.className = 'empty'; av.style.cssText = 'margin-bottom:10px;';
+    av.textContent = setoresR.error && rosterR.error
+      ? 'Não foi possível carregar os times nem as pessoas. Feche e tente de novo.'
+      : setoresR.error
+        ? 'Não foi possível carregar os times. Feche e tente de novo.'
+        : 'Não foi possível carregar as pessoas para Responsável. Feche e tente de novo.';
+    m.appendChild(av);
+  }
 
   const mk = (lbl, el) => { const L = document.createElement('label'); L.textContent = lbl; m.append(L, el); return el; };
 
@@ -282,6 +356,7 @@ async function abrirFormTarefa() {
   const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:16px;';
   const cancel = document.createElement('button'); cancel.className = 'btn'; cancel.style.flex = '1'; cancel.textContent = 'Cancelar'; cancel.onclick = () => ov.remove();
   const save = document.createElement('button'); save.className = 'btn gold'; save.style.flex = '1'; save.textContent = 'Criar';
+  save.disabled = falhouCarga;  // não deixa salvar meia tarefa em cima de um catálogo que pode estar incompleto por falha
   save.onclick = async () => {
     const titulo = iTit.value.trim();
     if (!titulo) { toast('Dê um título à tarefa.', 'error'); return; }
