@@ -395,7 +395,9 @@ Concluir: ao marcar, gravar `concluida_em`/`concluida_por` e — se houver recor
 
 - [ ] **Passo 8: provar EXECUTANDO**
 
-Com o harness `<scratchpad>/exec-tela.mjs`: rodar o `init()` com sessão simulada para admin e para equipe sem a permissão, e conferir três cenários — sem tarefa (mostra "Nenhuma tarefa por aqui"), com tarefas (agrupadas, atrasadas no topo), e consulta falhando (mostra o erro, **não** o estado vazio).
+Siga `.superpowers/sdd/2026-08-17-acolitos-tarefas-dos-times/como-verificar-a-tela.md` — o harness já está montado, testado e com exemplo pronto; o servidor local já está de pé na porta 5210. **Não monte outro** e **não mexa no processo da porta 5199**, que é de outra janela.
+
+Três cenários, e a saída dos três vai literal no relatório: sem tarefa, com tarefas, e **consulta falhando**. Se a tela mostrar "Nenhuma tarefa por aqui" quando a consulta falhou, é defeito crítico — é dizer que está tudo em dia quando não se conseguiu nem perguntar.
 
 - [ ] **Passo 9: rodar todos os testes, carimbar e commitar**
 
