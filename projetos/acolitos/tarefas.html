@@ -255,11 +255,39 @@ async function voltarParaAfazer(t, btn) {
 async function reabrirTarefa(t, btn, destino) {
   destino = destino || 'andamento';
   if (btn) btn.disabled = true;
-  const avisoRec = (t.recorrencia && t.recorrencia !== 'nenhuma')
-    ? ' Se a próxima recorrência já foi criada, ela continua existindo — reabrir esta não a apaga.'
-    : '';
+
+  // A pergunta da próxima recorrência é feita AQUI, na hora em que existe informação para
+  // responder — e não como regra global escolhida de véspera. Só se pergunta quando há de
+  // fato uma próxima, e ela é nomeada com o prazo, para ninguém apagar às cegas.
+  let proxima = null, avisoRec = '';
+  if (t.recorrencia && t.recorrencia !== 'nenhuma') {
+    const r = await proximaGeradaPor(t);
+    if (r.tarefa && !r.tarefa.andamento_em) {
+      proxima = r.tarefa;                       // existe e ninguém começou: dá para oferecer
+    } else if (r.tarefa) {
+      avisoRec = ' Alguém já começou a próxima (' + prazoLabel(r.tarefa.prazo) + '), então ela fica.';
+    } else if (r.semColuna || r.falhou) {
+      // Sem saber, não se afirma que existe nem que não existe.
+      avisoRec = ' Se a próxima já foi criada, ela continua existindo — reabrir esta não a apaga.';
+    }
+  }
+
   const confirmou = await uiConfirm('Reabrir "' + t.titulo + '"?' + avisoRec);
   if (!confirmou) { if (btn) btn.disabled = false; return; }
+
+  if (proxima) {
+    const apagar = await uiConfirm('A próxima já foi criada (' + prazoLabel(proxima.prazo)
+      + '). Apagar essa próxima também?\n\nSe você responder Não, as duas ficam.');
+    if (apagar) {
+      const { error: errDel } = await sb.from('acolitos_tarefas').delete().eq('id', proxima.id);
+      if (errDel) {
+        // Não continua calado: reabrir e falhar em apagar deixaria duas tarefas abertas sem
+        // a pessoa saber, que é justamente o que ela pediu para não acontecer.
+        console.error('Tarefas: apagar a próxima falhou', errDel);
+        toast('Reabri, mas não consegui apagar a próxima. Apague à mão.', 'error');
+      }
+    }
+  }
   const campos = destino === 'andamento'
     ? { concluida_em: null, concluida_por: null, andamento_em: new Date().toISOString(), andamento_por: ctx.membro ? ctx.membro.id : null }
     : { concluida_em: null, concluida_por: null, andamento_em: null, andamento_por: null };
@@ -289,12 +317,37 @@ async function criarProxima(t) {
     prazo: prox.prazo, observacao: t.observacao || null, recorrencia: t.recorrencia,
     criada_por: ctx.membro ? ctx.membro.id : null,
   };
-  const { error } = await sb.from('acolitos_tarefas').insert(payload);
+  // `origem_id` liga a próxima à conclusão que a gerou — é o que deixa o Reabrir oferecer
+  // apagá-la. Se a migration 054 ainda não foi aplicada, o insert falha por coluna inexistente:
+  // aí repete SEM o campo, porque criar a próxima importa mais que o elo. Sem esta reserva,
+  // concluir uma tarefa recorrente pararia de funcionar até alguém colar a migration.
+  let { error } = await sb.from('acolitos_tarefas').insert(Object.assign({ origem_id: t.id }, payload));
+  if (error && ehFalhaDeColuna(error)) {
+    ({ error } = await sb.from('acolitos_tarefas').insert(payload));
+  }
   if (error) {
     console.error('Tarefas: criar a próxima falhou', error);
     return { ok: false, falhaCelebracao };
   }
   return { ok: true, falhaCelebracao };
+}
+
+// A próxima que nasceu de uma conclusão, se ainda existir e ninguém tiver mexido nela.
+// Devolve {tarefa} | {tarefa:null} | {semColuna:true} — os três casos são diferentes e o
+// Reabrir fala diferente em cada um. Nunca adivinha por título: apagar a tarefa errada é
+// pior do que não oferecer nada.
+async function proximaGeradaPor(t) {
+  const { data, error } = await sb.from('acolitos_tarefas')
+    .select('id,titulo,prazo,andamento_em').eq('origem_id', t.id).is('concluida_em', null);
+  if (error) {
+    if (ehFalhaDeColuna(error)) return { semColuna: true };
+    console.error('Tarefas: procurar a próxima falhou', error);
+    return { falhou: true };
+  }
+  // Mais de uma só acontece se alguém criou à mão a partir desta; nesse caso não se escolhe
+  // por conta própria qual apagar.
+  if (!data || data.length !== 1) return { tarefa: null };
+  return { tarefa: data[0] };
 }
 
 async function concluirTarefa(t, btn) {
@@ -341,6 +394,41 @@ async function aplicarTransicao(t, novoEstado, btn) {
   return voltarParaAfazer(t, btn);
 }
 
+// Apagar é o único caminho sem volta desta tela — por isso nomeia a tarefa na pergunta e
+// avisa o que se perde junto, em vez de um "tem certeza?" seco.
+async function apagarTarefa(t, btn) {
+  if (btn) btn.disabled = true;
+  const recorrente = t.recorrencia && t.recorrencia !== 'nenhuma';
+  const aviso = recorrente
+    ? '\n\nEla se repete: apagando, a corrente para aqui e nenhuma próxima nasce.'
+    : '';
+  const confirmou = await uiConfirm('Apagar "' + t.titulo + '"?' + aviso + '\n\nIsto não tem como desfazer.');
+  if (!confirmou) { if (btn) btn.disabled = false; return; }
+  const { data: linhas, error } = await sb.from('acolitos_tarefas').delete().eq('id', t.id).select('id');
+  if (error) {
+    console.error('Tarefas: apagar falhou', error);
+    toast('Não foi possível apagar. Tente de novo.', 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  // Zero linhas: já não estava lá. Não é erro, mas também não é "apaguei" — a tela recarrega
+  // e mostra a realidade em vez de fingir que a ação foi dela.
+  toast(linhas && linhas.length ? '✓ Tarefa apagada.' : 'Essa tarefa já tinha sido apagada.');
+  await recarregarTarefas(); render();
+}
+
+// Editar e Apagar acompanham a tarefa nas duas visões — em cinza, para não competir com o
+// botão de mover, que é o gesto do dia a dia.
+function botoesEditarApagar(t) {
+  const ed = document.createElement('button'); ed.className = 'btn-sm gray';
+  ed.innerHTML = _svgIcon('editar'); ed.title = 'Editar tarefa'; // ícone fixo — seguro
+  ed.onclick = () => abrirFormTarefa(t);
+  const ap = document.createElement('button'); ap.className = 'btn-sm gray';
+  ap.innerHTML = _svgIcon('lixeira'); ap.title = 'Apagar tarefa'; // ícone fixo — seguro
+  ap.onclick = () => apagarTarefa(t, ap);
+  return [ed, ap];
+}
+
 function acoesDaTarefa(t) {
   const estado = estadoDaTarefa(t);
   if (estado === 'afazer')    return [ { label:'Iniciar', fn:(b) => aplicarTransicao(t,'andamento',b) }, { label:'Concluir', fn:(b) => aplicarTransicao(t,'feita',b) } ];
@@ -372,6 +460,7 @@ function linhaTarefaCompleta(t) {
     b.onclick = () => a.fn(b);
     acoes.appendChild(b);
   });
+  botoesEditarApagar(t).forEach(b => acoes.appendChild(b));
   row.append(bar, body, acoes);
   return row;
 }
@@ -408,6 +497,7 @@ function cartaoTarefa(t, estadoAtual) {
   } else {
     acoes.appendChild(botaoMover('Reabrir', 'seta-esq', (b) => aplicarTransicao(t, 'andamento', b)));
   }
+  botoesEditarApagar(t).forEach(b => acoes.appendChild(b));
   card.appendChild(acoes);
   return card;
 }
@@ -544,7 +634,10 @@ function renderPorTime(main) {
 }
 
 // ── Criar tarefa ──
-async function abrirFormTarefa() {
+// Sem argumento: criar. Com uma tarefa: editar a mesma tarefa, no mesmo formulário — dois
+// formulários parecidos viram dois lugares para consertar cada regra.
+async function abrirFormTarefa(tarefa) {
+  const editando = !!tarefa;
   const [setoresR, membrosR] = await Promise.all([carregarSetores(), carregarResponsaveisPermitidos()]);
   const setores = setoresR.data, membros = membrosR.data;
   const falhouSetores = !!setoresR.error;
@@ -553,7 +646,7 @@ async function abrirFormTarefa() {
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   const m = document.createElement('div'); m.className = 'modal tf-form'; m.style.maxWidth = '440px';
   const h = document.createElement('h2'); h.style.cssText = 'font-family:Sora,sans-serif;font-size:18px;margin:0 0 4px;color:var(--text);';
-  h.textContent = 'Nova tarefa'; m.appendChild(h);
+  h.textContent = editando ? 'Editar tarefa' : 'Nova tarefa'; m.appendChild(h);
 
   if (falhouSetores || falhouMembros) {
     // Time é campo obrigatório: se a lista falhou, o select fica só com "Escolha o time..."
@@ -575,11 +668,21 @@ async function abrirFormTarefa() {
   const mk = (lbl, el) => { const L = document.createElement('label'); L.textContent = lbl; m.append(L, el); return el; };
 
   const iTit = document.createElement('input'); iTit.className = 'form-input'; iTit.placeholder = 'Ex.: conferir estoque de velas';
+  if (editando) iTit.value = tarefa.titulo || '';
   mk('Título', iTit);
 
   const sTime = document.createElement('select'); sTime.className = 'form-input';
   const optVazio = document.createElement('option'); optVazio.value = ''; optVazio.textContent = 'Escolha o time...'; sTime.appendChild(optVazio);
   setores.forEach(s => { const o = document.createElement('option'); o.value = s.valor; o.textContent = s.label || s.valor; sTime.appendChild(o); });
+  if (editando && tarefa.time_slug) {
+    // Time que saiu do catálogo continua selecionável, senão editar o prazo de uma tarefa
+    // antiga trocaria o time dela em silêncio.
+    if (!setores.some(x => x.valor === tarefa.time_slug)) {
+      const o = document.createElement('option'); o.value = tarefa.time_slug;
+      o.textContent = tarefa.time_slug + ' (time removido)'; sTime.appendChild(o);
+    }
+    sTime.value = tarefa.time_slug;
+  }
   mk('Time', sTime);
 
   const sResp = document.createElement('select'); sResp.className = 'form-input';
@@ -588,11 +691,23 @@ async function abrirFormTarefa() {
   // escolhido ainda, mostra quem está em QUALQUER time (o mesmo comportamento de
   // responsaveisPossiveis quando timeSlug é vazio) — refinado assim que o time é definido.
   function preencherResponsaveis() {
+    const anterior = sResp.value || (editando ? (tarefa.responsavel_id || '') : '');
     sResp.textContent = '';
     const optNinguem = document.createElement('option'); optNinguem.value = ''; optNinguem.textContent = 'Ninguém (fica com o time)'; sResp.appendChild(optNinguem);
-    responsaveisPossiveis(membros, sTime.value || null).forEach(p => {
+    const lista = responsaveisPossiveis(membros, sTime.value || null);
+    lista.forEach(p => {
       const o = document.createElement('option'); o.value = p.id; o.textContent = p.apelido || p.nome; sResp.appendChild(o);
     });
+    // Quem já é responsável mas saiu do time (ou nem está mais na lista) PRECISA continuar
+    // no select: sem isto, abrir a tarefa só para mudar o prazo e salvar apagaria o
+    // responsável em silêncio — a pessoa perderia a cobrança sem ninguém decidir isso.
+    if (anterior && !lista.some(p => p.id === anterior)) {
+      const conhecido = membros.filter(p => p.id === anterior)[0];
+      const o = document.createElement('option'); o.value = anterior;
+      o.textContent = (conhecido ? (conhecido.apelido || conhecido.nome) : nomeResponsavel(tarefa)) + ' (fora deste time)';
+      sResp.appendChild(o);
+    }
+    sResp.value = anterior;
   }
   preencherResponsaveis();
   mk('Responsável (opcional)', sResp);
@@ -614,19 +729,22 @@ async function abrirFormTarefa() {
   sTime.onchange = () => { preencherResponsaveis(); atualizarDicaResp(); };
 
   const iPrazo = document.createElement('input'); iPrazo.className = 'form-input'; iPrazo.type = 'date';
+  if (editando && tarefa.prazo) iPrazo.value = tarefa.prazo;
   mk('Prazo (opcional)', iPrazo);
 
   const sRec = document.createElement('select'); sRec.className = 'form-input';
   [['nenhuma','Não se repete'], ['semanal','Toda semana'], ['mensal','Todo mês'], ['anual','Todo ano'], ['celebracao','A cada celebração']]
     .forEach(([v,l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; sRec.appendChild(o); });
+  if (editando && tarefa.recorrencia) sRec.value = tarefa.recorrencia;
   mk('Recorrência', sRec);
 
   const iObs = document.createElement('textarea'); iObs.className = 'form-input'; iObs.rows = 3; iObs.placeholder = 'Detalhes, o que levar, a quem avisar...';
+  if (editando && tarefa.observacao) iObs.value = tarefa.observacao;
   mk('Observação (opcional)', iObs);
 
   const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:16px;';
   const cancel = document.createElement('button'); cancel.className = 'btn'; cancel.style.flex = '1'; cancel.textContent = 'Cancelar'; cancel.onclick = () => ov.remove();
-  const save = document.createElement('button'); save.className = 'btn gold'; save.style.flex = '1'; save.textContent = 'Criar';
+  const save = document.createElement('button'); save.className = 'btn gold'; save.style.flex = '1'; save.textContent = editando ? 'Salvar' : 'Criar';
   // Só o TIME impede salvar, porque é obrigatório: sem a lista de times não dá para escolher um.
   // A lista de responsáveis falhando NÃO impede — responsável é opcional, e travar tudo por
   // causa dela deixaria a coordenação sem conseguir criar tarefa nenhuma. A tarefa nasce do
@@ -642,14 +760,31 @@ async function abrirFormTarefa() {
       prazo: iPrazo.value || null, observacao: iObs.value.trim() || null,
       recorrencia: sRec.value, criada_por: ctx.membro ? ctx.membro.id : null,
     };
-    const { error } = await sb.from('acolitos_tarefas').insert(payload);
+    let error, linhas;
+    if (editando) {
+      // `.select('id')` diz se alguma linha mudou mesmo: zero linhas quer dizer que a tarefa
+      // sumiu (outra pessoa apagou) — salvar em silêncio deixaria a tela mostrando algo que
+      // já não existe no banco.
+      ({ data: linhas, error } = await sb.from('acolitos_tarefas').update({
+        titulo, time_slug: sTime.value, responsavel_id: sResp.value || null,
+        prazo: iPrazo.value || null, observacao: iObs.value.trim() || null,
+        recorrencia: sRec.value,
+      }).eq('id', tarefa.id).select('id'));
+      if (!error && (!linhas || !linhas.length)) {
+        toast('Esta tarefa já não existe — alguém apagou.', 'error');
+        ov.remove(); await recarregarTarefas(); render();
+        return;
+      }
+    } else {
+      ({ error } = await sb.from('acolitos_tarefas').insert(payload));
+    }
     if (error) {
-      console.error('Tarefas: criar falhou', error);
-      toast('Não foi possível criar a tarefa. Tente de novo.', 'error');
-      save.disabled = false; save.textContent = 'Criar';
+      console.error('Tarefas: ' + (editando ? 'salvar' : 'criar') + ' falhou', error);
+      toast(editando ? 'Não foi possível salvar. Tente de novo.' : 'Não foi possível criar a tarefa. Tente de novo.', 'error');
+      save.disabled = false; save.textContent = editando ? 'Salvar' : 'Criar';
       return;
     }
-    toast('✓ Tarefa criada!');
+    toast(editando ? '✓ Tarefa salva!' : '✓ Tarefa criada!');
     ov.remove();
     await recarregarTarefas(); render();
   };

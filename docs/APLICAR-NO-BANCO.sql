@@ -13,6 +13,10 @@
 --       Hoje exige também `eh_equipe`, que só 4 dos 176 têm. Vai junto com a mudança da barra
 --       de navegação que já está no ar: sem a 053, a pessoa vê a aba e não pode ser responsável.
 --
+-- 054 — a tarefa recorrente passa a saber de qual conclusão nasceu.
+--       Sem isso, reabrir uma conclusão só consegue AVISAR que a próxima existe; com isso,
+--       consegue dizer qual é e oferecer apagá-la. A tela já funciona sem a coluna.
+--
 -- Já aplicado e conferido rodando: 048, 049, 050, 051.
 -- ============================================================
 
@@ -161,3 +165,28 @@ grant execute on function public.acolitos_responsaveis_de_tarefa() to authentica
 -- Conferência: tem de devolver bem mais que 4. Se devolver 4, a coluna `setores` está vazia
 -- para quase todo mundo — e aí o problema é outro (ninguém foi posto num time ainda).
 select count(*) as podem_ser_responsaveis from public.acolitos_responsaveis_de_tarefa();
+
+
+-- ============================================================
+
+-- Acólitos — a tarefa recorrente passa a saber de qual conclusão ela nasceu
+--
+-- Ao concluir uma tarefa que se repete, o app cria a próxima. Até aqui essa próxima nascia
+-- SOLTA: nada ligava uma à outra. Consequência prática: ao reabrir uma conclusão, o app só
+-- conseguia avisar "se a próxima já foi criada, ela continua existindo" — não conseguia dizer
+-- QUAL é, nem oferecer apagá-la. E adivinhar por título e prazo seria pior que não oferecer:
+-- apagaria a tarefa errada num dia de azar.
+--
+-- `on delete set null`: apagar a tarefa de origem NÃO pode levar a próxima junto. Elas são
+-- trabalho de semanas diferentes; sumir com a de agora porque alguém arrumou o histórico seria
+-- perder serviço combinado.
+alter table public.acolitos_tarefas
+  add column if not exists origem_id uuid references public.acolitos_tarefas(id) on delete set null;
+
+-- Reabrir procura a filha por aqui, e só entre as não concluídas.
+create index if not exists acolitos_tarefas_origem_idx
+  on public.acolitos_tarefas (origem_id) where concluida_em is null;
+
+-- Conferência: a coluna tem de aparecer.
+select column_name from information_schema.columns
+where table_name = 'acolitos_tarefas' and column_name = 'origem_id';
