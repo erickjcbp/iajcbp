@@ -31,29 +31,17 @@ função atrás de login — a trava que eu mesmo pedi fechou a porta que eu usa
 
 ---
 
-## 2. Melhorias já decididas — prontas para começar
+## 2. Melhorias já decididas — ✔ TODAS FEITAS em 18/08/2026
 
-### 2.1 Uma regra só: estar num time
-**Pequena, e é por onde eu começaria.** Hoje você pode marcar a permissão "Tarefas dos times"
-para alguém e **não acontece nada**: a barra exige `eh_equipe`, que só 4 dos 176 têm. A permissão
-existe, é marcável, e é inerte. A mesma incoerência está na lista de responsáveis, que exige
-`eh_equipe` **e** estar num time — ou seja, só dá para responsabilizar essas 4 pessoas, num
-recurso feito para 11 times.
+- **Uma regra só: estar num time.** Permissão de módulo passou a valer na barra, não só na URL.
+- **Tarefas: editar, apagar e desfazer.** O Reabrir resolve a próxima recorrência perguntando na
+  hora, com o prazo dela no texto.
+- **Times viraram uma porta só** (`Config › As pessoas › Times`), com a gente dentro. A regra de
+  entrar/sair virou `times-core.js`, compartilhada com as Casas.
 
-**Proposta:** a aba passa a ser gateada só pela permissão (padrão de toda a casa — liberar
-realmente libera), e a lista de responsáveis larga o `eh_equipe`, ficando com o critério que o
-dono já escolheu: quem está de fato num time. O `eh_equipe` volta a significar só coordenação.
-
-### 2.2 Tarefas: desfazer, editar e apagar — ✔ FEITO em 18/08/2026
-Editar e apagar existem, nas duas visões. O Reabrir (que já era o "desfazer") passou a resolver a
-próxima recorrência: **a pergunta é feita na hora**, com o prazo da próxima no texto, em vez de
-virar uma regra global escolhida de véspera. E remover um time no Config passou a avisar quantas
-tarefas e pessoas ainda dependem dele.
-
-✔ A **054** foi aplicada em 18/08, então o Reabrir está completo: nomeia a próxima com o prazo
-dela e oferece apagá-la.
-
----
+**O candidato seguinte, se quiser continuar por aqui:** as **nove listas** de
+`A paróquia › Listas` ainda são um saco de gatos — Tesouraria, Agenda, Jornada e liturgia no mesmo
+lugar. O dono escolheu não mexer nisso quando os times saíram de lá; a pergunta continua aberta.
 
 ## 3. Brasões — NÃO refazer os 4 antigos
 
