@@ -36,21 +36,28 @@ test('coordenação: Config só aparece para superadmin', () => {
 test('jornada: lista fixa, independente de permissão', () => {
   const r = montarItensNav({ ...base, modo:'jornada', perms:[], isAdmin:false });
   // Lista mudou na Task 6: Conquistas entrou na barra do membro.
+  // 'Faltar' saiu em 17/08: avisar ausência virou botão dentro das Escalas.
   assert.deepStrictEqual(ids(r),
-    ['home','quests','escalas-membro','agenda','conquistas','destaques','minha-casa','ausencias']);
+    ['home','quests','escalas-membro','agenda','conquistas','destaques','minha-casa']);
 });
 
-test('jornada: Conquistas está na barra e Ausência virou Faltar', () => {
+test('jornada: Conquistas está na barra', () => {
   const r = montarItensNav({ ...base, modo:'jornada', perms:[], isAdmin:false });
   const conq = r.find(x => x.id === 'conquistas');
   assert.ok(conq, 'conquistas deveria estar na barra do membro');
   assert.strictEqual(conq.href, 'conquistas.html');
-  assert.strictEqual(r.find(x => x.id === 'ausencias').label, 'Faltar');
+  assert.strictEqual(r.find(x => x.id === 'ausencias'), undefined, 'o item Faltar foi retirado');
 });
 
-test('jornada: o id ausencias NÃO muda (contrato com nav_ordem_jornada)', () => {
-  const r = montarItensNav({ ...base, modo:'jornada', perms:[], isAdmin:false });
-  assert.ok(r.some(x => x.id === 'ausencias'));
+// O id 'ausencias' foi APOSENTADO da barra do membro. A ordem salva no banco ainda o cita
+// em quem já usava o app — e não pode quebrar a barra por causa de um id que sumiu. Este é
+// o risco real agora; era isso que o teste antigo deveria estar protegendo.
+test('jornada: ordem salva citando o id aposentado não quebra a barra', () => {
+  const salva = ['home','ausencias','quests','escalas-membro','agenda','conquistas','destaques','minha-casa'];
+  const r = montarItensNav({ ...base, modo:'jornada', perms:[], isAdmin:false, ordemCfg: salva });
+  assert.strictEqual(r.find(x => x.id === 'ausencias'), undefined);
+  assert.strictEqual(ids(r)[0], 'home');
+  assert.strictEqual(ids(r).length, 7);
 });
 
 test('a ordem salva no Config manda, e ninguém é perdido no caminho', () => {
@@ -61,7 +68,10 @@ test('a ordem salva no Config manda, e ninguém é perdido no caminho', () => {
     ordemCfg: salva,
   });
   // os ids que o dono ordenou saem na ordem dele, sem exceção
-  assert.deepStrictEqual(ids(r).filter(x => salva.includes(x)), salva);
+  // descontando 'ausencias', aposentado da barra mas ainda gravado no banco de quem já
+  // usava o app — é de propósito que a ordem salva aqui ainda o cite.
+  const salvaViva = salva.filter(x => x !== 'ausencias');
+  assert.deepStrictEqual(ids(r).filter(x => salvaViva.includes(x)), salvaViva);
   // nenhum item some: quem a ordem salva não conhece é interpolado, não descartado.
   // (ANTES ia todo mundo pro fim; isso mudou de propósito — ver os dois testes de
   //  "posição padrão" abaixo. A contagem é o que garante que ninguém se perdeu.)
@@ -103,8 +113,11 @@ test('item que a ordem salva não conhece entra na posição padrão, não no fi
   assert.notStrictEqual(pos, ids(r).length - 1, 'conquistas foi jogado pro fim');
   // no código, conquistas vem logo depois de agenda — tem que cair ali
   assert.strictEqual(ids(r)[ids(r).indexOf('agenda') + 1], 'conquistas');
-  // e a ordem que o dono salvou tem que ser respeitada no resto
-  assert.deepStrictEqual(ids(r).filter(x => salva.includes(x)), salva);
+  // e a ordem que o dono salvou tem que ser respeitada no resto — descontando 'ausencias',
+  // aposentado da barra mas ainda gravado no banco de quem já usava o app. É de propósito
+  // que a ordem salva deste teste ainda o cite: é a ordem real de produção.
+  const salvaViva = salva.filter(x => x !== 'ausencias');
+  assert.deepStrictEqual(ids(r).filter(x => salvaViva.includes(x)), salvaViva);
 });
 
 test('coordenação: caixa desconhecida pela ordem salva cai logo após jornada', () => {
@@ -145,4 +158,10 @@ test('o mapa REAL do shared.js aponta cada módulo para o arquivo certo', () => 
     const href = (linha.match(/href:\s*'([^']+)'/) || [])[1];
     assert.strictEqual(href, destino, 'o módulo "' + chave + '" aponta para ' + href);
   });
+});
+
+test('a barra do membro não tem mais o item Faltar — a função vive nas Escalas', () => {
+  const r = montarItensNav({ ...base, modo: 'jornada' });
+  assert.strictEqual(r.find(x => x.id === 'ausencias'), undefined);
+  assert.ok(ids(r).includes('escalas-membro'), 'o caminho do membro é pelas Escalas');
 });

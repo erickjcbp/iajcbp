@@ -14,9 +14,10 @@
     { id:'conquistas',      href:'conquistas.html',      label:'Conquistas', icon:'award' },
     { id:'destaques',       href:'destaques.html',       label:'Destaques',  icon:'star' },
     { id:'minha-casa',      href:'minha-casa.html',      label:'Casa',       icon:'shield' },
-    // id 'ausencias' é contrato com nav_ordem_jornada — só o rótulo muda.
-    // "Faltar" diz o que a tela faz pro membro; pra equipe a mesma tela é a Caixa.
-    { id:'ausencias',       href:'ausencias.html',       label:'Faltar',     icon:'x-circle' },
+    // O item 'Faltar' SAIU daqui em 17/08: avisar ausência virou um botão dentro das
+    // Escalas do membro. A ordem salva em acolitos_config.nav_ordem_jornada ainda cita o
+    // id 'ausencias' em quem já usava o app; ordenarPorConfig ignora id que não existe
+    // mais (linha 58), então a barra dessas pessoas não quebra.
   ];
 
   var ITENS_COORD_FIXOS = [
