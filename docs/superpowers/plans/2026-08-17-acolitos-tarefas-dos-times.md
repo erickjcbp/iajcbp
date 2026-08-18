@@ -23,7 +23,7 @@
 - **Conferir o deploy pela ponta**: baixar o arquivo do ar e comparar com o local.
 - **NÃO mexer em `navMode` nem em `eh_equipe`.** O spec registra que a aba nasce visível para 4 pessoas e que isso precisará ser revisto quando os times forem preenchidos — mas é **outra frente**. Quem executar este plano não resolve isso de passagem.
 - **A permissão `tarefas` é portão de TELA, não de banco.** A RLS trava por papel, como todas as irmãs `acolitos_*`. Quem é da equipe e chegar por outro caminho lê a tabela — é o desenho que já existe no app, não um defeito deste plano.
-- **Migration nova vai pelo MCP do Supabase**, com a conta do projeto (erickjcbp) — e **conferida contra as tabelas irmãs** antes de aplicar.
+- **A migration NÃO pode ser aplicada nesta sessão** (MCP em outra conta, Docker parado, senha do banco velha). Ela é escrita, conferida contra as tabelas irmãs e commitada — quem aplica é o dono, pelo painel. **A branch não pode ser publicada antes disso**, senão a aba Tarefas nasce mostrando erro.
 
 ---
 
@@ -279,14 +279,16 @@ end $$;
 Comparar, item a item, com `046_arte_escala.sql`: os papéis são os mesmos? falta algum `grant`? o `enable row level security` está lá? há política de escrita separada da de leitura?
 **Uma tabela nova que não parece com as irmãs é o defeito mais provável desta tarefa** — já subiu tabela sem a trava por conta neste projeto, e nove revisões passaram sem ver.
 
-- [ ] **Passo 4: aplicar pelo MCP do Supabase, com a conta do projeto**
+- [ ] **Passo 4: NÃO aplicar — deixar pronto para o dono aplicar**
 
-A conta correta é a do iajcbp (`erickjcbp`, projeto `fttjgsotuosjfrasttds`). Se o MCP estiver conectado a outra conta, ele responde "You do not have permission" — **avise o dono e pare**, não tente por outro caminho.
+**Não tente aplicar.** Já foi conferido nesta sessão que os três caminhos estão fechados: o MCP do Supabase está logado em outra conta, o `supabase db dump` exige Docker (parado), e a senha do banco no `.env` está velha (`password authentication failed`). Não procure um quarto caminho e não mexa no `.env`.
 
-- [ ] **Passo 5: provar que a trava funciona**
+O que você faz no lugar: conferir que o arquivo `048_tarefas.sql` está inteiro e colável de uma vez no editor de SQL do painel do Supabase — sem `\i`, sem depender de outro arquivo, e idempotente (os `if not exists` já estão lá, então rodar duas vezes não quebra).
 
-Com a chave anônima (sem login), tentar `select` e `insert` na tabela nova.
-Esperado: as duas recusadas pela RLS. **Uma tabela que aceita leitura anônima é defeito crítico** — já houve caso neste projeto de política que barrava e o PostgREST respondia sucesso com zero linhas.
+- [ ] **Passo 5: registrar que a prova da trava ficou PENDENTE**
+
+A prova de fogo — com a chave anônima, tentar `select` e `insert` e ver as duas recusadas — **só pode ser feita depois de a tabela existir**. Anote isso no seu relatório, com todas as letras: a RLS foi conferida por leitura contra `003_acolitos_fase2.sql` e `046_arte_escala.sql`, e **não** foi provada rodando.
+Não escreva no relatório que a trava funciona. Ela ainda não foi testada.
 
 - [ ] **Passo 6: commitar**
 
