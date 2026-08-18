@@ -566,7 +566,9 @@ async function abrirFormTarefa() {
       ? 'Não foi possível carregar os times nem os responsáveis. Feche e tente de novo.'
       : falhouSetores
         ? 'Não foi possível carregar os times. Feche e tente de novo.'
-        : 'Não foi possível carregar os responsáveis (a migration 050 pode não estar aplicada ainda). Feche e tente de novo.';
+        // Sem os responsáveis DÁ para criar: responsável é opcional e a tarefa nasce do time.
+        // Dizer "feche e tente de novo" mandaria a pessoa desistir de algo que funciona.
+        : 'Não foi possível carregar quem pode ser responsável. Dá para criar a tarefa mesmo assim — ela fica com o time, e você define o responsável depois.';
     m.appendChild(av);
   }
 
@@ -610,7 +612,11 @@ async function abrirFormTarefa() {
   const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:16px;';
   const cancel = document.createElement('button'); cancel.className = 'btn'; cancel.style.flex = '1'; cancel.textContent = 'Cancelar'; cancel.onclick = () => ov.remove();
   const save = document.createElement('button'); save.className = 'btn gold'; save.style.flex = '1'; save.textContent = 'Criar';
-  save.disabled = falhouSetores || falhouMembros; // não deixa salvar meia tarefa em cima de um catálogo incompleto por falha
+  // Só o TIME impede salvar, porque é obrigatório: sem a lista de times não dá para escolher um.
+  // A lista de responsáveis falhando NÃO impede — responsável é opcional, e travar tudo por
+  // causa dela deixaria a coordenação sem conseguir criar tarefa nenhuma. A tarefa nasce do
+  // time, e o responsável se define depois, quando a lista voltar.
+  save.disabled = falhouSetores;
   save.onclick = async () => {
     const titulo = iTit.value.trim();
     if (!titulo) { toast('Dê um título à tarefa.', 'error'); return; }
