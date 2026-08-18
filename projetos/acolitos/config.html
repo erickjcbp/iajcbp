@@ -286,7 +286,14 @@ async function renderListaUnica(b){
         renderListaUnica(b); };
       top.appendChild(ed);
       const del=document.createElement('button'); del.className='mini-del'; del.textContent='−';
-      del.onclick=async()=>{ if(!await uiConfirm('Remover "'+(item.label||item.valor)+'"?'))return;
+      del.onclick=async()=>{
+        // Time não é um rótulo solto: há tarefas e gente pendurados nele. Remover sem dizer
+        // isso faz a tarefa "sumir" da vista de quem apagou (ela vira órfã e passa a aparecer
+        // com o nome cru) e deixa pessoas num time que já não existe. O aviso não impede nada
+        // — só conta o que vai acontecer, com números.
+        let extra = '';
+        if (conf.tipo === 'setor') extra = await avisoDeTimeEmUso(item.valor);
+        if(!await uiConfirm('Remover "'+(item.label||item.valor)+'"?'+extra))return;
         const { error } = await sb.from('acolitos_listas').delete().eq('id',item.id);
         if (error) { console.error('Listas: remover falhou', error); toast('Não foi possível remover.','error'); return; }
         renderListaUnica(b); };
@@ -892,6 +899,25 @@ function abrirEditorMissao(m, onSave){
   };
   md.appendChild(save);
   ov.appendChild(md); document.body.appendChild(ov);
+}
+
+// O que ainda depende de um time, em número. Falha de consulta NÃO vira "nada depende":
+// dizer que está limpo sem ter conseguido perguntar é o que faz alguém apagar tranquilo.
+async function avisoDeTimeEmUso(slug) {
+  const [tar, pes] = await Promise.all([
+    sb.from('acolitos_tarefas').select('id', { count:'exact', head:true }).eq('time_slug', slug).is('concluida_em', null),
+    sb.from('acolitos_membros').select('id', { count:'exact', head:true }).eq('status','ativo').contains('setores', [slug]),
+  ]);
+  if (tar.error || pes.error) {
+    console.error('Config: conferir uso do time falhou', tar.error || pes.error);
+    return '\n\nNão consegui conferir se alguma tarefa ou pessoa ainda depende deste time.';
+  }
+  const partes = [];
+  if (tar.count) partes.push(tar.count + (tar.count === 1 ? ' tarefa aberta' : ' tarefas abertas'));
+  if (pes.count) partes.push(pes.count + (pes.count === 1 ? ' pessoa' : ' pessoas'));
+  if (!partes.length) return '\n\nNada depende deste time.';
+  return '\n\nAinda há ' + partes.join(' e ') + ' neste time. Nada disso é apagado: as tarefas'
+       + ' continuam na aba Tarefas, com o nome cru do time, e as pessoas seguem marcadas nele.';
 }
 
 // ── Seção Etapas do CRM: CRUD completo (reordenar, editar, excluir, adicionar) ──
