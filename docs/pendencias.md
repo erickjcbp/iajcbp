@@ -50,12 +50,18 @@ duas**? Sem essa resposta a implementação não fecha.
 
 ---
 
-## 3. Achado meu, não pedido
+## 3. Brasões — NÃO refazer os 4 antigos
 
-**Os 4 brasões antigos têm franja preta no modo claro.** Apareceu quando comparei o recorte novo
-da Consilium com o `templaris` lado a lado nos dois fundos: o novo sai limpo, os antigos têm
-sujeira serrilhada em toda a silhueta. Os originais continuam guardados em
-`midia/brasoes/originais/`, então é só refazer com o mesmo processamento. Meia hora.
+Cheguei a propor refazer os quatro brasões antigos, porque eles têm uma franja preta serrilhada
+no modo claro. **Tentei, e estava errado: o recorte novo destrói a arte deles.** No `templaris`
+a capa verde e o cabelo sumiram — a inundação vaza para dentro pelas regiões escuras que encostam
+no fundo. Os arquivos que estão no ar são melhores. A franja fica; é o preço de um recorte
+conservador, e é menos ruim que buraco no meio do bordado.
+
+**A regra que ficou (vale para todo brasão novo):** limite de recorte **6**, suavização de borda
+**0,5**, e conferir a saída **composta sobre magenta** antes de subir — foi só assim que apareceu
+que a faixa do CONSILIUM tinha ficado transparente com o limite 40. Sobre o fundo escuro do app
+o buraco é quase invisível.
 
 ---
 
@@ -85,3 +91,6 @@ sujeira serrilhada em toda a silhueta. Os originais continuam guardados em
 - A recusa nas telas de decisão passou a **dizer o motivo** em vez de "Não foi possível decidir".
 - **Dívida de fuso quitada**: `hojeLocal()` nas 7 telas, nada mais monta "hoje" em UTC.
 - **Push** testado no aparelho do dono. Frente fechada.
+- **Permissão de módulo passou a valer na barra**, não só na URL: liberar um módulo para quem não
+  é da equipe abria a tela e escondia o botão. Vale para todos os módulos, não só Tarefas.
+- **Brasão da Consilium** — subiu com a faixa transparente e foi corrigido no mesmo dia.
