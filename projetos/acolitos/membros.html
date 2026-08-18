@@ -602,7 +602,7 @@ function appendEquipeFields(el, m) {
   const reveal = document.createElement('div');
   reveal.style.cssText = 'display:' + (m.eh_equipe ? 'block' : 'none') + ';margin:2px 0 6px;padding:12px;background:var(--surface);border:1px solid var(--border-wine);border-radius:8px;';
   el.appendChild(editBool('É da coordenação / equipe?', 'eh_equipe', m.eh_equipe, (on) => { reveal.style.display = on ? 'block' : 'none'; }));
-  const lblS = document.createElement('div'); lblS.className = 'form-label'; lblS.textContent = 'Setores (um ou mais)';
+  const lblS = document.createElement('div'); lblS.className = 'form-label'; lblS.textContent = 'Times (um ou mais)';
   reveal.appendChild(lblS);
   reveal.appendChild(editMulti('', 'setores', m.setores, SETORES));
   const lblP = document.createElement('div'); lblP.className = 'form-label'; lblP.style.marginTop = '10px'; lblP.textContent = 'Módulos liberados para esta pessoa';
@@ -867,7 +867,7 @@ async function renderTab(tab) {
     // Coordenação / equipe / setores
     const hr = document.createElement('div'); hr.style.cssText = 'border-top:1px solid var(--border-wine);margin:18px 0 14px;';
     el.appendChild(hr);
-    const tEq = document.createElement('div'); tEq.className = 'section-card-title'; tEq.textContent = 'Coordenação & Setores'; el.appendChild(tEq);
+    const tEq = document.createElement('div'); tEq.className = 'section-card-title'; tEq.textContent = 'Coordenação & Times'; el.appendChild(tEq);
     appendEquipeFields(el, m);
   }
 

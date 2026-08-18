@@ -40,6 +40,7 @@
 <div class="main" id="main-content"><span class="loading">Carregando...</span></div>
 
 <script src="navegacao-core.js"></script>
+<script src="times-core.js"></script>
 <script src="shared.js"></script>
 <script>
 let ctx = null, casas = [], membros = [], roleMap = {};
@@ -106,7 +107,7 @@ function render() {
   const nota = document.createElement('p'); nota.style.cssText = 'font-size:12px;color:var(--text-muted);text-align:center;margin-top:6px;'; nota.textContent = semCasa + ' membro(s) ainda sem casa.'; main.appendChild(nota);
 }
 
-// ── CONSILIUM (casa da equipe) + organograma de setores ──
+// ── CONSILIUM (casa da equipe) + organograma dos times ──
 function renderConsilium(main, casa) {
   const cor = casa.cor || '#7d3c98';
   const hd = document.createElement('div'); hd.className = 'consilium-hd'; hd.style.setProperty('--c', cor);
@@ -145,49 +146,43 @@ function renderConsilium(main, casa) {
       const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:7px;padding:4px 2px;';
       row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 26, { nivelSlug: m.nivel||'aspirante' }));
       const n = document.createElement('div'); n.style.cssText = 'flex:1;min-width:0;font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; n.textContent = m.apelido || m.nome;
-      const x = document.createElement('button'); x.className = 'mini-del'; x.textContent = '−'; x.title = 'Remover do setor'; x.style.cssText = 'width:24px;height:24px;font-size:12px;'; x.onclick = () => removerSetor(m, slug);
+      const x = document.createElement('button'); x.className = 'mini-del'; x.textContent = '−'; x.title = 'Tirar do time'; x.style.cssText = 'width:24px;height:24px;font-size:12px;'; x.onclick = () => removerSetor(m, slug);
       row.append(n, x); card.appendChild(row);
     });
     const add = document.createElement('button'); add.className = 'mini-add'; add.textContent = '+ membro'; add.style.marginTop = '6px'; add.onclick = () => abrirAddSetor(slug, label); card.appendChild(add);
     grid.appendChild(card);
   });
   orgWrap.appendChild(grid);
-  const addSet = document.createElement('button'); addSet.className = 'btn-sm gray'; addSet.textContent = '+ Adicionar setor'; addSet.style.marginTop = '12px'; addSet.onclick = adicionarSetor;
+  const addSet = document.createElement('button'); addSet.className = 'btn-sm gray'; addSet.textContent = '+ Novo time'; addSet.style.marginTop = '12px'; addSet.onclick = adicionarSetor;
   orgWrap.appendChild(addSet);
   main.appendChild(orgWrap);
 }
 
+// A regra de sair vive em times-core.js, compartilhada com a seção Times do Config. Aqui só
+// se grava o que ela mandar — duas cópias divergiriam no primeiro conserto.
 async function removerSetor(m, slug) {
-  const novos = (m.setores || []).filter(s => s !== slug);
-  const ultimo = novos.length === 0; // saiu do último setor → deixa de ser equipe
-  const patch = ultimo ? { setores: novos, eh_equipe: false } : { setores: novos };
-  const { error } = await sbAdmin.from('acolitos_membros').update(patch).eq('id', m.id);
+  const r = sairDoTime(m, slug, roleMap[m.user_id], nivelInfo(m.nivel || 'aspirante').base);
+  if (r.semEfeito) return;
+  const { error } = await sbAdmin.from('acolitos_membros').update(r.patch).eq('id', m.id);
   if (error) { toast('Erro.', 'error'); return; }
-  m.setores = novos;
-  if (ultimo) {
-    m.eh_equipe = false;
-    // rebaixa o acesso ao papel-base do nível — sem rebaixar admins (coord_admin/subadmin)
-    if (m.user_id && !['coord_admin', 'subadmin'].includes(roleMap[m.user_id])) {
-      const base = nivelInfo(m.nivel || 'aspirante').base;
-      try { await apiPost('/api/acolito-admin', { action: 'sync_role', user_id: m.user_id, role: base }); roleMap[m.user_id] = base; } catch (e) {}
-    }
-    toast('✓ Removido — não faz mais parte da equipe.');
-  } else {
-    toast('✓ Removido do setor.');
+  m.setores = r.patch.setores;
+  if (r.ultimo) m.eh_equipe = false;
+  if (r.rebaixarPara) {
+    try { await apiPost('/api/acolito-admin', { action: 'sync_role', user_id: m.user_id, role: r.rebaixarPara }); roleMap[m.user_id] = r.rebaixarPara; } catch (e) {}
   }
+  toast(r.ultimo ? '✓ Removido — não faz mais parte da equipe.' : '✓ Removido do time.');
   render();
 }
 
 async function addMembroSetor(m, slug) {
-  const novos = Array.from(new Set([...(m.setores || []), slug]));
-  const { error } = await sbAdmin.from('acolitos_membros').update({ setores: novos, eh_equipe: true }).eq('id', m.id);
+  const r = entrarNoTime(m, slug, roleMap[m.user_id]);
+  const { error } = await sbAdmin.from('acolitos_membros').update(r.patch).eq('id', m.id);
   if (error) { toast('Erro.', 'error'); return; }
-  m.setores = novos; m.eh_equipe = true;
-  // promove a equipe (acesso) se ainda não for equipe/admin — sem rebaixar ninguém
-  if (m.user_id && !['coord_admin', 'subadmin', 'membro_equipe'].includes(roleMap[m.user_id])) {
-    try { await apiPost('/api/acolito-admin', { action: 'sync_role', user_id: m.user_id, role: 'membro_equipe' }); roleMap[m.user_id] = 'membro_equipe'; } catch (e) {}
+  m.setores = r.patch.setores; m.eh_equipe = true;
+  if (r.promoverPara) {
+    try { await apiPost('/api/acolito-admin', { action: 'sync_role', user_id: m.user_id, role: r.promoverPara }); roleMap[m.user_id] = r.promoverPara; } catch (e) {}
   }
-  toast('✓ Adicionado ao setor.'); render();
+  toast('✓ Adicionado ao time.'); render();
 }
 
 function abrirAddSetor(slug, label) {
@@ -216,12 +211,12 @@ function abrirAddSetor(slug, label) {
 }
 
 async function adicionarSetor() {
-  const nome = (await uiPrompt('Nome do novo setor:') || '').trim(); if (!nome) return;
+  const nome = (await uiPrompt('Nome do novo time:') || '').trim(); if (!nome) return;
   const valor = 's_' + nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24) + '_' + Math.random().toString(36).slice(2, 6);
   const { error } = await sbAdmin.from('acolitos_listas').insert({ tipo: 'setor', valor, label: nome });
   if (error) { toast('Não foi possível adicionar.', 'error'); return; }
   SETORES.push([valor, nome]); SETOR_LABEL[valor] = nome;
-  toast('✓ Setor adicionado.'); render();
+  toast('✓ Time criado.'); render();
 }
 
 async function moverMembro(m, casaId) {

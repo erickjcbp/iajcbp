@@ -49,6 +49,7 @@
 <div class="main" id="main-content"><span class="loading">Carregando...</span></div>
 
 <script src="navegacao-core.js"></script>
+<script src="times-core.js"></script>
 <script src="kits-core.js"></script>
 <script src="gerador-substituto.js"></script>
 <script src="shared.js"></script>
@@ -61,11 +62,15 @@ let ctx = null, secaoAtual = 'identidade';
 // seção sumiu e nenhum id mudou.
 //
 // 'listas' é UMA seção com as oito listas dentro (era Competências, Tipos de celebração,
-// Funções litúrgicas, Categorias da Tesouraria e Times — cinco entradas para o mesmo editor —
-// mais os Motivos de ausência, que viviam fora do Config, no fim da tela de Ausências).
+// Funções litúrgicas e Categorias da Tesouraria — quatro entradas para o mesmo editor — mais
+// os Motivos de ausência, que viviam fora do Config, no fim da tela de Ausências).
+//
+// 'times' NÃO é uma dessas listas, embora grave na mesma tabela. Um time tem gente dentro, e
+// era isso que confundia: para criar o time ia-se em A paróquia › Listas, e para pôr alguém
+// nele em outra tela. Agora as duas coisas moram juntas, em As pessoas.
 const GRUPOS = [
   ['A paróquia',        [['identidade','Identidade'], ['comunidades','Comunidades & horários'], ['listas','Listas']]],
-  ['As pessoas',        [['equipe','Equipe & Permissões'], ['admins','Admins & superadmin'], ['logins','Logins (usuário/senha)'], ['cadastro','Campos do cadastro']]],
+  ['As pessoas',        [['equipe','Equipe & Permissões'], ['times','Times'], ['admins','Admins & superadmin'], ['logins','Logins (usuário/senha)'], ['cadastro','Campos do cadastro']]],
   ['Como o app funciona',[['navegacao','Navegação'], ['gerador','Regras do gerador'], ['modelos','Modelos de escala'], ['niveis','Níveis / Jornada'], ['missoes','Missões & XP']]],
   ['Os módulos',        [['crm','Etapas do CRM']]],
 ];
@@ -91,7 +96,7 @@ function render(){
   const body = document.createElement('div'); body.id='cfg-body'; body.className='cfg-body';
   wrap.append(side, body); main.appendChild(wrap);
   // 'modelos' não entra aqui: vive dentro de 'tipos' (Tipos & Modelos).
-  ({ listas:renderListaUnica, modelos:renderModelos, gerador:renderGerador,
+  ({ listas:renderListaUnica, times:renderTimes, modelos:renderModelos, gerador:renderGerador,
      comunidades:renderComunidades, cadastro:renderCadastro, admins:renderAdmins, identidade:renderIdentidade,
      navegacao:renderNavOrdem, equipe:renderEquipe,
      crm:renderCrm, niveis:renderNiveis, missoes:renderMissoes, logins:renderLogins
@@ -173,8 +178,6 @@ const LISTAS_CFG = [
   { tipo:'tipo_evento',    nome:'Tipos de evento',        dica:'Ficam disponíveis ao criar um evento na Agenda (ensaio, retiro, procissão…). A cor é a bolinha no calendário.', novo:'Novo tipo de evento (ex.: Procissão)', slug:true,
     extra:{ modo:'cor', rotulo:'Cor no calendário' } },
   { tipo:'tipo_celebracao',nome:'Tipos de celebração',     dica:'Ficam disponíveis ao criar uma celebração e aparecem na Agenda.', novo:'Novo tipo (ex.: Missa de Formatura)', slug:true },
-  { tipo:'setor',          nome:'Times da pastoral',       dica:'Os times (Almoxarifado, Formação…). O texto abaixo de cada um aparece na aba Tarefas.', novo:'Novo time (ex.: Logística)',
-    extra:{ modo:'texto', chave:'responsabilidades', rotulo:'Do que este time cuida, ano após ano (aparece em Tarefas) — opcional' } },
   { tipo:'cat_entrada',    nome:'Tesouraria — entradas',   dica:'Categorias de dinheiro que entra.', novo:'Nova categoria de entrada…' },
   { tipo:'cat_saida',      nome:'Tesouraria — saídas',     dica:'Categorias de dinheiro que sai.',   novo:'Nova categoria de saída…' },
   { tipo:'motivo',         nome:'Motivos de ausência',     dica:'As opções que a pessoa escolhe ao avisar que não pode servir.', novo:'Novo motivo…' },
@@ -631,7 +634,7 @@ function _chipsMulti(opcoes, selSet){
 }
 async function renderEquipe(b){
   b.textContent='';
-  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 8px;'; hint.textContent='Quem é equipe, setores e acessos da Coordenação. Toque num membro pra editar; busque pra incluir alguém.'; b.appendChild(hint);
+  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 8px;'; hint.textContent='Quem é equipe, em que times está e os acessos da Coordenação. Toque num membro pra editar; busque pra incluir alguém.'; b.appendChild(hint);
   const { data: mod } = await sb.from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
   const [{ data: mems }, { data: pms }] = await Promise.all([
     sb.from('acolitos_membros').select('id,nome,eh_equipe,setores,permissoes,serve,nivel,user_id').eq('status','ativo').order('nome'),
@@ -660,13 +663,12 @@ async function renderEquipe(b){
     });
   };
   inp.oninput=desenha; desenha();
-  // Gerência da LISTA de setores (movida das Listas) — aqui se cria/exclui os setores existentes
+  // Ponteiro para onde os times moram agora. Ele já apontou para "Listas › Times da pastoral",
+  // que deixou de existir — ponteiro errado é pior que ponteiro nenhum, porque manda a pessoa
+  // procurar num lugar vazio.
   const hr=document.createElement('div'); hr.style.cssText='border-top:1px solid var(--border-wine);margin:20px 0 10px;'; b.appendChild(hr);
-  const sh=document.createElement('div'); sh.style.cssText='font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; sh.textContent='🗂 Setores (lista)'; b.appendChild(sh);
-  // A lista de times saiu daqui: agora vive em Listas › Times da pastoral, junto das outras
-  // sete. Ficava escondida dentro desta seção e ninguém adivinhava que era ali que se editava.
-  const dicaSet=document.createElement('p'); dicaSet.style.cssText='font-size:12px;color:var(--text-muted);margin:10px 0 0;';
-  dicaSet.textContent='Os times da pastoral se editam em Listas › Times da pastoral.'; b.appendChild(dicaSet);
+  const dicaSet=document.createElement('p'); dicaSet.style.cssText='font-size:12px;color:var(--text-muted);margin:0;';
+  dicaSet.textContent='Criar e renomear times, e pôr gente neles, é aqui do lado: As pessoas › Times.'; b.appendChild(dicaSet);
 }
 // CRUD da lista de setores (acolitos_listas tipo='setor') + a responsabilidade fixa
 // de cada um (o que o time É, ano após ano — mora em acolitos_config, chave
@@ -918,6 +920,234 @@ async function avisoDeTimeEmUso(slug) {
   if (!partes.length) return '\n\nNada depende deste time.';
   return '\n\nAinda há ' + partes.join(' e ') + ' neste time. Nada disso é apagado: as tarefas'
        + ' continuam na aba Tarefas, com o nome cru do time, e as pessoas seguem marcadas nele.';
+}
+
+// ── Seção Times (As pessoas) ────────────────────────────────────────
+// Um time NÃO é uma das Listas, embora grave na mesma tabela: ele tem gente dentro. Antes,
+// criar o time era em "A paróquia › Listas" e pôr alguém nele era no organograma das Casas —
+// duas portas para a mesma ideia, e nenhuma delas mostrava a outra metade.
+//
+// A regra de entrar e sair vive em times-core.js, compartilhada com as Casas: estar num time
+// é o que marca a pessoa como equipe, e sair do último tira isso e o acesso junto.
+async function renderTimes(b) {
+  b.textContent = '';
+  const dica = document.createElement('p');
+  dica.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0 0 10px;';
+  dica.textContent = 'Os times da pastoral e quem está em cada um. Estar num time marca a pessoa como equipe; sair do último time tira essa marca e o acesso de coordenação.';
+  b.appendChild(dica);
+
+  const { data: mod } = await sb.from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
+  const [lst, cfgRow, mem, pms] = await Promise.all([
+    sb.from('acolitos_listas').select('id,valor,label').eq('tipo','setor').order('label'),
+    sb.from('acolitos_config').select('valor').eq('chave','responsabilidades').maybeSingle(),
+    sb.from('acolitos_membros').select('id,nome,apelido,setores,eh_equipe,user_id,nivel').eq('status','ativo').order('nome'),
+    mod ? sb.from('pastoral_members').select('user_id,role').eq('module_id', mod.id) : Promise.resolve({ data: [] }),
+  ]);
+
+  // Falha ao carregar os times NÃO vira lista vazia: zero time é indistinguível de "não há
+  // nenhum cadastrado", e alguém sairia recriando o que já existe.
+  if (lst.error) {
+    console.error('Times: carregar falhou', lst.error);
+    const e = document.createElement('div'); e.className = 'empty';
+    e.textContent = 'Não foi possível carregar os times. Isto é falha de carregamento, não lista vazia — recarregue a página.';
+    b.appendChild(e); return;
+  }
+  const times = lst.data || [];
+
+  // Sem os membros dá para mexer nos times, mas NÃO dá para dizer quantas pessoas há em cada
+  // um. Mostrar "0 pessoas" seria inventar; a contagem some e o aviso explica.
+  const temMembros = !mem.error;
+  if (!temMembros) console.error('Times: carregar membros falhou', mem.error);
+  const membros = mem.data || [];
+  const roleMap = {}; (pms.data || []).forEach(r => { roleMap[r.user_id] = r.role; });
+
+  // O texto "do que cuida" é UM objeto só, com todos os times dentro. Gravar sem saber o que
+  // já está lá apagaria o dos outros — por isso, se a leitura falhar, o campo fica travado.
+  const textoOk = !cfgRow.error;
+  if (!textoOk) console.error('Times: carregar as responsabilidades falhou', cfgRow.error);
+  const textos = (textoOk && cfgRow.data && cfgRow.data.valor && typeof cfgRow.data.valor === 'object' && !Array.isArray(cfgRow.data.valor))
+    ? Object.assign({}, cfgRow.data.valor) : {};
+  if (!temMembros || !textoOk) {
+    const av = document.createElement('div'); av.className = 'empty'; av.style.marginBottom = '8px';
+    av.textContent = (!temMembros && !textoOk)
+      ? 'Não foi possível carregar quem está nos times nem o texto de cada um. Recarregue a página.'
+      : !temMembros
+        ? 'Não foi possível carregar quem está nos times. Os nomes dos times funcionam; a contagem de pessoas não aparece até recarregar.'
+        : 'Não foi possível carregar o texto "do que este time cuida". A edição dele está travada até recarregar; o resto funciona.';
+    b.appendChild(av);
+  }
+
+  const doTime = (slug) => membros.filter(m => (m.setores || []).indexOf(slug) >= 0);
+
+  async function gravarTextos(novo) {
+    const { error } = await sb.from('acolitos_config')
+      .upsert({ chave:'responsabilidades', valor:novo, updated_at:new Date().toISOString() }, { onConflict:'chave' });
+    if (error) { console.error('Times: gravar as responsabilidades falhou', error); toast('Não foi possível salvar.','error'); return false; }
+    if (typeof _APP_CONFIG !== 'undefined' && _APP_CONFIG) _APP_CONFIG.responsabilidades = novo;
+    toast('✓ Salvo!'); return true;
+  }
+
+  if (!times.length) {
+    const e = document.createElement('div'); e.className = 'empty';
+    e.textContent = 'Nenhum time cadastrado ainda. Crie o primeiro abaixo — depois é aqui que você põe gente nele.';
+    b.appendChild(e);
+  }
+
+  times.forEach(t => {
+    const gente = doTime(t.valor);
+    const row = document.createElement('div');
+    row.style.cssText = 'border-bottom:1px solid var(--border);padding:9px 2px;';
+    const top = document.createElement('div'); top.style.cssText = 'display:flex;align-items:center;gap:8px;';
+    const info = document.createElement('div'); info.style.cssText = 'flex:1;min-width:0;cursor:pointer;';
+    const nm = document.createElement('div'); nm.style.cssText = 'font-weight:700;font-size:13px;'; nm.textContent = t.label || t.valor;
+    const sub = document.createElement('div'); sub.style.cssText = 'font-size:11px;color:var(--text-muted);';
+    // Sem os membros carregados NÃO se escreve nada sobre gente: "sem ninguém ainda" seria
+    // afirmar vazio sem ter conseguido perguntar. O aviso lá em cima já explica o que houve.
+    const partes = [];
+    if (temMembros) partes.push(gente.length === 1 ? '1 pessoa' : gente.length + ' pessoas');
+    const resumo = (textos[t.valor] || '').slice(0, 60);
+    if (resumo) partes.push(resumo);
+    sub.textContent = partes.join(' · ');
+    info.append(nm, sub);
+
+    const bEd = document.createElement('button'); bEd.className = 'cfg-mini';
+    bEd.innerHTML = _svgIcon('editar'); bEd.title = 'Renomear time'; // ícone fixo — seguro
+    bEd.onclick = async () => {
+      const nv = await uiPrompt('Novo nome para "' + (t.label || t.valor) + '":', { value: t.label || t.valor });
+      if (nv == null) return;
+      const txt = String(nv).trim(); if (!txt) return;
+      const { error } = await sb.from('acolitos_listas').update({ label: txt }).eq('id', t.id);
+      if (error) { console.error('Times: renomear falhou', error); toast('Não foi possível renomear.','error'); return; }
+      renderTimes(b);
+    };
+    const bDel = document.createElement('button'); bDel.className = 'cfg-mini danger';
+    bDel.innerHTML = _svgIcon('lixeira'); bDel.title = 'Remover time'; // ícone fixo — seguro
+    bDel.onclick = async () => {
+      const extra = await avisoDeTimeEmUso(t.valor);
+      if (!await uiConfirm('Remover "' + (t.label || t.valor) + '"?' + extra)) return;
+      const { error } = await sb.from('acolitos_listas').delete().eq('id', t.id);
+      if (error) { console.error('Times: remover falhou', error); toast('Não foi possível remover.','error'); return; }
+      renderTimes(b);
+    };
+    top.append(info, bEd, bDel); row.appendChild(top);
+
+    // O corpo abre por toque no nome — a tela mostra os times de relance e só desce no que
+    // interessa. Sem isto, dez times com gente dentro viram uma parede de nomes.
+    const corpo = document.createElement('div'); corpo.style.display = 'none'; corpo.style.paddingTop = '8px';
+    info.onclick = () => { corpo.style.display = corpo.style.display === 'none' ? '' : 'none'; };
+
+    const ta = document.createElement('textarea'); ta.className = 'form-input'; ta.rows = 2;
+    ta.style.cssText = 'font-size:12px;'; ta.placeholder = 'Do que este time cuida, ano após ano (aparece em Tarefas) — opcional';
+    ta.value = textos[t.valor] || ''; ta.disabled = !textoOk;
+    const sv = document.createElement('button'); sv.className = 'btn-sm'; sv.style.marginTop = '6px'; sv.textContent = 'Salvar texto'; sv.disabled = !textoOk;
+    sv.onclick = async () => {
+      const txt = ta.value.trim(); const novo = Object.assign({}, textos);
+      if (txt) novo[t.valor] = txt; else delete novo[t.valor];
+      sv.disabled = true; const ok = await gravarTextos(novo); sv.disabled = !textoOk;
+      // Só espelha depois de confirmado: senão o próximo salvar, de outro time, gravaria por
+      // cima de algo que nem chegou a ser salvo.
+      if (ok) { if (txt) textos[t.valor] = txt; else delete textos[t.valor]; }
+    };
+    corpo.append(ta, sv);
+
+    if (temMembros) {
+      const lab = document.createElement('div');
+      lab.style.cssText = 'font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 4px;';
+      lab.textContent = 'Quem está neste time';
+      corpo.appendChild(lab);
+      if (!gente.length) {
+        const vz = document.createElement('div'); vz.style.cssText = 'font-size:12px;color:var(--text-muted);font-style:italic;';
+        vz.textContent = 'Ninguém ainda.'; corpo.appendChild(vz);
+      }
+      gente.forEach(m => {
+        const l = document.createElement('div'); l.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px 0;';
+        const n = document.createElement('div'); n.style.cssText = 'flex:1;font-size:13px;'; n.textContent = m.apelido || m.nome;
+        const x = document.createElement('button'); x.className = 'cfg-mini danger'; x.textContent = '−'; x.title = 'Tirar deste time';
+        x.onclick = async () => { await tirarDoTime(m, t.valor, roleMap, () => renderTimes(b)); };
+        l.append(n, x); corpo.appendChild(l);
+      });
+      const bAdd = document.createElement('button'); bAdd.className = 'mini-add'; bAdd.style.marginTop = '8px';
+      bAdd.textContent = '+ pessoa';
+      bAdd.onclick = () => abrirEscolherPessoaTime(membros, t, roleMap, () => renderTimes(b));
+      corpo.appendChild(bAdd);
+    }
+    row.appendChild(corpo);
+    b.appendChild(row);
+  });
+
+  const add = document.createElement('div'); add.style.cssText = 'display:flex;gap:8px;margin-top:12px;';
+  const inp = document.createElement('input'); inp.className = 'form-input'; inp.placeholder = 'Novo time (ex.: Logística)';
+  const bt = document.createElement('button'); bt.className = 'btn-sm gold'; bt.textContent = 'Criar';
+  bt.onclick = async () => {
+    const nome = inp.value.trim(); if (!nome) return;
+    bt.disabled = true;
+    const { error } = await sb.from('acolitos_listas').insert({ tipo:'setor', valor: slugDe(nome), label: nome });
+    bt.disabled = false;
+    if (error) { console.error('Times: criar falhou', error); toast('Não foi possível criar.','error'); return; }
+    inp.value = ''; renderTimes(b);
+  };
+  add.append(inp, bt); b.appendChild(add);
+}
+
+// Tirar alguém de um time. A conta de o que gravar é do times-core (compartilhado com as
+// Casas); aqui só se grava e se avisa.
+async function tirarDoTime(m, slug, roleMap, aoTerminar) {
+  const base = (typeof nivelInfo === 'function') ? nivelInfo(m.nivel || 'aspirante').base : null;
+  const r = sairDoTime(m, slug, roleMap[m.user_id], base);
+  if (r.semEfeito) return;
+  if (r.ultimo && !await uiConfirm('Este é o último time de ' + (m.apelido || m.nome)
+      + '. Tirando daqui, a pessoa deixa de ser equipe e perde o acesso de coordenação. Continuar?')) return;
+  const { error } = await sb.from('acolitos_membros').update(r.patch).eq('id', m.id);
+  if (error) { console.error('Times: tirar do time falhou', error); toast('Não foi possível tirar.','error'); return; }
+  if (r.rebaixarPara) {
+    try { await apiPost('/api/acolito-admin', { action:'sync_role', user_id:m.user_id, role:r.rebaixarPara }); } catch (e) {}
+  }
+  toast(r.ultimo ? '✓ Tirado — não faz mais parte da equipe.' : '✓ Tirado do time.');
+  aoTerminar();
+}
+
+function abrirEscolherPessoaTime(membros, time, roleMap, aoTerminar) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.maxWidth = '400px';
+  const tt = document.createElement('div'); tt.className = 'modal-title';
+  tt.textContent = 'Adicionar a ' + (time.label || time.valor); modal.appendChild(tt);
+  const busca = document.createElement('input'); busca.className = 'form-input';
+  busca.placeholder = 'Buscar nome...'; busca.style.marginBottom = '10px'; modal.appendChild(busca);
+  const list = document.createElement('div'); list.className = 'pick-list'; modal.appendChild(list);
+  function pop() {
+    const q = busca.value.trim().toLowerCase(); list.textContent = '';
+    const fora = membros.filter(m => (m.setores || []).indexOf(time.valor) < 0
+      && (!q || semAcento(m.nome).includes(semAcento(q))));
+    if (!fora.length) {
+      const e = document.createElement('div'); e.style.cssText = 'font-size:12px;color:var(--text-muted);font-style:italic;padding:8px 0;';
+      e.textContent = q ? 'Ninguém encontrado.' : 'Todo mundo já está neste time.';
+      list.appendChild(e); return;
+    }
+    fora.slice(0, 60).forEach(m => {
+      const r = document.createElement('div'); r.className = 'pick-row'; r.style.cursor = 'pointer';
+      const n = document.createElement('div'); n.style.cssText = 'flex:1;font-size:13px;'; n.textContent = m.apelido || m.nome;
+      const sub = document.createElement('div'); sub.style.cssText = 'font-size:11px;color:var(--text-muted);';
+      sub.textContent = (m.setores || []).length ? 'já em outro time' : (m.eh_equipe ? 'equipe' : 'não é equipe ainda');
+      r.append(n, sub);
+      r.onclick = async () => {
+        const res = entrarNoTime(m, time.valor, roleMap[m.user_id]);
+        const { error } = await sb.from('acolitos_membros').update(res.patch).eq('id', m.id);
+        if (error) { console.error('Times: adicionar falhou', error); toast('Não foi possível adicionar.','error'); return; }
+        if (res.promoverPara) {
+          try { await apiPost('/api/acolito-admin', { action:'sync_role', user_id:m.user_id, role:res.promoverPara }); } catch (e) {}
+        }
+        ov.remove(); toast('✓ Adicionado ao time.'); aoTerminar();
+      };
+      list.appendChild(r);
+    });
+  }
+  busca.oninput = pop; pop();
+  const fechar = document.createElement('button'); fechar.className = 'btn-sm gray';
+  fechar.style.cssText = 'margin-top:12px;width:100%;'; fechar.textContent = 'Fechar';
+  fechar.onclick = () => ov.remove(); modal.appendChild(fechar);
+  ov.appendChild(modal); document.body.appendChild(ov);
+  busca.focus();
 }
 
 // ── Seção Etapas do CRM: CRUD completo (reordenar, editar, excluir, adicionar) ──
