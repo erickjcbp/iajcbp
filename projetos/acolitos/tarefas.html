@@ -53,9 +53,15 @@
 
 let ctx = null;
 
-// 'hoje' no mesmo formato AAAA-MM-DD usado no resto do app (escalas-membro.html,
-// caixa.html etc.) — consistência com o app inteiro, não invenção nova aqui.
-function hojeStr() { return new Date().toISOString().slice(0, 10); }
+// Data local, não UTC. `toISOString()` devolve UTC, e como estamos em UTC-3 ele vira o dia
+// seguinte às 21h — o que faria uma tarefa que vence HOJE aparecer como atrasada três horas
+// antes de vencer, todo dia. O prazo é digitado pela pessoa no fuso dela, então a comparação
+// tem de ser no fuso dela também.
+function hojeStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+                         + '-' + String(d.getDate()).padStart(2, '0');
+}
 
 function prazoLabel(prazo) {
   if (!prazo) return 'sem prazo';
@@ -85,13 +91,19 @@ function renderNadaAqui(main) {
   box.append(t, s); main.appendChild(box);
 }
 
-function linhaTarefa(t, atrasada) {
+function linhaTarefa(t, atrasada, labelTime) {
   const row = document.createElement('div'); row.className = 'tf-item' + (atrasada ? ' tf-atrasada' : '');
   const bar = document.createElement('div'); bar.className = 'tf-bar';
   const body = document.createElement('div'); body.className = 'tf-body';
   const tit = document.createElement('div'); tit.className = 'tf-tit'; tit.textContent = t.titulo;
   const meta = document.createElement('div'); meta.className = 'tf-meta' + (atrasada ? ' tf-atrasada-txt' : '');
-  meta.textContent = prazoLabel(t.prazo) + ' · ' + nomeResponsavel(t);
+  // No bloco Atrasadas não há cabeçalho de grupo (o time some junto), então a linha
+  // carrega o rótulo do time ela mesma — senão ninguém sabe a quem cobrar. Nas linhas
+  // agrupadas isso seria repetir o cabeçalho, por isso só entra quando atrasada=true.
+  const partes = [prazoLabel(t.prazo)];
+  if (atrasada) partes.push((labelTime && labelTime[t.time_slug]) || t.time_slug);
+  partes.push(nomeResponsavel(t));
+  meta.textContent = partes.join(' · ');
   body.append(tit, meta);
   if (t.observacao) {
     const obs = document.createElement('div'); obs.className = 'tf-obs'; obs.textContent = t.observacao;
@@ -140,7 +152,7 @@ async function renderLista(main) {
     const h = document.createElement('div'); h.className = 'tf-grupo-titulo tf-atraso';
     h.textContent = 'Atrasadas (' + atrasadas.length + ')';
     main.appendChild(h);
-    atrasadas.forEach(t => main.appendChild(linhaTarefa(t, true)));
+    atrasadas.forEach(t => main.appendChild(linhaTarefa(t, true, labelTime)));
   }
 
   const porTime = {};
