@@ -28,6 +28,12 @@ checagem anterior dizia "não instalado" e estava errada.)
   Enrico Pompeu Secherini. E nenhum dos dois por idade — os dois estão **sem data de
   nascimento**, então a regra não consegue dizer se têm 14 anos. É problema de dado, não de regra.
 
+- ✔ **A varredura das 40 tabelas.** Proteção de linha ligada nas 40 de 40. O defeito que a 051
+  fechou estava em mais **11**: nenhuma vazava linha, mas todas devolviam `[]` com HTTP 200 em vez
+  de recusar — e entre elas estavam as chaves de notificação do celular, os nomes de usuário e o
+  contato de quem avisa ausência pelo formulário público. Fechadas pelas **055** e **056**, que eu
+  mesmo apliquei e conferi. A tela pública continua inteira.
+
 **Sobrou daqui:** decidir o que fazer com o Lucas Bernardo e com as duas datas de nascimento que
 faltam. Nenhum dos dois é trabalho meu — são decisões e dados.
 
