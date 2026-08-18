@@ -182,7 +182,7 @@ async function renderCaixaSolicitacoes(container){
 
   async function decidir(id, acao, substituto, onOk){
     const { data:res } = await sb.rpc('acolitos_solicitacao_decidir', { p_solicitacao_id:id, p_acao:acao, p_substituto_id:substituto||null });
-    if(res && res.ok){ toast('Feito.','success'); onOk(); } else { toast('Não foi possível decidir.','error'); }
+    if(res && res.ok){ toast('Feito.','success'); onOk(); } else { toast(motivoDaRecusa(res,'Não foi possível decidir.'),'error'); }
   }
 
   // 🔄 Trocas aguardando homologação (colega já aceitou)
@@ -261,9 +261,9 @@ async function renderCaixaCobrir(container, cobrir){
     const ok=document.createElement('button'); ok.className='btn-sm'; ok.style.flex='1'; ok.textContent=sugeridoId?'Confirmar':'Deixar vago';
     const no=document.createElement('button'); no.className='btn-sm gray'; no.style.flex='1'; no.textContent='Negar';
     ok.onclick=async()=>{ ok.disabled=no.disabled=true; const { data:res }=await sb.rpc('acolitos_solicitacao_decidir',{p_solicitacao_id:it.id,p_acao:'confirmar_cobertura',p_substituto_id:sugeridoId});
-      if(res&&res.ok){ toast('Cobertura confirmada.','success'); renderCaixa(); } else { toast('Não foi possível confirmar.','error'); ok.disabled=no.disabled=false; } };
+      if(res&&res.ok){ toast('Cobertura confirmada.','success'); renderCaixa(); } else { toast(motivoDaRecusa(res,'Não foi possível confirmar.'),'error'); ok.disabled=no.disabled=false; } };
     no.onclick=async()=>{ ok.disabled=no.disabled=true; const { data:res }=await sb.rpc('acolitos_solicitacao_decidir',{p_solicitacao_id:it.id,p_acao:'negar',p_substituto_id:null});
-      if(res&&res.ok){ toast('Negado.','success'); renderCaixa(); } else { toast('Não foi possível negar.','error'); ok.disabled=no.disabled=false; } };
+      if(res&&res.ok){ toast('Negado.','success'); renderCaixa(); } else { toast(motivoDaRecusa(res,'Não foi possível negar.'),'error'); ok.disabled=no.disabled=false; } };
     a.append(ok,no); c.appendChild(a); container.appendChild(c);
   }
   return cobrir.length;

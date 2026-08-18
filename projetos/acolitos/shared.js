@@ -1338,6 +1338,36 @@ function openContaModal(ctx) {
   ov.appendChild(modal); document.body.appendChild(ov);
 }
 
+// ── MOTIVO DE UMA DECISÃO RECUSADA ────────────────────────────
+// As RPCs de solicitações devolvem `{erro:'codigo'}` em vez de estourar. As telas mostravam
+// sempre "Não foi possível decidir", então o coordenador via a recusa e NÃO via o motivo —
+// tentava de novo, dava errado de novo, e ninguém descobria que a função já estava cheia.
+const MOTIVO_RECUSA = {
+  vaga_cheia:      'Esta função já está completa nesta missa.',
+  ja_escalado:     'Esta pessoa já está escalada nesta missa.',
+  ja_nao_escalado: 'A pessoa já não estava mais escalada — alguém resolveu antes.',
+  nao_pendente:    'Este pedido já foi decidido por outra pessoa.',
+  nao_encontrada:  'Pedido não encontrado — pode ter sido cancelado.',
+  sem_permissao:   'Você não tem permissão para decidir isto.',
+  sem_membro:      'Sua conta não está ligada a um cadastro de acólito.',
+  sem_habilitacao: 'Esta pessoa não está habilitada nesta função.',
+  ja_candidatou:   'Já existe uma candidatura sua para esta vaga.',
+  acao_invalida:   'Este pedido mudou de estado — recarregue a página.',
+};
+// `padrao` é o que aparece quando nem resposta veio (rede caiu). Nunca devolver texto vazio:
+// mensagem em branco vira caixa de erro muda, que é pior que a mensagem genérica.
+function motivoDaRecusa(res, padrao) {
+  if (res && res.erro && MOTIVO_RECUSA[res.erro]) {
+    let m = MOTIVO_RECUSA[res.erro];
+    if (res.erro === 'vaga_cheia' && res.vagas != null) {
+      m += res.vagas === 1 ? ' É 1 vaga, e já está preenchida.'
+                           : ' São ' + res.vagas + ' vagas, e já estão preenchidas.';
+    }
+    return m;
+  }
+  return padrao || 'Não foi possível concluir.';
+}
+
 // ── EQUIPE / COORDENAÇÃO ──────────────────────────────────────
 const SETORES = [
   ['coordenacao','Coordenação'], ['vice_coordenacao','Vice-Coordenação'], ['secretaria','Secretaria'],
