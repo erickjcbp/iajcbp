@@ -1,4 +1,4 @@
-# Ligar a aba Tarefas — o que falta fazer no banco
+# O que falta fazer no banco
 
 **Só você consegue fazer este passo.** Eu não tenho como aplicar: a senha do banco no `.env` está
 velha (a conexão chega no projeto certo e é recusada com `password authentication failed`), o MCP
@@ -8,13 +8,20 @@ parado. Testei os três.
 ## O que fazer
 
 1. Abra o painel do Supabase no projeto dos acólitos, em **SQL Editor**.
-2. Cole o conteúdo inteiro de `docs/migrations/048_tarefas.sql` e rode.
+2. Cole o conteúdo inteiro de **`docs/migrations/048_tarefas.sql`** e rode.
    O arquivo é fechado em si mesmo e **idempotente** — rodar duas vezes não quebra nada.
-3. Só depois disso publique a branch `tarefas-dos-times`.
+3. Cole o conteúdo inteiro de **`docs/migrations/049_convocar_por_time.sql`** e rode.
 
-**Publicar antes de aplicar faz a aba Tarefas nascer mostrando erro de carregamento** — ela vai
-dizer "Não foi possível carregar as tarefas", que é a mensagem certa para uma tabela que não existe,
-mas não é a estreia que você quer.
+## O que cada uma faz
+
+**048 — a tabela das Tarefas dos times.** Sem ela, a aba Tarefas mostra "Não foi possível
+carregar as tarefas" (que é a mensagem certa para uma tabela que não existe, mas não é a
+estreia que você quer). **Esta é a urgente: a aba já está no ar.**
+
+**049 — convocar um evento por time da pastoral.** Cria uma função nova e **não toca em
+nenhuma existente**: se der errado, é só não usar. Sem ela, convocar por nível continua
+funcionando normalmente e os times aparecem como "não foi possível carregar" — nunca somem
+calados.
 
 ## A conferência que ficou pendente
 
@@ -24,7 +31,8 @@ leitura e escrita separadas, nada alcançando quem não fez login. Mas **não fo
 porque a tabela ainda não existe.
 
 Depois de aplicar, a prova é rápida: tentar ler `acolitos_tarefas` com a chave anônima (sem login)
-e confirmar que é recusado. Se voltar lista vazia em vez de recusa, me chame — lista vazia e recusa
+e confirmar que é recusado. A 049 também: a função foi revogada de `public` e de `anon`, então
+quem não fez login não pode executá-la. Se voltar lista vazia em vez de recusa, me chame — lista vazia e recusa
 se parecem, e a diferença importa.
 
 ## O que vem junto
