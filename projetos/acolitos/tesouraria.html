@@ -207,7 +207,7 @@ function abrirLancamento(editar) {
 
   const g4 = document.createElement('div'); g4.className = 'form-group';
   const l4 = document.createElement('label'); l4.className = 'form-label'; l4.textContent = 'Data';
-  const inpData = document.createElement('input'); inpData.className = 'form-input'; inpData.type = 'date'; inpData.value = new Date().toISOString().slice(0, 10);
+  const inpData = document.createElement('input'); inpData.className = 'form-input'; inpData.type = 'date'; inpData.value = hojeLocal();
   g4.append(l4, inpData); modal.appendChild(g4);
 
   // Preenche para edição
@@ -226,7 +226,7 @@ function abrirLancamento(editar) {
     const valor = parseFloat(inpVal.value);
     if (!(valor > 0)) { msg.className = 'msg error'; msg.textContent = 'Informe um valor válido.'; return; }
     conf.disabled = true; conf.textContent = 'Salvando...';
-    const payload = { tipo, categoria: catSel.value, valor, descricao: inpDesc.value.trim() || null, data: inpData.value || new Date().toISOString().slice(0, 10) };
+    const payload = { tipo, categoria: catSel.value, valor, descricao: inpDesc.value.trim() || null, data: inpData.value || hojeLocal() };
     const { error } = editar
       ? await sb.from('acolitos_financeiro').update(payload).eq('id', editar.id)
       : await sb.from('acolitos_financeiro').insert({ ...payload, created_by: ctx.user.id });

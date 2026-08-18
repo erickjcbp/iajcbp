@@ -173,7 +173,7 @@ async function init() {
   // errados por um instante, e um tipo criado pela paroquia apareceria como "Evento" generico.
   await carregarTiposConfiguraveis();
   const hoje = new Date();
-  curY = hoje.getFullYear(); curM = hoje.getMonth(); selDate = ymd(hoje);
+  curY = hoje.getFullYear(); curM = hoje.getMonth(); selDate = hojeLocal();
   await reload();
   // Depois do reload, não antes: o desenho da tela limpa o #main-content e o aviso sumiria.
   if (tiposIncompletos) {
@@ -263,7 +263,7 @@ function renderCalBody(main) {
   DIAS.forEach(d => { const dw = document.createElement('div'); dw.className = 'cal-dow'; dw.textContent = d; grid.appendChild(dw); });
   const primeiro = new Date(curY, curM, 1).getDay();
   const totalDias = new Date(curY, curM + 1, 0).getDate();
-  const hojeStr = ymd(new Date());
+  const hojeStr = hojeLocal();
   for (let i = 0; i < primeiro; i++) { const e = document.createElement('div'); e.className = 'cal-cell empty'; grid.appendChild(e); }
   for (let d = 1; d <= totalDias; d++) {
     const ds = ymd(new Date(curY, curM, d));
@@ -300,7 +300,7 @@ function renderCalBody(main) {
 
 // ── LINHA DO TEMPO ───────────────────────────────────────────
 async function loadTimeline() {
-  const hojeStr = ymd(new Date());
+  const hojeStr = hojeLocal();
   const [cb, ev] = await Promise.all([
     sb.from('acolitos_celebracoes').select('id,data,horario,comunidade,tipo,observacoes').gte('data', hojeStr).order('data').order('horario'),
     sb.from('acolitos_eventos').select('*').gte('data', hojeStr).order('data').order('hora'),

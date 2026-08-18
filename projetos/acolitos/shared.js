@@ -1431,6 +1431,23 @@ function aplicarIdentidade() {
   if (idn.cor_ouro) { root.style.setProperty('--gold', idn.cor_ouro); root.style.setProperty('--gold-light', idn.cor_ouro); }
   if (idn.cor_primaria) { root.style.setProperty('--wine', idn.cor_primaria); root.style.setProperty('--red', idn.cor_primaria); root.style.setProperty('--red-soft', idn.cor_primaria); }
 }
+// A data de HOJE no fuso de quem está usando o app.
+//
+// O jeito antigo — `new Date().toISOString()` cortado em 10 — devolvia a data em UTC.
+// Como o Brasil é UTC-3, das 21h
+// à meia-noite o "hoje" do app já é o dia seguinte — e às 21h de um sábado o app acha que é
+// domingo. Isso valia em 11 lugares de 6 telas, e mordia de duas formas: filtro de data
+// mostrando o dia errado, e campo de data que já vinha preenchido com AMANHÃ. O segundo é o
+// pior, porque a pessoa salva sem reparar — e 21h em diante é justamente quando o pessoal
+// mexe no app, saindo da missa.
+//
+// Existe um teste que impede a volta do jeito antigo: projetos/acolitos/fuso.test.js.
+function hojeLocal() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+                         + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 function cfg(chave, padrao) { return (_APP_CONFIG && (chave in _APP_CONFIG)) ? _APP_CONFIG[chave] : padrao; }
 // Mescla os tipos de celebração customizados no objeto TIPO_LABEL da página (mutação de objeto — ok mesmo sendo const)
 function mergeTiposLabel(obj) {
@@ -2459,7 +2476,7 @@ function baixarCSV(nomeBase, linhas){
   const csv='﻿'+(linhas||[]).map(r=>r.map(esc).join(';')).join('\r\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob); const a=document.createElement('a');
-  a.href=url; a.download=(nomeBase||'relatorio')+'-'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  a.href=url; a.download=(nomeBase||'relatorio')+'-'+hojeLocal()+'.csv'; a.click();
   URL.revokeObjectURL(url); toast('✓ CSV gerado');
 }
 

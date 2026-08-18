@@ -431,7 +431,7 @@ async function renderViewMembro() {
   hint.textContent = 'Marque as missas em que você NÃO poderá servir. A escala vai considerar isso automaticamente.';
   main.appendChild(hint);
 
-  const hoje = new Date().toISOString().slice(0,10);
+  const hoje = hojeLocal();
   const { data: cels } = await sb.from('acolitos_celebracoes')
     .select('id,data,horario,comunidade').gte('data', hoje).order('data').order('horario');
   let futuras = cels || [];
@@ -744,7 +744,7 @@ async function renderViewEquipe() {
 
 // ── REGISTRAR AUSÊNCIA (equipe/admin, em nome de um membro) ───
 async function abrirRegistroAusencia() {
-  const hoje = new Date().toISOString().slice(0,10);
+  const hoje = hojeLocal();
   const membros = await carregarRosterAus(); // roster seguro (cobre cerimoniário; embed RLS volta vazio p/ ele)
   const { data: cels } = await sb.from('acolitos_celebracoes')
     .select('id,data,horario,comunidade').gte('data', hoje).order('data').order('horario');
