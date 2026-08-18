@@ -701,22 +701,35 @@ function renderIdentidade(b){
 
 // ── Seção Navegação: reordenar a barra inferior (jornada / coordenação) ──
 let _navModo = 'jornada';
-const NAV_ITENS = {
-  jornada: [['home','Início'],['quests','Quests'],['escalas-membro','Escalas'],['agenda','Agenda'],['conquistas','Conquistas'],['destaques','Destaques'],['minha-casa','Casa'],['ausencias','Faltar']],
-  coord:   [['home','Início'],['agenda','Agenda'],['jornada','Jornada'],['caixa','Caixa'],['membros','Membros'],['escala','Escala'],['crm','CRM'],['tesouraria','Tesouraria'],['casas','Casas'],['config','Config']],
-};
+// A lista de itens NÃO se escreve mais aqui. Ela vem de montarItensNav (navegacao-core.js),
+// a MESMA função que monta a barra de verdade no app. Era uma quarta cópia à mão e envelheceu
+// sem avisar: faltava a Tarefas (módulo que entrou depois) e sobrava "Faltar" (aposentada em
+// 17/08, quando avisar ausência virou botão dentro das Escalas). Quem editava a ordem aqui
+// não conseguia posicionar o que era novo, e mexia num item que já não existe.
+// Pedimos TODAS as permissões e superadmin de propósito: aqui se edita a ordem GLOBAL da
+// barra, não a barra de quem está olhando.
+function navItensDoModo(modo, ordemSalva){
+  if (modo === 'coord') {
+    return montarItensNav({ modo:'coordenacao', perms: ORDEM_MODULOS, isAdmin:true,
+      isSuperadmin:true, ordemCfg: ordemSalva,
+      modulos: NAV_COORD_MODULOS, ordemModulos: ORDEM_MODULOS });
+  }
+  return montarItensNav({ modo:'jornada', ordemCfg: ordemSalva });
+}
 function renderNavOrdem(b){
   b.textContent='';
   const subnav=document.createElement('div'); subnav.className='cfg-nav';
   [['jornada','Membro (Jornada)'],['coord','Coordenação']].forEach(([m,l])=>{ const x=document.createElement('button'); x.className='cfg-tab'+(m===_navModo?' on':''); x.textContent=l; x.onclick=()=>{_navModo=m;renderNavOrdem(b);}; subnav.appendChild(x); });
   b.appendChild(subnav);
   const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 10px;'; hint.textContent='Use as setas para reordenar. A barra inferior do app segue esta ordem.'; b.appendChild(hint);
-  const base = NAV_ITENS[_navModo]; const ids = base.map(x=>x[0]);
   const chave = _navModo==='coord' ? 'nav_ordem_coord' : 'nav_ordem_jornada';
   const saved = cfg(chave, null);
-  let ordem = Array.isArray(saved) ? saved.filter(id=>ids.includes(id)) : [];
-  ids.forEach(id=>{ if(!ordem.includes(id)) ordem.push(id); });
-  const labelDe = id => (base.find(x=>x[0]===id)||[id,id])[1];
+  // A ordem já vem resolvida de dentro: ordenarPorConfig respeita o que está salvo e encaixa
+  // o item novo logo depois do vizinho que ele tem na ordem padrão do código — em vez de
+  // jogá-lo no fim, que era como o novo nascia escondido atrás da seta ›.
+  const base = navItensDoModo(_navModo, Array.isArray(saved) ? saved : null);
+  let ordem = base.map(x=>x.id);
+  const labelDe = id => (base.find(x=>x.id===id)||{label:id}).label;
   const list=document.createElement('div');
   const repaint=()=>{
     list.textContent='';
