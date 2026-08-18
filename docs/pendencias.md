@@ -54,6 +54,21 @@ certo; sem ela, alguém tem de lembrar.
 - **Kits e "Leitura B" fechados:** Enrico liberado no Kit processional (de 8 para 9 liberados).
 
 **Telas**
+- **A barra dizia o lugar errado.** Abrir Escala › ⋯ Mais › Ausências levava à tela certa, mas
+  a barra de baixo acendia **Caixa**: a Ausências não tem botão próprio e o código emprestava o
+  id da vizinha. A Chamada tinha o contrário (barra apagada, pelo id que sumiu quando ela foi
+  fundida na Escala). As duas passam a acender a **seção de onde saem**, por `idNaBarra()` no
+  navegacao-core. Provado executando o `init()` das telas em 3 papéis e lendo o `.active` no DOM.
+- **Coisa nova não entrava no Config.** Em Config › Navegação faltava a **Tarefas** e sobrava
+  **"Faltar"** (aposentada em 17/08): a lista era uma **quarta cópia à mão** dos itens da barra.
+  Agora vem de `montarItensNav`, a mesma função que monta a barra. Guarda nova
+  (`modulos-sincronia.test.js`) exige que as três listas de módulo do shared.js falem do mesmo
+  conjunto — buraco que estava declarado e sem teste.
+- **Modelos de escala ignorava função criada pelo dono.** Dava para criar "Báculo Auxiliar" em
+  Funções litúrgicas, ela nascia na Escala e na ficha do membro, e o editor de Modelos lia só as
+  13 do sistema — não havia onde dizer quantas vagas ela tem, e o Salvar gravava só as 13.
+  Passa a mesclar as próprias, sem repetir chave. Provado em 3 cenários (nenhuma, uma, e uma com
+  chave repetida), lendo a tela E o que o Salvar mandaria pro banco.
 - **A aba Tarefas confirmada pelo dono** — carrega normal para quem está logado. Era o último
   pedaço da trava de 18/08 que não dava para medir daqui.
 - **Permissão de módulo passou a valer na barra**, não só na URL — valia para todos os módulos.

@@ -849,6 +849,21 @@ let _tesTipo='cat_entrada';
 
 // ── Seção Modelos de celebração: vagas por função por tipo+comunidade (acolitos_modelos) ──
 const FUNCOES_MODELO=[['cred_altar','Cerim. de Altar'],['cred_credencia','Cerim. de Credência'],['missal','Missal'],['turibulo','Turíbulo'],['naveta','Naveta'],['altar','Altar'],['cruz','Cruz'],['vela','Vela'],['sineta','Sineta'],['sinao','Sinão'],['apoio','Apoio'],['mitra','Mitra'],['baculo','Báculo']];
+// As 13 do sistema MAIS as funções que o dono criar em Funções litúrgicas (elas vivem em
+// acolitos_listas e chegam às telas por cfg('__funcoes')). Antes esta tela lia só as 13:
+// dava para criar "Báculo Auxiliar", ela nascia na Escala e na ficha do membro, e aqui não
+// havia onde dizer quantas vagas dela a celebração tem — o Salvar também gravava só as 13.
+// Mesma mescla que a escala.html faz em mergeFuncoesConfig: o código traz as do sistema, o
+// banco acrescenta as próprias, sem repetir chave.
+function funcoesDoModelo(){
+  const lista = FUNCOES_MODELO.map(([f,l]) => [f,l]);
+  const jaTem = new Set(lista.map(x => x[0]));
+  const proprias = (typeof cfg === 'function' ? cfg('__funcoes', []) : []) || [];
+  proprias.forEach(f => {
+    if (f && f.valor && !jaTem.has(f.valor)) { lista.push([f.valor, f.label || f.valor]); jaTem.add(f.valor); }
+  });
+  return lista;
+}
 let _mdTipo='missa_comum', _mdCom='matriz', _mdQty={};
 async function renderModelos(b){
   b.textContent='';
@@ -864,7 +879,8 @@ async function renderModelos(b){
   sels.append(sT,sC); b.appendChild(sels);
   const { data } = await sb.from('acolitos_modelos').select('funcao,quantidade').eq('tipo',_mdTipo).eq('comunidade',_mdCom);
   _mdQty={}; (data||[]).forEach(r=>{ _mdQty[r.funcao]=r.quantidade; });
-  FUNCOES_MODELO.forEach(([f,l])=>{
+  const funcoesDaTela = funcoesDoModelo();
+  funcoesDaTela.forEach(([f,l])=>{
     const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:10px;padding:5px 2px;border-bottom:1px solid var(--border);';
     const lbl=document.createElement('span'); lbl.style.cssText='flex:1;font-size:13px;'; lbl.textContent=l;
     const minus=document.createElement('button'); minus.className='mini-del'; minus.textContent='−';
@@ -875,7 +891,7 @@ async function renderModelos(b){
     row.append(lbl,minus,num,plus); b.appendChild(row);
   });
   const save=document.createElement('button'); save.className='btn gold'; save.style.marginTop='12px'; save.textContent='Salvar modelo';
-  save.onclick=async()=>{ const payload=FUNCOES_MODELO.map(([f],i)=>({tipo:_mdTipo,comunidade:_mdCom,funcao:f,quantidade:_mdQty[f]||0,ordem:i})); const {error}=await sb.from('acolitos_modelos').upsert(payload,{onConflict:'tipo,comunidade,funcao'}); if(error){toast('Erro ao salvar.','error');return;} toast('✓ Modelo salvo!'); };
+  save.onclick=async()=>{ const payload=funcoesDaTela.map(([f],i)=>({tipo:_mdTipo,comunidade:_mdCom,funcao:f,quantidade:_mdQty[f]||0,ordem:i})); const {error}=await sb.from('acolitos_modelos').upsert(payload,{onConflict:'tipo,comunidade,funcao'}); if(error){toast('Erro ao salvar.','error');return;} toast('✓ Modelo salvo!'); };
   b.appendChild(save);
 }
 
