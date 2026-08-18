@@ -57,23 +57,56 @@
 // A seção inicial PRECISA existir em SECOES — senão o painel abre numa tela
 // que não tem botão no menu e, ao sair dela, não há como voltar sem recarregar.
 let ctx = null, secaoAtual = 'identidade';
-// As seções em quatro grupos. Antes eram 13 botões soltos, sem nenhuma pista do que era o quê:
-// quem procurava onde se edita um time olhava um por um. O agrupamento é só visual — nenhuma
-// seção sumiu e nenhum id mudou.
+// As seções em quatro grupos. Antes eram 13 botões soltos, sem nenhuma pista do que era o quê.
 //
-// 'listas' é UMA seção com as oito listas dentro (era Competências, Tipos de celebração,
-// Funções litúrgicas e Categorias da Tesouraria — quatro entradas para o mesmo editor — mais
-// os Motivos de ausência, que viviam fora do Config, no fim da tela de Ausências).
+// O grupo "Os módulos" tinha UM item (Etapas do CRM), enquanto oito coisas de módulo — os tipos
+// de evento da Agenda, as categorias da Tesouraria, os motivos de ausência… — moravam numa seção
+// chamada "Listas", debaixo de "A paróquia". Estavam juntas porque compartilham o mesmo editor,
+// não porque tenham a ver umas com as outras: detalhe de construção virando navegação. Quem
+// procurava "motivo de ausência" não tinha por que olhar em "A paróquia › Listas".
 //
-// 'times' NÃO é uma dessas listas, embora grave na mesma tabela. Um time tem gente dentro, e
-// era isso que confundia: para criar o time ia-se em A paróquia › Listas, e para pôr alguém
-// nele em outra tela. Agora as duas coisas moram juntas, em As pessoas.
+// Agora cada coisa mora no módulo a que serve, e a seção "Listas" deixou de existir.
 const GRUPOS = [
-  ['A paróquia',        [['identidade','Identidade'], ['comunidades','Comunidades & horários'], ['listas','Listas']]],
-  ['As pessoas',        [['equipe','Equipe & Permissões'], ['times','Times'], ['admins','Admins & superadmin'], ['logins','Logins (usuário/senha)'], ['cadastro','Campos do cadastro']]],
-  ['Como o app funciona',[['navegacao','Navegação'], ['gerador','Regras do gerador'], ['modelos','Modelos de escala'], ['niveis','Níveis / Jornada'], ['missoes','Missões & XP']]],
-  ['Os módulos',        [['crm','Etapas do CRM']]],
+  ['A paróquia',         [['identidade','Identidade'], ['comunidades','Comunidades & horários']]],
+  ['As pessoas',         [['equipe','Equipe & Permissões'], ['times','Times'], ['admins','Admins & superadmin'], ['logins','Logins (usuário/senha)'], ['cadastro','Campos do cadastro']]],
+  ['Os módulos',         [['escala','Escala'], ['agenda','Agenda'], ['tesouraria','Tesouraria'], ['ausencias','Ausências'], ['jornada','Jornada'], ['crm','CRM']]],
+  ['Como o app funciona',[['navegacao','Navegação'], ['gerador','Regras do gerador'], ['missoes','Missões & XP']]],
 ];
+
+// O que cada seção tem DENTRO. Um item só entra direto no editor; mais de um ganha sub-abas,
+// sozinho. Antes essa fila de abas vivia cravada dentro do renderListaUnica e só servia às
+// oito listas — agora é o mesmo mecanismo para qualquer seção.
+//
+// `lista:` desenha o editor daquela lista (o mesmo de sempre, escolhendo o tipo);
+// `fn:` chama um editor próprio. As funções são declaradas mais abaixo no arquivo e podem ser
+// citadas aqui porque declaração de função sobe — ao contrário de `const`, que não sobe (é por
+// isso que LISTAS_CFG guarda `padroes` como função em vez de lista pronta).
+const CONTEUDO = {
+  identidade:  [{ nome:'Identidade',           fn:renderIdentidade }],
+  comunidades: [{ nome:'Comunidades',          fn:renderComunidades }],
+  equipe:      [{ nome:'Equipe & Permissões',  fn:renderEquipe }],
+  times:       [{ nome:'Times',                fn:renderTimes }],
+  admins:      [{ nome:'Admins & superadmin',  fn:renderAdmins }],
+  logins:      [{ nome:'Logins',               fn:renderLogins }],
+  cadastro:    [{ nome:'Campos do cadastro',   fn:renderCadastro }],
+  escala:      [{ nome:'Funções litúrgicas',   lista:'funcao' },
+                { nome:'Tipos de celebração',  lista:'tipo_celebracao' },
+                { nome:'Modelos de escala',    fn:renderModelos }],
+  agenda:      [{ nome:'Tipos de evento',      lista:'tipo_evento' }],
+  tesouraria:  [{ nome:'Entradas',             lista:'cat_entrada' },
+                { nome:'Saídas',               lista:'cat_saida' }],
+  ausencias:   [{ nome:'Motivos de ausência',  lista:'motivo' }],
+  jornada:     [{ nome:'Competências',         lista:'competencia' },
+                { nome:'Habilidades',          lista:'habilidade' },
+                { nome:'Níveis',               fn:renderNiveis }],
+  crm:         [{ nome:'Etapas do CRM',        fn:renderCrm }],
+  navegacao:   [{ nome:'Navegação',            fn:renderNavOrdem }],
+  gerador:     [{ nome:'Regras do gerador',    fn:renderGerador }],
+  missoes:     [{ nome:'Missões & XP',         fn:renderMissoes }],
+};
+// Qual sub-aba está aberta em cada seção — lembrada enquanto a tela não recarrega, para quem
+// vai e volta entre Entradas e Saídas não recomeçar do começo toda vez.
+const SUB_ABERTA = {};
 const SECOES = GRUPOS.flatMap(([,itens]) => itens);
 async function init(){
   ctx = await initModulo();
@@ -95,12 +128,30 @@ function render(){
   });
   const body = document.createElement('div'); body.id='cfg-body'; body.className='cfg-body';
   wrap.append(side, body); main.appendChild(wrap);
-  // 'modelos' não entra aqui: vive dentro de 'tipos' (Tipos & Modelos).
-  ({ listas:renderListaUnica, times:renderTimes, modelos:renderModelos, gerador:renderGerador,
-     comunidades:renderComunidades, cadastro:renderCadastro, admins:renderAdmins, identidade:renderIdentidade,
-     navegacao:renderNavOrdem, equipe:renderEquipe,
-     crm:renderCrm, niveis:renderNiveis, missoes:renderMissoes, logins:renderLogins
-   }[secaoAtual] || (()=>{}))(body);
+  desenharSecao(body);
+}
+
+// Desenha a seção aberta. Uma coisa dentro: entra direto. Mais de uma: sub-abas primeiro.
+function desenharSecao(body) {
+  const itens = CONTEUDO[secaoAtual] || [];
+  if (!itens.length) return;
+  let i = SUB_ABERTA[secaoAtual] || 0;
+  if (i >= itens.length) i = 0;   // seção que encolheu não pode deixar a tela em branco
+
+  if (itens.length > 1) {
+    const nav = document.createElement('div'); nav.className='cfg-nav';
+    itens.forEach((it, n) => {
+      const x = document.createElement('button'); x.className = 'cfg-tab' + (n === i ? ' on' : '');
+      x.textContent = it.nome;
+      x.onclick = () => { SUB_ABERTA[secaoAtual] = n; render(); };
+      nav.appendChild(x);
+    });
+    body.appendChild(nav);
+  }
+  // Alvo próprio: o editor limpa o que recebe, e sem isto ele apagaria as sub-abas ao redesenhar.
+  const alvo = document.createElement('div'); body.appendChild(alvo);
+  const it = itens[i];
+  if (it.lista) renderListaUnica(alvo, it.lista); else it.fn(alvo);
 }
 // ── Logins (usuário/senha) — só superadmin ──
 async function renderLogins(b){
@@ -182,7 +233,6 @@ const LISTAS_CFG = [
   { tipo:'cat_saida',      nome:'Tesouraria — saídas',     dica:'Categorias de dinheiro que sai.',   novo:'Nova categoria de saída…' },
   { tipo:'motivo',         nome:'Motivos de ausência',     dica:'As opções que a pessoa escolhe ao avisar que não pode servir.', novo:'Novo motivo…' },
 ];
-let _listaAtual = 'competencia';
 
 // O apelido de sistema saía de seis cópias iguais desta conta. Agora é uma só.
 function slugDe(texto) {
@@ -192,14 +242,11 @@ function slugDe(texto) {
 
 // O ÚNICO editor de listas. Cada lista se declara em LISTAS_CFG; o que muda entre elas é
 // texto e, em duas, um campo extra por item.
-async function renderListaUnica(b){
+// Desenha UMA lista. Antes esta função também escolhia qual, com uma fila de oito abas cravada
+// dentro dela; escolher passou a ser da seção (desenharSecao), e a fila virou o mecanismo geral.
+async function renderListaUnica(b, tipo){
   b.textContent='';
-  const conf = LISTAS_CFG.find(x=>x.tipo===_listaAtual) || LISTAS_CFG[0];
-
-  const subnav=document.createElement('div'); subnav.className='cfg-nav';
-  LISTAS_CFG.forEach(c=>{ const x=document.createElement('button'); x.className='cfg-tab'+(c.tipo===_listaAtual?' on':'');
-    x.textContent=c.nome; x.onclick=()=>{_listaAtual=c.tipo; renderListaUnica(b);}; subnav.appendChild(x); });
-  b.appendChild(subnav);
+  const conf = LISTAS_CFG.find(x=>x.tipo===tipo) || LISTAS_CFG[0];
 
   const dica=document.createElement('p'); dica.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 10px;';
   dica.textContent=conf.dica; b.appendChild(dica);
@@ -286,20 +333,17 @@ async function renderListaUnica(b){
         const t=String(nv).trim(); if (!t) return;
         const { error } = await sb.from('acolitos_listas').update({ label:t }).eq('id',item.id);
         if (error) { console.error('Listas: renomear falhou', error); toast('Não foi possível renomear.','error'); return; }
-        renderListaUnica(b); };
+        renderListaUnica(b, conf.tipo); };
       top.appendChild(ed);
       const del=document.createElement('button'); del.className='mini-del'; del.textContent='−';
       del.onclick=async()=>{
-        // Time não é um rótulo solto: há tarefas e gente pendurados nele. Remover sem dizer
-        // isso faz a tarefa "sumir" da vista de quem apagou (ela vira órfã e passa a aparecer
-        // com o nome cru) e deixa pessoas num time que já não existe. O aviso não impede nada
-        // — só conta o que vai acontecer, com números.
-        let extra = '';
-        if (conf.tipo === 'setor') extra = await avisoDeTimeEmUso(item.valor);
-        if(!await uiConfirm('Remover "'+(item.label||item.valor)+'"?'+extra))return;
+        // O aviso de "quantas tarefas e pessoas ainda dependem" era para os TIMES, que saíram
+        // desta lista e viraram seção própria (As pessoas › Times) — o aviso foi junto, para lá.
+        // Aqui ficaria código que nunca roda, e código morto com cara de vivo engana na leitura.
+        if(!await uiConfirm('Remover "'+(item.label||item.valor)+'"?'))return;
         const { error } = await sb.from('acolitos_listas').delete().eq('id',item.id);
         if (error) { console.error('Listas: remover falhou', error); toast('Não foi possível remover.','error'); return; }
-        renderListaUnica(b); };
+        renderListaUnica(b, conf.tipo); };
       top.appendChild(del);
     }
     row.appendChild(top);
@@ -347,7 +391,7 @@ async function renderListaUnica(b){
   bt.onclick=async()=>{ const v=inp.value.trim(); if(!v)return;
     const { error } = await sb.from('acolitos_listas').insert({ tipo:conf.tipo, valor:slugDe(v), label:v });
     if (error) { console.error('Listas: criar falhou', error); toast('Não foi possível criar.','error'); return; }
-    inp.value=''; renderListaUnica(b); };
+    inp.value=''; renderListaUnica(b, conf.tipo); };
   add.append(inp,bt); b.appendChild(add);
 }
 
