@@ -17,6 +17,11 @@
        é o que transforma a lista em acompanhamento em vez de anotação solta. */
     .tf-grupo-titulo { font-family:'Sora',sans-serif; font-weight:800; font-size:13px; color:var(--gold-light); letter-spacing:.5px; margin:18px 0 8px; text-transform:uppercase; }
     .tf-grupo-titulo.tf-atraso { color:var(--danger-text); }
+    /* O que o time É responsável por, ano após ano — não é tarefa, é a descrição fixa
+       do time (editada em Config → Equipe & Permissões). Time sem texto não mostra
+       nada aqui; se a consulta falhar, o aviso troca de cor pra não passar por "em dia". */
+    .tf-resp { font-size:12px; color:var(--text-muted); font-style:italic; margin:-2px 0 10px; line-height:1.4; }
+    .tf-resp.tf-resp-erro { color:var(--danger-text); font-style:normal; font-weight:600; }
     .tf-item { display:flex; gap:10px; align-items:stretch; background:var(--surface); border:1px solid var(--border-wine); border-radius:10px; padding:11px 12px; margin-bottom:8px; }
     .tf-item.tf-atrasada { border-color:var(--danger); }
     .tf-bar { width:4px; border-radius:3px; flex:none; background:var(--gold); }
@@ -143,6 +148,16 @@ async function renderLista(main) {
   const labelTime = {};
   (listas || []).forEach(l => { labelTime[l.valor] = l.label; });
 
+  // O que cada time É responsável por (fixo, editado em Config → Equipe & Permissões,
+  // guardado em acolitos_config chave='responsabilidades'). Diferente do rótulo acima:
+  // aqui uma falha na consulta NÃO pode virar silêncio — silêncio é indistinguível de
+  // "nenhum time tem responsabilidade escrita", que é o estado que a coordenação vai
+  // ver primeiro hoje (nenhum time ainda tem texto). Por isso, ao falhar, cada grupo
+  // avisa que não deu pra carregar, em vez de simplesmente não mostrar nada.
+  const { data: cfgResp, error: errResp } = await sb.from('acolitos_config').select('valor').eq('chave', 'responsabilidades').maybeSingle();
+  if (errResp) console.error('Tarefas: responsabilidades dos times falharam', errResp);
+  const responsabilidades = (!errResp && cfgResp && cfgResp.valor) ? cfgResp.valor : {};
+
   const hoje = hojeStr();
   const atrasadas = tarefas.filter(t => t.prazo && t.prazo < hoje);
   const idsAtrasadas = new Set(atrasadas.map(t => t.id));
@@ -161,6 +176,16 @@ async function renderLista(main) {
     const h = document.createElement('div'); h.className = 'tf-grupo-titulo';
     h.textContent = labelTime[slug] || slug;
     main.appendChild(h);
+    if (errResp) {
+      // Não fingir que o time não tem responsabilidade: dizer que não conseguiu perguntar.
+      const av = document.createElement('div'); av.className = 'tf-resp tf-resp-erro';
+      av.textContent = 'Não foi possível carregar a responsabilidade deste time.';
+      main.appendChild(av);
+    } else if (responsabilidades[slug]) {
+      const resp = document.createElement('div'); resp.className = 'tf-resp';
+      resp.textContent = responsabilidades[slug];
+      main.appendChild(resp);
+    }
     porTime[slug].forEach(t => main.appendChild(linhaTarefa(t, false)));
   });
 }

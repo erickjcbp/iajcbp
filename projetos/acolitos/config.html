@@ -541,16 +541,55 @@ async function renderEquipe(b){
   const sh=document.createElement('div'); sh.style.cssText='font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; sh.textContent='🗂 Setores (lista)'; b.appendChild(sh);
   const setBox=document.createElement('div'); b.appendChild(setBox); renderSetorLista(setBox);
 }
-// CRUD da lista de setores (acolitos_listas tipo='setor')
+// CRUD da lista de setores (acolitos_listas tipo='setor') + a responsabilidade fixa
+// de cada um (o que o time É, ano após ano — mora em acolitos_config, chave
+// 'responsabilidades', formato { slug: texto }; não é tarefa, por isso não vive em
+// acolitos_tarefas). Aparece na tela Tarefas, no topo do grupo de cada time.
 async function renderSetorLista(b){
   b.textContent='';
-  const { data } = await sb.from('acolitos_listas').select('id,valor,label').eq('tipo','setor').order('label');
+  const [{ data }, { data: cfgResp, error: errResp }] = await Promise.all([
+    sb.from('acolitos_listas').select('id,valor,label').eq('tipo','setor').order('label'),
+    sb.from('acolitos_config').select('valor').eq('chave','responsabilidades').maybeSingle(),
+  ]);
+  if (errResp) console.error('Setores: carregar responsabilidades falhou', errResp);
+  // Sem saber o que já está salvo, editar aqui e salvar apagaria a responsabilidade dos
+  // OUTROS times (o valor inteiro é um único objeto). Por isso, se a leitura falhar, o
+  // campo fica travado — em vez de deixar editar em cima de um mapa que pode estar vazio
+  // por engano.
+  const respCarregou = !errResp;
+  const respMap = respCarregou && cfgResp && cfgResp.valor ? { ...cfgResp.valor } : {};
+  if (!respCarregou) {
+    const av=document.createElement('div'); av.className='empty'; av.style.cssText='margin-bottom:8px;';
+    av.textContent='Não foi possível carregar as responsabilidades dos times — a edição abaixo está bloqueada até recarregar.';
+    b.appendChild(av);
+  }
   (data||[]).forEach(item=>{
-    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
-    const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=item.label||item.valor;
+    const row=document.createElement('div'); row.style.cssText='padding:8px 2px;border-bottom:1px solid var(--border);';
+    const top=document.createElement('div'); top.style.cssText='display:flex;align-items:center;gap:8px;';
+    const nm=document.createElement('span'); nm.style.flex='1'; nm.style.fontWeight='700'; nm.textContent=item.label||item.valor;
     const del=document.createElement('button'); del.className='mini-del'; del.textContent='−';
     del.onclick=async()=>{ if(!await uiConfirm('Remover setor "'+(item.label||item.valor)+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',item.id); renderSetorLista(b); };
-    row.append(nm,del); b.appendChild(row);
+    top.append(nm,del); row.appendChild(top);
+
+    const resp=document.createElement('textarea'); resp.className='form-input'; resp.rows=2;
+    resp.style.cssText='margin-top:6px;font-size:12px;';
+    resp.placeholder='O que este time é responsável por, ano após ano (aparece em Tarefas) — opcional';
+    resp.value=respMap[item.valor]||''; resp.disabled=!respCarregou;
+    const salvar=document.createElement('button'); salvar.className='btn-sm'; salvar.style.marginTop='6px'; salvar.textContent='Salvar responsabilidade';
+    salvar.disabled=!respCarregou;
+    salvar.onclick=async()=>{
+      const texto=resp.value.trim();
+      const novoMapa={ ...respMap };
+      if (texto) novoMapa[item.valor]=texto; else delete novoMapa[item.valor];
+      salvar.disabled=true; salvar.textContent='Salvando...';
+      const ok=await setConfig('responsabilidades', novoMapa);
+      salvar.disabled=false; salvar.textContent='Salvar responsabilidade';
+      // Sincroniza o mapa local só depois de confirmado salvo — senão o PRÓXIMO save
+      // (de outro setor, sem recarregar a tela) escreveria em cima de algo que nem
+      // chegou a gravar.
+      if (ok) { if (texto) respMap[item.valor]=texto; else delete respMap[item.valor]; }
+    };
+    row.append(resp, salvar); b.appendChild(row);
   });
   const add=document.createElement('div'); add.style.cssText='display:flex;gap:8px;margin-top:10px;';
   const inp=document.createElement('input'); inp.className='form-input'; inp.placeholder='Novo setor (ex.: Logística)';
