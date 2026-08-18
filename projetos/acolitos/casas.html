@@ -97,7 +97,7 @@ function render() {
 
     const acts = document.createElement('div'); acts.className = 'casa-actions';
     const bAdd = document.createElement('button'); bAdd.className = 'btn-sm gold'; bAdd.textContent = '+ Adicionar membro'; bAdd.onclick = () => abrirAddMembro(casa);
-    const bEd = document.createElement('button'); bEd.className = 'btn-sm gray'; bEd.textContent = '✎ Editar casa'; bEd.onclick = () => abrirEditarCasa(casa);
+    const bEd = document.createElement('button'); bEd.className = 'btn-sm gray'; bEd.innerHTML = _svgIcon('editar') + ' Editar casa'; bEd.onclick = () => abrirEditarCasa(casa);
     acts.append(bAdd, bEd); box.appendChild(acts);
     main.appendChild(box);
   });
@@ -116,13 +116,26 @@ function renderConsilium(main, casa) {
   const lema = document.createElement('div'); lema.style.cssText = 'font-family:Lora,serif;font-style:italic;color:var(--gold-light);font-size:13px;'; lema.textContent = '"' + (casa.lema||'') + '" — ' + (casa.lema_pt||'');
   const mis = document.createElement('div'); mis.style.cssText = 'font-size:12px;color:var(--text-muted);margin-top:3px;'; mis.textContent = 'Missão: ' + (casa.tagline||'');
   info.append(nm, lema, mis);
-  const bEd = document.createElement('button'); bEd.className = 'btn-sm gray'; bEd.textContent = '✎'; bEd.title = 'Editar casa'; bEd.style.flex = 'none'; bEd.onclick = () => abrirEditarCasa(casa);
+  const bEd = document.createElement('button'); bEd.className = 'btn-sm gray'; bEd.innerHTML = _svgIcon('editar'); bEd.title = 'Editar casa'; bEd.style.flex = 'none'; bEd.onclick = () => abrirEditarCasa(casa);
   hd.append(info, bEd); main.appendChild(hd);
+
+  // Os times de fábrica e os do Config se parecem na tela. Quando a busca falha, esta tela
+  // mostraria os 11 fixos como se fossem a configuração de hoje, e um time recém-criado
+  // sumiria calado — bem aqui, que é onde se coloca gente nos times.
+  if (typeof listasCustomFalharam === 'function' && listasCustomFalharam()) {
+    const av = document.createElement('div'); av.className = 'empty'; av.style.margin = '10px 0 0';
+    av.textContent = 'Não foi possível carregar os times do Config. O organograma abaixo está mostrando a lista padrão — um time criado recentemente pode não aparecer. Recarregue a página.';
+    main.appendChild(av);
+  }
 
   const orgWrap = document.createElement('div'); orgWrap.className = 'org-wrap';
   const top = document.createElement('div'); top.className = 'org-top'; top.style.setProperty('--c', cor); top.textContent = 'Coordenação Geral'; orgWrap.appendChild(top);
   const conn = document.createElement('div'); conn.className = 'org-conn'; orgWrap.appendChild(conn);
   const grid = document.createElement('div'); grid.className = 'org-grid';
+  // SETORES já são os times do Config: o initModulo chama loadListasCustom antes desta tela
+  // desenhar, e ela troca a lista de fábrica pelos times do banco. Buscar de novo aqui, numa
+  // lista à parte, quebrava o "+ Adicionar setor": ele acrescenta o time novo em SETORES, e o
+  // quadro passaria a desenhar de outro lugar — o time só apareceria ao recarregar a página.
   SETORES.forEach(([slug, label]) => {
     const card = document.createElement('div'); card.className = 'org-card'; card.style.setProperty('--c', cor);
     const t = document.createElement('div'); t.className = 'org-st'; t.textContent = label; card.appendChild(t);
