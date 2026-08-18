@@ -7,23 +7,27 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ## 1. Travado no acesso ao banco
 
-**Quatro coisas param no mesmo lugar.** Eu não alcanço o banco dos acólitos: a senha no `.env`
-está velha, o `psql` não está instalado nesta máquina, o Docker está parado, e o acesso do
-Supabase enxerga só o projeto do iamundi (`dashboard-instagram`). Retestado em 18/08.
+**Nada pendente para colar** — 048 a 054 estão todas aplicadas e conferidas. O que continua
+travado é o meu ACESSO: a senha no `.env` está velha, o `psql` não está instalado nesta máquina,
+o Docker está parado, e o acesso do Supabase enxerga só o projeto do iamundi
+(`dashboard-instagram`). Retestado em 18/08.
 
 **Destrava com uma coisa só:** a senha do banco atualizada no `.env`, **ou** o acesso do Supabase
 apontado para a conta `erickjcbp`.
 
 | o que | por que importa |
 |---|---|
-| **Aplicar 052, 053 e 054** | **052**: aprovar candidatura insere na escala sem conferir nada (dá para superlotar uma função e escalar a mesma pessoa duas vezes na mesma missa). **053**: ser responsável por tarefa larga o `eh_equipe` e passa a exigir só estar num time — sem ela a lista fica nos 4 da equipe. **054**: liga a tarefa recorrente à conclusão que a gerou, que é o que deixa o Reabrir oferecer apagar a próxima. As três estão escritas em `docs/APLICAR-NO-BANCO.sql`, é colar. |
+| **As 31 migrations que faltam** | `docs/migrations/` vai de 001 a 011 e pula para 043: as **012 a 042 não existem em arquivo**. Não dá para reconstruir o banco do zero. **É o risco mais sério da lista.** |
 | **Conferir os kits** | Saber se o kit em modo *trava* já existe no Config. Enquanto não existir, o código está inerte e as **9 liberações acordadas** não estão gravadas em lugar nenhum. |
 | **Conferir a "Leitura B"** | 40 pessoas ainda constam aptas em cruz e vela mas são barradas pela regra. Saber se já foram marcadas. |
-| **As 31 migrations que faltam** | `docs/migrations/` vai de 001 a 011 e pula para 043: as **012 a 042 não existem em arquivo**. Não dá para reconstruir o banco do zero. **É o risco mais sério da lista.** |
 
 **Isto custa caro no dia a dia, não só no papel:** para escrever a 052 eu precisei das colunas de
 `acolitos_modelos`, que vieram na migration **022** — bem no meio das que faltam. Tive de descobrir
 lendo o `config.html`. Acontece toda vez.
+
+**E custa na conferência:** desde a 051 eu não consigo mais medir de fora o comportamento de
+função atrás de login — a trava que eu mesmo pedi fechou a porta que eu usava. Sobrou
+`docs/CONFERIR-NO-BANCO.sql` (só leitura), que o dono cola e me diz o resultado.
 
 ---
 
@@ -46,9 +50,8 @@ próxima recorrência: **a pergunta é feita na hora**, com o prazo da próxima 
 virar uma regra global escolhida de véspera. E remover um time no Config passou a avisar quantas
 tarefas e pessoas ainda dependem dele.
 
-**Depende da 054 para ficar completo.** Sem ela o Reabrir volta a só AVISAR que a próxima talvez
-exista — não consegue dizer qual é nem oferecer apagá-la, porque não há o elo entre as duas. A
-tela funciona sem a migration; só perde essa parte.
+✔ A **054** foi aplicada em 18/08, então o Reabrir está completo: nomeia a próxima com o prazo
+dela e oferece apagá-la.
 
 ---
 
@@ -100,3 +103,5 @@ o buraco é quase invisível.
   devolve. Não era o banco. Junto: lista vazia passou a dizer o motivo.
 - **Tarefas: editar, apagar e o Reabrir resolvendo a próxima recorrência.**
 - **Remover um time avisa** quantas tarefas e pessoas ainda dependem dele.
+- **Migrations 052, 053 e 054** aplicadas pelo dono e conferidas (`docs/CONFERIR-NO-BANCO.sql`
+  deu OK nas três; de fora, confirmei `origem_id` e que nada foi aberto sem querer).
