@@ -1362,10 +1362,20 @@ const HABILIDADE_LABEL = Object.fromEntries(HABILIDADES);
 const COMPETENCIA_LABEL = Object.fromEntries(COMPETENCIAS);
 // Mescla habilidades/competências customizadas (tabela acolitos_listas) nas listas e nos rótulos
 let _listasCarregadas = false;
+let _listasFalharam = false;
+// Diz se a última tentativa de carregar as listas do Config falhou. Quem desenha a partir delas
+// usa isto para AVISAR na tela: sem o aviso, uma consulta recusada fica igualzinha a "não há
+// nada customizado", e um time criado no Config simplesmente não aparece — sem erro nenhum,
+// como se nunca tivesse sido criado.
+function listasCustomFalharam() { return _listasFalharam; }
 async function loadListasCustom(force = false) {
   if (_listasCarregadas && !force) return;
   try {
-    const { data } = await sb.from('acolitos_listas').select('tipo,valor,label').in('tipo', ['habilidade', 'competencia', 'setor']).order('label');
+    const { data, error } = await sb.from('acolitos_listas').select('tipo,valor,label').in('tipo', ['habilidade', 'competencia', 'setor']).order('label');
+    // O banco não estoura exceção quando recusa: devolve `error` preenchido e `data` nulo. Sem
+    // ler o `error` aqui, uma recusa de permissão ou um limite de chamadas passava direto pelo
+    // `catch` de baixo e virava lista vazia — que aqui significa "usa as de fábrica".
+    if (error) throw error;
     const byTipo = { habilidade: [], competencia: [], setor: [] };
     (data || []).forEach(r => { if (byTipo[r.tipo]) byTipo[r.tipo].push([r.valor, r.label]); });
     // DB é a fonte da verdade: se há linhas no banco p/ o tipo, substitui a lista; vazio → mantém o padrão do código (fallback de fábrica)
@@ -1377,8 +1387,13 @@ async function loadListasCustom(force = false) {
     aplicar(HABILIDADES, HABILIDADE_LABEL, byTipo.habilidade);
     aplicar(COMPETENCIAS, COMPETENCIA_LABEL, byTipo.competencia);
     aplicar(SETORES, SETOR_LABEL, byTipo.setor);
-    _listasCarregadas = true;
-  } catch (e) { /* listas indisponíveis — segue com as padrão */ }
+    _listasCarregadas = true; _listasFalharam = false;
+  } catch (e) {
+    // Não derruba a tela: segue com as listas de fábrica, que é o comportamento de sempre.
+    // Mas fica registrado e marcado, para a tela poder dizer que está mostrando a reserva.
+    _listasFalharam = true;
+    console.error('Listas do Config não carregaram — seguindo com as de fábrica.', e);
+  }
 }
 // ── CONFIG GLOBAL (tabela acolitos_config) ────────────────────
 let _APP_CONFIG = {};
