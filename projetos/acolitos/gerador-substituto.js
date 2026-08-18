@@ -3,6 +3,11 @@
 // Espelha as regras do gerador (elegibilidade, comunidade, cerimoniário, rodízio).
 (function(global){
   'use strict';
+  // As funções "maiores" quando ninguém configurou nada. Fica aqui, exportada, porque o
+  // Config precisa MOSTRAR exatamente o que o gerador APLICA: enquanto esta lista estava
+  // copiada nos dois arquivos, marcar a caixinha na tela e a regra do gerador podiam divergir
+  // sem ninguém notar — e a tela estaria mentindo sobre a regra em vigor.
+  var MAIORES_PADRAO = ['cred_altar','cred_credencia','missal','turibulo','naveta','mitra','baculo'];
   // Espelho de shared.js NIVEIS (int por slug de nível da jornada)
   var NIVEL_INT = {
     aspirante:0, coroinha:1, acolito_aspirante:2, acolito_guardiao:3, acolito_sentinela:4,
@@ -40,7 +45,7 @@
     var rnd = ctx.rnd || Math.random;
     var maiores = (config.funcoes_maiores && config.funcoes_maiores.length)
       ? config.funcoes_maiores
-      : ['cred_altar','cred_credencia','missal','turibulo','naveta','mitra','baculo'];
+      : MAIORES_PADRAO;
     var MAIORES = {}; maiores.forEach(function(f){ MAIORES[f]=true; });
 
     var disp = function(id){ return !horKey || (dispMap[id]||[]).indexOf(horKey) >= 0; };
@@ -153,7 +158,7 @@
     card.appendChild(fechar); ov.appendChild(card); document.body.appendChild(ov);
   }
 
-  var API = { escolherSubstituto: escolherSubstituto, elegivelFuncao: elegivelFuncao, nivelInt: nivelInt, calcIdade: calcIdade,
+  var API = { MAIORES_PADRAO: MAIORES_PADRAO, escolherSubstituto: escolherSubstituto, elegivelFuncao: elegivelFuncao, nivelInt: nivelInt, calcIdade: calcIdade,
               aplicarTrocaEscala: aplicarTrocaEscala, desfazerTroca: desfazerTroca, abrirResumoTrocas: abrirResumoTrocas };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;   // node/testes
   global.GeradorSubstituto = API;                                             // navegador

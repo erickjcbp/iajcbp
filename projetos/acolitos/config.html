@@ -50,15 +50,21 @@
 
 <script src="navegacao-core.js"></script>
 <script src="kits-core.js"></script>
+<script src="gerador-substituto.js"></script>
 <script src="shared.js"></script>
 <script>
 // A seção inicial PRECISA existir em SECOES — senão o painel abre numa tela
 // que não tem botão no menu e, ao sair dela, não há como voltar sem recarregar.
 let ctx = null, secaoAtual = 'identidade';
+// 'listas' agora é UMA seção com as oito listas dentro (era Competências, Tipos de celebração,
+// Funções litúrgicas, Categorias da Tesouraria, Times — cinco entradas para o mesmo editor —
+// mais os Motivos de ausência, que viviam fora do Config, no fim da tela de Ausências).
 const SECOES = [
-  ['identidade','Identidade'], ['navegacao','Navegação'], ['equipe','Equipe & Permissões'], ['tipos','Tipos & Modelos'], ['funcoes','Funções litúrgicas'],
+  ['identidade','Identidade'], ['navegacao','Navegação'], ['equipe','Equipe & Permissões'],
+  ['listas','Listas'], ['modelos','Modelos de escala'],
   ['gerador','Regras do gerador'], ['comunidades','Comunidades & horários'],
-  ['cadastro','Campos do cadastro'], ['tesouraria','Categorias da Tesouraria'], ['crm','Etapas do CRM'], ['niveis','Níveis / Jornada'], ['listas','Competências'], ['missoes','Missões & XP'], ['logins','Logins (usuário/senha)'], ['admins','Admins & superadmin'],
+  ['cadastro','Campos do cadastro'], ['crm','Etapas do CRM'], ['niveis','Níveis / Jornada'],
+  ['missoes','Missões & XP'], ['logins','Logins (usuário/senha)'], ['admins','Admins & superadmin'],
 ];
 async function init(){
   ctx = await initModulo();
@@ -76,9 +82,9 @@ function render(){
   const body = document.createElement('div'); body.id='cfg-body'; body.className='cfg-body';
   wrap.append(side, body); main.appendChild(wrap);
   // 'modelos' não entra aqui: vive dentro de 'tipos' (Tipos & Modelos).
-  ({ listas:renderListas, tipos:renderTiposModelos, funcoes:renderFuncoes, gerador:renderGerador,
+  ({ listas:renderListaUnica, modelos:renderModelos, gerador:renderGerador,
      comunidades:renderComunidades, cadastro:renderCadastro, admins:renderAdmins, identidade:renderIdentidade,
-     navegacao:renderNavOrdem, equipe:renderEquipe, tesouraria:renderTesouraria,
+     navegacao:renderNavOrdem, equipe:renderEquipe,
      crm:renderCrm, niveis:renderNiveis, missoes:renderMissoes, logins:renderLogins
    }[secaoAtual] || (()=>{}))(body);
 }
@@ -142,89 +148,140 @@ async function setConfig(chave, valor){
   if (error) { toast('Erro ao salvar.', 'error'); return false; }
   _APP_CONFIG[chave] = valor; toast('✓ Salvo!'); return true;
 }
-const LISTAS_TIPOS = [['competencia','Competências']];
-let _listaTipo = 'competencia';
-async function renderListas(b){
+// ── AS LISTAS QUE A PARÓQUIA EDITA ────────────────────────────
+// Eram SEIS editores copiados pelo app (cinco aqui, um no fim da tela de Ausências), todos
+// gravando na mesma tabela `acolitos_listas` e mudando só a palavra do `tipo`. Agora é um só,
+// e cada lista se declara nesta tabela. Acrescentar uma lista passa a ser uma linha aqui.
+const LISTAS_CFG = [
+  { tipo:'competencia',    nome:'Competências',            dica:'O plano de desenvolvimento — aparecem na Jornada, em Competências de cada membro.', novo:'Nova competência…' },
+  { tipo:'habilidade',     nome:'Habilidades',             dica:'O que a pessoa sabe fazer. É o mesmo que as funções litúrgicas veem como habilitação.', novo:'Nova habilidade…' },
+  { tipo:'funcao',         nome:'Funções litúrgicas',      dica:'As funções da celebração. A marca “Maior” reserva a função para cerimoniário no gerador.', novo:'Nova função (ex.: Báculo Auxiliar)', slug:true,
+    extra:{ modo:'interruptor', chave:'funcoes_maiores', rotulo:'Maior' } },
+  { tipo:'tipo_celebracao',nome:'Tipos de celebração',     dica:'Ficam disponíveis ao criar uma celebração e aparecem na Agenda.', novo:'Novo tipo (ex.: Missa de Formatura)', slug:true },
+  { tipo:'setor',          nome:'Times da pastoral',       dica:'Os times (Almoxarifado, Formação…). O texto abaixo de cada um aparece na aba Tarefas.', novo:'Novo time (ex.: Logística)',
+    extra:{ modo:'texto', chave:'responsabilidades', rotulo:'Do que este time cuida, ano após ano (aparece em Tarefas) — opcional' } },
+  { tipo:'cat_entrada',    nome:'Tesouraria — entradas',   dica:'Categorias de dinheiro que entra.', novo:'Nova categoria de entrada…' },
+  { tipo:'cat_saida',      nome:'Tesouraria — saídas',     dica:'Categorias de dinheiro que sai.',   novo:'Nova categoria de saída…' },
+  { tipo:'motivo',         nome:'Motivos de ausência',     dica:'As opções que a pessoa escolhe ao avisar que não pode servir.', novo:'Novo motivo…' },
+];
+let _listaAtual = 'competencia';
+
+// O apelido de sistema saía de seis cópias iguais desta conta. Agora é uma só.
+function slugDe(texto) {
+  return String(texto||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^\w]+/g,'_').replace(/^_|_$/g,'');
+}
+
+// O ÚNICO editor de listas. Cada lista se declara em LISTAS_CFG; o que muda entre elas é
+// texto e, em duas, um campo extra por item.
+async function renderListaUnica(b){
   b.textContent='';
-  // sub-abas só fazem sentido com mais de um tipo de lista; com um só, o título da seção já diz qual é
-  if (LISTAS_TIPOS.length > 1) {
-    const subnav=document.createElement('div'); subnav.className='cfg-nav';
-    LISTAS_TIPOS.forEach(([t,l])=>{ const x=document.createElement('button'); x.className='cfg-tab'+(t===_listaTipo?' on':''); x.textContent=l; x.onclick=()=>{_listaTipo=t;renderListas(b);}; subnav.appendChild(x); });
-    b.appendChild(subnav);
-  }
+  const conf = LISTAS_CFG.find(x=>x.tipo===_listaAtual) || LISTAS_CFG[0];
+
+  const subnav=document.createElement('div'); subnav.className='cfg-nav';
+  LISTAS_CFG.forEach(c=>{ const x=document.createElement('button'); x.className='cfg-tab'+(c.tipo===_listaAtual?' on':'');
+    x.textContent=c.nome; x.onclick=()=>{_listaAtual=c.tipo; renderListaUnica(b);}; subnav.appendChild(x); });
+  b.appendChild(subnav);
+
   const dica=document.createElement('p'); dica.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 10px;';
-  dica.textContent='Competências são o plano de desenvolvimento — aparecem na Jornada, em 🎯 Competências de cada membro.';
-  b.appendChild(dica);
-  const { data } = await sb.from('acolitos_listas').select('id,valor,label').eq('tipo',_listaTipo).order('valor');
+  dica.textContent=conf.dica; b.appendChild(dica);
+
+  const [{ data, error:errLista }, { data:cfgRow, error:errExtra }] = await Promise.all([
+    sb.from('acolitos_listas').select('id,valor,label').eq('tipo',conf.tipo).order('label'),
+    conf.extra ? sb.from('acolitos_config').select('valor').eq('chave',conf.extra.chave).maybeSingle()
+               : Promise.resolve({ data:null, error:null }),
+  ]);
+
+  // Falha de consulta NÃO pode virar lista vazia: na tela, zero item é indistinguível de
+  // "não há nada cadastrado" — e alguém sairia recriando o que já existe.
+  if (errLista) {
+    console.error('Listas: carregar '+conf.tipo+' falhou', errLista);
+    const e=document.createElement('div'); e.className='empty';
+    e.textContent='Não foi possível carregar '+conf.nome.toLowerCase()+'. Isto é falha de carregamento, não lista vazia — recarregue a página.';
+    b.appendChild(e); return;
+  }
+
+  // Sem saber o que já está gravado, editar o campo extra apagaria o dos OUTROS itens (o valor
+  // é um objeto/lista única). Por isso, se a leitura falhar, o extra fica travado.
+  const extraOk = !errExtra;
+  if (conf.extra && !extraOk) {
+    console.error('Listas: carregar '+conf.extra.chave+' falhou', errExtra);
+    const av=document.createElement('div'); av.className='empty'; av.style.marginBottom='8px';
+    av.textContent='Não foi possível carregar o campo "'+conf.extra.rotulo+'". A edição dele está bloqueada até recarregar; o resto da lista funciona.';
+    b.appendChild(av);
+  }
+  // Quando nada foi configurado, o padrão TEM de ser o mesmo que o gerador aplica — senão a
+  // tela mostraria tudo desmarcado enquanto sete funções seguem valendo como maiores, e quem
+  // olhasse acreditaria numa regra que não é a que está em vigor.
+  const padraoExtra = (conf.extra && conf.extra.modo==='interruptor')
+    ? ((typeof GeradorSubstituto!=='undefined' && GeradorSubstituto.MAIORES_PADRAO) || []) : {};
+  const guardado = (extraOk && cfgRow && cfgRow.valor != null) ? cfgRow.valor : padraoExtra;
+  const marcados = new Set(Array.isArray(guardado) ? guardado : []);
+  const textos = (!Array.isArray(guardado) && typeof guardado==='object') ? { ...guardado } : {};
+
+  async function gravarExtra(valor){
+    const { error } = await sb.from('acolitos_config')
+      .upsert({ chave:conf.extra.chave, valor, updated_at:new Date().toISOString() }, { onConflict:'chave' });
+    if (error) { console.error('Listas: gravar '+conf.extra.chave+' falhou', error); toast('Não foi possível salvar.','error'); return false; }
+    if (typeof _APP_CONFIG!=='undefined' && _APP_CONFIG) _APP_CONFIG[conf.extra.chave]=valor;
+    toast('✓ Salvo!'); return true;
+  }
+
   (data||[]).forEach(item=>{
-    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
+    const row=document.createElement('div'); row.style.cssText='padding:8px 2px;border-bottom:1px solid var(--border);';
+    const top=document.createElement('div'); top.style.cssText='display:flex;align-items:center;gap:8px;';
     const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=item.label||item.valor;
+    top.appendChild(nm);
+    if (conf.slug) { const sl=document.createElement('span'); sl.style.cssText='font-size:11px;color:var(--text-muted);'; sl.textContent=item.valor; top.appendChild(sl); }
+
+    if (conf.extra && conf.extra.modo==='interruptor') {
+      const lb=document.createElement('label'); lb.style.cssText='display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-muted);cursor:pointer;';
+      const ck=document.createElement('input'); ck.type='checkbox'; ck.checked=marcados.has(item.valor); ck.disabled=!extraOk;
+      ck.onchange=async()=>{ ck.disabled=true;
+        const antes=new Set(marcados);
+        if (ck.checked) marcados.add(item.valor); else marcados.delete(item.valor);
+        // Volta ao estado anterior se a gravação falhar: deixar marcado sem ter salvo faria a
+        // pessoa acreditar numa regra que o gerador não vai aplicar.
+        if (!await gravarExtra([...marcados])) { marcados.clear(); antes.forEach(v=>marcados.add(v)); ck.checked=antes.has(item.valor); }
+        ck.disabled=!extraOk; };
+      const tx=document.createElement('span'); tx.textContent=conf.extra.rotulo;
+      lb.append(ck,tx); top.appendChild(lb);
+    }
+
     const del=document.createElement('button'); del.className='mini-del'; del.textContent='−';
-    del.onclick=async()=>{ if(!await uiConfirm('Remover "'+(item.label||item.valor)+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',item.id); renderListas(b); };
-    row.append(nm,del); b.appendChild(row);
-  });
-  const add=document.createElement('div'); add.style.cssText='display:flex;gap:8px;margin-top:10px;';
-  const inp=document.createElement('input'); inp.className='form-input'; inp.placeholder='Novo item…';
-  const bt=document.createElement('button'); bt.className='mini-add'; bt.textContent='+';
-  bt.onclick=async()=>{ const v=inp.value.trim(); if(!v)return; const slug=v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''); await sb.from('acolitos_listas').insert({tipo:_listaTipo,valor:slug,label:v}); inp.value=''; renderListas(b); };
-  add.append(inp,bt); b.appendChild(add);
-}
-// Aba unificada: Tipos de celebração + Modelos (vagas por função) — antes eram 2 abas
-async function renderTiposModelos(b){
-  b.textContent='';
-  const sec=(txt)=>{ const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);letter-spacing:.5px;margin:6px 0 8px;'; h.textContent=txt; b.appendChild(h); };
-  sec('🗓 Tipos de celebração');
-  const d1=document.createElement('div'); b.appendChild(d1); renderTipos(d1);
-  const hr=document.createElement('div'); hr.style.cssText='border-top:1px solid var(--border-wine);margin:18px 0 0;'; b.appendChild(hr);
-  sec('🪑 Modelos — vagas por função');
-  const d2=document.createElement('div'); b.appendChild(d2); renderModelos(d2);
-}
-async function renderTipos(b){
-  b.textContent='';
-  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 10px;'; hint.textContent='Tipos disponíveis ao criar uma celebração (além dos padrões do sistema).'; b.appendChild(hint);
-  const { data } = await sb.from('acolitos_listas').select('id,valor,label').eq('tipo','tipo_celebracao').order('label');
-  (data||[]).forEach(item=>{
-    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
-    const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=item.label||item.valor;
-    const sl=document.createElement('span'); sl.style.cssText='font-size:11px;color:var(--text-muted);'; sl.textContent=item.valor;
-    const del=document.createElement('button'); del.className='mini-del'; del.textContent='−';
-    del.onclick=async()=>{ if(!await uiConfirm('Remover "'+(item.label||item.valor)+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',item.id); renderTipos(b); };
-    row.append(nm,sl,del); b.appendChild(row);
-  });
-  const add=document.createElement('div'); add.style.cssText='display:flex;gap:8px;margin-top:10px;';
-  const inp=document.createElement('input'); inp.className='form-input'; inp.placeholder='Novo tipo (ex.: Missa de Formatura)';
-  const bt=document.createElement('button'); bt.className='mini-add'; bt.textContent='+';
-  bt.onclick=async()=>{ const v=inp.value.trim(); if(!v)return; const slug=v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''); await sb.from('acolitos_listas').insert({tipo:'tipo_celebracao',valor:slug,label:v}); inp.value=''; renderTipos(b); };
-  add.append(inp,bt); b.appendChild(add);
-}
-async function renderFuncoes(b){
-  b.textContent='';
-  const FUNCOES_DEFAULT=[['cred_altar','Cerimonial de Altar'],['cred_credencia','Cerimonial de Credência'],['missal','Missal'],['turibulo','Turíbulo'],['naveta','Naveta'],['altar','Altar'],['cruz','Cruz'],['vela','Vela'],['sineta','Sineta'],['sinao','Sinão'],['apoio','Apoio'],['mitra','Mitra'],['baculo','Báculo']];
-  const MAIORES_DEFAULT=['cred_altar','cred_credencia','missal','turibulo','naveta','mitra','baculo'];
-  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 10px;'; hint.textContent='Funções litúrgicas (= habilidades). Marque cada uma como Maior (reserva cerimoniário) ou Menor; crie, edite e exclua funções próprias. Clique em Salvar ao terminar.'; b.appendChild(hint);
-  const { data: custom } = await sb.from('acolitos_listas').select('id,valor,label').eq('tipo','funcao').order('label');
-  const sel = new Set(cfg('funcoes_maiores', MAIORES_DEFAULT));
-  const todas = FUNCOES_DEFAULT.map(([v,l])=>({valor:v,label:l,custom:false})).concat((custom||[]).map(c=>({valor:c.valor,label:c.label||c.valor,custom:true,id:c.id})));
-  todas.forEach(f=>{
-    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
-    const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=f.label+(f.custom?' (própria)':'');
-    const tg=document.createElement('button'); tg.className='btn-sm'; tg.style.minWidth='66px';
-    const paint=()=>{ const on=sel.has(f.valor); tg.textContent=on?'Maior':'Menor'; tg.style.cssText='min-width:66px;'+(on?'background:linear-gradient(180deg,var(--gold-light),var(--gold-dim));border-color:var(--gold-light);color:#2a1400;':'background:var(--surface2);color:var(--text-muted);'); };
-    paint(); tg.onclick=()=>{ if(sel.has(f.valor))sel.delete(f.valor); else sel.add(f.valor); paint(); };
-    row.append(nm,tg);
-    if(f.custom){
-      const ed=document.createElement('button'); ed.className='mini-add'; ed.textContent='✎'; ed.onclick=async()=>{ const nv=((await uiPrompt('Novo nome da função:', {value:f.label}))||'').trim(); if(!nv)return; await sb.from('acolitos_listas').update({label:nv}).eq('id',f.id); renderFuncoes(b); }; row.append(ed);
-      const del=document.createElement('button'); del.className='mini-del'; del.textContent='−'; del.onclick=async()=>{ if(!await uiConfirm('Remover função própria "'+f.label+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',f.id); renderFuncoes(b); }; row.append(del);
+    del.onclick=async()=>{ if(!await uiConfirm('Remover "'+(item.label||item.valor)+'"?'))return;
+      const { error } = await sb.from('acolitos_listas').delete().eq('id',item.id);
+      if (error) { console.error('Listas: remover falhou', error); toast('Não foi possível remover.','error'); return; }
+      renderListaUnica(b); };
+    top.appendChild(del); row.appendChild(top);
+
+    if (conf.extra && conf.extra.modo==='texto') {
+      const ta=document.createElement('textarea'); ta.className='form-input'; ta.rows=2;
+      ta.style.cssText='margin-top:6px;font-size:12px;'; ta.placeholder=conf.extra.rotulo;
+      ta.value=textos[item.valor]||''; ta.disabled=!extraOk;
+      const sv=document.createElement('button'); sv.className='btn-sm'; sv.style.marginTop='6px'; sv.textContent='Salvar'; sv.disabled=!extraOk;
+      sv.onclick=async()=>{ const t=ta.value.trim(); const novo={ ...textos };
+        if (t) novo[item.valor]=t; else delete novo[item.valor];
+        sv.disabled=true; const ok=await gravarExtra(novo); sv.disabled=!extraOk;
+        // Só espelha localmente depois de confirmado: senão o PRÓXIMO salvar, de outro item,
+        // gravaria por cima de algo que nem chegou a ser salvo.
+        if (ok) { if (t) textos[item.valor]=t; else delete textos[item.valor]; } };
+      row.append(ta,sv);
     }
     b.appendChild(row);
   });
-  const save=document.createElement('button'); save.className='btn gold'; save.style.marginTop='12px'; save.textContent='Salvar funções maiores'; save.onclick=async()=>{ await setConfig('funcoes_maiores',[...sel]); }; b.appendChild(save);
-  const add=document.createElement('div'); add.style.cssText='display:flex;gap:8px;margin-top:14px;';
-  const inp=document.createElement('input'); inp.className='form-input'; inp.placeholder='Nova função própria (ex.: Báculo Auxiliar)';
+
+  const add=document.createElement('div'); add.style.cssText='display:flex;gap:8px;margin-top:10px;';
+  const inp=document.createElement('input'); inp.className='form-input'; inp.placeholder=conf.novo;
   const bt=document.createElement('button'); bt.className='mini-add'; bt.textContent='+';
-  bt.onclick=async()=>{ const v=inp.value.trim(); if(!v)return; const slug=v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''); await sb.from('acolitos_listas').insert({tipo:'funcao',valor:slug,label:v}); inp.value=''; renderFuncoes(b); };
+  bt.onclick=async()=>{ const v=inp.value.trim(); if(!v)return;
+    const { error } = await sb.from('acolitos_listas').insert({ tipo:conf.tipo, valor:slugDe(v), label:v });
+    if (error) { console.error('Listas: criar falhou', error); toast('Não foi possível criar.','error'); return; }
+    inp.value=''; renderListaUnica(b); };
   add.append(inp,bt); b.appendChild(add);
 }
+
+// Aba unificada: Tipos de celebração + Modelos (vagas por função) — antes eram 2 abas
 // KITS: conjuntos de funções com critério próprio de quem pode servir.
 //
 // Antes existia UM "kit leve", com a comunidade escrita no código (santo_antonio/matriz)
@@ -539,73 +596,15 @@ async function renderEquipe(b){
   // Gerência da LISTA de setores (movida das Listas) — aqui se cria/exclui os setores existentes
   const hr=document.createElement('div'); hr.style.cssText='border-top:1px solid var(--border-wine);margin:20px 0 10px;'; b.appendChild(hr);
   const sh=document.createElement('div'); sh.style.cssText='font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; sh.textContent='🗂 Setores (lista)'; b.appendChild(sh);
-  const setBox=document.createElement('div'); b.appendChild(setBox); renderSetorLista(setBox);
+  // A lista de times saiu daqui: agora vive em Listas › Times da pastoral, junto das outras
+  // sete. Ficava escondida dentro desta seção e ninguém adivinhava que era ali que se editava.
+  const dicaSet=document.createElement('p'); dicaSet.style.cssText='font-size:12px;color:var(--text-muted);margin:10px 0 0;';
+  dicaSet.textContent='Os times da pastoral se editam em Listas › Times da pastoral.'; b.appendChild(dicaSet);
 }
 // CRUD da lista de setores (acolitos_listas tipo='setor') + a responsabilidade fixa
 // de cada um (o que o time É, ano após ano — mora em acolitos_config, chave
 // 'responsabilidades', formato { slug: texto }; não é tarefa, por isso não vive em
 // acolitos_tarefas). Aparece na tela Tarefas, no topo do grupo de cada time.
-async function renderSetorLista(b){
-  b.textContent='';
-  const [{ data, error: errSet }, { data: cfgResp, error: errResp }] = await Promise.all([
-    sb.from('acolitos_listas').select('id,valor,label').eq('tipo','setor').order('label'),
-    sb.from('acolitos_config').select('valor').eq('chave','responsabilidades').maybeSingle(),
-  ]);
-  if (errResp) console.error('Setores: carregar responsabilidades falhou', errResp);
-  // Falha ao buscar os setores NÃO pode virar lista vazia: o supabase-js não lança exceção,
-  // devolve {data:null, error}, e `(data||[])` desenharia zero linha — indistinguível de
-  // "não há time cadastrado". Quem visse isso poderia sair criando os 11 times de novo.
-  if (errSet) {
-    console.error('Setores: carregar a lista falhou', errSet);
-    const e=document.createElement('div'); e.className='empty';
-    e.textContent='Não foi possível carregar os times. Isto é falha de carregamento, não ausência de time — recarregue a página.';
-    b.appendChild(e); return;
-  }
-  // Sem saber o que já está salvo, editar aqui e salvar apagaria a responsabilidade dos
-  // OUTROS times (o valor inteiro é um único objeto). Por isso, se a leitura falhar, o
-  // campo fica travado — em vez de deixar editar em cima de um mapa que pode estar vazio
-  // por engano.
-  const respCarregou = !errResp;
-  const respMap = respCarregou && cfgResp && cfgResp.valor ? { ...cfgResp.valor } : {};
-  if (!respCarregou) {
-    const av=document.createElement('div'); av.className='empty'; av.style.cssText='margin-bottom:8px;';
-    av.textContent='Não foi possível carregar as responsabilidades dos times — a edição abaixo está bloqueada até recarregar.';
-    b.appendChild(av);
-  }
-  (data||[]).forEach(item=>{
-    const row=document.createElement('div'); row.style.cssText='padding:8px 2px;border-bottom:1px solid var(--border);';
-    const top=document.createElement('div'); top.style.cssText='display:flex;align-items:center;gap:8px;';
-    const nm=document.createElement('span'); nm.style.flex='1'; nm.style.fontWeight='700'; nm.textContent=item.label||item.valor;
-    const del=document.createElement('button'); del.className='mini-del'; del.textContent='−';
-    del.onclick=async()=>{ if(!await uiConfirm('Remover setor "'+(item.label||item.valor)+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',item.id); renderSetorLista(b); };
-    top.append(nm,del); row.appendChild(top);
-
-    const resp=document.createElement('textarea'); resp.className='form-input'; resp.rows=2;
-    resp.style.cssText='margin-top:6px;font-size:12px;';
-    resp.placeholder='O que este time é responsável por, ano após ano (aparece em Tarefas) — opcional';
-    resp.value=respMap[item.valor]||''; resp.disabled=!respCarregou;
-    const salvar=document.createElement('button'); salvar.className='btn-sm'; salvar.style.marginTop='6px'; salvar.textContent='Salvar responsabilidade';
-    salvar.disabled=!respCarregou;
-    salvar.onclick=async()=>{
-      const texto=resp.value.trim();
-      const novoMapa={ ...respMap };
-      if (texto) novoMapa[item.valor]=texto; else delete novoMapa[item.valor];
-      salvar.disabled=true; salvar.textContent='Salvando...';
-      const ok=await setConfig('responsabilidades', novoMapa);
-      salvar.disabled=false; salvar.textContent='Salvar responsabilidade';
-      // Sincroniza o mapa local só depois de confirmado salvo — senão o PRÓXIMO save
-      // (de outro setor, sem recarregar a tela) escreveria em cima de algo que nem
-      // chegou a gravar.
-      if (ok) { if (texto) respMap[item.valor]=texto; else delete respMap[item.valor]; }
-    };
-    row.append(resp, salvar); b.appendChild(row);
-  });
-  const add=document.createElement('div'); add.style.cssText='display:flex;gap:8px;margin-top:10px;';
-  const inp=document.createElement('input'); inp.className='form-input'; inp.placeholder='Novo setor (ex.: Logística)';
-  const bt=document.createElement('button'); bt.className='mini-add'; bt.textContent='+';
-  bt.onclick=async()=>{ const v=inp.value.trim(); if(!v)return; const slug=v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''); await sb.from('acolitos_listas').insert({tipo:'setor',valor:slug,label:v}); inp.value=''; renderSetorLista(b); };
-  add.append(inp,bt); b.appendChild(add);
-}
 // [Equipe] — é equipe? participa de escalas? setores
 function abrirEditorEquipeMembro(m, role, onSaved){
   const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=(e)=>{ if(e.target===ov) ov.remove(); };
@@ -653,25 +652,6 @@ function abrirPermissoesMembro(m, onSaved){
 
 // ── Seção Tesouraria: categorias de entrada/saída (acolitos_listas cat_entrada/cat_saida) ──
 let _tesTipo='cat_entrada';
-async function renderTesouraria(b){
-  b.textContent='';
-  const subnav=document.createElement('div'); subnav.className='cfg-nav';
-  [['cat_entrada','Entradas'],['cat_saida','Saídas']].forEach(([t,l])=>{ const x=document.createElement('button'); x.className='cfg-tab'+(t===_tesTipo?' on':''); x.textContent=l; x.onclick=()=>{_tesTipo=t;renderTesouraria(b);}; subnav.appendChild(x); });
-  b.appendChild(subnav);
-  const { data } = await sb.from('acolitos_listas').select('id,valor,label').eq('tipo',_tesTipo).order('label');
-  (data||[]).forEach(item=>{
-    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
-    const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=item.label||item.valor;
-    const del=document.createElement('button'); del.className='mini-del'; del.textContent='−';
-    del.onclick=async()=>{ if(!await uiConfirm('Remover "'+(item.label||item.valor)+'"?'))return; await sb.from('acolitos_listas').delete().eq('id',item.id); renderTesouraria(b); };
-    row.append(nm,del); b.appendChild(row);
-  });
-  const add=document.createElement('div'); add.style.cssText='display:flex;gap:8px;margin-top:10px;';
-  const inp=document.createElement('input'); inp.className='form-input'; inp.placeholder='Nova categoria…';
-  const bt=document.createElement('button'); bt.className='mini-add'; bt.textContent='+';
-  bt.onclick=async()=>{ const v=inp.value.trim(); if(!v)return; const slug=v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\w]+/g,'_').replace(/^_|_$/g,''); await sb.from('acolitos_listas').insert({tipo:_tesTipo,valor:slug,label:v}); inp.value=''; renderTesouraria(b); };
-  add.append(inp,bt); b.appendChild(add);
-}
 
 // ── Seção Modelos de celebração: vagas por função por tipo+comunidade (acolitos_modelos) ──
 const FUNCOES_MODELO=[['cred_altar','Cerim. de Altar'],['cred_credencia','Cerim. de Credência'],['missal','Missal'],['turibulo','Turíbulo'],['naveta','Naveta'],['altar','Altar'],['cruz','Cruz'],['vela','Vela'],['sineta','Sineta'],['sinao','Sinão'],['apoio','Apoio'],['mitra','Mitra'],['baculo','Báculo']];
