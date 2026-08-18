@@ -19,7 +19,7 @@
 - **Nunca `git add <pasta>`** — adicionar arquivo por arquivo.
 - **Carimbar `BUILD` em `projetos/acolitos/sw.js`** em todo deploy, senão o app aberto continua na versão velha.
 - **Conferir o deploy pela ponta:** baixar o arquivo do ar e comparar com o local. O "sucesso" da Vercel não é prova.
-- Rodar os testes com: `node --test projetos/acolitos/*-core.test.js` (passe os arquivos, não a pasta — `node --test <pasta>` não varre).
+- Rodar os testes com: `node --test projetos/acolitos/*.test.js` (passe os arquivos, não a pasta — `node --test <pasta>` não varre).
 
 ---
 
@@ -416,7 +416,7 @@ Trazer `abrirRegistrarAusenciaCoord` (escala.html:1560) para esta tela como bot�
 
 - [ ] **Passo 6: rodar os testes e provar na tela**
 
-Rodar: `node --test projetos/acolitos/*-core.test.js` (listando os arquivos)
+Rodar: `node --test projetos/acolitos/*.test.js` (listando os arquivos)
 Depois carregar a tela local em 390px e 1100px, nas duas abas, e conferir zero erro de JavaScript.
 
 - [ ] **Passo 7: commitar**
