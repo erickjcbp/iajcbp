@@ -71,6 +71,31 @@ certo; sem ela, alguém tem de lembrar.
 
 ## Fechados em 20/08/2026
 
+**Cada time vê só as tarefas dele (migration 057 APLICADA e PROVADA RODANDO)**
+- **O que era:** a trava das tarefas olhava só o PAPEL. Quem fosse `coord_admin`, `subadmin`
+  ou `membro_equipe` lia **e escrevia** todas as tarefas dos onze times. E entrar em qualquer
+  time promove a `membro_equipe` — ou seja, quem entrasse no Almoxarifado podia **apagar**
+  tarefa da Coordenação. O que segurava era a aba exigir a permissão `tarefas`, que nasce
+  desmarcada: portão na TELA, não no dado.
+- **O que é agora:** coordenação vê e mexe em tudo; quem é de time, só no time dela. A
+  função nova `acolitos_meus_times(uid)` é `SECURITY DEFINER` (a política precisa ler a
+  tabela de membros, que tem trava própria) e **não executa para o anônimo**.
+- **O `with check` é metade da trava**, não enfeite: sem ele a pessoa editaria uma tarefa do
+  time dela trocando o `time_slug` — a separação vazaria pela EDIÇÃO, não pela leitura, que
+  é o buraco que ninguém procura.
+- **Feito com a tabela VAZIA** (zero tarefas), de propósito: errar isso depois, com o quadro
+  cheio, esconderia trabalho real de gente real.
+- **PROVADA RODANDO, não por leitura:** `docs/provar-057-tarefas-por-time.sql` cria tarefas
+  de mentira, consulta fingindo ser a coordenação e duas pessoas de times diferentes, tenta
+  apagar de outro time, tenta mover para outro time, tenta criar em outro time, e desfaz tudo
+  com `rollback`. **8 verificações, todas passaram** — antes de aplicar e de novo depois. Vale
+  rodar de novo a qualquer momento: ele mede o que está valendo, não reaplica nada.
+- **A tela acompanha em UM lugar só** (`timesVisiveis`, 7 testes): o recorte é feito ao
+  carregar e no formulário, que relê o catálogo por conta própria. Não é segurança — é para
+  a tela não oferecer um time que o banco vai recusar, o que daria erro sem explicação.
+- **Quem for `membro_equipe` sem nenhum time não vê tarefa alguma.** É o correto, mas se
+  alguém reclamar de quadro vazio, é a primeira coisa a olhar.
+
 **Boas-vindas ao time (NO AR)**
 - **Incluir alguém num time avisa a pessoa.** Antes produzia só um `toast` que quem clicou
   via; a pessoa incluída não ficava sabendo de nada. Agora abre uma caixa para escrever um

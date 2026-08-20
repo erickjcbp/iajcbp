@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { estadoDaTarefa, podeSerResponsavel, responsaveisPossiveis,
-        filtrar, ordenar, agruparPorTime } = require('./tarefas-visao-core.js');
+        filtrar, ordenar, agruparPorTime, timesVisiveis } = require('./tarefas-visao-core.js');
 
 // ── estado ──────────────────────────────────────────────────────────
 test('sem data nenhuma: a fazer', () => {
@@ -130,4 +130,52 @@ test('tarefa de time que saiu do catálogo não some: aparece com o apelido cru'
 test('sem time nenhum cadastrado ainda não quebra', () => {
   assert.deepStrictEqual(agruparPorTime([], []), []);
   assert.deepStrictEqual(agruparPorTime(), []);
+});
+
+// ── QUAIS TIMES A PESSOA ENXERGA (espelho da trava do banco, migration 057) ──
+// Se estes testes e a política do banco discordarem, a tela desenha caixas de times que o
+// banco recusa: o time aparece e vem sempre vazio, sem explicação nenhuma.
+const CATALOGO = [
+  { valor: 'secretaria', label: 'Secretaria' },
+  { valor: 'formacao',   label: 'Formação' },
+  { valor: 'midia',      label: 'Mídia' },
+];
+
+test('coordenação enxerga todos os times', () => {
+  const r = timesVisiveis({ isAdmin: true, setores: [], catalogo: CATALOGO });
+  assert.deepStrictEqual(r.map(t => t.valor), ['secretaria', 'formacao', 'midia']);
+});
+
+test('quem é de um time enxerga só o dele', () => {
+  const r = timesVisiveis({ isAdmin: false, setores: ['formacao'], catalogo: CATALOGO });
+  assert.deepStrictEqual(r.map(t => t.valor), ['formacao']);
+});
+
+test('quem é de dois times enxerga os dois', () => {
+  const r = timesVisiveis({ isAdmin: false, setores: ['midia', 'secretaria'], catalogo: CATALOGO });
+  assert.deepStrictEqual(r.map(t => t.valor), ['secretaria', 'midia']);   // mantém a ordem do catálogo
+});
+
+// Não deveria existir (o papel de equipe vem de ENTRAR num time), mas se existir a tela tem
+// de mostrar nada — e não o catálogo inteiro, que é o que um `||` desatento faria.
+test('quem não está em time nenhum não enxerga time nenhum', () => {
+  assert.deepStrictEqual(timesVisiveis({ isAdmin: false, setores: [], catalogo: CATALOGO }), []);
+  assert.deepStrictEqual(timesVisiveis({ isAdmin: false, catalogo: CATALOGO }), []);
+});
+
+test('time que a pessoa tem mas saiu do catálogo não vira linha inventada', () => {
+  const r = timesVisiveis({ isAdmin: false, setores: ['time_apagado'], catalogo: CATALOGO });
+  assert.deepStrictEqual(r, []);
+});
+
+test('sem catálogo não estoura', () => {
+  assert.deepStrictEqual(timesVisiveis({ isAdmin: true }), []);
+  assert.deepStrictEqual(timesVisiveis(), []);
+});
+
+// Devolver o próprio array deixaria a tela alterar o catálogo sem querer (um sort, um pop).
+test('a lista devolvida à coordenação é uma CÓPIA', () => {
+  const r = timesVisiveis({ isAdmin: true, setores: [], catalogo: CATALOGO });
+  r.pop();
+  assert.strictEqual(CATALOGO.length, 3, 'o catálogo original foi alterado');
 });

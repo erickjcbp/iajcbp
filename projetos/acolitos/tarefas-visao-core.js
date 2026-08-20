@@ -40,6 +40,21 @@
     });
   }
 
+  // ── QUAIS TIMES A PESSOA ENXERGA ────────────────────────────────────
+  // ESPELHO da trava do banco (migration 057). Coordenação vê todos; quem é de time vê só
+  // os seus. Se este espelho divergir da trava, a tela desenha caixas de times que o banco
+  // recusa: a pessoa vê o time e ele vem sempre vazio, sem nenhuma explicação.
+  //
+  // O critério de "coordenação" tem de ser o MESMO dos dois lados: `coord_admin` e
+  // `subadmin` — é o que `navCaps().isAdmin` responde e o que a política do banco pergunta.
+  function timesVisiveis(o) {
+    o = o || {};
+    var catalogo = Array.isArray(o.catalogo) ? o.catalogo : [];
+    if (o.isAdmin) return catalogo.slice();
+    var meus = Array.isArray(o.setores) ? o.setores : [];
+    return catalogo.filter(function (t) { return t && meus.indexOf(t.valor) >= 0; });
+  }
+
   // ── FILTRO ──────────────────────────────────────────────────────────
   // Campo vazio não filtra nada. Isso importa: filtro que "some com tudo" quando está vazio
   // faz a tela parecer sem dado.
@@ -106,11 +121,12 @@
 
   var api = { estadoDaTarefa: estadoDaTarefa, podeSerResponsavel: podeSerResponsavel,
               responsaveisPossiveis: responsaveisPossiveis, filtrar: filtrar,
-              ordenar: ordenar, agruparPorTime: agruparPorTime };
+              ordenar: ordenar, agruparPorTime: agruparPorTime, timesVisiveis: timesVisiveis };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else {  // pelo NOME: expor só o objeto deixaria a tela em branco com os testes verdes
     global.estadoDaTarefa = estadoDaTarefa; global.podeSerResponsavel = podeSerResponsavel;
     global.responsaveisPossiveis = responsaveisPossiveis; global.filtrar = filtrar;
     global.ordenar = ordenar; global.agruparPorTime = agruparPorTime;
+    global.timesVisiveis = timesVisiveis;
   }
 })(typeof globalThis !== 'undefined' ? globalThis : this);

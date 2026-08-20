@@ -194,8 +194,21 @@ async function carregarResponsaveisPermitidos() {
 async function carregarTudo() {
   const [rT, rS, rR] = await Promise.all([carregarTarefas(), carregarSetores(), carregarResponsabilidades()]);
   TAREFAS = rT.data; ERR_TAREFAS = !!rT.error;
-  TIMES = rS.data;
-  LABEL_TIME = {}; TIMES.forEach(s => { LABEL_TIME[s.valor] = s.label; });
+  // Recorta os times AQUI, num lugar só. As três visões, o filtro e o formulário bebem de
+  // TIMES — recortar em cada um deles seria três chances de esquecer, e o esquecido vira o
+  // caminho por onde a pessoa escolhe um time que o banco recusa.
+  //
+  // Isto NÃO é a segurança: quem tranca é a trava do banco (migration 057). Aqui é para a
+  // tela não oferecer o que vai ser recusado — filtro de tela esconde, não protege.
+  const _caps = navCaps(ctx);
+  TIMES = timesVisiveis({
+    isAdmin: _caps.isAdmin,
+    setores: (ctx && ctx.membro && Array.isArray(ctx.membro.setores)) ? ctx.membro.setores : [],
+    catalogo: rS.data,
+  });
+  // O rótulo vem do catálogo INTEIRO: uma tarefa antiga de um time que a pessoa não vê mais
+  // ainda precisa aparecer com nome de gente, não com o código do banco.
+  LABEL_TIME = {}; (rS.data || []).forEach(s => { LABEL_TIME[s.valor] = s.label; });
   RESPONSABILIDADES = rR.data; ERR_RESP = !!rR.error;
 }
 
@@ -643,7 +656,17 @@ function renderPorTime(main) {
 async function abrirFormTarefa(tarefa) {
   const editando = !!tarefa;
   const [setoresR, membrosR] = await Promise.all([carregarSetores(), carregarResponsaveisPermitidos()]);
-  const setores = setoresR.data, membros = membrosR.data;
+  // Recorta pelos times DA PESSOA, igual ao carregarTudo. Este formulário relê o catálogo do
+  // banco por conta própria: sem o recorte aqui, ele ofereceria no seletor um time que a
+  // pessoa não pode usar, ela escolheria, e o banco recusaria na hora de salvar — erro sem
+  // explicação, na cara de quem só queria criar uma tarefa.
+  const _capsF = navCaps(ctx);
+  const setores = timesVisiveis({
+    isAdmin: _capsF.isAdmin,
+    setores: (ctx && ctx.membro && Array.isArray(ctx.membro.setores)) ? ctx.membro.setores : [],
+    catalogo: setoresR.data,
+  });
+  const membros = membrosR.data;
   const falhouSetores = !!setoresR.error;
   const falhouMembros = !!membrosR.error;
   const ov = document.createElement('div'); ov.className = 'modal-overlay open';

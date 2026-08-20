@@ -286,6 +286,56 @@ async function provaBoasVindasAoTime(provas) {
     'sem recado, o texto padrão entra e cita o time');
 }
 
+async function provaTarefasSoDoMeuTime(provas) {
+  console.log('\n\x1b[1mCada time só enxerga as tarefas dele\x1b[0m');
+
+  // Quem TRANCA é o banco (migration 057, provada por docs/provar-057-tarefas-por-time.sql).
+  // O que se prova aqui é o espelho na tela: que ela não OFERECE um time que o banco vai
+  // recusar. Oferecer e ser recusado na hora de salvar é erro sem explicação na cara de quem
+  // só queria criar uma tarefa.
+  const CATALOGO = [
+    { valor: 'secretaria', label: 'Secretaria' },
+    { valor: 'formacao',   label: 'Formação' },
+    { valor: 'midia',      label: 'Mídia' },
+  ];
+  const medir = (papel, setores) => provas.abrir('tarefas.html', {
+    papel,
+    tabelas: { acolitos_listas: { data: CATALOGO } },
+    avaliar: `
+      // O membro da prova não traz \`setores\` — aqui ele ganha os do caso em teste, e a
+      // tela é mandada carregar DE NOVO pelo caminho real (carregarTudo), não por atalho.
+      ctx.membro.setores = ${JSON.stringify(setores)};
+      await carregarTudo();
+      return { times: TIMES.map(function (t) { return t.valor; }),
+               rotulos: Object.keys(LABEL_TIME).sort() };
+    `,
+  });
+
+  const admin = await medir(PAPEIS.admin, []);
+  exigir(!admin.erroAvaliar, 'a tela de tarefas carrega sem estourar', admin.erroAvaliar);
+  exigir(JSON.stringify((admin.avaliado || {}).times) === JSON.stringify(['secretaria', 'formacao', 'midia']),
+    'coordenação continua vendo todos os times', 'viu: ' + JSON.stringify((admin.avaliado || {}).times));
+
+  const equipe = await medir(PAPEIS.equipe, ['formacao']);
+  exigir(JSON.stringify((equipe.avaliado || {}).times) === JSON.stringify(['formacao']),
+    'quem é da Formação só vê a Formação', 'viu: ' + JSON.stringify((equipe.avaliado || {}).times));
+
+  const dois = await medir(PAPEIS.equipe, ['midia', 'secretaria']);
+  exigir(JSON.stringify((dois.avaliado || {}).times) === JSON.stringify(['secretaria', 'midia']),
+    'quem é de dois times vê os dois', 'viu: ' + JSON.stringify((dois.avaliado || {}).times));
+
+  const nenhum = await medir(PAPEIS.equipe, []);
+  exigir(JSON.stringify((nenhum.avaliado || {}).times) === JSON.stringify([]),
+    'quem não está em time nenhum não vê time nenhum',
+    'viu: ' + JSON.stringify((nenhum.avaliado || {}).times));
+
+  // Os RÓTULOS vêm do catálogo inteiro, mesmo para quem vê um time só: uma tarefa antiga de
+  // outro time ainda precisa aparecer com nome de gente, não com o código do banco.
+  exigir(((equipe.avaliado || {}).rotulos || []).length === 3,
+    'os nomes dos times continuam completos, para não sobrar código na tela',
+    'rótulos: ' + JSON.stringify((equipe.avaliado || {}).rotulos));
+}
+
 // ── Partida ──────────────────────────────────────────────────────────────────
 const filtro = process.argv[2] || null;
 const provas = await iniciarProvas();
@@ -298,6 +348,7 @@ try {
     await provaModelosAceitaFuncaoPropria(provas);
     await provaPortaoNotificacoes(provas);
     await provaBoasVindasAoTime(provas);
+    await provaTarefasSoDoMeuTime(provas);
   }
 } finally {
   await provas.encerrar();

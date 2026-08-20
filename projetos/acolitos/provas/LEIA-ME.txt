@@ -58,7 +58,9 @@ PROVAS — perguntas específicas, uma por defeito que já aconteceu de verdade:
   · o Config › Navegação mostra os mesmos itens da barra (faltava a Tarefas);
   · função criada por você entra nos Modelos de escala, na tela E no que é gravado;
   · sem o sino ligado o app não abre: a parede aparece, cobre tudo, não fecha ao clicar
-    fora nem no ESC, e cada beco (negou / iPhone no navegador) recebe a receita certa.
+    fora nem no ESC, e cada beco (negou / iPhone no navegador) recebe a receita certa;
+  · a festa de boas-vindas ao time desenha, com ícone TRAÇADO e o recado escrito;
+  · cada time só enxerga os times dele nas Tarefas — o espelho da trava do banco.
 
 REGRA: defeito que o dono encontrar usando o app vira prova aqui. É assim que a lista
 cresce — não por imaginação, por cicatriz.
@@ -73,6 +75,12 @@ O QUE ELE **NÃO** PROVA (para ninguém confiar demais)
 · Não prova a permissão de módulo. A prova substitui o `initModulo`, que é justamente
   quem gateia a porta na vida real. A única tranca conferida é a do Config, que a
   própria tela faz. Quem quiser provar as outras terá de mexer nisto primeiro.
+
+· Não prova TRAVA DE BANCO. As provas de tela rodam com um banco de mentira, que não tem
+  RLS nenhuma. Quem enxerga o quê nas Tarefas é decidido pelo banco (migration 057), e isso
+  se prova com `psql -f docs/provar-057-tarefas-por-time.sql` — que cria tarefas de mentira,
+  consulta fingindo ser cada pessoa e desfaz tudo com rollback. A prova de tela daqui só
+  confere o ESPELHO: que a tela não oferece um time que o banco vai recusar.
 
 · Pela mesma razão, não prova o PORTÃO DE NOTIFICAÇÕES no lugar onde ele mora. A prova
   do sino chama o portão e a parede na mão (com `avaliar:`), o que prova que os dois
