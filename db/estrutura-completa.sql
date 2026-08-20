@@ -15,7 +15,11 @@
 -- reconstruir o banco do zero, e era o risco mais sério do projeto.
 --
 -- COMO USAR
--- Banco novo → rode este arquivo primeiro, e depois as migrations de 055 em diante.
+-- Banco novo → rode este arquivo primeiro, e depois TODAS as migrations posteriores à data
+--   desta fotografia. Hoje (20/08/2026) isso quer dizer da 057 em diante. Este número tem
+--   de subir junto com cada migration nova, senão a reconstrução pula a mudança em silêncio
+--   — e a 057 é uma TRAVA de segurança (cada time só vê as tarefas dele): pular seria abrir
+--   o quadro dos onze times para qualquer pessoa de equipe, sem ninguém perceber.
 -- Banco que já existe → NÃO rode. Ele recria tudo; é fotografia, não remendo.
 --
 -- O QUE NÃO ESTÁ AQUI

@@ -7,18 +7,16 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ## 1. Pendente
 
-**Brasão da casa nas 3 telas que faltam** (Agenda, Chamada, Destaques). Elas não leem
-`acolitos_membros` — pegam por **RPC**, e nenhuma devolve a casa. Medido em 20/08: são **6
-funções, ~120 linhas de SQL** (`acolitos_destaques`, `acolitos_ranking_temporada`,
-`acolitos_campeoes`, `acolitos_solicitos`, `acolitos_roster_substituicao`,
-`acolitos_membros_display`). Não é difícil, é **arriscado**: errar o corpo de uma delas deixa a
-tela correspondente vazia **sem erro nenhum**, que é como este projeto já se machucou. Merece
-uma rodada própria, não o fim de uma sessão longa. A `minha-casa` fica de fora de propósito:
-ali todo mundo é da mesma casa.
+**Distribuir as pessoas pelas casas.** Em 20/08 **1 das 176 pessoas ativas** tem casa
+preenchida (o dono, na Sanctaris). As 5 casas existem, os 5 brasões estão no ar e o
+encanamento inteiro está pronto e provado (ver "O brasão chega às telas de RPC", abaixo) —
+o que falta é gente dentro das casas. Enquanto isso, o brasão só aparece no avatar de uma
+pessoa em todo o app.
 
-*Meia-medida que NÃO vale a pena:* a Agenda tem embed em dois pontos e daria para acrescentar
-`casa_id` só neles — mas o caminho do membro comum passa pela RPC, então o brasão apareceria
-para a coordenação e sumiria para os membros. Inconsistência é pior que ausência.
+Não é trabalho de código: quem distribui é a coordenação, em **Casas › organograma**, uma
+pessoa por vez. **Não faço isso por SQL** — é dado de gente real, e o dono não pediu. Se o
+volume incomodar (são 175), o que dá para fazer é uma tela de distribuir vários de uma vez;
+é feature nova, precisa ser pedida.
 
 
 **Abrir o app com conta real e conferir DUAS coisas que subiram sem prova no ar** (portão de
@@ -41,16 +39,22 @@ tela, não.
 >
 > Se algo der errado com o resto do grupo, o desfazer rápido é o Instant Rollback da Vercel.
 
-Faltam **39 das 41 contas ativas**. Elas vão esbarrar no portão sozinhas, na primeira abertura
-— não há nada a fazer aqui além de acompanhar o número subir.
+**Medido em 20/08, no fim do dia: 7 inscrições, de 6 pessoas.** O portão funcionou — era
+**1 aparelho parado desde 16/07**, um mês inteiro com o pop-up antigo, e entraram 6 num dia
+só. (Uma das 7 é o mesmo celular contado duas vezes: o navegador de uma pessoa descartou a
+inscrição e fez outra 90 segundos depois. O endereço velho morre sozinho — o `enviar-push`
+apaga quando o Google responde que não existe mais. Na prática são 6 aparelhos.)
+
+Faltam **41 das 47 contas**. Elas esbarram no portão sozinhas, na primeira abertura — não há
+nada a fazer aqui além de acompanhar o número subir. Para medir de novo:
+`select count(*), count(distinct user_id) from acolitos_push_subs;`
 
 *Da boas-vinda:* a animação e o texto estão provados no navegador, mas **o caminho inteiro
 não** — incluir alguém de verdade no Config › Times, ver o toque chegar no celular dela e a
 festa aparecer na abertura seguinte. O tipo `boas_vindas` do `api/enviar-push` só se prova
 mandando um de verdade: pelo ar não dá, a função recusa antes de olhar o tipo.
 
-**O que esperar:** só **1 aparelho** dos 47 com conta está inscrito. Os outros 46 batem na
-parede na primeira abertura. Quem tocar em "Não Permitir" na caixinha do sistema não entra até
+**O que esperar:** os que ainda não ligaram o sino batem na parede na primeira abertura. Quem tocar em "Não Permitir" na caixinha do sistema não entra até
 religar nos Ajustes — a parede ensina o caminho, mas vai gerar ligação para a coordenação. É
 consequência conhecida e aceita, não surpresa.
 
@@ -84,6 +88,48 @@ certo; sem ela, alguém tem de lembrar.
 ---
 
 ## Fechados em 20/08/2026
+
+**O brasão chega às telas que pegam a gente por FUNÇÃO do banco (migration 058)**
+- **O que era:** o brasão da casa subiu no avatar em 20/08 e funcionava só nas telas que
+  leem `acolitos_membros` direto. As que pegam a gente por **função do banco** ficavam sem
+  brasão, caladas, porque nenhuma dessas funções devolvia `casa_id`.
+- **Eram 7 funções, não 6.** A anotação anterior esqueceu a `acolitos_membro_card` — é ela
+  que monta o cartão que abre ao tocar num nome. Sem ela o brasão apareceria na lista e
+  sumiria ao abrir a pessoa.
+- **A Jornada já pedia o brasão desde 20/08 e nunca recebia nada.** Estava quebrado no ar,
+  em silêncio; ninguém ia descobrir olhando o código de uma tela só.
+- **Dois lugares não precisavam de SQL nenhum** (o chip de irmãos e "quem você vai
+  administrar"), e mais dois apareceram na varredura (**Minha Conta** e "Complete seu
+  cadastro"): o membro ali vem de `select('*')`, a casa já estava na mão, faltava pedir.
+- **Varridos os 22 avatares do app**, não os 3 da anotação. Sobram dois de fora e os dois
+  estão certos: `minha-casa` (ali todo mundo é da mesma casa — brasão em todo rosto é ruído)
+  e a definição da própria função.
+- **De brinde, a aba Campeões ganhou FOTO.** Ela montava cada pessoa só com id, nome e liga:
+  ninguém tinha foto ali. Mesma função, mesmo risco.
+- **O medo da anotação antiga estava mal calibrado.** Ela temia "tela vazia sem erro
+  nenhum". Fui medir por quê: as 7 funções montam a resposta **campo a campo**, então
+  acrescentar um campo não muda quantas linhas saem, e onde há agrupamento o Postgres
+  **recusa na criação**, alto e claro. O que dá tela vazia é mexer em junção ou filtro — e
+  não precisou.
+- **Provado nos dois lados.** `docs/provar-058-casa-nas-rpcs.sql` roda antes e depois, mede
+  o que está valendo e não escreve nada: a coluna `itens` deu **exatamente o mesmo número**
+  nas duas rodadas (470, 30, 30, 71, 176, 33) — nenhuma tela esvaziou — e o campo passou de
+  0 para 100% em todas. Uma segunda parte prova que o **valor** chega, não só o campo
+  (sanctaris chegando na Agenda, no cartão e na Chamada). As permissões das 7 foram
+  fotografadas antes e depois: **idênticas**, e nenhuma executa para o anônimo.
+- **A prova achou a função vazia sumindo do relatório.** A `acolitos_campeoes` (ainda não há
+  campeões) simplesmente não aparecia na lista — que é a cara do "está tudo bem" falso deste
+  projeto. Agora as 7 são listadas sempre, e a vazia diz que está vazia.
+- **A ferramenta de provas de tela tinha um buraco que impedia provar isto.** O `initModulo`
+  falso devolvia o contexto e nada mais — nunca carregava o de-para das casas, que o de
+  verdade carrega. Com isso **nenhuma** prova de tela conseguiria ver um brasão: a prova nova
+  nasceu vermelha acusando um app correto. Corrigido no verificador.
+- **Provado que fica vermelha quando o app quebra:** tirei o pedido do brasão da lista de
+  Destaques, a prova acusou, e o arquivo voltou sem diferença nenhuma.
+- **91 provas de tela + 168 de regra, todas verdes.**
+- **O que isto NÃO resolve:** com 1 pessoa de 176 em alguma casa, o campo chega em todas as
+  telas mas vem vazio para 175 — e vazio faz o avatar sair **sem** brasão, nunca com o de
+  outra casa. Ver o pendente lá em cima.
 
 **Cada time vê só as tarefas dele (migration 057 APLICADA e PROVADA RODANDO)**
 - **O que era:** a trava das tarefas olhava só o PAPEL. Quem fosse `coord_admin`, `subadmin`

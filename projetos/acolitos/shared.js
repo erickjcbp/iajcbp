@@ -1049,7 +1049,7 @@ function showCompletarCadastroForm(membro, done) {
     const fotoLab = document.createElement('div'); fotoLab.style.cssText = 'font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;'; fotoLab.textContent = 'Foto de perfil';
     const fotoHint = document.createElement('div'); fotoHint.style.cssText = 'font-size:12px;color:var(--gold);margin-top:3px;'; fotoHint.textContent = membro.foto_url ? 'Toque na foto para trocar.' : 'Toque na foto para adicionar.';
     const av = buildAvatarEl(membro.foto_url, nivelInfo(membro.nivel || 'aspirante').base, 64, {
-      editable: true, membro: membro, nivelSlug: membro.nivel || 'aspirante',
+      editable: true, membro: membro, nivelSlug: membro.nivel || 'aspirante', casaSlug: casaSlugDe(membro),
       onUpload: (url) => { membro.foto_url = url; fotoHint.textContent = '✓ Foto adicionada!'; fotoHint.style.color = 'var(--success-text)'; }
     });
     fotoTxt.append(fotoLab, fotoHint); fotoWrap.append(av, fotoTxt); modal.appendChild(fotoWrap);
@@ -1248,7 +1248,7 @@ function familyChip(ctx) {
   const a = ctx.membro || ctx.conta;
   const roleBase = nivelInfo(a.nivel || 'aspirante').base;
   const chip = document.createElement('button'); chip.className = 'family-chip'; chip.title = 'Trocar de irmão';
-  const av = buildAvatarEl(a.foto_url, roleBase, 22, { nivelSlug: a.nivel || 'aspirante' }); av.style.flex = 'none';
+  const av = buildAvatarEl(a.foto_url, roleBase, 22, { nivelSlug: a.nivel || 'aspirante', casaSlug: casaSlugDe(a) }); av.style.flex = 'none';
   const nm = document.createElement('span'); nm.className = 'fc-nome'; nm.textContent = a.apelido || (a.nome || '').split(' ')[0];
   const car = document.createElement('span'); car.textContent = '▾'; car.style.opacity = '.7';
   chip.append(av, nm, car);
@@ -1267,7 +1267,7 @@ function openFamilyPicker(ctx) {
   ctx.grupoIrmaos.forEach(m => {
     const ativo = m.id === (ctx.membro ? ctx.membro.id : ctx.conta.id);
     const row = document.createElement('button'); row.className = 'fam-row' + (ativo ? ' ativo' : '');
-    const av = buildAvatarEl(m.foto_url, nivelInfo(m.nivel || 'aspirante').base, 38, { nivelSlug: m.nivel || 'aspirante' }); av.style.flex = 'none';
+    const av = buildAvatarEl(m.foto_url, nivelInfo(m.nivel || 'aspirante').base, 38, { nivelSlug: m.nivel || 'aspirante', casaSlug: casaSlugDe(m) }); av.style.flex = 'none';
     const info = document.createElement('div'); info.style.cssText = 'flex:1;text-align:left;min-width:0;';
     const n = document.createElement('div'); n.style.cssText = 'font-weight:700;font-size:14px;color:var(--text);'; n.textContent = m.apelido || m.nome;
     const s = document.createElement('div'); s.style.cssText = 'font-size:11px;color:var(--text-muted);'; s.textContent = nivelInfo(m.nivel || 'aspirante').label + (m.id === ctx.conta.id ? ' · sua conta' : '');
@@ -1636,6 +1636,7 @@ function openContaModal(ctx) {
     avWrap.appendChild(buildAvatarEl(ctx.conta.foto_url, ctx.membership.role, 96, {
       editable: true, membro: ctx.conta,
       nivelSlug: ctx.conta.nivel || nivelFromRole(ctx.membership.role),
+      casaSlug: casaSlugDe(ctx.conta),
       onUpload: (url) => { ctx.conta.foto_url = url; }
     }));
     modal.appendChild(avWrap);

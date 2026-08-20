@@ -424,6 +424,57 @@ async function provaBrasaoNoAvatar(provas) {
   exigir(a.semCasaSemBrasao === true, 'quem não tem casa continua sem brasão');
 }
 
+async function provaCasaChegaPelasFuncoesDoBanco(provas) {
+  console.log('\n\x1b[1mO brasão chega nas telas que pegam a gente por FUNÇÃO do banco\x1b[0m');
+
+  // O brasão no avatar subiu em 20/08 e funcionava só nas telas que leem a tabela de
+  // membros direto. Sete telas pegam a gente por FUNÇÃO do banco, e nenhuma dessas
+  // funções mandava a casa — então ali o avatar saía sempre sem brasão, calado. A 058
+  // acrescentou o campo nas sete.
+  //
+  // A resposta de mentira abaixo tem os campos EXATOS que a função devolve hoje
+  // (conferidos no banco em 20/08: casa_id, foto_url, id, nivel, nome, total). Campo a
+  // mais ou a menos na amostra já deixou uma lista SEMPRE vazia no ar com a suíte verde
+  // — por isso a forma é copiada do banco, não inventada.
+  const r = await provas.abrir('destaques.html', {
+    papel: PAPEIS.membro,
+    tabelas: { acolitos_casas: { data: [{ id: 'c1', slug: 'sanctaris' }] } },
+    rpcs: {
+      acolitos_destaques: { data: {
+        servos: [
+          { id: 'm1', nome: 'Quem tem casa',  foto_url: null, nivel: 'aspirante', casa_id: 'c1',  total: 9 },
+          { id: 'm2', nome: 'Quem não tem',   foto_url: null, nivel: 'aspirante', casa_id: null,  total: 4 },
+        ],
+        versateis: [], prontos: [],
+      } },
+    },
+    avaliar: `
+      var linhas = Array.from(document.querySelectorAll('#dest-corpo .rank-row'));
+      var saida = { linhas: linhas.length };
+      // A lista tem de continuar com as DUAS pessoas. Se o brasão custou uma linha,
+      // o conserto é pior que o defeito.
+      var comCasa = linhas.find(function (l) { return /tem casa/i.test(l.innerText || ''); });
+      var semCasa = linhas.find(function (l) { return /não tem|nao tem/i.test(l.innerText || ''); });
+      saida.achouAsDuas = !!comCasa && !!semCasa;
+      var sel = 'img[src*="brasoes"], picture';
+      saida.comCasaTemBrasao = !!(comCasa && comCasa.querySelector(sel));
+      saida.semCasaSemBrasao = !!(semCasa && !semCasa.querySelector(sel));
+      // O emblema de nível não pode ter sido substituído pelo da casa: são os dois.
+      saida.nivelContinua = !!(comCasa && comCasa.querySelector('svg'));
+      return saida;
+    `,
+  });
+
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a tela de Destaques abre e desenha a lista', r.erroAvaliar);
+  exigir(a.linhas === 2 && a.achouAsDuas === true, 'as duas pessoas continuam na lista',
+    'vieram ' + a.linhas + ' linha(s) — acrescentar a casa não pode sumir com ninguém');
+  exigir(a.comCasaTemBrasao === true, 'quem tem casa ganha o brasão pela função do banco',
+    'o campo casa_id chegou na tela mas o avatar não desenhou — olhar loadCasas/casaSlugDe');
+  exigir(a.semCasaSemBrasao === true, 'e quem não tem casa continua sem brasão, nunca com o de outra');
+  exigir(a.nivelContinua === true, 'o emblema de nível continua junto');
+}
+
 async function provaPessoasETimesFundidas(provas) {
   console.log('\n\x1b[1mPessoas & Times: uma seção só, e a ficha lê os times do BANCO\x1b[0m');
 
@@ -538,6 +589,7 @@ try {
     await provaBoasVindasAoTime(provas);
     await provaTarefasSoDoMeuTime(provas);
     await provaBrasaoNoAvatar(provas);
+    await provaCasaChegaPelasFuncoesDoBanco(provas);
     await provaPessoasETimesFundidas(provas);
     await provaEntrarNoTimeLiberaTarefas(provas);
   }

@@ -216,7 +216,7 @@ async function abrirChamada(celeb) {
       const r=rosterMap[e.membro_id]||{}; // fonte à prova de RLS (cerimoniário não lê o embed)
       const block=document.createElement('div');
       const item=document.createElement('div');item.className='chamada-item';
-      const av=buildAvatarEl(m?.foto_url||r.foto_url,patchRoleFromHabs(habMapCh[e.membro_id]||{}),40,{nivelSlug:m?.nivel||r.nivel||nivelFromRole(patchRoleFromHabs(habMapCh[e.membro_id]||{}))});av.style.flexShrink='0';
+      const av=buildAvatarEl(m?.foto_url||r.foto_url,patchRoleFromHabs(habMapCh[e.membro_id]||{}),40,{nivelSlug:m?.nivel||r.nivel||nivelFromRole(patchRoleFromHabs(habMapCh[e.membro_id]||{})),casaSlug:casaSlugDe(m||r)});av.style.flexShrink='0';
       const info=document.createElement('div');info.className='chamada-info';
       const nEl=document.createElement('div');nEl.className='chamada-nome-el';nEl.textContent=r.apelido||r.nome||m?.nome||'—';
       const fEl=document.createElement('div');fEl.className='chamada-fn';fEl.textContent=FUNCAO_LABEL[e.funcao]||e.funcao;

@@ -61,6 +61,8 @@ PROVAS — perguntas específicas, uma por defeito que já aconteceu de verdade:
     fora nem no ESC, e cada beco (negou / iPhone no navegador) recebe a receita certa;
   · a festa de boas-vindas ao time desenha, com ícone TRAÇADO e o recado escrito;
   · cada time só enxerga os times dele nas Tarefas — o espelho da trava do banco.
+  · o brasão da casa aparece nas telas que pegam a gente por FUNÇÃO do banco (Destaques),
+    e quem não tem casa continua sem brasão — nunca com o de outra.
 
 REGRA: defeito que o dono encontrar usando o app vira prova aqui. É assim que a lista
 cresce — não por imaginação, por cicatriz.
@@ -71,6 +73,12 @@ O QUE ELE **NÃO** PROVA (para ninguém confiar demais)
 
 · Não toca no banco de verdade. As respostas do banco são de mentira, e por padrão
   vazias. Uma tela pode passar aqui e mostrar coisa errada com dado real.
+
+· O `initModulo` falso carrega o de-para das casas, e SÓ isso, além de devolver o
+  contexto. Foi preciso: sem o de-para o avatar não tem como saber a casa de ninguém,
+  `casaSlugDe` responde null para todo mundo, e a prova acusaria brasão faltando num app
+  perfeito. Se um dia o initModulo de verdade passar a carregar outra coisa de que a tela
+  dependa, o falso tem de acompanhar — senão o defeito aparece aqui e não existe no app.
 
 · Não prova a permissão de módulo. A prova substitui o `initModulo`, que é justamente
   quem gateia a porta na vida real. A única tranca conferida é a do Config, que a

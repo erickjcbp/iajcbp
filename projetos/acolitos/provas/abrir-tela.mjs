@@ -222,7 +222,12 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
       membership: { role: papel.role }, membro, conta: membro,
       user: { id: 'u1', email: papel.email },
     };
-    window.initModulo = async () => ctxFalso;
+    // O initModulo de VERDADE carrega o de-para casa_id → slug antes de liberar a tela
+    // (é dele que o avatar tira o brasão da casa). O falso devolvia só o contexto — com
+    // isso o mapa ficava vazio, `casaSlugDe` respondia null para todo mundo e NENHUMA
+    // prova de tela conseguia ver um brasão: acusaria defeito num app perfeito. Falhar
+    // aqui não derruba a prova, exatamente como no de verdade.
+    window.initModulo = async () => { try { await loadCasas(); } catch (e) {} return ctxFalso; };
 
     // ── O banco de mentira ──────────────────────────────────────────────────
     // Responde POR TABELA e sabe FALHAR. Um harness que devolve sempre a mesma lista e

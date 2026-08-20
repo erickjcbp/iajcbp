@@ -433,7 +433,7 @@ function abrirEvento(e) {
     vao.forEach(p => {
       const mm = p.acolitos_membros || nomesMap[p.membro_id] || {};
       const chip = document.createElement('div'); chip.className = 'go-chip';
-      chip.appendChild(buildAvatarEl(mm.foto_url, '', 24, { nivelSlug: mm.nivel || 'aspirante' }));
+      chip.appendChild(buildAvatarEl(mm.foto_url, '', 24, { nivelSlug: mm.nivel || 'aspirante', casaSlug: casaSlugDe(mm) }));
       const nm = document.createElement('span'); nm.textContent = mm.apelido || mm.nome || 'Membro'; chip.appendChild(nm);
       gl.appendChild(chip);
     });

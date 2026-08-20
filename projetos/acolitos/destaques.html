@@ -81,7 +81,7 @@ function rankRow(m, eu, valor, unidade, pos, medalhaPos) {
   const medalhas = ['🥇','🥈','🥉'];
   const row = document.createElement('div'); row.className = 'rank-row' + (m.id===eu?' eu':''); row.style.cursor = 'pointer'; row.onclick = () => abrirCard(m.id);
   const p = document.createElement('div'); p.className = 'rank-pos'; p.textContent = medalhaPos ? medalhaPos : (pos<=3 ? medalhas[pos-1] : pos);
-  const av = buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 38, { nivelSlug: m.nivel||'aspirante' }); av.style.flex = 'none';
+  const av = buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 38, { nivelSlug: m.nivel||'aspirante', casaSlug: casaSlugDe(m) }); av.style.flex = 'none';
   const info = document.createElement('div'); info.className = 'rank-info';
   const nmRow = document.createElement('div'); nmRow.style.cssText = 'display:flex;align-items:center;gap:5px;min-width:0;';
   const nm = document.createElement('div'); nm.className = 'rank-nome'; nm.textContent = (m.id===eu?'★ ':'') + m.nome;
@@ -118,7 +118,7 @@ async function renderCampeoes(corpo) {
   const grupos = {}; data.forEach(c => { (grupos[c.temporada] = grupos[c.temporada] || []).push(c); });
   Object.keys(grupos).forEach(temp => {
     const th = document.createElement('div'); th.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:12px;color:var(--gold);margin:16px 0 6px;'; th.textContent = '🏆 ' + temp; corpo.appendChild(th);
-    grupos[temp].forEach(c => corpo.appendChild(rankRow({ id:c.membro_id, nome:c.membro, subnivel:(LIGA_LABEL[c.liga]||c.liga) }, null, c.xp, 'XP', 1, '🏅')));
+    grupos[temp].forEach(c => corpo.appendChild(rankRow({ id:c.membro_id, nome:c.membro, foto_url:c.foto_url, nivel:c.nivel, casa_id:c.casa_id, subnivel:(LIGA_LABEL[c.liga]||c.liga) }, null, c.xp, 'XP', 1, '🏅')));
   });
 }
 
@@ -150,7 +150,7 @@ function renderAba(a) {
     const row = document.createElement('div'); row.className = 'rank-row' + (m.id === euId ? ' eu' : '');
     row.style.cursor = 'pointer'; row.onclick = () => abrirCard(m.id);
     const pos = document.createElement('div'); pos.className = 'rank-pos'; pos.textContent = posicao <= 3 ? medalhas[posicao-1] : posicao;
-    const av = buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 38, { nivelSlug: m.nivel||'aspirante' }); av.style.flex = 'none';
+    const av = buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 38, { nivelSlug: m.nivel||'aspirante', casaSlug: casaSlugDe(m) }); av.style.flex = 'none';
     const info = document.createElement('div'); info.className = 'rank-info';
     const nmRow = document.createElement('div'); nmRow.style.cssText = 'display:flex;align-items:center;gap:5px;min-width:0;';
     const nm = document.createElement('div'); nm.className = 'rank-nome'; nm.textContent = (m.id===euId?'★ ':'') + m.nome;
@@ -180,7 +180,7 @@ async function abrirCard(id) {
 
   // cabeçalho: foto + nome + nível
   const head = document.createElement('div'); head.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:14px;';
-  head.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 84, { nivelSlug: m.nivel||'aspirante' }));
+  head.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 84, { nivelSlug: m.nivel||'aspirante', casaSlug: casaSlugDe(m) }));
   const nmRow = document.createElement('div'); nmRow.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:6px;max-width:100%;';
   const nm = document.createElement('div'); nm.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:17px;color:var(--text);text-align:center;min-width:0;'; nm.textContent = m.nome_completo || m.nome;
   const stTag = estrelaTagAsync(id); stTag.style.fontSize = '14px';
