@@ -155,10 +155,12 @@ export default async function handler(req, res) {
   const payload = JSON.stringify({ title, body, url, tag, renotify: true });
 
   let enviados = 0, removidos = 0;
+  const entregues = [];
   await Promise.all(subs.map(async (s) => {
     try {
       await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload);
       enviados++;
+      entregues.push(s.endpoint);
     } catch (err) {
       if (err && (err.statusCode === 404 || err.statusCode === 410)) {
         removidos++;
@@ -166,5 +168,32 @@ export default async function handler(req, res) {
       }
     }
   }));
+
+  // Carimba QUANDO o aparelho recebeu. A coluna `ultima_ok` existia desde a 047 e nunca era
+  // preenchida: dava para saber quem ATIVOU, jamais quem continua recebendo. Um aparelho que
+  // parou de receber ficava indistinguível de um recém-inscrito.
+  //
+  // Vai DEPOIS do envio e em uma tacada só: falhar aqui não pode desfazer notificação que já
+  // saiu, por isso o erro é engolido com aviso — o carimbo é registro, não a entrega.
+  if (entregues.length) {
+    const agora = new Date().toISOString();
+    // EM LOTES: o endpoint de push é uma URL longa (uns 200 caracteres). Num aviso para
+    // todos, mandar os 47 de uma vez montaria uma URL de quilômetros e o servidor recusaria
+    // — e o carimbo sumiria justamente no envio que mais importa.
+    const LOTE = 15;
+    for (let i = 0; i < entregues.length; i += LOTE) {
+      const pedaco = entregues.slice(i, i + LOTE);
+      try {
+        const lista = pedaco.map((e) => `"${e.replace(/"/g, '\\"')}"`).join(',');
+        await fetch(`${URL}/rest/v1/acolitos_push_subs?endpoint=in.(${encodeURIComponent(lista)})`, {
+          method: 'PATCH',
+          headers: { ...h, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({ ultima_ok: agora }),
+        });
+      } catch (e) {
+        console.warn('push: não consegui carimbar ultima_ok', e);
+      }
+    }
+  }
   return res.status(200).json({ ok: true, enviados, removidos });
 }

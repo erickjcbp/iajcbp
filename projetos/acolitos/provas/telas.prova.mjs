@@ -486,6 +486,44 @@ async function provaPessoasETimesFundidas(provas) {
     'apareceram times que só existem na const SETORES — a ficha está lendo as duas fontes');
 }
 
+async function provaEntrarNoTimeLiberaTarefas(provas) {
+  console.log('\n\x1b[1mEntrar no time abre a aba Tarefas\x1b[0m');
+
+  // A permissão `tarefas` nasce desmarcada e é ELA que abre a tela. Sem isto a pessoa recebia
+  // a festa, tocava em "Ver as tarefas do time" e era mandada de volta para o Início sem uma
+  // linha de explicação — time e permissão são coisas diferentes, e ninguém adivinha isso.
+  //
+  // Quem registra o que SERIA gravado é o próprio motor (`r.gravacoes`). Espionar `sb.from` na
+  // mão não funciona: a cadeia do banco de mentira é um Proxy, e atribuir por cima dela não
+  // pega — a prova ficava vermelha sem defeito nenhum no código.
+  const r = await provas.abrir('index.html', {
+    papel: PAPEIS.admin,
+    avaliar: `
+      await liberarAbaTarefas({ id: 'm1', permissoes: ['escala'] }, sb);
+      await liberarAbaTarefas({ id: 'm2', permissoes: ['escala', 'tarefas'] }, sb);
+      await liberarAbaTarefas({ id: 'm3', permissoes: null }, sb);
+      return true;
+    `,
+  });
+
+  exigir(!r.erroAvaliar, 'a liberação roda sem estourar', r.erroAvaliar);
+  const perms = (r.gravacoes || [])
+    .filter((g) => g.tabela === 'acolitos_membros' && g.acao === 'update')
+    .map((g) => g.dados && g.dados.permissoes)
+    .filter(Boolean);
+
+  // Duas gravações, não três: quem JÁ tinha a permissão não pode ser tocado de novo.
+  exigir(perms.length === 2, 'só grava para quem ainda não tinha a permissão',
+    'gravou ' + perms.length + ' vez(es): ' + JSON.stringify(perms));
+  // O ponto que mais dói se errar: acrescentar não pode APAGAR o que já estava lá.
+  exigir(JSON.stringify(perms[0]) === JSON.stringify(['escala', 'tarefas']),
+    'acrescenta sem apagar as permissões que a pessoa já tinha',
+    'gravaria: ' + JSON.stringify(perms[0]));
+  exigir(JSON.stringify(perms[1]) === JSON.stringify(['tarefas']),
+    'quem não tinha permissão nenhuma ganha só a de Tarefas',
+    'gravaria: ' + JSON.stringify(perms[1]));
+}
+
 // ── Partida ──────────────────────────────────────────────────────────────────
 const filtro = process.argv[2] || null;
 const provas = await iniciarProvas();
@@ -501,6 +539,7 @@ try {
     await provaTarefasSoDoMeuTime(provas);
     await provaBrasaoNoAvatar(provas);
     await provaPessoasETimesFundidas(provas);
+    await provaEntrarNoTimeLiberaTarefas(provas);
   }
 } finally {
   await provas.encerrar();

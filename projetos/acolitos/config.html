@@ -881,7 +881,7 @@ function abrirFichaPessoa(m, role, times, onSaved){
     // três notificações seguidas por uma edição só seria assédio.
     if(entrou.length && typeof boasVindasAoTime==='function'){
       for(let i=0;i<entrou.length;i++){
-        await boasVindasAoTime({ membro:m, slug:entrou[i], recado:recado, cliente:sb, semPush: i>0 });
+        await aoEntrarNoTime({ membro:m, slug:entrou[i], recado:recado, cliente:sb, semPush: i>0 });
       }
     }
     toast('✓ Salvo!'); ov.remove(); if(onSaved) onSaved();
@@ -1334,7 +1334,7 @@ function abrirEscolherPessoaTime(membros, time, roleMap, aoTerminar) {
         if (res.promoverPara) {
           try { await apiPost('/api/acolito-admin', { action:'sync_role', user_id:m.user_id, role:res.promoverPara }); } catch (e) {}
         }
-        await boasVindasAoTime({ membro: m, slug: time.valor, recado: recado, cliente: sb });
+        await aoEntrarNoTime({ membro: m, slug: time.valor, recado: recado, cliente: sb });
         ov.remove(); toast('✓ Adicionado ao time.'); aoTerminar();
       };
       list.appendChild(r);

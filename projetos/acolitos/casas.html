@@ -188,7 +188,7 @@ async function addMembroSetor(m, slug) {
   if (r.promoverPara) {
     try { await apiPost('/api/acolito-admin', { action: 'sync_role', user_id: m.user_id, role: r.promoverPara }); roleMap[m.user_id] = r.promoverPara; } catch (e) {}
   }
-  await boasVindasAoTime({ membro: m, slug: slug, recado: recado, cliente: sbAdmin });
+  await aoEntrarNoTime({ membro: m, slug: slug, recado: recado, cliente: sbAdmin });
   toast('✓ Adicionado ao time.'); render();
 }
 

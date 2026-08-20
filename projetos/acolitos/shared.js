@@ -638,6 +638,15 @@ function pedirRecadoDeBoasVindas(nome, timeLabel) {
     ta.placeholder = 'Ex.: te chamei pra esse time porque você tem jeito com gente nova. Conto com você!';
     ta.style.cssText = 'width:100%;resize:vertical;line-height:1.55;';
 
+    // Dito na cara: entrar num time não é só um rótulo — abre a aba Tarefas e marca a pessoa
+    // como equipe. Quem inclui precisa saber disso ANTES de confirmar, não descobrir depois.
+    const nota = document.createElement('div');
+    nota.style.cssText = 'margin-top:10px;padding:9px 11px;border-radius:7px;' +
+      'background:var(--surface2);border-left:3px solid var(--gold-dim);' +
+      'font-size:12px;line-height:1.55;color:var(--text-muted);';
+    nota.textContent = 'Ao entrar no time, ela passa a fazer parte da equipe e a ver a aba ' +
+      'Tarefas — só as do time dela.';
+
     const bOk = document.createElement('button');
     bOk.className = 'btn gold'; bOk.style.cssText = 'width:100%;margin-top:12px;';
     bOk.textContent = 'Incluir e avisar';
@@ -653,10 +662,37 @@ function pedirRecadoDeBoasVindas(nome, timeLabel) {
     bNao.textContent = 'Cancelar';
     bNao.onclick = () => responder(null);
 
-    modal.append(handle, tt, p, ta, bOk, bSem, bNao);
+    modal.append(handle, tt, p, ta, nota, bOk, bSem, bNao);
     ov.appendChild(modal); document.body.appendChild(ov);
     ta.focus();
   });
+}
+
+// TUDO o que acontece quando alguém entra num time, num lugar só. As três portas (Config ›
+// Times, a ficha da pessoa e o organograma das Casas) chamam ISTO — não os pedaços soltos.
+// Foi assim que a boas-vinda nasceu faltando numa das portas.
+async function aoEntrarNoTime(o) {
+  o = o || {};
+  await liberarAbaTarefas(o.membro, o.cliente);
+  await boasVindasAoTime(o);
+}
+
+// Entrar num time é para trabalhar nas tarefas dele — mas quem abre a ABA é a permissão, que
+// nasce desmarcada. Sem isto a pessoa recebia a festa, tocava em "Ver as tarefas do time" e
+// era mandada de volta para o Início, sem uma linha de explicação.
+async function liberarAbaTarefas(m, cliente) {
+  if (!m || !m.id) return;
+  const atuais = Array.isArray(m.permissoes) ? m.permissoes : [];
+  if (atuais.indexOf('tarefas') >= 0) return;          // já tinha: nada a fazer
+  const novas = atuais.concat(['tarefas']);
+  try {
+    const { error } = await (cliente || sb).from('acolitos_membros')
+      .update({ permissoes: novas }).eq('id', m.id);
+    // Falhar aqui não desfaz a entrada no time: a pessoa entrou, só não enxerga a aba ainda.
+    // Some no Config › Pessoas, marcando à mão.
+    if (error) { console.warn('Times: não consegui liberar a aba Tarefas', error); return; }
+    m.permissoes = novas;
+  } catch (e) { console.warn('Times: não consegui liberar a aba Tarefas', e); }
 }
 
 // Guarda a boas-vinda para a pessoa ver e toca o celular dela. Chamada DEPOIS de a inclusão
