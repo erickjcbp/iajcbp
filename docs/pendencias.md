@@ -1,25 +1,32 @@
 # Acólitos — o que está pendente
 
-Atualizado em 19/08/2026. Esta é A LISTA: abrir aqui antes de decidir o que fazer.
+Atualizado em 20/08/2026. Esta é A LISTA: abrir aqui antes de decidir o que fazer.
 Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi commitado.
 
 ---
 
 ## 1. Pendente
 
-**Provar o portão de notificações no app de verdade** (feito em 19/08/2026, ainda **não**
-deployado). O portão obriga a ligar o sino para usar o app — mas ele mora dentro do
-`initModulo`, e o verificador de telas troca o `initModulo` por um falso. Ou seja: a parede
-e a regra estão provadas; **que o boot chama o portão antes de liberar a tela, não**. Isso
-só se vê no ar, com conta de verdade. Antes de mandar para as 47 pessoas, abrir com uma
-conta real e conferir três coisas: (1) sem o sino, a parede aparece e a tela não carrega
-atrás; (2) ativando, o app recarrega e entra; (3) quem já tem o sino ligado **não** vê
-parede nenhuma — um falso positivo aqui tranca todo mundo de uma vez.
+**Abrir o app com conta real e conferir DUAS coisas que subiram sem prova no ar** (portão de
+notificações no ar em 19/08, boas-vindas ao time no ar em 20/08). As duas moram em lugares
+que o verificador de telas não alcança, e as duas quebram feio se estiverem erradas.
 
-**O que esperar quando subir:** hoje só **1 aparelho** dos 47 com conta está inscrito. Os
-outros 46 vão bater na parede na primeira abertura. Quem tocar em "Não Permitir" na caixinha
-do sistema não entra mais até religar nos Ajustes — a parede ensina o caminho, mas vai gerar
-ligação para a coordenação. É consequência conhecida e aceita, não surpresa.
+*Do portão:* ele vive dentro do `initModulo`, e o verificador **substitui o `initModulo`**
+por um falso. A parede e a regra estão provadas; que o boot chame o portão antes de liberar a
+tela, não. Conferir: (1) sem o sino, a parede aparece e a tela não carrega atrás; (2) ativando,
+o app recarrega e entra; (3) **quem já tem o sino ligado não vê parede nenhuma** — este é o
+perigoso: falso positivo aqui tranca as 47 pessoas de uma vez. O jeito rápido de desfazer é o
+Instant Rollback da Vercel.
+
+*Da boas-vinda:* a animação e o texto estão provados no navegador, mas **o caminho inteiro
+não** — incluir alguém de verdade no Config › Times, ver o toque chegar no celular dela e a
+festa aparecer na abertura seguinte. O tipo `boas_vindas` do `api/enviar-push` só se prova
+mandando um de verdade: pelo ar não dá, a função recusa antes de olhar o tipo.
+
+**O que esperar:** só **1 aparelho** dos 47 com conta está inscrito. Os outros 46 batem na
+parede na primeira abertura. Quem tocar em "Não Permitir" na caixinha do sistema não entra até
+religar nos Ajustes — a parede ensina o caminho, mas vai gerar ligação para a coordenação. É
+consequência conhecida e aceita, não surpresa.
 
 O dono dispensou dois itens que estavam aqui: a **conta do Vercel** (o CLI e o acesso automático
 seguem presos em outra conta — quando a Vercel não dispara o build sozinha, o jeito é um commit
@@ -47,6 +54,36 @@ barrado só na **Matriz**, pelo Kit processional. O dono decidiu que **quando el
 liberar** — mas isso **não acontece sozinho** com a `data_nascimento` em branco, porque a regra
 recusa por não saber a idade, não por compará-la. Preencher a data faz o sistema liberá-lo no dia
 certo; sem ela, alguém tem de lembrar.
+
+---
+
+## Fechados em 20/08/2026
+
+**Boas-vindas ao time (NO AR)**
+- **Incluir alguém num time avisa a pessoa.** Antes produzia só um `toast` que quem clicou
+  via; a pessoa incluída não ficava sabendo de nada. Agora abre uma caixa para escrever um
+  **recado só para ela**, ela recebe o toque no celular na hora e vê a festa na abertura
+  seguinte, uma vez, com o recado em destaque e o ícone do time.
+- **Reusa o que já existia:** o motor de celebração (`showCeleb`, o mesmo de estrela, medalha
+  e campeão) e a fila de avisos (`membro.avisos`). Tipo novo `boas_vindas_time`. **Nenhuma
+  tabela nova, nenhuma migration.**
+- **O recado é opcional** — exigir texto para cada pessoa viraria trabalho chato e acabaria
+  pulado. Sem recado, entra o texto padrão.
+- **As DUAS portas** (Config › Times e o organograma das Casas) chamam a mesma função do
+  `shared.js`. Duas cópias divergiriam no primeiro conserto.
+- **11 ícones de time** no catálogo `_svgIcon`, traçados, sem emoji — com a classe `ico`, sem
+  a qual o navegador preenche o caminho e o ícone vira mancha preta.
+- **Push:** tipo `boas_vindas`, no portão da **COORDENAÇÃO** (não o da equipe: incluir alguém
+  num time é ato de coordenação), e cai na **home**, não nas escalas do membro.
+- **Antes de gravar, relê os avisos do banco** — escrever por cima da lista da tela apagaria
+  avisos que chegaram no meio, inclusive de outra coordenação mexendo ao mesmo tempo.
+- **Um erro de português pego na revisão:** o aviso dizia "você entrou **do** time Escala".
+  Os testes passavam porque conferiam só se o nome e o time apareciam; agora conferem a frase
+  **inteira**.
+- **Provas:** 14 de regra + 13 de tela. Duas armadilhas de medição ficaram registradas no
+  código do verificador: `innerText` devolve o texto **em maiúsculas** (é o CSS dos botões), e
+  `getBoundingClientRect` **mente** enquanto o `transform` da animação está em curso — foi
+  assim que um ícone perfeito apareceu com largura 0.
 
 ---
 
