@@ -56,7 +56,9 @@ PROVAS — perguntas específicas, uma por defeito que já aconteceu de verdade:
 
   · a barra de baixo acende o lugar onde a pessoa está (a Ausências acendia "Caixa");
   · o Config › Navegação mostra os mesmos itens da barra (faltava a Tarefas);
-  · função criada por você entra nos Modelos de escala, na tela E no que é gravado.
+  · função criada por você entra nos Modelos de escala, na tela E no que é gravado;
+  · sem o sino ligado o app não abre: a parede aparece, cobre tudo, não fecha ao clicar
+    fora nem no ESC, e cada beco (negou / iPhone no navegador) recebe a receita certa.
 
 REGRA: defeito que o dono encontrar usando o app vira prova aqui. É assim que a lista
 cresce — não por imaginação, por cicatriz.
@@ -71,6 +73,11 @@ O QUE ELE **NÃO** PROVA (para ninguém confiar demais)
 · Não prova a permissão de módulo. A prova substitui o `initModulo`, que é justamente
   quem gateia a porta na vida real. A única tranca conferida é a do Config, que a
   própria tela faz. Quem quiser provar as outras terá de mexer nisto primeiro.
+
+· Pela mesma razão, não prova o PORTÃO DE NOTIFICAÇÕES no lugar onde ele mora. A prova
+  do sino chama o portão e a parede na mão (com `avaliar:`), o que prova que os dois
+  funcionam — mas não prova que o initModulo de verdade os chama antes de liberar a
+  tela. Isso só se vê no app no ar, com conta de verdade.
 
 · Não prova aparência. Ele lê o texto que ficou na tela, não se está bonito, alinhado
   ou legível no celular.
@@ -117,5 +124,21 @@ Abra `telas.prova.mjs` e escreva uma função no mesmo formato das que já estã
 Repare no `error:` — dá para mandar o banco FALHAR. Vale usar: o erro mais caro deste
 projeto é consulta que falha e a tela dizendo "não há nada" em vez de "não consegui
 perguntar". Foi assim que uma tela escondeu pendência de verdade.
+
+Existe também `avaliar:`, para o que a medição normal não alcança — código do shared.js
+que roda fora do desenho da tela. É um pedaço de programa que roda DENTRO da tela, e o
+que ele devolver volta em `r.avaliado`:
+
+    const r = await provas.abrir('index.html', {
+      avaliar: `return { temSino: typeof portaoNotificacoes === 'function' }; `,
+    });
+    exigir(r.avaliado.temSino, 'o portão existe na tela');
+
+Esse texto vem sempre daqui, do repositório — nunca de fora e nunca do banco. Se um dia
+vier de fora, vira execução de código alheio dentro do navegador: não faça.
+
+UM CUIDADO AO MEDIR TEXTO: `innerText` devolve o texto COMO ELE APARECE, e os botões do
+app são maiúsculas por CSS. Procurar "Sair da conta" no texto de um botão dá defeito
+falso — o que está lá é "SAIR DA CONTA". Compare sem caixa.
 
 Depois de escrever, chame a função lá embaixo, junto das outras.

@@ -291,6 +291,19 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
     }
     await new Promise((s) => setTimeout(s, 200));
 
+    // opcoes.avaliar: corpo de função (TEXTO) rodado DENTRO da tela, depois dos passos, e o
+    // que ele devolver volta em `avaliado`. Existe para provar código do shared.js que a
+    // medição normal nunca alcança — o portão de notificações, por exemplo, mora no
+    // initModulo, e aqui o initModulo é substituído. Sem isto, aquele código não teria prova
+    // nenhuma e o verde diria menos do que parece.
+    // O texto vem SEMPRE do arquivo de provas do repositório — nunca de entrada de fora, nem
+    // do banco. Se algum dia vier de fora, isto vira execução de código alheio: não faça.
+    let avaliado = null, erroAvaliar = null;
+    if (opcoes.avaliar) {
+      try { avaliado = await (new Function('return (async () => {' + opcoes.avaliar + '})()'))(); }
+      catch (e) { erroAvaliar = String((e && e.message) || e); }
+    }
+
     const principal = document.getElementById('main-content') || document.getElementById('main') || document.body;
     const barraEl = document.getElementById('app-nav');
     const aceso = barraEl ? barraEl.querySelector('.nav-item.active') : null;
@@ -307,6 +320,8 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
       },
       gravacoes,
       passosFalhos,
+      avaliado,
+      erroAvaliar,
     };
   };
 

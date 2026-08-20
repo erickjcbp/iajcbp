@@ -144,6 +144,77 @@ async function provaModelosAceitaFuncaoPropria(provas) {
     'gravaria só: ' + (chaves.join(', ') || '(nada)'));
 }
 
+async function provaPortaoNotificacoes(provas) {
+  console.log('\n\x1b[1mSem o sino ligado, o app não abre\x1b[0m');
+
+  // A REGRA de quem entra é testada em node (portao-notificacoes-core.test.js). O que só o
+  // navegador prova é o resto: que o core CHEGOU na tela, que o portão roda de verdade e
+  // que a parede desenha e não fecha. Nada disto passa pela FUMAÇA: lá o initModulo é
+  // substituído por um falso, então o portão nunca roda.
+  const r = await provas.abrir('index.html', {
+    papel: PAPEIS.admin,
+    avaliar: `
+      const saida = {};
+      saida.coreCarregou = typeof decidirPortaoNotificacoes === 'function';
+
+      // O portão REAL, com os fatos reais deste navegador: sem inscrição nenhuma.
+      const decisao = await portaoNotificacoes('u1', { _crmEtapa: null });
+      saida.entra = decisao.entra;
+      saida.parede = decisao.parede;
+
+      // A isenção combinada: quem ainda espera aprovação do cadastro passa.
+      saida.aguardandoEntra = (await portaoNotificacoes('u1', { _crmEtapa: 'aprovacao_cadastro' })).entra;
+
+      // E a parede: desenha, cobre tudo, e não vai embora de jeito nenhum.
+      mostrarParedeNotificacoes(decisao.parede, 'u1');
+      const p = document.getElementById('parede-notif');
+      saida.desenhou = !!p;
+      if (p) {
+        const e = getComputedStyle(p);
+        saida.cobreTudo = e.position === 'fixed' && parseInt(e.zIndex, 10) >= 1000;
+        p.click();                                                   // clicar fora
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        saida.continuaDepoisDeInsistir = !!document.getElementById('parede-notif');
+        // innerText devolve o texto COMO ELE APARECE, e os botões do app são uppercase por
+        // CSS: procurar "Sair da conta" aqui dá falso defeito. Medir sem caixa.
+        saida.textoPedir = (p.innerText || '').toLowerCase();
+        saida.temSaidaDaConta = saida.textoPedir.includes('sair da conta');
+      }
+
+      // Cada beco com a receita certa. Mandar pela saída errada é pior que não mandar.
+      const textoDe = (qual) => {
+        const velha = document.getElementById('parede-notif');
+        if (velha) velha.remove();
+        mostrarParedeNotificacoes(qual, 'u1');
+        return (document.getElementById('parede-notif').innerText || '');
+      };
+      saida.textoNegado = textoDe('negado').toLowerCase();
+      saida.textoInstalar = textoDe('instalar-ios').toLowerCase();
+      return saida;
+    `,
+  });
+
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'o portão roda sem estourar', r.erroAvaliar);
+  exigir(a.coreCarregou === true, 'portao-notificacoes-core.js chegou na tela',
+    'a função decidirPortaoNotificacoes não existe — <script> faltando no HTML');
+  exigir(a.entra === false, 'sem inscrição, NÃO entra', 'o portão deixou passar');
+  exigir(a.parede === 'pedir', 'e a parede é a que pede o sino', 'veio "' + a.parede + '"');
+  exigir(a.aguardandoEntra === true, 'quem aguarda aprovação do cadastro entra');
+  exigir(a.desenhou === true, 'a parede desenha');
+  exigir(a.cobreTudo === true, 'a parede cobre a tela inteira');
+  // O ponto do pedido: não tem "agora não", nem clicar fora, nem ESC. Só ativando.
+  exigir(a.continuaDepoisDeInsistir === true, 'a parede NÃO fecha ao clicar fora nem no ESC',
+    'a parede sumiu — vira pop-up de novo, e o portão deixa de existir');
+  exigir(a.temSaidaDaConta === true, 'tem "Sair da conta" — ninguém fica preso sem botão');
+  exigir(/ajustes/.test(a.textoNegado || ''), 'quem negou recebe a receita dos Ajustes');
+  exigir(/tela de início/.test(a.textoInstalar || ''), 'iPhone no navegador recebe a receita de instalar');
+  // A receita errada no beco errado é o defeito que a ordem das perguntas evita. O "e tem
+  // texto" não é enfeite: sem ele, uma parede VAZIA passaria neste exame.
+  exigir((a.textoPedir || '').length > 40 && !/tela de início/.test(a.textoPedir || ''),
+    'a parede que só pede o sino não fala em instalar');
+}
+
 // ── Partida ──────────────────────────────────────────────────────────────────
 const filtro = process.argv[2] || null;
 const provas = await iniciarProvas();
@@ -154,6 +225,7 @@ try {
     await provaBarraAcendeSecao(provas);
     await provaConfigBateComABarra(provas);
     await provaModelosAceitaFuncaoPropria(provas);
+    await provaPortaoNotificacoes(provas);
   }
 } finally {
   await provas.encerrar();

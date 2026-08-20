@@ -266,6 +266,16 @@ async function initModulo(requiredRoles = null, opts = null) {
     }
   }
 
+  // PORTÃO DE NOTIFICAÇÕES — sem o sino ligado ninguém usa o app. Fica DEPOIS dos guards de
+  // papel e permissão (não adianta pedir o sino a quem seria mandado embora de qualquer
+  // jeito) e ANTES da fila de pop-ups, senão os avisos apareceriam atrás da parede.
+  const _portao = await portaoNotificacoes(session.user.id, membro);
+  if (!_portao.entra) {
+    mostrarParedeNotificacoes(_portao.parede, session.user.id);
+    hideSplash();
+    return null;   // as 19 telas param no `if (!ctx) return` — nada carrega atrás da parede
+  }
+
   queueNotificacoes(membro);
 
   hideSplash();
@@ -407,8 +417,8 @@ function queueNotificacoes(membro) {
   _notifStart();
   // 4) Lembrete diário de XP (assíncrono; só se ainda não pontuou hoje)
   _checkXpDiario(membro);
-  // 5) Pedido de ativação de notificações (só na home; enquanto não inscrito)
-  _checkPedirNotificacoes(membro);
+  // (5) O pedido de notificações saiu daqui: virou PORTÃO no initModulo, antes desta fila.
+  // Quem chega até aqui já tem o sino ligado.
 }
 
 // Notificação diária de engajamento: aparece 1x/dia, só na home, e SÓ se o membro
@@ -1114,41 +1124,41 @@ function notifStatus() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return 'nao-suportado';
   return Notification.permission; // 'default' | 'granted' | 'denied'
 }
-async function ativarNotificacoes(btn) {
+// O userId vem de fora porque a parede do portão sobe DURANTE o boot, quando o `ctx` da
+// tela ainda não existe. Sem ele, ativar pela parede quebrava em `ctx.user.id`.
+async function ativarNotificacoes(btn, userId) {
+  const uid = userId || (typeof ctx !== 'undefined' && ctx && ctx.user ? ctx.user.id : null);
   try {
-    if (notifStatus() === 'nao-suportado') { toast('Seu navegador não suporta notificações.', 'error'); return; }
+    if (!uid) { toast('Sessão não reconhecida. Saia e entre novamente.', 'error'); return false; }
+    if (notifStatus() === 'nao-suportado') { toast('Seu navegador não suporta notificações.', 'error'); return false; }
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
     if (isIOS && navigator.standalone !== true) {
       uiAlert('Para receber notificações no iPhone: toque em Compartilhar → "Adicionar à Tela de Início" e abra o app por lá. Depois volte aqui e ative.');
-      return;
+      return false;
     }
     const perm = await Notification.requestPermission();
-    if (perm !== 'granted') { toast('Permissão negada. Ative nas configurações do navegador.', 'error'); return; }
+    if (perm !== 'granted') { toast('Permissão negada. Ative nas configurações do aparelho.', 'error'); return false; }
     const reg = await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription();
     if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
     const j = sub.toJSON();
     const { error } = await sb.from('acolitos_push_subs').upsert({
-      user_id: ctx.user.id, endpoint: sub.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, user_agent: navigator.userAgent,
+      user_id: uid, endpoint: sub.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, user_agent: navigator.userAgent,
     }, { onConflict: 'endpoint' });
-    if (error) { toast('Erro ao salvar a inscrição.', 'error'); return; }
+    if (error) { toast('Erro ao salvar a inscrição.', 'error'); return false; }
     if (typeof desbloquearSomNotif === 'function') desbloquearSomNotif(); // gesto do usuário → libera o áudio (iOS)
     toast('Notificações ativadas! 🔔', 'success');
     if (btn) pintarBotaoNotif(btn, true);
-  } catch (e) { toast('Não foi possível ativar as notificações.', 'error'); }
+    return true;
+  } catch (e) { toast('Não foi possível ativar as notificações.', 'error'); return false; }
 }
-async function desativarNotificacoes(btn) {
-  try {
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    if (sub) { await sb.from('acolitos_push_subs').delete().eq('endpoint', sub.endpoint); await sub.unsubscribe(); }
-    toast('Notificações desativadas.');
-    if (btn) pintarBotaoNotif(btn, false);
-  } catch (e) { toast('Erro ao desativar.', 'error'); }
-}
+// Não existe mais DESLIGAR pela tela: as notificações são obrigatórias (portaoNotificacoes).
+// Desligar aqui só levava a pessoa a bater na parede na tela seguinte, sem entender por quê.
+// Quem quiser mesmo desligar tem de fazer isso nos Ajustes do aparelho — e aí não entra.
 function pintarBotaoNotif(btn, ativo) {
   btn.textContent = ativo ? '🔔 Notificações ativadas ✓' : '🔔 Ativar notificações';
-  btn.onclick = () => (ativo ? desativarNotificacoes(btn) : ativarNotificacoes(btn));
+  btn.disabled = !!ativo;
+  btn.onclick = ativo ? null : (() => ativarNotificacoes(btn));
 }
 async function renderBotaoNotificacoes(container) {
   if (!container) return;
@@ -1225,33 +1235,181 @@ async function avisarTodos() {
   };
 }
 
-// Pede pra ativar notificações ao abrir a home, enquanto o membro não estiver inscrito (aparece a cada abertura até ativar)
-async function _checkPedirNotificacoes(membro) {
-  try {
-    if (!membro || typeof window.showLevelUp !== 'function') return;      // só na home
-    if (membro._crmEtapa === 'aprovacao_cadastro') return;                // aguardando aprovação: não incomoda
-    if (notifStatus() === 'nao-suportado' || Notification.permission === 'denied') return;
-    let ativo = false;
-    try { const reg = await navigator.serviceWorker.ready; ativo = !!(await reg.pushManager.getSubscription()); } catch (_) {}
-    if (ativo) return;                                                    // já inscrito → não pede
-    enqueueNotif(20, (done) => showPedirNotificacoesPrompt(done));
-    _notifStart();
-  } catch (e) {}
+// ── PORTÃO DE NOTIFICAÇÕES ───────────────────────────────────────────────────
+// Antes era um pop-up insistente, só na home, que desistia de quem tinha negado. Em um mês
+// isso rendeu UM aparelho inscrito, de 47 contas. Agora é portão: roda no initModulo, vale
+// nas 19 telas, e sem o sino ligado a pessoa não usa o app.
+//
+// A regra de QUEM entra está em portao-notificacoes-core.js (testada). Aqui a gente só
+// junta os fatos do aparelho e desenha a parede.
+
+// Espera o service worker com hora marcada. Sem isto, aparelho sem service worker registrado
+// deixa a promessa `ready` pendurada PARA SEMPRE e o app morre no splash — trocar um pop-up
+// por uma tela que nunca abre seria um estrago maior que o problema.
+function _swPronto(ms) {
+  if (!('serviceWorker' in navigator)) return Promise.resolve(null);
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise((r) => setTimeout(() => r(null), ms || 5000)),
+  ]).catch(() => null);
 }
 
-// Pop-up pedindo autorização de notificações
-function showPedirNotificacoesPrompt(done) {
-  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '505';
-  const modal = document.createElement('div'); modal.className = 'modal';
-  const handle = document.createElement('div'); handle.className = 'modal-handle';
-  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Ative as notificações 🔔';
-  const p = document.createElement('p'); p.style.cssText = 'font-size:14px;line-height:1.6;color:var(--text);margin:4px 0 14px;';
-  p.textContent = 'Receba no seu celular quando você for escalado, quando sua ausência for respondida, convites de troca e avisos da coordenação. Você pode desativar quando quiser.';
-  modal.append(handle, tt, p);
-  const btn = document.createElement('button'); btn.className = 'btn gold'; btn.style.width = '100%'; btn.textContent = '🔔 Ativar agora';
-  btn.onclick = async () => { btn.disabled = true; btn.textContent = 'Ativando...'; try { await ativarNotificacoes(); } catch (_) {} ov.remove(); done && done(); };
-  modal.append(btn); // sem "Agora não" — insiste a cada abertura da home até ativar
-  ov.appendChild(modal); document.body.appendChild(ov);
+async function _fatosNotificacao(userId) {
+  const fatos = { suporte: 'ok', permissao: 'default', iosSemInstalar: false, inscrito: false };
+  fatos.iosSemInstalar = /iphone|ipad|ipod/i.test(navigator.userAgent) && navigator.standalone !== true;
+  if (notifStatus() === 'nao-suportado') { fatos.suporte = 'nao-suportado'; return fatos; }
+  fatos.permissao = Notification.permission;
+  if (fatos.permissao !== 'granted') return fatos;
+
+  const reg = await _swPronto();
+  let sub = null;
+  try { sub = reg ? await reg.pushManager.getSubscription() : null; } catch (_) {}
+  if (!sub) return fatos;
+
+  // Assinatura existe no aparelho. Falta saber se ela está GRAVADA — sem a linha no banco o
+  // envio não acha o aparelho, e a pessoa acha que está recebendo sem receber nada.
+  try {
+    const { data } = await sb.from('acolitos_push_subs').select('id').eq('endpoint', sub.endpoint).maybeSingle();
+    if (data) { fatos.inscrito = true; return fatos; }
+    // Sumiu a linha (desativou antes, faxina, troca de conta): grava de novo, calado. Isto
+    // não custa nada à pessoa e evita parede por um problema que é nosso, não dela.
+    const j = sub.toJSON();
+    const { error } = await sb.from('acolitos_push_subs').upsert({
+      user_id: userId, endpoint: sub.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, user_agent: navigator.userAgent,
+    }, { onConflict: 'endpoint' });
+    fatos.inscrito = !error;
+  } catch (_) {}
+  return fatos;
+}
+
+async function portaoNotificacoes(userId, membro) {
+  // Se o core não carregou nesta tela, o portão SE ABRE. É de propósito: um <script>
+  // esquecido não pode trancar 47 pessoas fora do app. Fica o aviso no console.
+  if (typeof decidirPortaoNotificacoes !== 'function') {
+    console.warn('portao-notificacoes-core.js não carregou nesta tela — portão liberado.');
+    return { entra: true, parede: null };
+  }
+  try {
+    const fatos = await _fatosNotificacao(userId);
+    fatos.etapaCrm = membro ? membro._crmEtapa : null;
+    return decidirPortaoNotificacoes(fatos);
+  } catch (e) {
+    console.warn('portão de notificações falhou; liberado', e);
+    return { entra: true, parede: null };   // falha nossa não tranca ninguém
+  }
+}
+
+// O que cada parede diz. Texto diferente por beco, porque cada beco tem uma saída só —
+// mandar a pessoa pela saída errada faz ela tentar, não resolver e desistir.
+const _PAREDES = {
+  pedir: {
+    titulo: 'Ative as notificações',
+    texto: 'Para usar o app é preciso ligar o sino. É assim que você fica sabendo quando for escalado, quando sua ausência for respondida, quando alguém pedir troca com você e quando a coordenação avisar algo.',
+    passos: null,
+    botao: '🔔 Ativar agora',
+  },
+  negado: {
+    titulo: 'As notificações estão bloqueadas',
+    texto: 'Você tocou em "Não Permitir" quando o aparelho perguntou. Ele não vai perguntar de novo sozinho — o caminho agora é religar nos Ajustes:',
+    passos: [
+      'Abra os Ajustes do aparelho',
+      'Vá em Notificações',
+      'Procure "Acólitos" na lista e toque',
+      'Ligue "Permitir Notificações"',
+      'Volte aqui e toque em "Já ativei"',
+    ],
+    rodape: 'Se "Acólitos" não aparecer na lista dos Ajustes: apague o ícone do app da Tela de Início e instale de novo pelo navegador. Aí ele pergunta outra vez.',
+    botao: 'Já ativei',
+  },
+  'instalar-ios': {
+    titulo: 'Instale o app na Tela de Início',
+    texto: 'No iPhone, notificação só funciona com o app instalado — pelo navegador não dá, é regra da Apple. São três toques:',
+    passos: [
+      'Toque no botão Compartilhar (o quadradinho com a seta pra cima)',
+      'Desça e toque em "Adicionar à Tela de Início"',
+      'Abra o app pelo ícone novo e ative o sino',
+    ],
+    botao: 'Já instalei',
+  },
+  'sem-suporte': {
+    titulo: 'Abra pelo celular',
+    texto: 'Este navegador não sabe receber notificações, e elas são obrigatórias para usar o app. Abra pelo celular — no iPhone, instale na Tela de Início; no Android, pelo Chrome.',
+    passos: null,
+    botao: 'Tentar de novo',
+  },
+};
+
+// A parede. Tela cheia, sem X, sem fechar clicando fora, sem "agora não". O conteúdo do app
+// até carrega atrás, mas o initModulo devolve nada e as 19 telas param no `if (!ctx) return`.
+function mostrarParedeNotificacoes(qual, userId) {
+  if (document.getElementById('parede-notif')) return;
+  const cfg = _PAREDES[qual] || _PAREDES.pedir;
+
+  const tela = document.createElement('div');
+  tela.id = 'parede-notif';
+  tela.style.cssText = 'position:fixed;inset:0;z-index:9000;background:var(--bg,#0a0406);overflow-y:auto;' +
+    'display:flex;align-items:center;justify-content:center;padding:24px 18px;';
+
+  const cartao = document.createElement('div');
+  cartao.style.cssText = 'width:100%;max-width:420px;text-align:center;';
+
+  const sino = document.createElement('div');
+  sino.style.cssText = 'font-size:46px;line-height:1;margin-bottom:14px;';
+  sino.textContent = '🔔';
+
+  const tt = document.createElement('div');
+  tt.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:21px;color:var(--gold-light,#ffd97a);margin-bottom:10px;';
+  tt.textContent = cfg.titulo;
+
+  const p = document.createElement('p');
+  p.style.cssText = 'font-size:14.5px;line-height:1.65;color:var(--text,#fff);margin:0 0 16px;';
+  p.textContent = cfg.texto;
+
+  cartao.append(sino, tt, p);
+
+  if (cfg.passos) {
+    const ol = document.createElement('ol');
+    ol.style.cssText = 'text-align:left;margin:0 0 16px;padding-left:22px;font-size:14px;line-height:1.9;color:var(--text,#fff);';
+    cfg.passos.forEach((t) => { const li = document.createElement('li'); li.textContent = t; ol.appendChild(li); });
+    cartao.appendChild(ol);
+  }
+
+  const btn = document.createElement('button');
+  btn.className = 'btn gold'; btn.style.cssText = 'width:100%;margin-bottom:10px;';
+  btn.textContent = cfg.botao;
+  btn.onclick = async () => {
+    const antes = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Um instante...';
+    try {
+      // "Pedir" é o único caso em que o aparelho ainda pergunta. Nos outros a pessoa foi
+      // resolver por fora, então aqui a gente só reconfere os fatos.
+      if (qual === 'pedir') await ativarNotificacoes(null, userId);
+      const r = await portaoNotificacoes(userId, { _crmEtapa: null });
+      if (r.entra) { location.reload(); return; }   // recarrega: a tela precisa nascer inteira
+      btn.disabled = false; btn.textContent = antes;
+      if (r.parede !== qual) { tela.remove(); mostrarParedeNotificacoes(r.parede, userId); return; }
+      toast('Ainda não está ativado.', 'error');
+    } catch (_) { btn.disabled = false; btn.textContent = antes; }
+  };
+  cartao.appendChild(btn);
+
+  if (cfg.rodape) {
+    const rod = document.createElement('p');
+    rod.style.cssText = 'font-size:12.5px;line-height:1.6;color:var(--text-muted,#b88a8f);margin:6px 0 0;';
+    rod.textContent = cfg.rodape;
+    cartao.appendChild(rod);
+  }
+
+  // Saída pela porta, não pela janela: quem não quer ativar sai da conta em vez de ficar
+  // preso numa tela sem nenhum botão. Não é escapatória — sair não dá acesso a nada.
+  const sair = document.createElement('button');
+  sair.className = 'btn-sm gray'; sair.style.cssText = 'width:100%;margin-top:14px;';
+  sair.textContent = 'Sair da conta';
+  sair.onclick = async () => { try { await sb.auth.signOut(); } catch (_) {} location.href = 'login.html'; };
+  cartao.appendChild(sair);
+
+  tela.appendChild(cartao);
+  (document.body || document.documentElement).appendChild(tela);
 }
 
 async function meUpdate(action, payload, btn, msgEl) {

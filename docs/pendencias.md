@@ -1,13 +1,25 @@
 # Acólitos — o que está pendente
 
-Atualizado em 18/08/2026. Esta é A LISTA: abrir aqui antes de decidir o que fazer.
+Atualizado em 19/08/2026. Esta é A LISTA: abrir aqui antes de decidir o que fazer.
 Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi commitado.
 
 ---
 
 ## 1. Pendente
 
-**Nada.** A lista está vazia em 18/08/2026.
+**Provar o portão de notificações no app de verdade** (feito em 19/08/2026, ainda **não**
+deployado). O portão obriga a ligar o sino para usar o app — mas ele mora dentro do
+`initModulo`, e o verificador de telas troca o `initModulo` por um falso. Ou seja: a parede
+e a regra estão provadas; **que o boot chama o portão antes de liberar a tela, não**. Isso
+só se vê no ar, com conta de verdade. Antes de mandar para as 47 pessoas, abrir com uma
+conta real e conferir três coisas: (1) sem o sino, a parede aparece e a tela não carrega
+atrás; (2) ativando, o app recarrega e entra; (3) quem já tem o sino ligado **não** vê
+parede nenhuma — um falso positivo aqui tranca todo mundo de uma vez.
+
+**O que esperar quando subir:** hoje só **1 aparelho** dos 47 com conta está inscrito. Os
+outros 46 vão bater na parede na primeira abertura. Quem tocar em "Não Permitir" na caixinha
+do sistema não entra mais até religar nos Ajustes — a parede ensina o caminho, mas vai gerar
+ligação para a coordenação. É consequência conhecida e aceita, não surpresa.
 
 O dono dispensou dois itens que estavam aqui: a **conta do Vercel** (o CLI e o acesso automático
 seguem presos em outra conta — quando a Vercel não dispara o build sozinha, o jeito é um commit
@@ -35,6 +47,33 @@ barrado só na **Matriz**, pelo Kit processional. O dono decidiu que **quando el
 liberar** — mas isso **não acontece sozinho** com a `data_nascimento` em branco, porque a regra
 recusa por não saber a idade, não por compará-la. Preencher a data faz o sistema liberá-lo no dia
 certo; sem ela, alguém tem de lembrar.
+
+---
+
+## Fechados em 19/08/2026
+
+**Notificações viraram obrigatórias**
+- **O pedido virou portão.** Era um pop-up insistente, só na home, que **desistia de quem
+  tinha negado**. Em um mês rendeu **1 aparelho inscrito, de 47 contas**. Agora roda no
+  `initModulo` (as 19 telas) e sem o sino ligado o app não abre.
+- **A parede não fecha:** sem X, sem clicar fora, sem ESC, sem "agora não". Tem só "Sair da
+  conta", para ninguém ficar preso numa tela sem botão — e sair não dá acesso a nada.
+- **Quatro becos, quatro receitas.** Quem ainda pode ser perguntado vê o botão; quem negou
+  vê o passo a passo dos Ajustes; **iPhone aberto no navegador** vê como instalar na Tela de
+  Início; navegador sem suporte é mandado para o celular. A ordem das perguntas é a regra:
+  no iPhone fora do app instalado o Safari responde "não suportado" **e** "negado", e as
+  duas receitas estão erradas ali — só instalar resolve.
+- **Só passa quem está inscrito no banco**, não quem só deu permissão. Se a assinatura
+  existe no aparelho mas a linha sumiu, o app **regrava calado** em vez de barrar.
+- **A única isenção** é quem aguarda aprovação do cadastro: não é membro, não é escalado,
+  não tem o que receber. Coordenação e superadmin não têm isenção.
+- **Sumiu o botão de desligar** em Minha Conta: desligar ali só levava a pessoa a bater na
+  parede na tela seguinte sem entender por quê.
+- **Se o `<script>` do portão faltar numa tela, o portão ABRE** (com aviso no console). Um
+  arquivo esquecido não pode trancar 47 pessoas fora do app.
+- **Provas:** 12 testes de regra (`portao-notificacoes-core.test.js`) + 12 provas de tela
+  que rodam o portão e a parede no navegador. O motor das provas ganhou `avaliar:` para
+  alcançar código do shared.js que a medição normal não vê.
 
 ---
 
