@@ -215,6 +215,77 @@ async function provaPortaoNotificacoes(provas) {
     'a parede que só pede o sino não fala em instalar');
 }
 
+async function provaBoasVindasAoTime(provas) {
+  console.log('\n\x1b[1mA festa de boas-vindas ao time\x1b[0m');
+
+  // O texto é testado em node (boas-vindas-core.test.js). O que só o navegador prova é o
+  // desenho: que a animação monta, que o ícone é TRAÇADO (sem a classe `ico` vira mancha
+  // preta — já aconteceu no app) e que o recado escrito aparece de verdade.
+  const r = await provas.abrir('index.html', {
+    papel: PAPEIS.membro,
+    avaliar: `
+      const saida = {};
+      saida.coreCarregou = typeof montarBoasVindas === 'function';
+
+      const aviso = { tipo:'boas_vindas_time', time:'escala', time_label:'Escala',
+                      recado:'Ana, conto com você nas escalas do mês.', seen:false };
+      showAvisoUnico(aviso, { nome:'Ana Clara' }, null);   // pela porta REAL da fila
+      await new Promise(function (s) { setTimeout(s, 120); });
+
+      const ov = document.querySelector('.celeb-overlay');
+      saida.desenhou = !!ov;
+      if (ov) {
+        saida.texto = (ov.innerText || '').toLowerCase();
+        const svg = ov.querySelector('.celeb-icon svg');
+        saida.temIcone = !!svg;
+        // Quem diz se o ícone é traçado é o fill CALCULADO, não o CSS lido a olho.
+        saida.iconeTracado = svg ? getComputedStyle(svg).fill === 'none' : false;
+        // Medir com getBoundingClientRect aqui MENTE: o ícone entra com transform:scale(0)
+        // e, no meio da animação, o retângulo dele é zero mesmo estando tudo certo. O
+        // tamanho declarado (1.15em do .ico) não sofre transform — é o critério honesto.
+        saida.iconeLargura = svg ? parseFloat(getComputedStyle(svg).width) || 0 : 0;
+        saida.iconeTemTamanho = saida.iconeLargura > 8;
+        saida.temRecado = !!ov.querySelector('.celeb-recado');
+        // O recado tem de vir ANTES dos botões: é a parte que ela precisa ler.
+        const card = ov.querySelector('.celeb-card');
+        const filhos = [].slice.call(card.children).map(function (e) { return e.className; });
+        saida.recadoAntesDosBotoes =
+          filhos.indexOf('celeb-recado') > -1 &&
+          filhos.indexOf('celeb-recado') < filhos.indexOf('celeb-actions');
+      }
+
+      // E sem recado nenhum: a caixa não pode aparecer vazia.
+      if (ov) ov.remove();
+      showAvisoUnico({ tipo:'boas_vindas_time', time:'midia', time_label:'Mídia', recado:null, seen:false },
+                     { nome:'Pedro' }, null);
+      await new Promise(function (s) { setTimeout(s, 120); });
+      const ov2 = document.querySelector('.celeb-overlay');
+      saida.semRecadoNaoTemCaixa = ov2 ? !ov2.querySelector('.celeb-recado') : false;
+      saida.textoSemRecado = ov2 ? (ov2.innerText || '').toLowerCase() : '';
+      return saida;
+    `,
+  });
+
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a festa roda sem estourar', r.erroAvaliar);
+  exigir(a.coreCarregou === true, 'boas-vindas-core.js chegou na tela',
+    'montarBoasVindas não existe — <script> faltando no HTML');
+  exigir(a.desenhou === true, 'a animação desenha');
+  exigir(/escala/.test(a.texto || ''), 'diz em que time a pessoa entrou');
+  exigir(/ana/.test(a.texto || ''), 'chama a pessoa pelo primeiro nome');
+  exigir(a.temIcone === true, 'o time tem ícone próprio (SVG, não emoji)');
+  exigir(a.iconeTracado === true, 'o ícone é TRAÇADO, não mancha preta',
+    'fill calculado não é "none" — falta a classe ico');
+  exigir(a.iconeTemTamanho === true, 'o ícone tem tamanho na tela',
+    'largura ' + (a.iconeLargura || 0) + 'px — recipiente sem medida definida');
+  exigir(a.temRecado === true, 'o recado escrito aparece');
+  exigir(/conto com você/.test(a.texto || ''), 'e aparece com o texto que foi escrito');
+  exigir(a.recadoAntesDosBotoes === true, 'o recado vem antes dos botões, não como rodapé');
+  exigir(a.semRecadoNaoTemCaixa === true, 'sem recado, não sobra caixa vazia na tela');
+  exigir((a.textoSemRecado || '').length > 40 && /mídia/.test(a.textoSemRecado || ''),
+    'sem recado, o texto padrão entra e cita o time');
+}
+
 // ── Partida ──────────────────────────────────────────────────────────────────
 const filtro = process.argv[2] || null;
 const provas = await iniciarProvas();
@@ -226,6 +297,7 @@ try {
     await provaConfigBateComABarra(provas);
     await provaModelosAceitaFuncaoPropria(provas);
     await provaPortaoNotificacoes(provas);
+    await provaBoasVindasAoTime(provas);
   }
 } finally {
   await provas.encerrar();

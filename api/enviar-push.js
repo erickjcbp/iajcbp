@@ -38,7 +38,7 @@ export default async function handler(req, res) {
   if (!VPUB || !VPRIV || !VSUB) return res.status(500).json({ error: 'VAPID não configurado' });
 
   const { tipo, texto, titulo, membros, alvo_membro_id, domingo, vazias, total } = req.body || {};
-  if (!['aviso', 'teste', 'escalado', 'ausencia', 'troca', 'arte', 'escala_pendente'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
+  if (!['aviso', 'teste', 'escalado', 'ausencia', 'troca', 'boas_vindas', 'arte', 'escala_pendente'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
 
   // O robô do cron não tem login: entra pelo segredo compartilhado, e SÓ para os tipos dele.
   const TIPOS_CRON = ['arte', 'escala_pendente', 'arte_faltando'];
@@ -81,6 +81,16 @@ export default async function handler(req, res) {
     const msg = String(texto || '').trim();
     if (!msg) return res.status(400).json({ error: 'Texto vazio' });
     title = String(titulo || '').trim() || (tipo === 'escalado' ? 'Você foi escalado ⛪' : 'Ausência respondida');
+    body = msg.slice(0, 180);
+    alvoMembros = membros;
+
+  } else if (tipo === 'boas_vindas') {
+    // Entrar num time é ato de COORDENAÇÃO, não de equipe: quem manda esta é quem inclui.
+    if (!COORD.includes(role)) return res.status(403).json({ error: 'Acesso negado' });
+    if (!Array.isArray(membros) || !membros.length) return res.status(400).json({ error: 'Sem destinatários' });
+    const msg = String(texto || '').trim();
+    if (!msg) return res.status(400).json({ error: 'Texto vazio' });
+    title = String(titulo || '').trim() || 'Bem-vindo à equipe';
     body = msg.slice(0, 180);
     alvoMembros = membros;
 
@@ -138,7 +148,9 @@ export default async function handler(req, res) {
   webpush.setVapidDetails(VSUB, VPUB, VPRIV);
   tag = tipo + '-' + Date.now() + '-' + Math.round(Math.random() * 1e6); // única → não colapsa, re-alerta
   const url = TIPOS_CRON.includes(tipo) ? URLBASE_ESCALA   // arte e escala pendente: os dois resolvem na Escala
-    : (tipo === 'aviso' || tipo === 'teste') ? '/projetos/acolitos/index.html'
+    // boas-vindas cai na HOME: é lá que a festa do time acontece. Sem esta linha ela iria
+    // parar nas escalas do membro, que não têm nada a ver com o assunto.
+    : (tipo === 'aviso' || tipo === 'teste' || tipo === 'boas_vindas') ? '/projetos/acolitos/index.html'
     : URLBASE_MEMBRO;
   const payload = JSON.stringify({ title, body, url, tag, renotify: true });
 

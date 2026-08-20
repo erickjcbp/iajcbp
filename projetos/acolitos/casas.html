@@ -41,6 +41,7 @@
 
 <script src="navegacao-core.js"></script>
 <script src="portao-notificacoes-core.js"></script>
+<script src="boas-vindas-core.js"></script>
 <script src="times-core.js"></script>
 <script src="shared.js"></script>
 <script>
@@ -176,6 +177,10 @@ async function removerSetor(m, slug) {
 }
 
 async function addMembroSetor(m, slug) {
+  // Mesma boas-vinda do Config › Times: são duas portas para o mesmo lugar, e a festa mora
+  // no shared.js justamente para não existir em duas versões.
+  const recado = await pedirRecadoDeBoasVindas(m.nome || m.apelido || '', SETOR_LABEL[slug] || slug);
+  if (recado === null) return;
   const r = entrarNoTime(m, slug, roleMap[m.user_id]);
   const { error } = await sbAdmin.from('acolitos_membros').update(r.patch).eq('id', m.id);
   if (error) { toast('Erro.', 'error'); return; }
@@ -183,6 +188,7 @@ async function addMembroSetor(m, slug) {
   if (r.promoverPara) {
     try { await apiPost('/api/acolito-admin', { action: 'sync_role', user_id: m.user_id, role: r.promoverPara }); roleMap[m.user_id] = r.promoverPara; } catch (e) {}
   }
+  await boasVindasAoTime({ membro: m, slug: slug, recado: recado, cliente: sbAdmin });
   toast('✓ Adicionado ao time.'); render();
 }
 

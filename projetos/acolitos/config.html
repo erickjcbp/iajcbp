@@ -62,6 +62,7 @@
 
 <script src="navegacao-core.js"></script>
 <script src="portao-notificacoes-core.js"></script>
+<script src="boas-vindas-core.js"></script>
 <script src="times-core.js"></script>
 <script src="kits-core.js"></script>
 <script src="gerador-substituto.js"></script>
@@ -1279,12 +1280,17 @@ function abrirEscolherPessoaTime(membros, time, roleMap, aoTerminar) {
       sub.textContent = (m.setores || []).length ? 'já em outro time' : (m.eh_equipe ? 'equipe' : 'não é equipe ainda');
       r.append(n, sub);
       r.onclick = async () => {
+        // O recado é pedido ANTES de incluir: quem desiste no modal não pode acabar com a
+        // pessoa dentro do time do mesmo jeito.
+        const recado = await pedirRecadoDeBoasVindas(m.nome || m.apelido || '', time.label || time.valor);
+        if (recado === null) return;
         const res = entrarNoTime(m, time.valor, roleMap[m.user_id]);
         const { error } = await sb.from('acolitos_membros').update(res.patch).eq('id', m.id);
         if (error) { console.error('Times: adicionar falhou', error); toast('Não foi possível adicionar.','error'); return; }
         if (res.promoverPara) {
           try { await apiPost('/api/acolito-admin', { action:'sync_role', user_id:m.user_id, role:res.promoverPara }); } catch (e) {}
         }
+        await boasVindasAoTime({ membro: m, slug: time.valor, recado: recado, cliente: sb });
         ov.remove(); toast('✓ Adicionado ao time.'); aoTerminar();
       };
       list.appendChild(r);

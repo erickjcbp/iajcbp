@@ -412,7 +412,12 @@ function queueNotificacoes(membro) {
     sb.from('acolitos_membros').update({ avisos: atualizados }).eq('id', membro.id).then(() => {}, () => {});
     const b = document.getElementById('sino-badge'); if (b) b.style.display = 'none';
     const _celebTipos = { xp_ganho: 1, medalha: 1, campeao: 1, estrela_nova: 1, quest_exclusiva: 1 };
-    naoVistos.forEach(a => enqueueNotif(a && a.logout ? -10 : (a && _celebTipos[a.tipo] ? 10 : 0), (done) => showAvisoUnico(a, membro, done)));
+    // A boas-vinda ao time vem à FRENTE das outras celebrações: entrar na equipe é a
+    // notícia daquela abertura, e ela é que explica por que as tarefas do time apareceram.
+    const _prio = (a) => (a && a.logout) ? -10
+      : (a && a.tipo === 'boas_vindas_time') ? 30
+      : (a && _celebTipos[a.tipo]) ? 10 : 0;
+    naoVistos.forEach(a => enqueueNotif(_prio(a), (done) => showAvisoUnico(a, membro, done)));
   }
   _notifStart();
   // 4) Lembrete diário de XP (assíncrono; só se ainda não pontuou hoje)
@@ -542,6 +547,152 @@ function showQuestExclusivaPop(aviso, done) {
       { label: 'Depois' }
     ]
   });
+}
+
+// ── BOAS-VINDAS AO TIME ──────────────────────────────────────────────────────
+// A festa que a pessoa vê UMA vez, na primeira abertura depois de entrar num time.
+// Reusa o motor de celebração; o que muda é o ícone (o traçado do time, não emoji) e a
+// caixa do recado que a coordenação escreveu para ela.
+function _boasVindasEstilo() {
+  if (document.getElementById('bv-style')) return;
+  const st = document.createElement('style'); st.id = 'bv-style';
+  // Estilo próprio em vez de mexer no _celebInject: o motor é usado por estrela, medalha e
+  // campeão, e um acréscimo lá mudaria as três de tabela.
+  st.textContent = `
+  .celeb-recado{position:relative;z-index:2;margin-top:13px;padding:11px 13px;text-align:left;
+    background:rgba(255,255,255,.05);border:1px solid var(--border-wine);
+    border-left:3px solid var(--cg2);border-radius:7px;font-size:13px;line-height:1.6;
+    color:var(--text);animation:xpgUp .5s ease .62s both}
+  .celeb-recado span{display:block;font-family:'Oxanium',sans-serif;font-size:9.5px;
+    font-weight:800;letter-spacing:2px;color:var(--cg2);margin-bottom:5px;text-transform:uppercase}
+  .celeb-icon.bv{color:var(--cg2)}`;
+  document.head.appendChild(st);
+}
+
+function showBoasVindasTime(aviso, done) {
+  const dados = (typeof montarBoasVindas === 'function') ? montarBoasVindas({
+    nome: (typeof ctx !== 'undefined' && ctx && ctx.membro) ? (ctx.membro.nome || '') : '',
+    slug: aviso.time, label: aviso.time_label, recado: aviso.recado,
+  }) : null;
+  // Sem a regra carregada não dá para montar o texto — mostra o aviso simples em vez de
+  // engolir a boas-vinda em silêncio.
+  if (!dados) { if (typeof done === 'function') done(); return; }
+
+  _boasVindasEstilo();
+  const c = showCeleb({
+    icon: '', tag: 'BEM-VINDO À EQUIPE', hero: dados.hero, sub: dados.sub,
+    sound: 'level', done: done,
+    actions: [
+      { label: 'Ver as tarefas do time', primary: true, onClick: (close) => {
+          close();
+          if (!location.pathname.endsWith('tarefas.html')) location.href = 'tarefas.html';
+        } },
+      { label: 'Agora não' },
+    ],
+  });
+
+  // O ícone do time, por cima do lugar do emoji. `class="ico"` é o que faz o desenho ser
+  // traçado — sem ela vira mancha preta.
+  const ic = c.ov.querySelector('.celeb-icon');
+  if (ic && typeof _svgIcon === 'function') {
+    ic.classList.add('bv');
+    // seguro: _svgIcon só devolve traçados do próprio dicionário — nome que não existe lá
+    // vira caminho vazio, nunca HTML vindo do banco.
+    ic.innerHTML = _svgIcon('time-' + aviso.time);
+  }
+
+  // O recado entra ANTES dos botões: é a parte que a pessoa tem de ler, não um rodapé.
+  if (dados.aviso.recado) {
+    const box = document.createElement('div'); box.className = 'celeb-recado';
+    const et = document.createElement('span'); et.textContent = 'Recado da coordenação';
+    const tx = document.createElement('div'); tx.textContent = dados.aviso.recado;
+    box.append(et, tx);
+    const acts = c.card.querySelector('.celeb-actions');
+    c.card.insertBefore(box, acts);
+  }
+}
+
+// O lado de quem inclui: pergunta o recado antes de adicionar a pessoa ao time.
+// → Promise<null> se desistiu, ou Promise<string> ('' = incluir sem recado).
+// Vive no shared.js porque são DUAS portas para o mesmo lugar (Config › Times e o
+// organograma das Casas) — duas cópias divergiriam no primeiro conserto.
+function pedirRecadoDeBoasVindas(nome, timeLabel) {
+  return new Promise((resolve) => {
+    let respondido = false;
+    const responder = (v) => { if (respondido) return; respondido = true; ov.remove(); resolve(v); };
+
+    const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '520';
+    ov.onclick = (e) => { if (e.target === ov) responder(null); };
+    const modal = document.createElement('div'); modal.className = 'modal'; modal.style.maxWidth = '420px';
+    const handle = document.createElement('div'); handle.className = 'modal-handle';
+    const tt = document.createElement('div'); tt.className = 'modal-title';
+    tt.textContent = 'Boas-vindas a ' + (nome || 'esta pessoa');
+    const p = document.createElement('p');
+    p.style.cssText = 'font-size:13px;line-height:1.6;color:var(--text-muted);margin:-6px 0 12px;';
+    p.textContent = 'Escreva um recado só para ' + (String(nome || '').trim().split(' ')[0] || 'ela') +
+      '. Ela recebe no celular e vê ao abrir o app, junto do time ' + (timeLabel || '') + '.';
+
+    const ta = document.createElement('textarea');
+    ta.className = 'form-input'; ta.rows = 4;
+    ta.placeholder = 'Ex.: te chamei pra esse time porque você tem jeito com gente nova. Conto com você!';
+    ta.style.cssText = 'width:100%;resize:vertical;line-height:1.55;';
+
+    const bOk = document.createElement('button');
+    bOk.className = 'btn gold'; bOk.style.cssText = 'width:100%;margin-top:12px;';
+    bOk.textContent = 'Incluir e avisar';
+    bOk.onclick = () => responder(ta.value || '');
+
+    const bSem = document.createElement('button');
+    bSem.className = 'btn-sm gray'; bSem.style.cssText = 'width:100%;margin-top:8px;';
+    bSem.textContent = 'Incluir sem recado';
+    bSem.onclick = () => responder('');
+
+    const bNao = document.createElement('button');
+    bNao.className = 'btn-sm gray'; bNao.style.cssText = 'width:100%;margin-top:8px;';
+    bNao.textContent = 'Cancelar';
+    bNao.onclick = () => responder(null);
+
+    modal.append(handle, tt, p, ta, bOk, bSem, bNao);
+    ov.appendChild(modal); document.body.appendChild(ov);
+    ta.focus();
+  });
+}
+
+// Guarda a boas-vinda para a pessoa ver e toca o celular dela. Chamada DEPOIS de a inclusão
+// no time já ter dado certo: a festa é consequência, não pode desfazer nada.
+// `cliente` é o sb que a tela usa (o organograma usa o sbAdmin) — quem chama é que sabe.
+async function boasVindasAoTime(o) {
+  o = o || {};
+  const m = o.membro;
+  if (!m || !o.slug) return;
+  const dados = (typeof montarBoasVindas === 'function') ? montarBoasVindas({
+    nome: m.nome || m.apelido || '', slug: o.slug,
+    label: (typeof SETOR_LABEL !== 'undefined' && SETOR_LABEL) ? SETOR_LABEL[o.slug] : '',
+    recado: o.recado,
+  }) : null;
+  if (!dados) return;
+
+  const cli = o.cliente || sb;
+  try {
+    // Relê os avisos ANTES de escrever. A lista da tela pode estar velha, e gravar por cima
+    // dela apagaria avisos que chegaram no meio — inclusive de outra coordenação.
+    const { data: atual } = await cli.from('acolitos_membros').select('avisos').eq('id', m.id).maybeSingle();
+    const avisos = (atual && Array.isArray(atual.avisos)) ? atual.avisos : [];
+    const { error } = await cli.from('acolitos_membros')
+      .update({ avisos: avisos.concat([dados.aviso]) }).eq('id', m.id);
+    if (error) { console.warn('Boas-vindas: não consegui guardar o recado', error); }
+    else if (m.avisos) m.avisos = avisos.concat([dados.aviso]);
+  } catch (e) { console.warn('Boas-vindas: não consegui guardar o recado', e); }
+
+  // Sem login não há para onde mandar o toque. O recado fica guardado e aparece quando ela
+  // criar a conta — melhor isso do que a boas-vinda se perder.
+  if (!m.user_id) return;
+  try {
+    await apiPost('/api/enviar-push', {
+      tipo: 'boas_vindas', membros: [m.id],
+      titulo: dados.push.titulo, texto: dados.push.texto,
+    });
+  } catch (e) { console.warn('Boas-vindas: o toque no celular não saiu', e); }
 }
 
 // ── ÁUDIO (arquivos WAV) — toca SOMENTE nas notificações animadas (estrela/level up).
@@ -755,6 +906,7 @@ function showAvisoUnico(aviso, membro, done) {
   if (aviso && aviso.tipo === 'xp_ganho') { showXpGain(Number(aviso.gain) || 0, Number(aviso.from_xp) || 0, aviso.titulo || '', done); return; }
   if (aviso && aviso.tipo === 'medalha') { showMedalha(aviso.label || '', done); return; }
   if (aviso && aviso.tipo === 'campeao') { showCampeao(aviso.liga, aviso.temporada, done); return; }
+  if (aviso && aviso.tipo === 'boas_vindas_time') { showBoasVindasTime(aviso, done); return; }
   if (aviso && aviso.tipo === 'levelup_demo') { if (typeof window.showLevelUp === 'function') window.showLevelUp(aviso.nivel, aviso.nome || '', done); else if (typeof done === 'function') done(); return; }
   const precisaLogout = !!(aviso && aviso.logout);
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '500';
@@ -1818,6 +1970,19 @@ function _svgIcon(name) {
     lista:          'M8 6h13 M8 12h13 M8 18h13 M3 6h.01 M3 12h.01 M3 18h.01',
     'seta-esq':     'M19 12H5 M12 19l-7-7 7-7',
     'seta-dir':     'M5 12h14 M12 5l7 7-7 7',
+    // ── Um traçado para cada TIME (SETORES) — usados na festa de boas-vindas à equipe.
+    // Emoji não serve: é convenção do app que todo elemento visual tem ícone próprio.
+    'time-coordenacao':       'M12 2l8 3v6c0 5-3.5 8.6-8 11-4.5-2.4-8-6-8-11V5z M9 12l2 2 4-4',
+    'time-vice_coordenacao':  'M12 2l8 3v6c0 5-3.5 8.6-8 11-4.5-2.4-8-6-8-11V5z M12 8v8',
+    'time-secretaria':        'M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1z M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2 M8 11h8 M8 15h5',
+    'time-tesouraria_compras':'M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
+    'time-ordem_disciplina':  'M12 3v18 M5 8h14 M7 8l-3 6a4 4 0 0 0 6 0z M17 8l-3 6a4 4 0 0 0 6 0z M9 21h6',
+    'time-eventos_viagens':   'M8 2v4 M16 2v4 M3 10h18 M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z M12 14l1.5 3 3 .5-2.2 2.1.5 3-2.8-1.5-2.8 1.5.5-3L7.5 17.5l3-.5z',
+    'time-escala':            'M16 3h5v5 M4 20L21 3 M21 16v5h-5 M15 15l6 6 M4 4l5 5',
+    'time-formacao':          'M3 5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v15a2 2 0 0 0-2-2H3z M21 5a2 2 0 0 0-2-2h-5a2 2 0 0 0-2 2v15a2 2 0 0 1 2-2h7z',
+    'time-espiritualidade':   'M12 3v18 M7 8h10 M12 21c-3 0-5-1.5-5-1.5 M12 21c3 0 5-1.5 5-1.5',
+    'time-almoxarifado':      'M22 12h-6l-2 3h-4l-2-3H2 M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z',
+    'time-midia':             'M23 7l-7 5 7 5V7z M14 5H3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z',
   };
   // A classe `ico` é o que faz o desenho ser TRAÇADO. Sem ela o SVG cai no padrão do navegador,
   // que é preencher — e o ícone vira uma mancha preta. Isso acontecia em todo lugar menos na
