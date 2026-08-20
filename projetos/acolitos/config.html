@@ -85,7 +85,10 @@ function noCelular(){ try { return window.matchMedia('(max-width: 560px)').match
 // Agora cada coisa mora no módulo a que serve, e a seção "Listas" deixou de existir.
 const GRUPOS = [
   ['A paróquia',         [['identidade','Identidade'], ['comunidades','Comunidades & horários']]],
-  ['As pessoas',         [['equipe','Equipe & Permissões'], ['times','Times'], ['admins','Admins & superadmin'], ['logins','Logins (usuário/senha)'], ['cadastro','Campos do cadastro']]],
+  // "Equipe & Permissões" e "Times" eram DUAS seções que se pisavam: pôr alguém num time
+  // dava para fazer nas duas (e ainda no organograma das Casas). Viraram uma só, com duas
+  // abas — mesma mecânica da seção Escala, que já tem três.
+  ['As pessoas',         [['pessoas','Pessoas & Times'], ['admins','Admins & superadmin'], ['logins','Logins (usuário/senha)'], ['cadastro','Campos do cadastro']]],
   ['Os módulos',         [['escala','Escala'], ['agenda','Agenda'], ['tesouraria','Tesouraria'], ['ausencias','Ausências'], ['jornada','Jornada'], ['crm','CRM']]],
   ['Como o app funciona',[['navegacao','Navegação'], ['gerador','Regras do gerador'], ['missoes','Missões & XP']]],
 ];
@@ -101,8 +104,8 @@ const GRUPOS = [
 const CONTEUDO = {
   identidade:  [{ nome:'Identidade',           fn:renderIdentidade }],
   comunidades: [{ nome:'Comunidades',          fn:renderComunidades }],
-  equipe:      [{ nome:'Equipe & Permissões',  fn:renderEquipe }],
-  times:       [{ nome:'Times',                fn:renderTimes }],
+  pessoas:     [{ nome:'Pessoas',              fn:renderEquipe },
+                { nome:'Times',                fn:renderTimes }],
   admins:      [{ nome:'Admins & superadmin',  fn:renderAdmins }],
   logins:      [{ nome:'Logins',               fn:renderLogins }],
   cadastro:    [{ nome:'Campos do cadastro',   fn:renderCadastro }],
@@ -768,6 +771,11 @@ async function renderEquipe(b){
     mod ? sb.from('pastoral_members').select('user_id,role').eq('module_id',mod.id) : Promise.resolve({data:[]}),
   ]);
   const roleMap={}; (pms||[]).forEach(p=>{ roleMap[p.user_id]=p.role; });
+  // Os times vêm do BANCO, não da lista fixa do shared.js. A ficha usava `SETORES` cravado no
+  // código: hoje os onze batem por coincidência, mas um time criado na aba do lado não
+  // apareceria aqui — e ninguém entenderia por quê.
+  const { data: _lst } = await sb.from('acolitos_listas').select('valor,label').eq('tipo','setor').order('label');
+  const timesDoBanco = _lst || [];
   const inp=document.createElement('input'); inp.className='form-input'; inp.placeholder='buscar membro…'; inp.style.marginBottom='8px'; b.appendChild(inp);
   const list=document.createElement('div'); b.appendChild(list);
   const setorLabel = s => (typeof SETOR_LABEL!=='undefined' && SETOR_LABEL[s]) || s;
@@ -784,63 +792,99 @@ async function renderEquipe(b){
       const setoresTxt=(m.setores||[]).map(setorLabel).join(', ');
       const sub=document.createElement('div'); sub.style.cssText='font-size:11px;color:var(--text-muted);'; sub.textContent=roleTxt+(setoresTxt?(' · '+setoresTxt):'')+(m.eh_equipe?(' · '+((m.permissoes||[]).length)+' módulos'):'');
       info.append(nm,sub);
-      const btEq=document.createElement('button'); btEq.className='btn-sm'; btEq.style.minWidth='62px'; btEq.textContent='Equipe'; btEq.onclick=()=>abrirEditorEquipeMembro(m, roleMap[m.user_id], desenha);
-      const btPe=document.createElement('button'); btPe.className='btn-sm'; btPe.style.minWidth='84px'; btPe.textContent='Permissões'; btPe.onclick=()=>abrirPermissoesMembro(m, desenha);
-      row.style.cursor=''; row.append(info, btEq, btPe); list.appendChild(row);
+      // UM botão, não dois. "Equipe" e "Permissões" abriam fichas separadas da MESMA pessoa,
+      // e era preciso adivinhar em qual delas morava cada coisa.
+      const btEd=document.createElement('button'); btEd.className='btn-sm'; btEd.style.minWidth='72px'; btEd.textContent='Editar';
+      btEd.onclick=()=>abrirFichaPessoa(m, roleMap[m.user_id], timesDoBanco, desenha);
+      row.style.cursor=''; row.append(info, btEd); list.appendChild(row);
     });
   };
   inp.oninput=desenha; desenha();
-  // Ponteiro para onde os times moram agora. Ele já apontou para "Listas › Times da pastoral",
-  // que deixou de existir — ponteiro errado é pior que ponteiro nenhum, porque manda a pessoa
-  // procurar num lugar vazio.
-  const hr=document.createElement('div'); hr.style.cssText='border-top:1px solid var(--border-wine);margin:20px 0 10px;'; b.appendChild(hr);
-  const dicaSet=document.createElement('p'); dicaSet.style.cssText='font-size:12px;color:var(--text-muted);margin:0;';
-  dicaSet.textContent='Criar e renomear times, e pôr gente neles, é aqui do lado: As pessoas › Times.'; b.appendChild(dicaSet);
+  // O ponteiro "os times ficam aqui do lado" saiu: agora ficam MESMO aqui do lado, na aba
+  // Times desta seção. Ponteiro que aponta para o próprio lugar é ruído.
 }
 // CRUD da lista de setores (acolitos_listas tipo='setor') + a responsabilidade fixa
 // de cada um (o que o time É, ano após ano — mora em acolitos_config, chave
 // 'responsabilidades', formato { slug: texto }; não é tarefa, por isso não vive em
 // acolitos_tarefas). Aparece na tela Tarefas, no topo do grupo de cada time.
 // [Equipe] — é equipe? participa de escalas? setores
-function abrirEditorEquipeMembro(m, role, onSaved){
+// Ficha única da pessoa: papel na equipe, escalas, TIMES e permissões, tudo num lugar.
+// Antes eram dois modais ("Equipe" e "Permissões") sobre a mesma pessoa, e era preciso
+// adivinhar em qual deles morava cada coisa.
+//
+// Os times aqui passam pela MESMA regra das outras portas (times-core.js). O editor antigo
+// gravava `setores` na mão: era um terceiro caminho, com lista fixa e sem a boas-vinda.
+function abrirFichaPessoa(m, role, times, onSaved){
   const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=(e)=>{ if(e.target===ov) ov.remove(); };
   const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='440px';
   const tt=document.createElement('div'); tt.className='modal-title'; tt.textContent=m.nome; md.appendChild(tt);
   const ehAdmin=['coord_admin','subadmin'].includes(role);
-  if(ehAdmin){ const w=document.createElement('div'); w.style.cssText='font-size:12px;color:var(--gold);margin:-6px 0 8px;'; w.textContent='É admin ('+(role==='coord_admin'?'Coord. Admin':'Subadmin')+') — o papel é gerido em "Admins & superadmin".'; md.appendChild(w); }
-  let ehEquipe=!!m.eh_equipe, serve=m.serve!==false; const setoresSel=new Set(m.setores||[]);
-  const lab=(t)=>{ const l=document.createElement('div'); l.style.cssText='font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 5px;'; l.textContent=t; md.appendChild(l); };
-  lab('Faz parte da equipe/coordenação?'); md.appendChild(_toggleSimNao(ehEquipe, v=>{ehEquipe=v;}).el);
-  lab('Participa das escalas (Minha Jornada)?'); md.appendChild(_toggleSimNao(serve, v=>{serve=v;}).el);
-  lab('Setores'); md.appendChild(_chipsMulti((typeof SETORES!=='undefined'?SETORES:[]), setoresSel));
-  const save=document.createElement('button'); save.className='btn gold'; save.style.cssText='width:100%;margin-top:16px;'; save.textContent='Salvar';
-  save.onclick=async()=>{
-    save.disabled=true; save.textContent='Salvando...';
-    const patch={ eh_equipe:ehEquipe, serve, setores:[...setoresSel] };
-    const { error } = await sb.from('acolitos_membros').update(patch).eq('id', m.id);
-    if(error){ toast('Erro ao salvar.','error'); save.disabled=false; save.textContent='Salvar'; return; }
-    if(m.user_id && !ehAdmin){ const novoRole = ehEquipe ? 'membro_equipe' : ((typeof nivelInfo==='function')?nivelInfo(m.nivel||'aspirante').base:'aspirante'); try { await apiPost('/api/acolito-admin', { action:'sync_role', user_id:m.user_id, role:novoRole }); } catch(e){} }
-    Object.assign(m, patch); toast('✓ Salvo!'); ov.remove(); if(onSaved) onSaved();
-  };
-  md.appendChild(save);
-  ov.appendChild(md); document.body.appendChild(ov);
-}
-// [Permissões] — quais módulos da Coordenação o membro acessa
-function abrirPermissoesMembro(m, onSaved){
-  const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=(e)=>{ if(e.target===ov) ov.remove(); };
-  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='440px';
-  const tt=document.createElement('div'); tt.className='modal-title'; tt.textContent='Permissões — '+m.nome; md.appendChild(tt);
-  if(!m.eh_equipe){ const w=document.createElement('div'); w.style.cssText='font-size:12px;color:var(--gold);margin:-6px 0 8px;'; w.textContent='Só vale se o membro for equipe. (admins veem todos os módulos)'; md.appendChild(w); }
+  if(ehAdmin){ const w=document.createElement('div'); w.style.cssText='font-size:12px;color:var(--gold);margin:-6px 0 8px;'; w.textContent='É admin ('+(role==='coord_admin'?'Coord. Admin':'Subadmin')+') — o papel não muda por aqui.'; md.appendChild(w); }
+
+  let ehEquipe=!!m.eh_equipe, serve=m.serve!==false;
+  const setoresAntes=(m.setores||[]).slice();
+  const setoresSel=new Set(setoresAntes);
   const permsSel=new Set(m.permissoes||[]);
-  const lab=document.createElement('div'); lab.style.cssText='font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 5px;'; lab.textContent='Acesso a módulos da Coordenação'; md.appendChild(lab);
+  const lab=(t)=>{ const l=document.createElement('div'); l.style.cssText='font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;'; l.textContent=t; return l; };
+
+  md.appendChild(lab('Faz parte da equipe/coordenação?'));
+  md.appendChild(_toggleSimNao(ehEquipe, v=>{ehEquipe=v;}).el);
+  md.appendChild(lab('Participa das escalas (Minha Jornada)?'));
+  md.appendChild(_toggleSimNao(serve, v=>{serve=v;}).el);
+
+  md.appendChild(lab('Times'));
+  // Do banco, e não da lista fixa: time criado na aba Times aparece aqui na hora.
+  md.appendChild(_chipsMulti((times||[]).map(t=>[t.valor, t.label||t.valor]), setoresSel));
+
+  md.appendChild(lab('Permissões de módulo'));
+  if(!m.eh_equipe){ const w=document.createElement('div'); w.style.cssText='font-size:11.5px;color:var(--gold);margin:-2px 0 6px;'; w.textContent='Só valem depois que a pessoa for equipe.'; md.appendChild(w); }
   md.appendChild(_chipsMulti((typeof MODULOS_LIBERAVEIS!=='undefined'?MODULOS_LIBERAVEIS.map(x=>[x[0],x[1]]):[]), permsSel));
-  const save=document.createElement('button'); save.className='btn gold'; save.style.cssText='width:100%;margin-top:16px;'; save.textContent='Salvar permissões';
+
+  const save=document.createElement('button'); save.className='btn gold'; save.style.cssText='width:100%;margin-top:18px;'; save.textContent='Salvar';
   save.onclick=async()=>{
+    const depois=[...setoresSel];
+    const entrou=depois.filter(s=>setoresAntes.indexOf(s)<0);
+    const saiu=setoresAntes.filter(s=>depois.indexOf(s)<0);
+
+    // O recado é pedido ANTES de gravar: quem desistir aqui não pode acabar com a pessoa
+    // dentro do time do mesmo jeito.
+    let recado=null;
+    if(entrou.length && typeof pedirRecadoDeBoasVindas==='function'){
+      const rotulos=entrou.map(s=>(times.find(t=>t.valor===s)||{}).label||s).join(', ');
+      recado=await pedirRecadoDeBoasVindas(m.nome, rotulos);
+      if(recado===null) return;                      // desistiu: nada é gravado
+    }
+
     save.disabled=true; save.textContent='Salvando...';
-    const patch={ permissoes:[...permsSel] };
+    // A REGRA é a de times-core, aplicada em sequência sobre uma cópia — a mesma que o
+    // "+ pessoa" e o organograma das Casas usam.
+    const trab={ setores:setoresAntes.slice(), eh_equipe:m.eh_equipe, user_id:m.user_id };
+    let promover=null, rebaixar=null;
+    const papelBase=(typeof nivelInfo==='function')?nivelInfo(m.nivel||'aspirante').base:'aspirante';
+    entrou.forEach(s=>{ const r=entrarNoTime(trab, s, role); Object.assign(trab, r.patch); if(r.promoverPara) promover=r.promoverPara; });
+    saiu.forEach(s=>{ const r=sairDoTime(trab, s, role, papelBase); if(r.patch) Object.assign(trab, r.patch); if(r.rebaixarPara) rebaixar=r.rebaixarPara; });
+
+    // Sem time nenhum, quem manda é o botão da ficha. Com pelo menos um, ser equipe é
+    // consequência de estar num time — o toggle não pode contradizer isso.
+    const patch={ serve, permissoes:[...permsSel], setores:trab.setores,
+                  eh_equipe: trab.setores.length ? true : ehEquipe };
     const { error } = await sb.from('acolitos_membros').update(patch).eq('id', m.id);
-    if(error){ toast('Erro ao salvar.','error'); save.disabled=false; save.textContent='Salvar permissões'; return; }
-    Object.assign(m, patch); toast('✓ Salvo!'); ov.remove(); if(onSaved) onSaved();
+    if(error){ console.error('Ficha da pessoa: gravar falhou', error); toast('Erro ao salvar.','error'); save.disabled=false; save.textContent='Salvar'; return; }
+
+    if(m.user_id && !ehAdmin){
+      const novoRole = patch.eh_equipe ? (promover||'membro_equipe') : (rebaixar||papelBase);
+      try{ await apiPost('/api/acolito-admin', { action:'sync_role', user_id:m.user_id, role:novoRole }); }catch(e){ console.warn('Ficha da pessoa: papel não sincronizou', e); }
+    }
+    Object.assign(m, patch);
+
+    // Uma festa por time novo (a fila do app mostra em sequência), mas UM toque no celular:
+    // três notificações seguidas por uma edição só seria assédio.
+    if(entrou.length && typeof boasVindasAoTime==='function'){
+      for(let i=0;i<entrou.length;i++){
+        await boasVindasAoTime({ membro:m, slug:entrou[i], recado:recado, cliente:sb, semPush: i>0 });
+      }
+    }
+    toast('✓ Salvo!'); ov.remove(); if(onSaved) onSaved();
   };
   md.appendChild(save);
   ov.appendChild(md); document.body.appendChild(ov);

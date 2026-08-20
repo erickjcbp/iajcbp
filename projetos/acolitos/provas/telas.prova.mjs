@@ -424,6 +424,68 @@ async function provaBrasaoNoAvatar(provas) {
   exigir(a.semCasaSemBrasao === true, 'quem não tem casa continua sem brasão');
 }
 
+async function provaPessoasETimesFundidas(provas) {
+  console.log('\n\x1b[1mPessoas & Times: uma seção só, e a ficha lê os times do BANCO\x1b[0m');
+
+  // "Equipe & Permissões" e "Times" eram duas seções que se pisavam. Além da redundância, a
+  // ficha de equipe era um TERCEIRO caminho para pôr gente em time: gravava `setores` na mão,
+  // lia a lista FIXA do shared.js e não disparava a boas-vinda.
+  //
+  // O time desta prova (`comunicacao`) NÃO existe na const SETORES do código. Se ele aparecer
+  // na ficha, é porque ela passou a ler o banco — que é o defeito que isto guarda.
+  const PESSOA = {
+    id: 'm1', nome: 'Ana Clara', eh_equipe: true, setores: [], permissoes: [],
+    serve: true, nivel: 'aspirante', user_id: 'u9',
+  };
+  const r = await provas.abrir('config.html', {
+    papel: PAPEIS.admin,
+    tabelas: {
+      acolitos_membros: { data: [PESSOA] },
+      acolitos_listas: { data: [{ valor: 'comunicacao', label: 'Comunicação' }] },
+    },
+    passos: [
+      { chamar: 'abrirSecao', args: ['pessoas'] },
+      { clicar: 'Editar' },
+    ],
+    avaliar: `
+      const saida = { passos: [] };
+      var modal = document.querySelector('.modal-overlay.open .modal');
+      saida.abriuFicha = !!modal;
+      if (modal) {
+        var t = (modal.innerText || '');
+        saida.temEquipe = /equipe\\/coordena/i.test(t);
+        saida.temEscalas = /escalas/i.test(t);
+        saida.temTimes = /times/i.test(t);
+        saida.temPermissoes = /permiss/i.test(t);
+        // O time do BANCO, que não existe na lista fixa do código:
+        saida.temTimeDoBanco = /Comunica/i.test(t);
+        saida.usaListaFixa = /Almoxarifado|Tesouraria e Compras/i.test(t);
+      }
+      return saida;
+    `,
+  });
+
+  // O MENU se mede com a seção FECHADA: abrir uma seção troca o menu pelo conteúdo dela, e
+  // procurar o nome do item ali dava tanto o defeito falso quanto o verde falso do vizinho
+  // ("não achei o item antigo" porque não havia menu nenhum na tela).
+  const menu = await provas.abrir('config.html', { papel: PAPEIS.admin });
+  const a = r.avaliado || {};
+  exigir(r.passosFalhos.length === 0, 'a seção abre e a ficha da pessoa também', r.passosFalhos.join(' | '));
+  exigir(/Pessoas & Times/.test(menu.texto), 'o menu mostra "Pessoas & Times"',
+    'não achei o item novo no menu do Config');
+  exigir(!/Equipe & Permiss/.test(menu.texto), 'e não mostra mais "Equipe & Permissões" separada',
+    'sobrou o item antigo no menu — viraram três seções em vez de uma');
+  exigir(a.abriuFicha === true, 'o botão Editar abre a ficha');
+  // As quatro coisas na MESMA ficha: era isso que estava espalhado em dois modais.
+  exigir(a.temEquipe && a.temEscalas && a.temTimes && a.temPermissoes,
+    'a ficha traz equipe, escalas, times e permissões juntos',
+    JSON.stringify({ equipe: a.temEquipe, escalas: a.temEscalas, times: a.temTimes, permissoes: a.temPermissoes }));
+  exigir(a.temTimeDoBanco === true, 'os times da ficha vêm do BANCO',
+    'o time "Comunicação" (que só existe no banco) não apareceu — a ficha ainda lê a lista fixa');
+  exigir(a.usaListaFixa === false, 'e não da lista cravada no código',
+    'apareceram times que só existem na const SETORES — a ficha está lendo as duas fontes');
+}
+
 // ── Partida ──────────────────────────────────────────────────────────────────
 const filtro = process.argv[2] || null;
 const provas = await iniciarProvas();
@@ -438,6 +500,7 @@ try {
     await provaBoasVindasAoTime(provas);
     await provaTarefasSoDoMeuTime(provas);
     await provaBrasaoNoAvatar(provas);
+    await provaPessoasETimesFundidas(provas);
   }
 } finally {
   await provas.encerrar();

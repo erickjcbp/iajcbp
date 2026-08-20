@@ -688,6 +688,10 @@ async function boasVindasAoTime(o) {
   // Sem login não há para onde mandar o toque. O recado fica guardado e aparece quando ela
   // criar a conta — melhor isso do que a boas-vinda se perder.
   if (!m.user_id) return;
+  // Entrou em vários times de uma vez (pela ficha do Config): cada time ganha a sua festa,
+  // que a fila mostra em sequência, mas o celular toca UMA vez. Três notificações seguidas
+  // por causa de uma edição só seria assédio.
+  if (o.semPush) return;
   try {
     await apiPost('/api/enviar-push', {
       tipo: 'boas_vindas', membros: [m.id],
