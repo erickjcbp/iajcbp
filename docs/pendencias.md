@@ -13,10 +13,16 @@ que o verificador de telas não alcança, e as duas quebram feio se estiverem er
 
 *Do portão:* ele vive dentro do `initModulo`, e o verificador **substitui o `initModulo`**
 por um falso. A parede e a regra estão provadas; que o boot chame o portão antes de liberar a
-tela, não. Conferir: (1) sem o sino, a parede aparece e a tela não carrega atrás; (2) ativando,
-o app recarrega e entra; (3) **quem já tem o sino ligado não vê parede nenhuma** — este é o
-perigoso: falso positivo aqui tranca as 47 pessoas de uma vez. O jeito rápido de desfazer é o
-Instant Rollback da Vercel.
+tela, não.
+
+> **✔ O caso perigoso está conferido.** Em 20/08/2026 o dono abriu o app com a conta dele —
+> que tem o sino ligado desde 16/07 — e **não viu parede nenhuma**. Era o risco que trancaria
+> as 47 pessoas de uma vez; está descartado.
+
+Falta conferir, e só aparece com uma conta SEM o sino: (1) a parede aparece e a tela não
+carrega atrás; (2) ativando, o app recarrega e entra. Não vale a pena forçar isso na conta do
+dono só para ver — vai acontecer sozinho na primeira pessoa que abrir. Se der errado, o jeito
+rápido de desfazer é o Instant Rollback da Vercel.
 
 *Da boas-vinda:* a animação e o texto estão provados no navegador, mas **o caminho inteiro
 não** — incluir alguém de verdade no Config › Times, ver o toque chegar no celular dela e a
