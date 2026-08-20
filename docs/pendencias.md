@@ -7,6 +7,20 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ## 1. Pendente
 
+**Brasão da casa nas 3 telas que faltam** (Agenda, Chamada, Destaques). Elas não leem
+`acolitos_membros` — pegam por **RPC**, e nenhuma devolve a casa. Medido em 20/08: são **6
+funções, ~120 linhas de SQL** (`acolitos_destaques`, `acolitos_ranking_temporada`,
+`acolitos_campeoes`, `acolitos_solicitos`, `acolitos_roster_substituicao`,
+`acolitos_membros_display`). Não é difícil, é **arriscado**: errar o corpo de uma delas deixa a
+tela correspondente vazia **sem erro nenhum**, que é como este projeto já se machucou. Merece
+uma rodada própria, não o fim de uma sessão longa. A `minha-casa` fica de fora de propósito:
+ali todo mundo é da mesma casa.
+
+*Meia-medida que NÃO vale a pena:* a Agenda tem embed em dois pontos e daria para acrescentar
+`casa_id` só neles — mas o caminho do membro comum passa pela RPC, então o brasão apareceria
+para a coordenação e sumiria para os membros. Inconsistência é pior que ausência.
+
+
 **Abrir o app com conta real e conferir DUAS coisas que subiram sem prova no ar** (portão de
 notificações no ar em 19/08, boas-vindas ao time no ar em 20/08). As duas moram em lugares
 que o verificador de telas não alcança, e as duas quebram feio se estiverem erradas.
