@@ -88,7 +88,7 @@ const GRUPOS = [
   // "Equipe & Permissões" e "Times" eram DUAS seções que se pisavam: pôr alguém num time
   // dava para fazer nas duas (e ainda no organograma das Casas). Viraram uma só, com duas
   // abas — mesma mecânica da seção Escala, que já tem três.
-  ['As pessoas',         [['pessoas','Pessoas & Times'], ['admins','Admins & superadmin'], ['logins','Logins (usuário/senha)'], ['cadastro','Campos do cadastro']]],
+  ['As pessoas',         [['pessoas','Pessoas & Times'], ['admins','Admins & superadmin'], ['logins','Logins (usuário/senha)'], ['atividade','Atividade & notificações'], ['cadastro','Campos do cadastro']]],
   ['Os módulos',         [['escala','Escala'], ['agenda','Agenda'], ['tesouraria','Tesouraria'], ['ausencias','Ausências'], ['jornada','Jornada'], ['crm','CRM']]],
   ['Como o app funciona',[['navegacao','Navegação'], ['gerador','Regras do gerador'], ['missoes','Missões & XP']]],
 ];
@@ -108,6 +108,7 @@ const CONTEUDO = {
                 { nome:'Times',                fn:renderTimes }],
   admins:      [{ nome:'Admins & superadmin',  fn:renderAdmins }],
   logins:      [{ nome:'Logins',               fn:renderLogins }],
+  atividade:   [{ nome:'Atividade',            fn:renderAtividade }],
   cadastro:    [{ nome:'Campos do cadastro',   fn:renderCadastro }],
   escala:      [{ nome:'Funções litúrgicas',   lista:'funcao' },
                 { nome:'Tipos de celebração',  lista:'tipo_celebracao' },
@@ -275,6 +276,150 @@ async function renderLogins(b){
       list.appendChild(row);
     });
     if(arr.length>300){ const e=document.createElement('div'); e.style.cssText='font-size:11px;color:var(--text-muted);padding:6px 0;'; e.textContent='Mostrando 300 de '+arr.length+' — refine a busca.'; list.appendChild(e); }
+  }
+  busca.oninput=desenha; desenha();
+}
+// ── ATIVIDADE: quem está usando o app, e quem tem o sino ligado ───────────────
+// O dono pediu "último uso de cada pessoa e se já está com notificação ativada".
+//
+// O QUE "ÚLTIMO USO" NÃO É: não é a última vez que a pessoa digitou a senha. O app
+// fica logado, então quem entrou uma vez em junho e usa todo dia continuaria
+// marcada como junho. Medido em 20/08: isso valia para 32 das 41 contas — a tela
+// teria mentido sobre 78% do grupo. A fonte é a SESSÃO, que sobe toda vez que o
+// app é aberto de verdade (migration 059 explica em detalhe).
+//
+// Os recortes de tempo são feitos AQUI, e não no banco, porque dependem do fuso de
+// quem está olhando — este projeto já pagou caro por data derivada no servidor.
+async function renderAtividade(b){
+  b.textContent='';
+  const hint=document.createElement('p');
+  hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 10px;line-height:1.5;';
+  hint.innerHTML='Quem abriu o app e quando, e quem já ligou o sino das notificações. '
+    +'<b>“Usou” é a última vez que a pessoa abriu o app</b> — não a última vez que digitou a senha, '
+    +'que fica meses parada em quem nunca sai da conta. Só leitura, e só superadmin vê.';
+  b.appendChild(hint);
+
+  const box=document.createElement('div'); box.innerHTML='<span class="loading">Carregando...</span>'; b.appendChild(box);
+  const { data, error } = await sb.rpc('acolitos_atividade_listar');
+  box.textContent='';
+  // Falha de consulta NÃO pode virar "ninguém usou o app": é o defeito que este
+  // projeto já teve (um erro virando R$ 0,00 por 17 horas).
+  if(error){ box.innerHTML='<span class="empty">Não consegui perguntar ao banco. Recarregue a tela.</span>'; return; }
+  if(!data || data.erro){ box.innerHTML='<span class="empty">Sem permissão.</span>'; return; }
+
+  const contas=data.contas||[], semConta=data.sem_conta||[];
+
+  // ── quando foi, em português ───────────────────────────────────────────────
+  const DIA=86400000;
+  const diaDe=(d)=>{ const x=new Date(d); x.setHours(0,0,0,0); return x.getTime(); };
+  const hoje0=diaDe(new Date());
+  function diasAtras(iso){ return Math.round((hoje0 - diaDe(new Date(iso)))/DIA); }
+  function quandoFoi(iso){
+    const d=new Date(iso), n=diasAtras(iso);
+    const hora=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}).replace(':','h');
+    const data=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    if(n<=0) return 'hoje às '+hora;
+    if(n===1) return 'ontem às '+hora;
+    if(n<7)   return 'há '+n+' dias · '+data;
+    if(n<30)  return 'há '+Math.floor(n/7)+(Math.floor(n/7)===1?' semana':' semanas')+' · '+data;
+    const m=Math.floor(n/30);
+    return 'há '+m+(m===1?' mês':' meses')+' · '+d.toLocaleDateString('pt-BR');
+  }
+  // Cada beco tem a SUA frase. "Nunca entrou" e "a sessão expirou" são coisas
+  // diferentes, e um traço no lugar das duas faria a coordenação tratar igual.
+  function estadoDe(c){
+    if(c.ultimo_uso) { const n=diasAtras(c.ultimo_uso);
+      return { chave:n<=0?'hoje':n<7?'semana':n<30?'mes':'sumido',
+               texto:'Usou '+quandoFoi(c.ultimo_uso),
+               cor:n<7?'var(--success-text)':n<30?'var(--text)':'var(--danger-text)' }; }
+    if(c.entrou_em) return { chave:'expirou',
+      texto:'Sumiu faz tempo — entrou pela última vez '+quandoFoi(c.entrou_em),
+      cor:'var(--danger-text)' };
+    return { chave:'nunca',
+      texto:'Nunca entrou — a conta foi criada '+quandoFoi(c.criada_em)+' e nunca foi usada',
+      cor:'var(--danger-text)' };
+  }
+  contas.forEach(c=>{ c._e=estadoDe(c); });
+
+  // Quem preocupa vem primeiro: nunca entrou, depois quem sumiu, depois o resto.
+  const ORDEM={nunca:0,expirou:1,sumido:2,mes:3,semana:4,hoje:5};
+  contas.sort((a,x)=> (ORDEM[a._e.chave]-ORDEM[x._e.chave]) || a.nome.localeCompare(x.nome,'pt-BR'));
+
+  // ── o resumo ───────────────────────────────────────────────────────────────
+  const conta=(k)=>contas.filter(c=>c._e.chave===k).length;
+  const resumo=document.createElement('div');
+  resumo.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;';
+  [['Hoje',conta('hoje'),'var(--success-text)'],
+   ['Nesta semana',conta('semana'),'var(--gold-light)'],
+   ['Neste mês',conta('mes'),'var(--text)'],
+   ['Sumiram',conta('sumido')+conta('expirou'),'var(--danger-text)'],
+   ['Nunca entraram',conta('nunca'),'var(--danger-text)'],
+   ['Com o sino',contas.filter(c=>c.sino).length,'var(--gold)']
+  ].forEach(([rot,val,cor])=>{
+    const k=document.createElement('div');
+    k.style.cssText='flex:1 1 90px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 6px;text-align:center;';
+    const v=document.createElement('div'); v.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:18px;color:'+cor+';'; v.textContent=val;
+    const r=document.createElement('div'); r.style.cssText='font-size:10px;color:var(--text-muted);margin-top:1px;'; r.textContent=rot;
+    k.append(v,r); resumo.appendChild(k);
+  });
+  box.appendChild(resumo);
+
+  // ── os que nem conta têm ───────────────────────────────────────────────────
+  // Não é rodapé: em 20/08 são 135 de 176 ativos, e é a informação mais acionável
+  // da tela — essa gente não consegue abrir o app de jeito nenhum.
+  if(semConta.length){
+    const av=document.createElement('div');
+    av.style.cssText='background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:10px 12px;margin-bottom:12px;';
+    const t=document.createElement('div'); t.style.cssText='font-size:12px;color:var(--text);line-height:1.5;';
+    t.innerHTML='<b>'+semConta.length+' das '+data.ativos+' pessoas ativas ainda não têm login.</b> '
+      +'Elas não conseguem abrir o app — não é que não usam, é que não podem. Criar conta é em <b>Logins</b>.';
+    const bt=document.createElement('button');
+    bt.style.cssText='margin-top:8px;font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;border:1px solid var(--gold-dim);background:var(--surface2);color:var(--gold-light);';
+    bt.textContent='Ver quem são';
+    const lista=document.createElement('div'); lista.style.cssText='display:none;margin-top:8px;font-size:12px;color:var(--text-muted);line-height:1.7;';
+    lista.textContent=semConta.map(m=>m.nome).join(' · ');
+    bt.onclick=()=>{ const aberto=lista.style.display!=='none';
+      lista.style.display=aberto?'none':'block'; bt.textContent=aberto?'Ver quem são':'Esconder'; };
+    av.append(t,bt,lista); box.appendChild(av);
+  }
+
+  // ── a lista ────────────────────────────────────────────────────────────────
+  const busca=document.createElement('input'); busca.className='form-input';
+  busca.placeholder='buscar pessoa…'; busca.style.marginBottom='8px'; box.appendChild(busca);
+  const list=document.createElement('div'); box.appendChild(list);
+
+  function desenha(){
+    list.textContent='';
+    const q=busca.value.trim().toLowerCase();
+    const arr=contas.filter(c=>!q||semAcento(c.nome).includes(semAcento(q))||semAcento(c.usuario||'').includes(semAcento(q)));
+    if(!arr.length){ const e=document.createElement('span'); e.className='empty'; e.textContent='Ninguém com esse nome.'; list.appendChild(e); return; }
+    arr.forEach(c=>{
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border);';
+      const av=buildAvatarEl(c.foto_url, nivelInfo(c.nivel||'aspirante').base, 34,
+        { nivelSlug:c.nivel||'aspirante', casaSlug:casaSlugDe(c) });
+      av.style.flexShrink='0'; row.appendChild(av);
+
+      const info=document.createElement('div'); info.style.cssText='flex:1;min-width:0;';
+      const nm=document.createElement('div'); nm.style.cssText='font-weight:700;font-size:13px;color:var(--text);'; nm.textContent=c.nome;
+      const uso=document.createElement('div'); uso.style.cssText='font-size:11px;margin-top:1px;color:'+c._e.cor+';'; uso.textContent=c._e.texto;
+      const usr=document.createElement('div'); usr.style.cssText='font-size:10px;color:var(--text-muted);margin-top:1px;'; usr.textContent='usuário: '+(c.usuario||'—');
+      info.append(nm,uso,usr); row.appendChild(info);
+
+      const sino=document.createElement('div');
+      sino.style.cssText='flex-shrink:0;text-align:right;font-size:10px;font-weight:700;line-height:1.4;';
+      if(c.sino){
+        sino.style.color='var(--success-text)';
+        sino.innerHTML='🔔 ligado<br><span style="font-weight:400;color:var(--text-muted)">desde '
+          +new Date(c.sino_desde).toLocaleDateString('pt-BR')
+          +(c.aparelhos>1?'<br>'+c.aparelhos+' inscrições':'')+'</span>';
+      } else {
+        sino.style.color='var(--text-muted)';
+        sino.innerHTML='🔕 desligado';
+      }
+      row.appendChild(sino);
+      list.appendChild(row);
+    });
   }
   busca.oninput=desenha; desenha();
 }

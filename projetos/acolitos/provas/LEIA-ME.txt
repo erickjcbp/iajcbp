@@ -63,6 +63,18 @@ PROVAS — perguntas específicas, uma por defeito que já aconteceu de verdade:
   · cada time só enxerga os times dele nas Tarefas — o espelho da trava do banco.
   · o brasão da casa aparece nas telas que pegam a gente por FUNÇÃO do banco (Destaques),
     e quem não tem casa continua sem brasão — nunca com o de outra.
+  · Config › Atividade diz a frase CERTA em cada beco (usou / sumiu / a sessão expirou /
+    nunca entrou), mostra o sino ligado e desligado, e avisa quantas pessoas ativas ainda
+    não têm login;
+  · e a mesma aba, quando o banco recusa, diz que não conseguiu perguntar — em vez de
+    mostrar lista vazia, que é uma falha virando número.
+
+ARMADILHA DE QUEM ESCREVE PROVA AQUI: o NOME da pessoa de mentira não pode conter a
+frase que está sendo medida. A prova da aba Atividade nasceu com gente chamada "Sumiu
+Faz Tempo" e "Nunca Entrou" e procurava essas frases no texto da tela: achava o NOME,
+não o estado. Ficou VERDE mesmo depois de eu sabotar os becos de propósito. Agora ela
+mede pela ESTRUTURA da linha (o estado é o irmão seguinte do pedaço cujo texto é
+exatamente o nome) e as pessoas se chamam "Pessoa Aa", "Pessoa Bb"...
 
 REGRA: defeito que o dono encontrar usando o app vira prova aqui. É assim que a lista
 cresce — não por imaginação, por cicatriz.

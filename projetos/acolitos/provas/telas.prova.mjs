@@ -475,6 +475,154 @@ async function provaCasaChegaPelasFuncoesDoBanco(provas) {
   exigir(a.nivelContinua === true, 'o emblema de nível continua junto');
 }
 
+async function provaAtividadeDeUsuario(provas) {
+  console.log('\n\x1b[1mConfig › Atividade: último uso e sino, com a frase certa em cada beco\x1b[0m');
+
+  // A resposta de mentira tem os campos EXATOS que a `acolitos_atividade_listar`
+  // devolve (copiados do banco em 20/08). As quatro pessoas cobrem os quatro
+  // estados possíveis, que é o ponto da tela: "nunca entrou" e "a sessão expirou"
+  // são coisas diferentes, e um traço no lugar das duas faria a coordenação
+  // tratar igual quem nunca abriu o app e quem sumiu depois de usar.
+  const agora = new Date('2026-08-20T18:00:00-03:00');
+  const iso = (dias, h) => new Date(agora.getTime() - dias * 86400000 - (h || 0) * 3600000).toISOString();
+  const base = { apelido: null, foto_url: null, nivel: 'aspirante', casa_id: null, aparelhos: 0, sino_desde: null };
+
+  const r = await provas.abrir('config.html', {
+    papel: PAPEIS.admin,
+    tabelas: { acolitos_casas: { data: [{ id: 'c1', slug: 'sanctaris' }] } },
+    rpcs: {
+      acolitos_atividade_listar: { data: {
+        ativos: 10,
+        sem_conta: [{ id: 'x1', nome: 'Sem Login Um', nivel: 'aspirante' },
+                    { id: 'x2', nome: 'Sem Login Dois', nivel: 'aspirante' }],
+        contas: [
+          { ...base, id: 'a', nome: 'Pessoa Aa',      usuario: 'hoje',
+            ultimo_uso: iso(0, 2), entrou_em: iso(60), criada_em: iso(90),
+            sino: true, sino_desde: iso(1), aparelhos: 2, casa_id: 'c1' },
+          { ...base, id: 'b', nome: 'Pessoa Bb', usuario: 'sumiu',
+            ultimo_uso: iso(75), entrou_em: iso(80), criada_em: iso(90), sino: false },
+          { ...base, id: 'c', nome: 'Pessoa Cc',  usuario: 'expirou',
+            ultimo_uso: null, entrou_em: iso(70), criada_em: iso(90), sino: false },
+          { ...base, id: 'd', nome: 'Pessoa Dd',    usuario: 'nunca',
+            ultimo_uso: null, entrou_em: null, criada_em: iso(30), sino: false },
+        ],
+      } },
+    },
+    passos: [{ chamar: 'render' }],
+    avaliar: `
+      // A seção existe no menu e abre.
+      secaoAtual = 'atividade';
+      render();
+      await new Promise(function (s) { setTimeout(s, 250); });
+
+      var raiz = document.getElementById('main-content') || document.body;
+      var txt = raiz.innerText || '';
+      var saida = { texto: txt.length };
+
+      // MEDIR DENTRO DA LINHA DA PESSOA, não no texto solto da tela. Na primeira
+      // versão desta prova as pessoas de teste se chamavam "Sumiu Faz Tempo" e
+      // "Nunca Entrou", e a busca no texto inteiro achava o NOME em vez do estado:
+      // a prova passava pelo motivo errado e continuou verde quando sabotei os
+      // becos de propósito. Nome de amostra nunca pode ser a coisa medida.
+      // Pela ESTRUTURA, não caçando texto: a linha é (nome, estado, usuário), então o
+      // estado é o irmão seguinte do pedaço cujo texto é exatamente o nome. Caçar texto
+      // solto na tela foi o que deixou a primeira versão desta prova verde por engano.
+      // E textContent, nao innerText (SEM crase: aqui dentro crase fecha a template
+      // string e derruba o arquivo inteiro) — o innerText vem mexido pelo CSS.
+      function estadoDe(nome) {
+        var alvo = Array.from(raiz.querySelectorAll('div')).find(function (d) {
+          return (d.textContent || '').trim() === nome;
+        });
+        if (!alvo) return '(nao achei a linha de ' + nome + ')';
+        var irmao = alvo.nextElementSibling;
+        return irmao ? (irmao.textContent || '').trim() : '(a linha de ' + nome + ' nao tem estado)';
+      }
+      saida.estadoA = estadoDe('Pessoa Aa');
+      saida.estadoB = estadoDe('Pessoa Bb');
+      saida.estadoC = estadoDe('Pessoa Cc');
+      saida.estadoD = estadoDe('Pessoa Dd');
+
+      // Cada beco com a SUA frase — é a decisão do dono, e o que a tela existe para dizer.
+      saida.dizUsouHoje    = /Usou hoje/i.test(saida.estadoA);
+      saida.dizSumiu       = /Usou h[áa] 2 meses/i.test(saida.estadoB);
+      saida.dizExpirou     = /Sumiu faz tempo/i.test(saida.estadoC);
+      saida.dizNuncaEntrou = /Nunca entrou/i.test(saida.estadoD);
+      // "nunca entrou" e "a sessão expirou" não podem sair com a MESMA frase.
+      saida.becosDiferentes = saida.dizExpirou && saida.dizNuncaEntrou
+                              && saida.estadoC !== saida.estadoD;
+
+      // O sino, ligado e desligado.
+      saida.sinoLigado    = /ligado/i.test(txt);
+      saida.sinoDesligado = /desligado/i.test(txt);
+
+      // Quem nem conta tem: o número aparece, e a lista começa ESCONDIDA.
+      saida.avisaSemConta = /2 das 10 pessoas ativas ainda n[ãa]o t[êe]m login/i.test(txt);
+      var btVer = Array.from(document.querySelectorAll('button')).find(function (x) {
+        return /ver quem s[ãa]o/i.test(x.textContent || ''); });
+      saida.temBotaoVer = !!btVer;
+      saida.listaComecaEscondida = !/Sem Login Um/.test(txt);
+      if (btVer) {
+        btVer.click();
+        await new Promise(function (s) { setTimeout(s, 60); });
+        saida.abreAoClicar = /Sem Login Um/.test((document.getElementById('main-content')||document.body).innerText || '');
+      }
+
+      // Quem preocupa vem primeiro: "Nunca Entrou" antes de "Usou Hoje".
+      var linhas = txt.split('\\n');
+      var iNunca = linhas.findIndex(function (l) { return /Pessoa Dd/.test(l); });
+      var iHoje  = linhas.findIndex(function (l) { return /Pessoa Aa/.test(l); });
+      saida.ordemPreocupanteAntes = iNunca >= 0 && iHoje >= 0 && iNunca < iHoje;
+
+      // O brasão da casa aparece aqui também (058).
+      saida.temBrasao = !!document.querySelector('#main-content img[src*="brasoes"], #main-content picture');
+      return saida;
+    `,
+  });
+
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a aba Atividade abre e desenha', r.erroAvaliar);
+  exigir(a.dizUsouHoje === true, 'quem usou hoje aparece como "Usou hoje"', 'a linha diz: ' + a.estadoA);
+  exigir(a.dizSumiu === true, 'quem sumiu aparece com há quantos meses', 'a linha diz: ' + a.estadoB);
+  exigir(a.dizExpirou === true, 'quem entrou uma vez e a sessão expirou tem a frase dela',
+    'a linha diz: ' + a.estadoC);
+  exigir(a.dizNuncaEntrou === true, 'quem nunca entrou tem a frase dela', 'a linha diz: ' + a.estadoD);
+  exigir(a.becosDiferentes === true,
+    '"nunca entrou" e "a sessão expirou" saem com frases DIFERENTES',
+    'os dois becos viraram a mesma coisa — sessão expirou: "' + a.estadoC + '" / nunca entrou: "' + a.estadoD + '"');
+  exigir(a.sinoLigado === true && a.sinoDesligado === true, 'o sino aparece ligado e desligado');
+  exigir(a.avisaSemConta === true, 'avisa quantas pessoas ativas ainda não têm login',
+    'sem isso a tela parece dizer que só 4 pessoas existem');
+  exigir(a.temBotaoVer === true && a.listaComecaEscondida === true && a.abreAoClicar === true,
+    'a lista de quem não tem conta começa escondida e abre no clique');
+  exigir(a.ordemPreocupanteAntes === true, 'quem preocupa vem primeiro na lista',
+    'a ordem se perdeu — quem nunca entrou ficou embaixo de quem usou hoje');
+  exigir(a.temBrasao === true, 'o avatar traz o brasão da casa, como no resto do app');
+}
+
+async function provaAtividadeNaoTransformaErroEmZero(provas) {
+  console.log('\n\x1b[1mConfig › Atividade: falha do banco não vira "ninguém usou"\x1b[0m');
+
+  // Cicatriz do projeto: um 500 virou R$ 0,00 na tela por 17 horas. Uma tela de
+  // atividade que engole o erro diria que o grupo inteiro sumiu — e alguém iria
+  // cobrar 41 pessoas por causa de uma consulta que não foi.
+  const r = await provas.abrir('config.html', {
+    papel: PAPEIS.admin,
+    rpcs: { acolitos_atividade_listar: { error: { message: 'boom' } } },
+    avaliar: `
+      secaoAtual = 'atividade';
+      render();
+      await new Promise(function (s) { setTimeout(s, 250); });
+      var txt = (document.getElementById('main-content') || document.body).innerText || '';
+      return { avisaFalha: /n[ãa]o consegui perguntar/i.test(txt),
+               naoInventaZero: !/Nunca entraram\\s*0/i.test(txt) };
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a aba aguenta o banco recusar', r.erroAvaliar);
+  exigir(a.avisaFalha === true, 'diz que não conseguiu perguntar, em vez de mostrar lista vazia',
+    'a tela engoliu o erro — é assim que uma falha vira número e alguém decide por ele');
+}
+
 async function provaPessoasETimesFundidas(provas) {
   console.log('\n\x1b[1mPessoas & Times: uma seção só, e a ficha lê os times do BANCO\x1b[0m');
 
@@ -590,6 +738,8 @@ try {
     await provaTarefasSoDoMeuTime(provas);
     await provaBrasaoNoAvatar(provas);
     await provaCasaChegaPelasFuncoesDoBanco(provas);
+    await provaAtividadeDeUsuario(provas);
+    await provaAtividadeNaoTransformaErroEmZero(provas);
     await provaPessoasETimesFundidas(provas);
     await provaEntrarNoTimeLiberaTarefas(provas);
   }

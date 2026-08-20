@@ -89,6 +89,51 @@ certo; sem ela, alguém tem de lembrar.
 
 ## Fechados em 20/08/2026
 
+**Config › Atividade: quem está usando o app e quem tem o sino (migration 059)**
+- **O pedido do dono:** "uma aba nas config de atividade de usuário, com o último uso de cada
+  e se já está com notificação ativada."
+- **O caminho óbvio MENTIRIA.** `auth.users.last_sign_in_at` marca a última vez que a pessoa
+  DIGITOU A SENHA. Como o app fica logado, quem entrou uma vez em junho e usa todo dia
+  continua marcada como junho. Medido antes de escrever a spec: isso valia para **32 das 41
+  contas** — a tela teria mentido sobre **78% do grupo**. A Franciele aparecia com "03/06"
+  numa tarde em que estava com o app aberto.
+- **A fonte certa é `auth.sessions.updated_at`**, que sobe toda vez que o app renova a
+  sessão. Conferido nas 6 pessoas que ligaram o sino em 20/08: bate **no minuto** com a hora
+  em que cada uma abriu o app. E o histórico já existia — não foi preciso criar coluna nem
+  esperar o dado nascer.
+- **NÃO usar `auth.sessions.refreshed_at`:** é `timestamp WITHOUT time zone`. Convertê-lo
+  para o fuso devolve lixo — deu 6 horas de diferença em todo mundo, igual para todos, que é
+  a cara de um erro de fuso e não de um dado estranho.
+- **Quatro becos, quatro frases.** "Usou hoje às 15h28" / "Usou há 2 meses · 03/06" / "Sumiu
+  faz tempo — entrou pela última vez…" / "Nunca entrou — a conta foi criada… e nunca foi
+  usada". Decisão do dono: um traço para todos faria a coordenação tratar igual quem nunca
+  abriu o app e quem sumiu depois de usar.
+- **135 das 176 pessoas ativas não têm login nenhum**, e isso ganhou destaque no topo em vez
+  de rodapé: essas pessoas não é que não usam, é que **não podem** abrir o app. A lista de
+  nomes começa fechada, para não empurrar a tela para baixo.
+- **O recorte por hoje/semana/mês é feito na TELA, não no banco**, porque depende do fuso de
+  quem olha — dívida que este projeto já quitou uma vez.
+- **Só superadmin**, pelo mesmo portão da aba Logins (`acolitos_is_superadmin()`). O grant
+  não é o portão: **provado rodando** como anônimo (não executa), como cerimoniário (executa
+  e recebe `sem_permissao`, sem dado nenhum) e como superadmin (recebe, e os 4 números batem
+  com a contagem direta do banco).
+- **Falha do banco não vira "ninguém usou"** — tem prova própria. É a cicatriz do 500 que
+  virou R$ 0,00 por 17 horas; aqui viraria "o grupo inteiro sumiu", e alguém cobraria 41
+  pessoas por causa de uma consulta que não foi.
+- **A primeira versão da prova estava ERRADA e passava.** As pessoas de mentira se chamavam
+  "Sumiu Faz Tempo" e "Nunca Entrou", e a prova procurava essas frases no texto da tela:
+  achava o **nome**, não o estado. Só apareceu porque sabotei os becos de propósito e ela
+  continuou verde. Agora mede pela estrutura da linha, e a armadilha está registrada no
+  LEIA-ME das provas.
+- **Cabe no celular, medido em navegador de verdade com o CSS do app:** a 375px não rola de
+  lado, os 6 cartões viram 3+3 e nenhuma linha estoura com o nome mais longo do grupo; no
+  desktop os 6 ficam lado a lado. (O Config é só de superadmin e eu não copio a sessão do
+  dono — a medição foi num HTML temporário com o mesmo CSS.)
+- **Provas:** 104 de tela + 168 de regra + 7 do banco, todas verdes.
+- **O retrato de 20/08:** 8 usaram hoje, 13 nesta semana, 8 neste mês, 7 sumiram, 5 nunca
+  entraram, 6 com o sino.
+
+
 **O brasão chega às telas que pegam a gente por FUNÇÃO do banco (migration 058)**
 - **O que era:** o brasão da casa subiu no avatar em 20/08 e funcionava só nas telas que
   leem `acolitos_membros` direto. As que pegam a gente por **função do banco** ficavam sem
