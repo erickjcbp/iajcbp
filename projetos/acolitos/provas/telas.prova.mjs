@@ -336,6 +336,94 @@ async function provaTarefasSoDoMeuTime(provas) {
     'rótulos: ' + JSON.stringify((equipe.avaliado || {}).rotulos));
 }
 
+async function provaBrasaoNoAvatar(provas) {
+  console.log('\n\x1b[1mO brasão da casa aparece no avatar\x1b[0m');
+
+  // O dono entrou na Sanctaris e estranhou que o avatar não mostrava nada. Não era defeito:
+  // o emblema do canto sempre foi o do NÍVEL, e a casa não aparecia em avatar nenhum.
+  const r = await provas.abrir('index.html', {
+    papel: PAPEIS.membro,
+    tabelas: { acolitos_casas: { data: [{ id: 'c1', slug: 'sanctaris' }] } },
+    avaliar: `
+      await loadCasas();
+      const saida = { slugAchado: casaSlugDe({ casa_id: 'c1' }),
+                      slugSemCasa: casaSlugDe({ casa_id: null }),
+                      slugCasaDesconhecida: casaSlugDe({ casa_id: 'nao-existe' }) };
+
+      const caixa = document.createElement('div');
+      caixa.id = 'prova-avatar';
+      document.body.appendChild(caixa);
+      caixa.appendChild(buildAvatarEl(null, 'membro', 76, {
+        nivelSlug: 'aspirante',
+        casaSlug: casaSlugDe({ casa_id: 'c1' }),
+        editable: true, membro: { id: 'm1' },
+      }));
+      await new Promise(function (s) { setTimeout(s, 80); });
+
+      var circulo = caixa.querySelector('div');                 // o avatar em si
+      var brasao  = caixa.querySelector('img[src*="brasoes"], picture');
+      var nivel = caixa.querySelector('svg');
+      saida.temBrasao = !!brasao;
+      saida.temNivelAinda = !!nivel;
+      if (brasao) {
+        var im = brasao.tagName === 'IMG' ? brasao : brasao.querySelector('img');
+        saida.altura = Math.round(parseFloat(getComputedStyle(im).height) || 0);
+      }
+      // Casa à ESQUERDA, nível à direita. Se os dois caírem do mesmo lado, um esconde o
+      // outro e o código continua parecendo certo.
+      //
+      // MEDIR POR getComputedStyle().right === 'auto' NAO FUNCIONA: para elemento
+      // posicionado o navegador devolve a distância JÁ RESOLVIDA (ex.: "53.17px"), nunca
+      // "auto" — a prova acusava defeito num layout perfeito. O critério honesto é comparar
+      // os dois emblemas ENTRE SI, que é o que a pessoa vê.
+      if (brasao && nivel) {
+        var rBras = brasao.getBoundingClientRect();
+        var rNiv  = nivel.getBoundingClientRect();
+        saida.ladoEsquerdo = rBras.left < rNiv.left;
+        saida.distancia = Math.round(rNiv.left - rBras.left);
+      }
+
+      // O botão de foto tem de estar FORA do círculo, com a palavra junto.
+      var botao = Array.from(caixa.querySelectorAll('button'))
+        .find(function (b) { return /trocar foto/i.test(b.innerText || ''); });
+      saida.temBotao = !!botao;
+      if (botao) {
+        saida.botaoTemPalavra = /trocar foto/i.test(botao.innerText || '');
+        saida.botaoTemIcone = !!botao.querySelector('svg.ico');
+        saida.botaoSolto = getComputedStyle(botao).position !== 'absolute';
+        // Abaixo de verdade: o topo do botão vem depois da base do avatar.
+        var rb = botao.getBoundingClientRect(), rc = circulo.getBoundingClientRect();
+        saida.botaoAbaixo = rb.top >= rc.top;
+      }
+
+      // E sem casa nenhuma: nada de brasão — nunca o de outra casa.
+      var caixa2 = document.createElement('div');
+      document.body.appendChild(caixa2);
+      caixa2.appendChild(buildAvatarEl(null, 'membro', 76, { nivelSlug: 'aspirante', casaSlug: null }));
+      saida.semCasaSemBrasao = !caixa2.querySelector('img[src*="brasoes"], picture');
+      return saida;
+    `,
+  });
+
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'o avatar monta sem estourar', r.erroAvaliar);
+  exigir(a.slugAchado === 'sanctaris', 'o de-para acha a casa da pessoa', 'veio: ' + a.slugAchado);
+  // Sem saber a casa, o avatar sai SEM brasão — jamais com o de outra casa.
+  exigir(a.slugSemCasa === null && a.slugCasaDesconhecida === null,
+    'sem casa (ou casa desconhecida) não inventa brasão');
+  exigir(a.temBrasao === true, 'o brasão da casa aparece no avatar');
+  exigir(a.ladoEsquerdo === true, 'a casa fica à esquerda, o nível à direita',
+    'os dois emblemas caíram do mesmo lado (distância: ' + a.distancia + 'px) — um esconde o outro');
+  exigir(a.temNivelAinda === true, 'o emblema de nível continua lá');
+  exigir(a.altura >= 24, 'o brasão usa a altura toda do canto',
+    'altura ' + a.altura + 'px — a arte está sendo espremida pela caixa quadrada');
+  exigir(a.temBotao === true, 'o botão de trocar foto existe');
+  exigir(a.botaoSolto === true && a.botaoAbaixo === true, 'o botão saiu do canto e foi para baixo');
+  exigir(a.botaoTemPalavra === true, 'o botão leva a palavra junto, não só o desenho');
+  exigir(a.botaoTemIcone === true, 'e o desenho é ícone de traço, não o caractere de lápis');
+  exigir(a.semCasaSemBrasao === true, 'quem não tem casa continua sem brasão');
+}
+
 // ── Partida ──────────────────────────────────────────────────────────────────
 const filtro = process.argv[2] || null;
 const provas = await iniciarProvas();
@@ -349,6 +437,7 @@ try {
     await provaPortaoNotificacoes(provas);
     await provaBoasVindasAoTime(provas);
     await provaTarefasSoDoMeuTime(provas);
+    await provaBrasaoNoAvatar(provas);
   }
 } finally {
   await provas.encerrar();

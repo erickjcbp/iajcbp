@@ -189,6 +189,7 @@ async function initModulo(requiredRoles = null, opts = null) {
 
   await loadListasCustom();
   try { await loadConfig(); } catch (e) {}
+  await loadCasas();   // de-para casa_id → slug, para o brasão no avatar
 
   const { data: modulo } = await sbAdmin
     .from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
@@ -1991,6 +1992,30 @@ function _svgIcon(name) {
   return `<svg class="ico" viewBox="0 0 24 24"><path d="${d[name] || ''}"/></svg>`;
 }
 
+// ── DE QUE CASA É ESTA PESSOA ─────────────────────────────────
+// O avatar precisa do SLUG da casa, mas as telas carregam `casa_id`. Em vez de pendurar um
+// embed em cada consulta (nove telas, dezoito avatares), o app lê as casas UMA vez — são
+// cinco linhas — e guarda o de-para. Consulta minúscula, feita no boot junto das outras.
+let _CASA_POR_ID = {};
+async function loadCasas() {
+  try {
+    const { data, error } = await sb.from('acolitos_casas').select('id,slug');
+    // Falha aqui NÃO pode derrubar a tela: sem o de-para os avatares ficam sem brasão, que é
+    // exatamente como eram antes. Perder o app inteiro por causa de um enfeite seria pior.
+    if (error) { console.warn('Casas: de-para não carregou', error); return; }
+    const mapa = {}; (data || []).forEach(c => { mapa[c.id] = c.slug; });
+    _CASA_POR_ID = mapa;
+  } catch (e) { console.warn('Casas: de-para não carregou', e); }
+}
+// Aceita o membro inteiro ou o id da casa. Devolve null quando não dá para saber — e null
+// faz o avatar sair SEM brasão, nunca com o de outra casa.
+function casaSlugDe(m) {
+  if (!m) return null;
+  const id = (typeof m === 'string') ? m : m.casa_id;
+  if (!id) return null;
+  return _CASA_POR_ID[id] || null;
+}
+
 // ── BRASÕES DAS CASAS (SVG próprio, sem emoji) ────────────────
 const CASA_COR = { sanctaris:'#c0392b', seraphim:'#e67e22', veritatis:'#2980b9', templaris:'#27ae60', consilium:'#7d3c98' };
 // Casas que já têm BRASÃO OFICIAL (arte enviada pela coordenação, em midia/brasoes/).
@@ -2536,6 +2561,22 @@ function buildAvatarEl(fotoUrl, role, size, opts) {
   patchEl.innerHTML = opts.nivelSlug ? getNivelSvg(opts.nivelSlug, patchSize) : getPatchSvg(getRoleForPatch(role), patchSize); // hardcoded SVG — seguro
   container.appendChild(patchEl);
 
+  // ── Brasão da CASA, no canto oposto ao do nível ──────────────────────────
+  // Os dois convivem: nível à direita (jornada), casa à esquerda (pertencimento). Antes o
+  // avatar não mostrava casa em lugar nenhum — ela só aparecia nas telas Casas e Minha Casa.
+  if (opts.casaSlug) {
+    const casaEl = document.createElement('div');
+    casaEl.style.cssText = `position:absolute;bottom:-4px;left:-4px;line-height:0;` +
+      `filter:drop-shadow(0 1px 2px rgba(0,0,0,.75));`;
+    casaEl.innerHTML = getCasaBrasao(opts.casaSlug, patchSize); // SVG/arte controlada — seguro
+    // A arte oficial é 256x305 — mais ALTA que larga. Numa caixa quadrada com `contain` ela
+    // encolhe pela altura e sobra vazio dos lados: no tamanho de patch isso custa quase um
+    // quinto do desenho. Deixando a altura mandar, o brasão ocupa o canto inteiro.
+    const im = casaEl.querySelector('img');
+    if (im) { im.style.height = patchSize + 'px'; im.style.width = 'auto'; im.removeAttribute('width'); }
+    container.appendChild(casaEl);
+  }
+
   if (opts.editable && opts.membro) {
     const camSize = Math.max(16, Math.round(size * 0.24));
     const input = document.createElement('input');
@@ -2544,11 +2585,20 @@ function buildAvatarEl(fotoUrl, role, size, opts) {
     // sem 'capture': no celular abre o seletor nativo (galeria/Fotos + câmera)
     input.style.display = 'none';
 
+    // O botão saiu do canto inferior esquerdo e foi para BAIXO do avatar. Dois motivos: o
+    // canto agora é do brasão da casa, e embaixo cabe a PALAVRA junto do desenho — no
+    // celular um botão só com ícone não é entendido, e `title` não aparece num toque.
     const badge = document.createElement('button');
     badge.type = 'button';
     badge.title = 'Trocar foto';
-    badge.textContent = '✎';
-    badge.style.cssText = `position:absolute;bottom:0;left:0;width:${camSize}px;height:${camSize}px;border-radius:50%;border:1px solid var(--border-wine);background:rgba(18,9,11,.82);color:var(--gold-dim);font-size:${Math.round(camSize*0.62)}px;line-height:0;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;z-index:2;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);`;
+    badge.style.cssText = `display:inline-flex;align-items:center;justify-content:center;gap:6px;` +
+      `margin-top:9px;padding:7px 12px;border-radius:8px;border:1px solid var(--border-wine);` +
+      `background:transparent;color:var(--text-muted);font-family:'Oxanium',sans-serif;` +
+      `font-weight:700;font-size:11px;letter-spacing:.8px;text-transform:uppercase;` +
+      `cursor:pointer;-webkit-tap-highlight-color:transparent;`;
+    // Ícone de traço, não o caractere de lápis: é a convenção do app para tudo que é ícone.
+    badge.innerHTML = _svgIcon('editar'); // hardcoded SVG — seguro
+    badge.appendChild(document.createTextNode('Trocar foto'));
     badge.onclick = () => input.click();
 
     input.onchange = () => {
@@ -2556,8 +2606,10 @@ function buildAvatarEl(fotoUrl, role, size, opts) {
       input.value = '';
       if (!file) return;
       openCropper(file, async (croppedFile) => {
-        const prev = badge.textContent;
-        badge.textContent = '…'; badge.disabled = true;
+        // Guarda os FILHOS, não o texto: o botão agora é ícone + palavra, e `textContent`
+        // devolveria só a palavra — o ícone sumiria depois do primeiro envio.
+        const prev = Array.from(badge.childNodes);
+        badge.textContent = 'Enviando...'; badge.disabled = true;
         try {
           const url = await uploadAvatar(croppedFile, opts.membro);
           const novo = renderFoto(url);
@@ -2567,12 +2619,19 @@ function buildAvatarEl(fotoUrl, role, size, opts) {
         } catch (err) {
           await uiAlert('Não foi possível enviar a foto. ' + (err?.message || ''));
         } finally {
-          badge.textContent = prev; badge.disabled = false;
+          badge.textContent = ''; prev.forEach((n) => badge.appendChild(n));
+          badge.disabled = false;
         }
       });
     };
 
-    container.append(badge, input);
+    // O botão está FORA do círculo agora, então o avatar ganha um envoltório em coluna. Só
+    // quando é editável: nas outras telas o avatar continua sendo um elemento só, do tamanho
+    // que sempre foi, e nenhum layout se mexe.
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:inline-flex;flex-direction:column;align-items:center;';
+    wrap.append(container, badge, input);
+    return wrap;
   }
 
   return container;

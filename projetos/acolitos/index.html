@@ -566,6 +566,7 @@ async function renderDashboardMembro(ctx) {
   const greet = document.createElement('div'); greet.className = 'greet-section';
   greet.appendChild(buildAvatarEl(m?.foto_url, role, 76, {
     nivelSlug: nivel,
+    casaSlug: casaSlugDe(m),
     editable: !!m, membro: m || undefined,
     onUpload: (url) => { if (m) m.foto_url = url; }
   }));
@@ -676,7 +677,7 @@ async function renderDashboardEquipe(ctx) {
     fetchFrequencia(),
     sb.from('acolitos_celebracoes').select('*',{count:'exact',head:true}).gte('data',iniMes).lte('data',fimMes),
     sb.from('acolitos_escalas').select('status, acolitos_celebracoes!inner(data)').gte('acolitos_celebracoes.data', seisStr),
-    sb.from('acolitos_membros').select('id,user_id,nivel,nome,apelido,foto_url,comunidade').eq('status','ativo'),
+    sb.from('acolitos_membros').select('id,user_id,nivel,nome,apelido,foto_url,comunidade,casa_id').eq('status','ativo'),
     moduloId ? sb.from('pastoral_members').select('user_id,role').eq('module_id',moduloId) : Promise.resolve({data:[]}),
     sb.from('acolitos_celebracoes').select('id,data,horario,comunidade,tipo, acolitos_escalas(id)').gte('data',hoje).lte('data', new Date(Date.now()+28*86400000).toISOString().slice(0,10)).order('data').order('horario'),
   ]);
@@ -801,7 +802,7 @@ function abrirNivelMembros(n, lista) {
   const box = document.createElement('div'); box.style.cssText='max-height:60vh;overflow-y:auto;';
   lista.slice().sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).forEach(m => {
     const row = document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid var(--border);';
-    row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(n.slug).base, 34, { nivelSlug: n.slug }));
+    row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(n.slug).base, 34, { nivelSlug: n.slug, casaSlug: casaSlugDe(m) }));
     const info = document.createElement('div'); info.style.cssText='flex:1;min-width:0;';
     const nm = document.createElement('div'); nm.style.cssText='font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; nm.textContent = m.apelido || m.nome;
     const cm = document.createElement('div'); cm.style.cssText='font-size:11px;color:var(--text-muted);'; cm.textContent = m.comunidade==='matriz'?'Matriz':(m.comunidade==='santo_antonio'?'Sto. Antônio':'Outra');

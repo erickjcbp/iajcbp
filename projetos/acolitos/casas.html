@@ -91,7 +91,7 @@ function render() {
     if (!doCasa.length) { const em = document.createElement('div'); em.className = 'casa-mem-empty'; em.textContent = 'Nenhum membro nesta casa ainda.'; box.appendChild(em); }
     else doCasa.forEach(m => {
       const row = document.createElement('div'); row.className = 'casa-mem';
-      row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 30, { nivelSlug: m.nivel||'aspirante' }));
+      row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 30, { nivelSlug: m.nivel||'aspirante', casaSlug: casaSlugDe(m) }));
       const n2 = document.createElement('div'); n2.className = 'nm2'; n2.textContent = m.apelido || m.nome; row.appendChild(n2);
       const del = document.createElement('button'); del.className = 'mini-del'; del.textContent = '−'; del.title = 'Remover da casa';
       del.onclick = () => moverMembro(m, null); row.appendChild(del);
@@ -146,7 +146,7 @@ function renderConsilium(main, casa) {
     if (!ms.length) { const e = document.createElement('div'); e.style.cssText = 'font-size:11px;color:var(--text-muted);font-style:italic;padding:2px 0;'; e.textContent = '— vazio —'; card.appendChild(e); }
     ms.forEach(m => {
       const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:7px;padding:4px 2px;';
-      row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 26, { nivelSlug: m.nivel||'aspirante' }));
+      row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 26, { nivelSlug: m.nivel||'aspirante', casaSlug: casaSlugDe(m) }));
       const n = document.createElement('div'); n.style.cssText = 'flex:1;min-width:0;font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; n.textContent = m.apelido || m.nome;
       const x = document.createElement('button'); x.className = 'mini-del'; x.textContent = '−'; x.title = 'Tirar do time'; x.style.cssText = 'width:24px;height:24px;font-size:12px;'; x.onclick = () => removerSetor(m, slug);
       row.append(n, x); card.appendChild(row);
@@ -203,7 +203,7 @@ function abrirAddSetor(slug, label) {
     const q = busca.value.toLowerCase(); list.textContent = '';
     membros.filter(m => !(m.setores || []).includes(slug) && semAcento(m.nome).includes(semAcento(q))).slice(0, 60).forEach(m => {
       const row = document.createElement('div'); row.className = 'pick-row';
-      row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 30, { nivelSlug: m.nivel||'aspirante' }));
+      row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 30, { nivelSlug: m.nivel||'aspirante', casaSlug: casaSlugDe(m) }));
       const info = document.createElement('div'); info.style.flex = '1';
       const n = document.createElement('div'); n.style.cssText = 'font-size:14px;color:var(--text);'; n.textContent = m.apelido || m.nome;
       const s = document.createElement('div'); s.style.cssText = 'font-size:11px;color:var(--text-muted);'; s.textContent = (m.setores || []).length ? 'já em outros setores' : nivelInfo(m.nivel||'aspirante').label;
@@ -246,7 +246,7 @@ function abrirAddMembro(casa) {
     list.textContent = '';
     membros.filter(m => m.casa_id !== casa.id && semAcento(m.nome).includes(semAcento(q))).slice(0, 60).forEach(m => {
       const row = document.createElement('div'); row.className = 'pick-row';
-      row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 30, { nivelSlug: m.nivel||'aspirante' }));
+      row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 30, { nivelSlug: m.nivel||'aspirante', casaSlug: casaSlugDe(m) }));
       const info = document.createElement('div'); info.style.flex = '1';
       const n = document.createElement('div'); n.style.cssText = 'font-size:14px;color:var(--text);'; n.textContent = m.apelido || m.nome;
       const sub = document.createElement('div'); sub.style.cssText = 'font-size:11px;color:var(--text-muted);'; sub.textContent = m.casa_id ? 'já está em outra casa' : nivelInfo(m.nivel||'aspirante').label;

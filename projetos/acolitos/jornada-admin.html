@@ -534,7 +534,7 @@ function editarCelula(td, cell, m, funcao){
 let _devMembros = [], _devFuncoes = [], _devComps = [];
 async function carregarDev() {
   const [{ data: mems }, { data: listas }] = await Promise.all([
-    sb.from('acolitos_membros').select('id,nome,apelido,nivel,foto_url,comunidade,data_nascimento,competencias_desenvolvidas,desenvolvimento_competencias').eq('status', 'ativo').order('nome'),
+    sb.from('acolitos_membros').select('id,nome,apelido,nivel,foto_url,comunidade,casa_id,data_nascimento,competencias_desenvolvidas,desenvolvimento_competencias').eq('status', 'ativo').order('nome'),
     sb.from('acolitos_listas').select('valor,label,tipo').in('tipo', ['funcao', 'competencia']),
   ]);
   _devMembros = mems || [];
@@ -585,7 +585,7 @@ async function renderDesenvolvimento(main) {
   function cardDe(m) {
     const row = document.createElement('div'); row.style.cssText = 'display:flex;flex-direction:column;gap:9px;padding:11px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--surface2);';
     const top = document.createElement('div'); top.style.cssText = 'display:flex;align-items:center;gap:10px;';
-    const av = buildAvatarEl(m.foto_url, null, 38, { nivelSlug: m.nivel || 'aspirante' }); av.style.flex = 'none';
+    const av = buildAvatarEl(m.foto_url, null, 38, { nivelSlug: m.nivel || 'aspirante', casaSlug: casaSlugDe(m) }); av.style.flex = 'none';
     const info = document.createElement('div'); info.style.cssText = 'flex:1;min-width:0;';
     const nm = document.createElement('div'); nm.style.cssText = 'font-weight:700;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; nm.textContent = m.apelido || m.nome;
     const meta = document.createElement('div'); meta.style.cssText = 'font-size:11px;color:var(--text-muted);'; meta.textContent = nivelInfo(m.nivel || 'aspirante').label + ' · ' + ((m.competencias_desenvolvidas || []).length) + ' comp.';
