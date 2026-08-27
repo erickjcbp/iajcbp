@@ -302,7 +302,11 @@ async function renderBarrados(b){
 async function renderLogins(b){
   b.textContent='';
   const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 8px;line-height:1.5;';
-  hint.innerHTML='Usuário e login de cada membro. <b>A senha não fica guardada</b> — vive só no login seguro (criptografada). Para trocar, use <b>Redefinir senha</b>: a nova é mostrada uma única vez, anote na hora. Só superadmin vê esta tela.';
+  hint.innerHTML='Usuário e login de cada membro. <b>A senha não fica guardada</b> — vive só no login seguro (criptografada). '
+    +'Para trocar, use <b>Redefinir senha</b>: a nova é mostrada uma única vez, anote na hora. Só superadmin vê esta tela.'
+    +'<br><b>Esta tela é o único jeito de alguém recuperar o acesso</b> — o app não manda e-mail de recuperação, '
+    +'porque as contas usam usuário, não e-mail de verdade. Por isso ela mostra TODO MUNDO, inclusive quem está '
+    +'em integração ou afastado: antes essas pessoas sumiam daqui e ficavam sem saída.';
   b.appendChild(hint);
   const box=document.createElement('div'); box.innerHTML='<span class="loading">Carregando...</span>'; b.appendChild(box);
   const { data } = await sb.rpc('acolitos_logins_listar');
@@ -310,6 +314,20 @@ async function renderLogins(b){
   if(!data || data.erro){ box.textContent='Sem permissão.'; return; }
   const membros = data.membros || [];
   const busca=document.createElement('input'); busca.className='form-input'; busca.placeholder='buscar membro…'; busca.style.marginBottom='8px'; box.appendChild(busca);
+  // Separar por situação: quem está em integração é justamente quem mais esquece a senha,
+  // e antes nem aparecia nesta tela.
+  const SITUACOES=[['todos','Todos'],['ativo','Ativos'],['em_integracao','Em integração'],['afastado','Afastados']];
+  let filtro='todos';
+  const abas=document.createElement('div'); abas.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;';
+  SITUACOES.forEach(([slug,rot])=>{
+    const qtd = slug==='todos' ? membros.length : membros.filter(m=>m.status===slug).length;
+    if(slug!=='todos' && !qtd) return;                       // não mostra aba vazia
+    const t=document.createElement('button'); t.className='form-toggle'+(slug===filtro?' active':'');
+    t.style.cssText='font-size:11px;padding:6px 10px;'; t.textContent=rot+' ('+qtd+')';
+    t.onclick=()=>{ filtro=slug; abas.querySelectorAll('.form-toggle').forEach(x=>x.classList.remove('active')); t.classList.add('active'); desenha(); };
+    abas.appendChild(t);
+  });
+  box.appendChild(abas);
   const list=document.createElement('div'); box.appendChild(list);
   const mini=(txt,danger)=>{ const x=document.createElement('button'); x.textContent=txt; x.style.cssText='font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;border:1px solid '+(danger?'var(--danger)':'var(--gold-dim)')+';background:var(--surface2);color:'+(danger?'var(--danger-text)':'var(--gold-light)')+';'; return x; };
   async function setSenha(m){
@@ -336,14 +354,16 @@ async function renderLogins(b){
   }
   function desenha(){
     list.textContent=''; const q=busca.value.trim().toLowerCase();
-    const arr=membros.filter(m=>!q||semAcento(m.nome).includes(semAcento(q)));
+    const arr=membros.filter(m=>(filtro==='todos'||m.status===filtro) && (!q||semAcento(m.nome).includes(semAcento(q))));
     arr.slice(0,300).forEach(m=>{
       const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--border);';
       const info=document.createElement('div'); info.style.cssText='flex:1;min-width:0;';
       const nm=document.createElement('div'); nm.style.cssText='font-weight:700;font-size:13px;color:var(--text);'; nm.textContent=m.nome;
       const sub=document.createElement('div'); sub.style.cssText='font-size:11px;color:var(--text-muted);word-break:break-all;';
-      if(m.tem_conta){ sub.innerHTML='usuário: <b style="color:var(--gold-light)">'+escHtml(m.usuario||'—')+'</b>'; }
-      else { sub.innerHTML='<i style="color:var(--danger-text)">sem conta</i>'; }
+      const ROTULO={ ativo:'', em_integracao:' · em integração', afastado:' · afastado', desligado:' · desligado' };
+      const marca=ROTULO[m.status]||'';
+      if(m.tem_conta){ sub.innerHTML='usuário: <b style="color:var(--gold-light)">'+escHtml(m.usuario||'—')+'</b>'+escHtml(marca); }
+      else { sub.innerHTML='<i style="color:var(--danger-text)">sem conta</i>'+escHtml(marca); }
       info.append(nm,sub); row.appendChild(info);
       if(m.tem_conta){ const bu=mini('Usuário'); bu.onclick=()=>setUser(m); const bs=mini('Redefinir senha'); bs.onclick=()=>setSenha(m); row.append(bu,bs); }
       else { const bc=mini('Criar conta'); bc.onclick=()=>criarConta(m); row.append(bc); }

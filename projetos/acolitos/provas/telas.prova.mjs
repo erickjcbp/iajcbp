@@ -475,6 +475,52 @@ async function provaCasaChegaPelasFuncoesDoBanco(provas) {
   exigir(a.nivelContinua === true, 'o emblema de nível continua junto');
 }
 
+async function provaLoginsMostraQuemEstaEmIntegracao(provas) {
+  console.log('\n\x1b[1mConfig › Logins: quem está em integração continua na lista\x1b[0m');
+
+  // POR QUE ESTA PROVA: a lista filtrava status='ativo' e quem está no CRM (situação
+  // "em integração") sumia dela. Como o app NÃO manda e-mail de recuperação — as contas
+  // usam usuário, e o domínio não recebe mensagem —, esta tela é o único caminho para
+  // recuperar acesso. Quem sumia daqui ficava sem saída nenhuma. Eram 6 pessoas.
+  const r = await provas.abrir('config.html', {
+    papel: PAPEIS.admin,
+    rpcs: {
+      acolitos_logins_listar: { data: { membros: [
+        { id: 'm1', nome: 'Ativa Um',      nivel: 'coroinha',  user_id: 'u1', status: 'ativo',         tem_conta: true,  usuario: 'ativa.um' },
+        { id: 'm2', nome: 'Integrando Um', nivel: 'aspirante', user_id: 'u2', status: 'em_integracao', tem_conta: true,  usuario: 'integrando.um' },
+        { id: 'm3', nome: 'Afastada Um',   nivel: 'coroinha',  user_id: null, status: 'afastado',      tem_conta: false, usuario: null },
+      ] } },
+    },
+    passos: [{ chamar: 'render' }],
+    avaliar: `
+      secaoAtual = 'logins';
+      render();
+      await new Promise(function (s) { setTimeout(s, 250); });
+      var raiz = document.getElementById('main-content') || document.body;
+      var txt = raiz.innerText || '';
+      var saida = {};
+      saida.temAtiva      = /Ativa Um/.test(txt);
+      saida.temIntegrando = /Integrando Um/.test(txt);
+      saida.temAfastada   = /Afastada Um/.test(txt);
+      // a situação aparece ao lado de quem não está ativo, senão a coordenação não
+      // entende por que aquela pessoa está ali
+      saida.dizIntegracao = /em integra/i.test(txt);
+      // e existe um jeito de separar
+      var botoes = Array.from(document.querySelectorAll('button')).map(function (b) { return b.textContent || ''; });
+      saida.temFiltro = botoes.some(function (t) { return /Em integra/i.test(t); })
+                     && botoes.some(function (t) { return /Ativos/i.test(t); });
+      return saida;
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(a.temAtiva === true, 'quem está ativo continua aparecendo');
+  exigir(a.temIntegrando === true, 'quem está EM INTEGRAÇÃO aparece na lista',
+    'era o buraco: essa pessoa não tinha como recuperar o acesso');
+  exigir(a.temAfastada === true, 'quem está afastado também aparece');
+  exigir(a.dizIntegracao === true, 'a situação aparece na linha de quem não está ativo');
+  exigir(a.temFiltro === true, 'dá para separar por situação');
+}
+
 async function provaAtividadeDeUsuario(provas) {
   console.log('\n\x1b[1mConfig › Atividade: último uso e sino, com a frase certa em cada beco\x1b[0m');
 
@@ -738,6 +784,7 @@ try {
     await provaTarefasSoDoMeuTime(provas);
     await provaBrasaoNoAvatar(provas);
     await provaCasaChegaPelasFuncoesDoBanco(provas);
+    await provaLoginsMostraQuemEstaEmIntegracao(provas);
     await provaAtividadeDeUsuario(provas);
     await provaAtividadeNaoTransformaErroEmZero(provas);
     await provaPessoasETimesFundidas(provas);

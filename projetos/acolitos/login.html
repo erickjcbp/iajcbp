@@ -222,11 +222,19 @@
     </div>
 
     <!-- ESQUECI -->
+    <!-- Aqui havia um "enviar link de recuperação" por e-mail. Ele NUNCA entregou nada:
+         as contas do app usam usuário (fulano@coroinhas...), que não é caixa postal de
+         ninguém — o domínio aponta para a hospedagem do site e não recebe mensagem. A
+         tela dizia "Link enviado. Verifique seu e-mail" e a pessoa ficava esperando em
+         vez de pedir ajuda. Dizer a verdade resolve mais que um botão bonito. -->
     <div id="screen-esqueci" class="screen">
-      <label>Seu e-mail cadastrado</label>
-      <input type="email" id="es-email" placeholder="seu@email.com"
-             onkeydown="if(event.key==='Enter')resetar()">
-      <button class="btn" id="btn-esqueci" onclick="resetar()">Enviar link de recuperação</button>
+      <p style="font-size:13px;line-height:1.6;opacity:.85;margin:0 0 14px;">
+        Aqui o acesso é por <b>usuário e senha</b>, não por e-mail — então não dá para
+        mandar link de recuperação.<br><br>
+        Fale com a coordenação: ela redefine a sua senha na hora e te passa a nova.
+      </p>
+      <a class="btn" href="https://wa.me/5519999071702" target="_blank" rel="noopener"
+         style="display:block;text-align:center;text-decoration:none;">Falar com a coordenação</a>
       <a class="link-action" onclick="showScreen('entrar')">← Voltar</a>
       <div class="msg" id="msg-esqueci"></div>
     </div>
@@ -282,15 +290,8 @@
     window.location.href='novos.html';
   }
 
-  async function resetar(){
-    const email=document.getElementById('es-email').value.trim();
-    const btn=document.getElementById('btn-esqueci');
-    if(!email){ msg('msg-esqueci','Informe seu e-mail.','error'); return; }
-    btn.disabled=true; btn.textContent='Enviando...';
-    const { error }=await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin+'/projetos/acolitos/login.html' });
-    if(error){ msg('msg-esqueci','Erro ao enviar. Tente novamente.','error'); btn.disabled=false; btn.textContent='Enviar link de recuperação'; return; }
-    msg('msg-esqueci','Link enviado. Verifique seu e-mail.','success'); btn.disabled=true;
-  }
+  // A recuperação por e-mail foi removida em 27/08/2026 — ver o comentário na tela.
+  // Quando as pessoas puderem cadastrar um e-mail de verdade, ela volta, e aí funciona.
 
   // Se já está logado, vai direto para a home do módulo
   sb.auth.getSession().then(({ data:{ session } })=>{ if(session) window.location.href='index.html'; });

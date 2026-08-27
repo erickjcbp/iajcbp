@@ -100,6 +100,28 @@ certo; sem ela, alguém tem de lembrar.
 
 ## Fechados em 27/08/2026
 
+**Quem esquece a senha volta a ter saída (migration 062)**
+- **A pergunta que abriu isto:** "quem está no CRM esquece login e senha, como faz?".
+  Fui medir: **não fazia**. Os dois caminhos estavam quebrados.
+- **O "Esqueci minha senha" nunca entregou nada a ninguém.** As 52 contas do app usam
+  e-mail inventado (`usuario@coroinhas.jcbplimeira.com.br`) e o domínio aponta para a
+  hospedagem do site, que **não recebe e-mail**. A tela dizia "Link enviado. Verifique seu
+  e-mail" e a pessoa ficava esperando em vez de pedir ajuda. Agora ela diz a verdade —
+  aqui o acesso é por usuário e senha — e oferece o WhatsApp da coordenação. Uma tela que
+  promete o impossível é pior que uma tela que não promete nada.
+- **A tela de Logins não mostrava quem está em integração.** Ela filtrava `status='ativo'`,
+  e quem está no CRM na etapa da túnica fica como "em integração". Eram **6 pessoas**
+  (mais 2 afastadas) sem NENHUM caminho para recuperar acesso, já que esta tela é o único
+  que existe. Agora mostra todo mundo, com filtro por situação e a situação escrita na
+  linha de quem não está ativo.
+- **Prova nova** que trava o buraco: uma pessoa "em integração" na resposta de mentira tem
+  de aparecer na lista. Sem ela, um filtro por status volta calado.
+- **A primeira versão da prova acusou o app errado**: ela lia a resposta na chave
+  `avaliacao`, e o motor devolve `avaliado`. Cinco falhas vermelhas num app correto. Só
+  apareceu porque fui olhar a tela de verdade em vez de acreditar na prova.
+- **Fica para depois (item "c" do dono):** deixar cada pessoa cadastrar um e-mail de
+  verdade só para recuperação. Aí o link volta a existir e funciona.
+
 **O app reconhece quem já está no cadastro na hora de se cadastrar (migration 061)**
 - **O problema, com nome e sobrenome:** vieram 170 pessoas de uma planilha e **134 ainda
   não têm login**. Quem já é da pastoral cria conta, preenche o formulário e vira uma
