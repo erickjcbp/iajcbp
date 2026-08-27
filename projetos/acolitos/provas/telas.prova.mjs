@@ -511,7 +511,7 @@ async function provaCartaoDoCrmEComentarioObrigatorio(provas) {
       await new Promise(function (s) { setTimeout(s, 400); });
       var gaveta = document.getElementById('cartao');
       var txt = gaveta ? (gaveta.innerText || '') : '';
-      saida.abriu       = !!gaveta && gaveta.style.display !== 'none';
+      saida.abriu       = !!gaveta && gaveta.classList.contains('aberto');
       saida.temIdade    = /13 anos/.test(txt);
       saida.temSacramentos = /Batizado/.test(txt) && /Crisma/.test(txt);
       saida.temFamilia  = /Mãe Teste/.test(txt);
@@ -525,6 +525,15 @@ async function provaCartaoDoCrmEComentarioObrigatorio(provas) {
       saida.temBotaoZap  = gaveta.querySelectorAll('a[href^="https://wa.me/"]').length > 0;
       // e a conta do que falta não pode acusar ausência do que está ali
       saida.naoMenteSobreTelefone = !/nenhum telefone/i.test(txt);
+      // no celular, o dedo tem de rolar o CARTÃO, não a lista atrás dele
+      saida.travouOFundo = document.body.style.overflow === 'hidden';
+      saida.seguraARolagem = Array.from(document.querySelectorAll('style')).some(function (e) {
+        var css = e.textContent || '';
+        return css.indexOf('#cartao') >= 0 && css.indexOf('overscroll-behavior') >= 0;
+      });
+      saida.respeitaOEntalhe = /safe-area-inset-top/.test(gaveta.innerHTML || '');
+      fecharCartao();
+      saida.destravouAoFechar = document.body.style.overflow !== 'hidden';
 
       // mudar de etapa sem escrever nada não pode mexer em nada
       abrirModal({ id: 'c1', membro_id: 'mm1', etapa: 'integracao',
@@ -547,6 +556,12 @@ async function provaCartaoDoCrmEComentarioObrigatorio(provas) {
   exigir(a.mostraRecado === true, 'o telefone aparece mesmo morando no campo do outro cadastro',
     'são dois campos para a mesma coisa: celular_recado e celular_responsavel');
   exigir(a.temBotaoZap === true, 'tem botão para falar no WhatsApp direto do cartão');
+  exigir(a.travouOFundo === true, 'com o cartão aberto, a página de trás para de rolar',
+    'era o defeito no celular: o dedo pegava a lista de baixo');
+  exigir(a.seguraARolagem === true, 'a rolagem não escapa do cartão (overscroll-behavior)');
+  exigir(a.respeitaOEntalhe === true, 'o topo do cartão conta o entalhe/ilha do celular');
+  exigir(a.destravouAoFechar === true, 'fechar o cartão devolve a rolagem da página',
+    'travar e não destravar deixaria a tela inteira presa');
   exigir(a.naoMenteSobreTelefone === true, 'não diz "nenhum telefone" para quem tem telefone',
     'a conta do que falta tem de olhar os mesmos campos que a tela mostra');
   exigir(a.pedeObrigatorio === true, 'o comentário é apresentado como obrigatório');
@@ -654,6 +669,11 @@ async function provaAtividadeDeUsuario(provas) {
       // solto na tela foi o que deixou a primeira versão desta prova verde por engano.
       // E textContent, nao innerText (SEM crase: aqui dentro crase fecha a template
       // string e derruba o arquivo inteiro) — o innerText vem mexido pelo CSS.
+      // SEM CONTRABARRA TAMBÉM: este bloco é uma template string, então \s, \S e \/
+      // perdem a barra antes de virar código. Uma expressão com [\s\S] chega aqui como
+      // [sS] e não casa nada; /01\/08/ chega como /01/08/ e estoura "flags inválidas".
+      // Em 27/08/2026 isso acusou 12 defeitos falsos num app correto. Para buscar texto
+      // com caractere especial, use indexOf em vez de expressão regular.
       function estadoDe(nome) {
         var alvo = Array.from(raiz.querySelectorAll('div')).find(function (d) {
           return (d.textContent || '').trim() === nome;

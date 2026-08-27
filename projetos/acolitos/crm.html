@@ -76,11 +76,25 @@
 <!-- Modal avançar etapa -->
 <!-- Cartão da pessoa: gaveta que abre pelo lado (no celular, tela cheia). -->
 <div id="cartao-fundo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:400;"></div>
-<aside id="cartao" style="display:none;position:fixed;top:0;right:0;bottom:0;width:min(420px,100vw);z-index:401;
-        background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;
-        -webkit-overflow-scrolling:touch;box-shadow:-8px 0 24px rgba(0,0,0,.35);">
+<style>
+  /* Gaveta do cartão da pessoa. Fica aqui, e não num atributo style, porque
+     overscroll-behavior é o que impede o dedo de "atravessar" o cartão e rolar a
+     lista de trás quando a gaveta chega no fim — no celular era o defeito mais
+     incômodo. Atributo style perde propriedade que o motor não conhece. */
+  #cartao {
+    display: none; position: fixed; top: 0; right: 0; bottom: 0;
+    width: min(420px, 100vw); z-index: 401;
+    background: var(--surface); border-left: 1px solid var(--border);
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    box-shadow: -8px 0 24px rgba(0,0,0,.35);
+  }
+  #cartao.aberto { display: block; }
+</style>
+<aside id="cartao">
   <div style="position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);
-              padding:14px 16px;display:flex;align-items:center;gap:10px;z-index:2;">
+              padding:calc(14px + env(safe-area-inset-top)) 16px 14px;
+              display:flex;align-items:center;gap:10px;z-index:2;">
     <div style="flex:1;min-width:0;">
       <div id="cartao-nome" style="font-weight:800;font-size:16px;color:var(--gold-light);
            overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
@@ -94,7 +108,8 @@
     <div style="font-weight:700;font-size:13px;color:var(--gold-light);margin-bottom:8px;">Linha do tempo</div>
     <div id="cartao-linha"></div>
   </div>
-  <div style="position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 16px;">
+  <div style="position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--border);
+              padding:12px 16px calc(12px + env(safe-area-inset-bottom));">
     <textarea id="cartao-texto" class="form-input" rows="2" placeholder="Escrever um comentário…"
               style="resize:vertical;"></textarea>
     <button id="cartao-comentar" class="btn-sm gold" style="width:100%;margin-top:8px;">Comentar</button>
@@ -353,7 +368,11 @@ async function abrirCartao(entry) {
   document.getElementById('cartao-sub').textContent =
     (ETAPA_LABEL[entry.etapa] || entry.etapa) + ' · há ' + diasNaEtapa(entry.etapa_iniciada_em) + ' dias nesta etapa';
   document.getElementById('cartao-fundo').style.display = '';
-  document.getElementById('cartao').style.display = '';
+  document.getElementById('cartao').classList.add('aberto');
+  // Sem isto, o dedo rola a LISTA ATRÁS em vez do cartão: a gaveta chega no fim e o
+  // gesto continua na página de baixo. O overscroll-behavior segura a corrente; travar
+  // o corpo segura o resto.
+  document.body.style.overflow = 'hidden';
   document.getElementById('cartao-texto').value = '';
 
   const ficha = document.getElementById('cartao-ficha'); ficha.textContent = '';
@@ -468,8 +487,9 @@ async function abrirCartao(entry) {
 }
 
 function fecharCartao() {
-  document.getElementById('cartao').style.display = 'none';
+  document.getElementById('cartao').classList.remove('aberto');
   document.getElementById('cartao-fundo').style.display = 'none';
+  document.body.style.overflow = '';
   cartaoEntry = null;
 }
 

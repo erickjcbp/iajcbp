@@ -365,7 +365,11 @@ body.has-switch { padding-top: calc(var(--header-h) + 46px + env(safe-area-inset
   position: fixed; inset: 0; background: rgba(0,0,0,.88);
   -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
   display: none; align-items: center; justify-content: center;
-  z-index: 200; padding: 14px; overflow-y: auto;
+  z-index: 200; overflow-y: auto;
+  /* O respiro do topo tem de contar o entalhe/ilha do celular, senão um modal alto
+     nasce embaixo da câmera e o título fica ilegível. Em aparelho sem entalhe,
+     env(safe-area-inset-top) é 0 e nada muda. */
+  padding: calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));
 }
 .modal-overlay.open { display: flex; }
 .modal {
