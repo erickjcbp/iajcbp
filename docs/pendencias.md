@@ -100,6 +100,37 @@ certo; sem ela, alguém tem de lembrar.
 
 ## Fechados em 27/08/2026
 
+**O CRM ganhou o cartão da pessoa, e mudar de etapa passou a exigir comentário (migration 063)**
+- **O pedido:** "torne obrigatório o preenchimento da observação; e transforma numa coluna
+  lateral de comentário, tipo quando abre uma task no ClickUp; e explore mais os dados
+  cadastrados". Ao esclarecer: **panorama = abrir o cartão da pessoa e ver tudo dela**, não
+  um painel de contagens.
+- **A observação de antes não era desusada: ela se apagava sozinha.** Era um campo único na
+  linha do CRM, SOBRESCRITO a cada avanço de etapa — quem escrevesse na integração perdia o
+  texto na túnica. Estava vazia em **0 de 18 linhas**. Agora são comentários: muitos, com
+  autor e data, só inserção (não se edita nem se apaga — histórico reescrevível não explica
+  decisão nenhuma).
+- **O cartão mostra a pessoa inteira**: idade, nascimento, comunidade, situação, sacramentos,
+  investidura, túnica, pai, mãe, responsável, pais ministros, irmãos na pastoral (buscando
+  quem mais está no grupo), telefones, grupo do WhatsApp, endereço, necessidades especiais —
+  e **o que falta na ficha**, que é a lista do que perguntar na próxima conversa. Antes a
+  tela dava cinco colunas: nome, idade, etapa, dias e data.
+- **A linha do tempo mistura comentários e mudanças de etapa** na ordem em que aconteceram, e
+  quando o comentário explica uma mudança os dois aparecem juntos, numa linha só.
+- **Obrigatório em avançar, voltar e tirar do funil.** Em "Recusar" NÃO se exige: essa ação
+  apaga a pessoa, o histórico e a conta — o comentário morreria no mesmo segundo.
+- **Um defeito antigo apareceu no caminho:** `formatDate` grudava 'T00:00:00' em tudo, então
+  qualquer data COM hora virava "Invalid Date" — e a coluna "Data" da lista do CRM já
+  mostrava isso para todo mundo, porque `etapa_iniciada_em` tem hora. Consertado na raiz, em
+  shared.js, com prova própria.
+- **A prova nova acusou os dois defeitos antes de eu subir**: "Invalid Date" e a situação
+  aparecendo como `em_integracao` em vez de "Em integração".
+- **E a prova mentiu duas vezes antes de funcionar**: uma barra dentro do texto que o motor
+  avalia (`\/` vira `/` e quebra a expressão) e uma função `render` que o CRM não tem.
+  Sete acusações num app correto.
+- **O campo `observacoes` da tabela `acolitos_crm` ficou morto** — ninguém escreve mais nele.
+  Está vazio; não foi removido para não mexer em tabela viva sem necessidade.
+
 **Quem esquece a senha volta a ter saída (migration 062)**
 - **A pergunta que abriu isto:** "quem está no CRM esquece login e senha, como faz?".
   Fui medir: **não fazia**. Os dois caminhos estavam quebrados.

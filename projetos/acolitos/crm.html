@@ -74,6 +74,33 @@
 </div>
 
 <!-- Modal avançar etapa -->
+<!-- Cartão da pessoa: gaveta que abre pelo lado (no celular, tela cheia). -->
+<div id="cartao-fundo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:400;"></div>
+<aside id="cartao" style="display:none;position:fixed;top:0;right:0;bottom:0;width:min(420px,100vw);z-index:401;
+        background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;
+        -webkit-overflow-scrolling:touch;box-shadow:-8px 0 24px rgba(0,0,0,.35);">
+  <div style="position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);
+              padding:14px 16px;display:flex;align-items:center;gap:10px;z-index:2;">
+    <div style="flex:1;min-width:0;">
+      <div id="cartao-nome" style="font-weight:800;font-size:16px;color:var(--gold-light);
+           overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+      <div id="cartao-sub" style="font-size:12px;color:var(--text-muted);margin-top:2px;"></div>
+    </div>
+    <button id="cartao-fechar" style="border:1px solid var(--border);background:var(--surface2);
+            color:var(--text);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:16px;">×</button>
+  </div>
+  <div id="cartao-ficha" style="padding:14px 16px;"></div>
+  <div style="padding:0 16px 14px;">
+    <div style="font-weight:700;font-size:13px;color:var(--gold-light);margin-bottom:8px;">Linha do tempo</div>
+    <div id="cartao-linha"></div>
+  </div>
+  <div style="position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 16px;">
+    <textarea id="cartao-texto" class="form-input" rows="2" placeholder="Escrever um comentário…"
+              style="resize:vertical;"></textarea>
+    <button id="cartao-comentar" class="btn-sm gold" style="width:100%;margin-top:8px;">Comentar</button>
+  </div>
+</aside>
+
 <div class="modal-overlay" id="modal-avancar">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -92,8 +119,13 @@
     </div>
 
     <div class="form-group" style="margin-top:12px;">
-      <label class="form-label">Observação (opcional)</label>
-      <input class="form-input" id="modal-obs" placeholder="Anotação desta etapa...">
+      <label class="form-label">Comentário (obrigatório)</label>
+      <textarea class="form-input" id="modal-obs" rows="2"
+                placeholder="O que aconteceu nesta etapa? Fica na linha do tempo da pessoa."
+                style="resize:vertical;"></textarea>
+      <p style="font-size:11px;color:var(--text-muted);margin:6px 0 0;line-height:1.5;">
+        Daqui a seis meses ninguém lembra por que esta pessoa avançou ou voltou. Escrito, lembra.
+      </p>
     </div>
 
     <div class="modal-actions" style="flex-wrap:wrap;gap:8px;">
@@ -144,12 +176,18 @@ async function init() {
   renderHeader(ctx, 'crm');
   renderBottomNav(ctx, 'crm');
   await loadCrm();
+  document.getElementById('cartao-fechar').onclick = fecharCartao;
+  document.getElementById('cartao-fundo').onclick = fecharCartao;
+  document.getElementById('cartao-comentar').onclick = comentarNoCartao;
 }
 
 async function loadCrm() {
   const { data } = await sbAdmin
     .from('acolitos_crm')
-    .select('*, acolitos_membros(id,nome,data_nascimento,foto_url,telefone,telefone_whatsapp,celular_responsavel,responsavel_whatsapp,celular_mae)')
+    // A ficha INTEIRA: o cartão da pessoa mostra tudo o que o cadastro sabe dela.
+    // Antes vinham sete campos e o resto — sacramentos, família, endereço, irmãos —
+    // ficava invisível justamente para quem decide se a pessoa entra.
+    .select('*, acolitos_membros(*)')
     .neq('etapa','integrado')
     .order('etapa_iniciada_em', { ascending: true });
   crmData = data || [];
@@ -206,7 +244,7 @@ function renderPipeline() {
       const m = c.acolitos_membros;
       const dias = diasNaEtapa(c.etapa_iniciada_em);
       const card = document.createElement('div'); card.className = 'crm-card';
-      card.onclick = () => abrirModal(c);
+      card.onclick = () => abrirCartao(c);
 
       const name = document.createElement('div'); name.className = 'crm-card-name';
       name.textContent = m?.nome || '—';
@@ -247,7 +285,12 @@ function renderLista() {
     const dias = diasNaEtapa(c.etapa_iniciada_em);
     const tr = document.createElement('tr');
 
-    const tdNome = document.createElement('td'); tdNome.textContent = m?.nome || '—';
+    const tdNome = document.createElement('td');
+    const linkNome = document.createElement('a');
+    linkNome.textContent = m?.nome || '—';
+    linkNome.style.cssText = 'color:var(--gold-light);cursor:pointer;text-decoration:none;font-weight:600;';
+    linkNome.onclick = () => abrirCartao(c);
+    tdNome.appendChild(linkNome);
     const tdIdade = document.createElement('td');
     tdIdade.textContent = m?.data_nascimento ? calcIdade(m.data_nascimento) + 'a' : '—';
 
@@ -273,6 +316,200 @@ function renderLista() {
     tr.append(tdNome, tdIdade, tdEtapa, tdDias, tdData, tdAcao);
     tbody.appendChild(tr);
   });
+}
+
+// ── CARTÃO DA PESSOA ──────────────────────────────────────────────────
+// Quem decide se alguém entra na pastoral precisa ver a pessoa inteira, não
+// cinco colunas de tabela. Aqui está tudo o que o cadastro sabe — e, junto,
+// a linha do tempo: comentários e mudanças de etapa na ordem em que
+// aconteceram, cada um com quem fez e quando.
+let cartaoEntry = null;
+const autoresCache = {};
+
+const SIMNAO = v => v === null || v === undefined ? '—' : (v ? 'Sim' : 'Não');
+const OU = v => (v === null || v === undefined || String(v).trim() === '') ? '—' : String(v);
+
+function bloco(titulo, linhas) {
+  const vivas = linhas.filter(l => l[1] !== '—' || l[2] === 'sempre');
+  if (!vivas.length) return null;
+  const cx = document.createElement('div'); cx.style.cssText = 'margin-bottom:14px;';
+  const t = document.createElement('div');
+  t.style.cssText = 'font-weight:700;font-size:12px;color:var(--gold-light);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;';
+  t.textContent = titulo; cx.appendChild(t);
+  vivas.forEach(([rot, val]) => {
+    const l = document.createElement('div');
+    l.style.cssText = 'display:flex;gap:10px;font-size:13px;padding:3px 0;border-bottom:1px solid var(--border);';
+    const a = document.createElement('span'); a.style.cssText = 'color:var(--text-muted);min-width:140px;'; a.textContent = rot;
+    const b = document.createElement('span'); b.style.cssText = 'flex:1;color:var(--text);word-break:break-word;'; b.textContent = val;
+    l.append(a, b); cx.appendChild(l);
+  });
+  return cx;
+}
+
+async function abrirCartao(entry) {
+  cartaoEntry = entry;
+  const m = entry.acolitos_membros || {};
+  document.getElementById('cartao-nome').textContent = m.nome || '—';
+  document.getElementById('cartao-sub').textContent =
+    (ETAPA_LABEL[entry.etapa] || entry.etapa) + ' · há ' + diasNaEtapa(entry.etapa_iniciada_em) + ' dias nesta etapa';
+  document.getElementById('cartao-fundo').style.display = '';
+  document.getElementById('cartao').style.display = '';
+  document.getElementById('cartao-texto').value = '';
+
+  const ficha = document.getElementById('cartao-ficha'); ficha.textContent = '';
+  const idade = m.data_nascimento ? calcIdade(m.data_nascimento) + ' anos' : '—';
+  const COM = { matriz:'Matriz', santo_antonio:'Santo Antônio', outra:'Outra' };
+
+  // Irmãos na pastoral: quem mais está no mesmo grupo.
+  let irmaos = '—';
+  if (m.grupo_irmaos) {
+    const { data: irm } = await sbAdmin.from('acolitos_membros')
+      .select('nome').eq('grupo_irmaos', m.grupo_irmaos).neq('id', m.id);
+    if (irm && irm.length) irmaos = irm.map(x => x.nome).join(', ');
+  }
+
+  [
+    bloco('Quem é', [
+      ['Idade', idade],
+      ['Nascimento', m.data_nascimento ? formatDate(m.data_nascimento) : '—'],
+      ['Apelido', OU(m.apelido)],
+      ['Comunidade', COM[m.comunidade] || OU(m.comunidade)],
+      ['Situação no cadastro', ({ ativo:'Ativo', afastado:'Afastado', em_integracao:'Em integração', desligado:'Desligado' })[m.status] || OU(m.status)],
+      ['Entrou no app em', m.created_at ? formatDate(m.created_at) : '—'],
+      ['Tem login', m.user_id ? 'Sim' : 'Não', 'sempre'],
+    ]),
+    bloco('Caminhada na igreja', [
+      ['Batizado', SIMNAO(m.batismo), 'sempre'],
+      ['Primeira Eucaristia', SIMNAO(m.primeira_eucaristia), 'sempre'],
+      ['Crisma', SIMNAO(m.crisma), 'sempre'],
+      ['Já foi investido', SIMNAO(m.investido), 'sempre'],
+      ['Túnica própria', SIMNAO(m.tem_tunica), 'sempre'],
+    ]),
+    bloco('Família', [
+      ['Pai', OU(m.nome_pai)],
+      ['Mãe', OU(m.nome_mae)],
+      ['Responsável', OU(m.responsavel)],
+      ['Pais são ministros', SIMNAO(m.tem_pai_ministro || m.tem_mae_ministro), 'sempre'],
+      ['Irmãos na pastoral', irmaos],
+      ['Escalar junto com irmão', m.escalar_com_irmao ? 'Sim' : '—'],
+      ['Escalar junto com os pais', m.escalar_com_pais ? 'Sim' : '—'],
+    ]),
+    bloco('Contato', [
+      ['Celular', OU(m.telefone) + (m.telefone_whatsapp ? ' (WhatsApp)' : '')],
+      ['Celular da mãe', OU(m.celular_mae)],
+      ['Recado', OU(m.celular_recado) + (m.responsavel_whatsapp ? ' (WhatsApp)' : '')],
+      ['No grupo do WhatsApp', SIMNAO(m.no_grupo_whatsapp), 'sempre'],
+      ['Endereço', OU(m.endereco)],
+    ]),
+    bloco('Cuidados e anotações', [
+      ['Necessidades especiais', OU(m.necessidades_especiais)],
+      ['Observações da ficha', OU(m.observacoes)],
+    ]),
+  ].filter(Boolean).forEach(x => ficha.appendChild(x));
+
+  // O que falta — a lista que diz o que perguntar na próxima conversa.
+  const falta = [];
+  if (!m.data_nascimento) falta.push('data de nascimento');
+  if (!m.telefone && !m.celular_recado && !m.celular_mae) falta.push('nenhum telefone');
+  if (!m.endereco) falta.push('endereço');
+  if (!m.nome_mae && !m.nome_pai && !m.responsavel) falta.push('nome de responsável');
+  if (!m.batismo) falta.push('batismo');
+  if (!m.no_grupo_whatsapp) falta.push('entrar no grupo do WhatsApp');
+  if (falta.length) {
+    const av = document.createElement('div');
+    av.style.cssText = 'border:1px solid var(--gold-dim);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.6;color:var(--text-muted);';
+    av.innerHTML = '<b style="color:var(--gold-light);">Falta nesta ficha:</b> ' + escHtml(falta.join(' · '));
+    ficha.appendChild(av);
+  }
+
+  const acao = document.createElement('button');
+  acao.className = 'btn-sm gold'; acao.style.cssText = 'width:100%;margin:12px 0 4px;';
+  acao.textContent = 'Avançar etapa / mover';
+  acao.onclick = () => { fecharCartao(); abrirModal(entry); };
+  ficha.appendChild(acao);
+
+  await carregarLinhaDoTempo(m.id, entry);
+}
+
+function fecharCartao() {
+  document.getElementById('cartao').style.display = 'none';
+  document.getElementById('cartao-fundo').style.display = 'none';
+  cartaoEntry = null;
+}
+
+async function nomesDosAutores(ids) {
+  const faltam = ids.filter(i => i && !(i in autoresCache));
+  if (faltam.length) {
+    const { data } = await sbAdmin.from('acolitos_membros').select('user_id,nome').in('user_id', faltam);
+    faltam.forEach(i => { autoresCache[i] = null; });
+    (data || []).forEach(x => { autoresCache[x.user_id] = x.nome; });
+  }
+  return autoresCache;
+}
+
+async function carregarLinhaDoTempo(membroId, entry) {
+  const alvo = document.getElementById('cartao-linha');
+  alvo.innerHTML = '<span class="loading">Carregando...</span>';
+  const [{ data: coms }, { data: hist }] = await Promise.all([
+    sbAdmin.from('acolitos_crm_comentarios').select('*').eq('membro_id', membroId).order('quando'),
+    sbAdmin.from('acolitos_crm_historico').select('*').eq('membro_id', membroId).order('changed_at'),
+  ]);
+  const itens = []
+    .concat((coms || []).map(c => ({ quando: c.quando, autor: c.autor_id, tipo: 'comentario', texto: c.texto, de: c.etapa_de, para: c.etapa_para })))
+    .concat((hist || []).map(h => ({ quando: h.changed_at, autor: h.changed_by, tipo: 'mudanca', de: h.etapa_de, para: h.etapa_para })))
+    .sort((a, b) => String(a.quando).localeCompare(String(b.quando)));
+  await nomesDosAutores(itens.map(i => i.autor));
+  alvo.textContent = '';
+  if (!itens.length) {
+    const p = document.createElement('p'); p.style.cssText = 'font-size:12px;color:var(--text-muted);';
+    p.textContent = 'Nada registrado ainda. O primeiro comentário aparece aqui.';
+    alvo.appendChild(p); return;
+  }
+  // Uma mudança de etapa e o comentário que a explicou chegam juntos: quando os dois
+  // apontam para a mesma transição, o texto entra na própria linha da mudança.
+  const usados = new Set();
+  itens.forEach((it, i) => {
+    if (usados.has(i)) return;
+    const cx = document.createElement('div');
+    cx.style.cssText = 'border-left:2px solid var(--gold-dim);padding:6px 0 10px 10px;margin-bottom:2px;';
+    const cab = document.createElement('div');
+    cab.style.cssText = 'font-size:11px;color:var(--text-muted);margin-bottom:3px;';
+    const quem = autoresCache[it.autor] || 'alguém da coordenação';
+    cab.textContent = quem + ' · ' + formatDate(it.quando);
+    const corpo = document.createElement('div'); corpo.style.cssText = 'font-size:13px;color:var(--text);line-height:1.5;';
+    if (it.tipo === 'mudanca') {
+      const par = itens.findIndex((o, j) => j !== i && o.tipo === 'comentario' && o.para === it.para && o.de === it.de
+                                    && Math.abs(new Date(o.quando) - new Date(it.quando)) < 60000);
+      const rot = (ETAPA_LABEL[it.de] || it.de || '—') + ' → ' + (ETAPA_LABEL[it.para] || it.para || '—');
+      corpo.innerHTML = '<b>' + escHtml(rot) + '</b>';
+      if (par >= 0) { usados.add(par); corpo.innerHTML += '<br>' + escHtml(itens[par].texto); }
+    } else {
+      corpo.textContent = it.texto;
+    }
+    cx.append(cab, corpo); alvo.appendChild(cx);
+  });
+}
+
+async function salvarComentario(membroId, texto, etapa, de, para) {
+  const { error } = await sbAdmin.from('acolitos_crm_comentarios').insert({
+    membro_id: membroId, autor_id: ctx.user.id, texto: texto,
+    etapa: etapa || null, etapa_de: de || null, etapa_para: para || null,
+  });
+  return !error;
+}
+
+async function comentarNoCartao() {
+  if (!cartaoEntry) return;
+  const el = document.getElementById('cartao-texto');
+  const txt = el.value.trim();
+  if (!txt) { await uiAlert('Escreva algo antes de comentar.'); return; }
+  const btn = document.getElementById('cartao-comentar');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  const ok = await salvarComentario(cartaoEntry.membro_id, txt, cartaoEntry.etapa, null, null);
+  btn.disabled = false; btn.textContent = 'Comentar';
+  if (!ok) { await uiAlert('Não consegui salvar o comentário.'); return; }
+  el.value = '';
+  await carregarLinhaDoTempo(cartaoEntry.membro_id, cartaoEntry);
 }
 
 function setView(view) {
@@ -322,15 +559,23 @@ async function voltarEtapa() {
   const idx = ETAPAS.indexOf(pendingEntry.etapa);
   if (idx <= 0) return;
   const anterior = ETAPAS[idx - 1];
+  const obsV = document.getElementById('modal-obs').value.trim();
+  // Voltar é justamente o movimento que mais precisa de explicação.
+  if (!obsV) { await uiAlert('Escreva um comentário explicando por que está voltando a etapa.'); return; }
   if (!await uiConfirm('Voltar ' + (pendingEntry.acolitos_membros?.nome || 'este membro') + ' para a etapa "' + ETAPA_LABEL[anterior] + '"?')) return;
   await sbAdmin.from('acolitos_crm').update({ etapa: anterior, etapa_iniciada_em: new Date().toISOString() }).eq('membro_id', pendingEntry.membro_id);
   await sbAdmin.from('acolitos_crm_historico').insert({ membro_id: pendingEntry.membro_id, etapa_de: pendingEntry.etapa, etapa_para: anterior, changed_by: ctx.user.id });
+  await salvarComentario(pendingEntry.membro_id, obsV, pendingEntry.etapa, pendingEntry.etapa, anterior);
   fecharModal(); pendingEntry = null; await loadCrm();
 }
 
 async function excluirEntry() {
   if (!pendingEntry) return;
   const nome = pendingEntry.acolitos_membros?.nome || 'este membro';
+  const obsX = document.getElementById('modal-obs').value.trim();
+  // A pessoa continua no cadastro, então o comentário sobrevive e explica a saída.
+  if (!obsX) { await uiAlert('Escreva um comentário explicando por que está tirando do funil.'); return; }
+  await salvarComentario(pendingEntry.membro_id, obsX, pendingEntry.etapa, null, null);
   if (!await uiConfirm('Remover ' + nome + ' do funil de integração?\n(O cadastro do membro não é apagado — só sai do CRM.)')) return;
   await sbAdmin.from('acolitos_crm_historico').delete().eq('membro_id', pendingEntry.membro_id);
   const { error } = await sbAdmin.from('acolitos_crm').delete().eq('membro_id', pendingEntry.membro_id);
@@ -347,15 +592,22 @@ async function confirmarAvancar() {
   const idx = ETAPAS.indexOf(etapaAtual);
   const proximaEtapa = ETAPAS[idx + 1];
   const obs = document.getElementById('modal-obs').value.trim();
+  // Obrigatório: sem isto, seis meses depois ninguém sabe por que a pessoa avançou.
+  if (!obs) {
+    await uiAlert('Escreva um comentário explicando a mudança. Ele fica na linha do tempo da pessoa.');
+    btn.disabled = false; btn.textContent = 'Confirmar'; return;
+  }
   const roleFinal = document.getElementById('sel-role').value;
   const membroId = pendingEntry.membro_id;
 
   // Avança etapa no CRM
+  // O texto NÃO vai mais para `observacoes`: aquele campo era um só por pessoa e se
+  // sobrescrevia a cada etapa. Agora vira comentário, que fica para sempre.
   await sbAdmin.from('acolitos_crm').update({
     etapa: proximaEtapa,
-    etapa_iniciada_em: new Date().toISOString(),
-    observacoes: obs || null
+    etapa_iniciada_em: new Date().toISOString()
   }).eq('membro_id', membroId);
+  await salvarComentario(membroId, obs, etapaAtual, etapaAtual, proximaEtapa);
 
   // Registra histórico
   await sbAdmin.from('acolitos_crm_historico').insert({

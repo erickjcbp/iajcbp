@@ -475,6 +475,72 @@ async function provaCasaChegaPelasFuncoesDoBanco(provas) {
   exigir(a.nivelContinua === true, 'o emblema de nível continua junto');
 }
 
+async function provaCartaoDoCrmEComentarioObrigatorio(provas) {
+  console.log('\n\x1b[1mCRM: o cartão mostra a pessoa inteira, e mudar de etapa exige comentário\x1b[0m');
+
+  // A tela mostrava cinco colunas de tabela: nome, idade, etapa, dias, data. Quem decide
+  // se alguém entra na pastoral não via sacramentos, família, endereço nem o que falta na
+  // ficha. E a "observação" era um campo único, sobrescrito a cada etapa — estava vazia
+  // nas 18 linhas do CRM em 27/08/2026, porque se apagava sozinha.
+  const pessoa = {
+    id: 'mm1', nome: 'Fulana de Teste', data_nascimento: '2013-04-10', comunidade: 'matriz',
+    status: 'em_integracao', batismo: true, primeira_eucaristia: false, crisma: false,
+    investido: null, tem_tunica: true, nome_pai: 'Pai Teste', nome_mae: 'Mãe Teste',
+    responsavel: 'Mãe Teste', tem_pai_ministro: false, tem_mae_ministro: false, grupo_irmaos: null,
+    telefone: '(19) 90000-0000', telefone_whatsapp: true, celular_mae: null, celular_recado: null,
+    no_grupo_whatsapp: false, endereco: 'Rua de Teste, 10', necessidades_especiais: null,
+    observacoes: null, user_id: 'u9', created_at: '2026-08-01T12:00:00Z', apelido: null, foto_url: null,
+  };
+  const r = await provas.abrir('crm.html', {
+    papel: PAPEIS.admin,
+    tabelas: {
+      acolitos_crm: { data: [{ id: 'c1', membro_id: 'mm1', etapa: 'integracao',
+                               etapa_iniciada_em: '2026-08-20T12:00:00Z', acolitos_membros: pessoa }] },
+      acolitos_crm_comentarios: { data: [] },
+      acolitos_crm_historico: { data: [] },
+    },
+    avaliar: `
+      var naFila = Array.from(document.querySelectorAll('.crm-card')).find(function (d) {
+        return /Fulana de Teste/.test(d.textContent || '');
+      });
+      var saida = { achou: !!naFila };
+      if (naFila) naFila.click();
+      await new Promise(function (s) { setTimeout(s, 400); });
+      var gaveta = document.getElementById('cartao');
+      var txt = gaveta ? (gaveta.innerText || '') : '';
+      saida.abriu       = !!gaveta && gaveta.style.display !== 'none';
+      saida.temIdade    = /13 anos/.test(txt);
+      saida.temSacramentos = /Batizado/.test(txt) && /Crisma/.test(txt);
+      saida.temFamilia  = /Mãe Teste/.test(txt);
+      saida.temEndereco = /Rua de Teste/.test(txt);
+      saida.temFalta    = /Falta nesta ficha/.test(txt);
+      // data COM hora não pode virar "Invalid Date"
+      saida.dataBoa     = /01.08.2026/.test(txt) && !/Invalid/i.test(txt);
+      saida.temLinha    = /Linha do tempo/.test(txt);
+
+      // mudar de etapa sem escrever nada não pode mexer em nada
+      abrirModal({ id: 'c1', membro_id: 'mm1', etapa: 'integracao',
+                   etapa_iniciada_em: '2026-08-20T12:00:00Z', acolitos_membros: { nome: 'Fulana de Teste' } });
+      document.getElementById('modal-obs').value = '';
+      confirmarAvancar();
+      await new Promise(function (s) { setTimeout(s, 300); });
+      saida.pedeObrigatorio = /obrigat/i.test(document.body.innerText || '');
+      return saida;
+    `,
+  });
+  const a = r.avaliado || {};
+  const escritas = (r.gravacoes || []).filter(g => g.tabela === 'acolitos_crm' || g.tabela === 'acolitos_crm_historico');
+  exigir(a.achou === true && a.abriu === true, 'clicar na pessoa abre o cartão dela');
+  exigir(a.temIdade === true && a.temSacramentos === true, 'o cartão traz idade e sacramentos');
+  exigir(a.temFamilia === true && a.temEndereco === true, 'traz família e endereço');
+  exigir(a.temFalta === true, 'diz o que falta na ficha', 'é a lista do que perguntar na próxima conversa');
+  exigir(a.dataBoa === true, 'data com hora não vira "Invalid Date"');
+  exigir(a.temLinha === true, 'o cartão tem a linha do tempo');
+  exigir(a.pedeObrigatorio === true, 'o comentário é apresentado como obrigatório');
+  exigir(escritas.length === 0, 'avançar sem comentário não muda etapa nenhuma',
+    'gravou: ' + JSON.stringify(escritas));
+}
+
 async function provaLoginsMostraQuemEstaEmIntegracao(provas) {
   console.log('\n\x1b[1mConfig › Logins: quem está em integração continua na lista\x1b[0m');
 
@@ -784,6 +850,7 @@ try {
     await provaTarefasSoDoMeuTime(provas);
     await provaBrasaoNoAvatar(provas);
     await provaCasaChegaPelasFuncoesDoBanco(provas);
+    await provaCartaoDoCrmEComentarioObrigatorio(provas);
     await provaLoginsMostraQuemEstaEmIntegracao(provas);
     await provaAtividadeDeUsuario(provas);
     await provaAtividadeNaoTransformaErroEmZero(provas);

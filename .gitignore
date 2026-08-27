@@ -12,3 +12,8 @@ midia/landing/*.jpeg
 
 # Brasões das casas: originais de ~3 MB ficam fora; as versões web (webp/png) entram
 midia/brasoes/originais/
+
+# Entregas para o dono: planilhas e listas com NOME DE GENTE REAL.
+# Fica dentro do projeto por pedido dele, mas NUNCA sobe: o site inteiro é
+# publicado a partir daqui, e um arquivo desses viraria endereço público.
+entregas/

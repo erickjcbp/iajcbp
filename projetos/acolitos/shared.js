@@ -88,9 +88,20 @@ function calcIdade(dataNasc) {
   return idade;
 }
 
+// Aceita os DOIS formatos que o banco devolve, porque quem chama nem sempre sabe
+// qual está na mão:
+//   "2013-04-10"            data pura  -> montada com os pedaços, no fuso de quem olha
+//                                         (somar T00:00:00 já bastava, mas ver abaixo)
+//   "2026-08-01T12:00:00Z"  instante   -> convertido normalmente
+// Antes a função grudava 'T00:00:00' em tudo. Num instante isso vira
+// "2026-08-01T12:00:00ZT00:00:00", que é data inválida — e a coluna "Data" da lista
+// do CRM mostrava "Invalid Date" para todo mundo, porque etapa_iniciada_em tem hora.
 function formatDate(d) {
   if (!d) return '—';
-  return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR');
+  const s = String(d);
+  const so = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const dt = so ? new Date(+so[1], +so[2] - 1, +so[3]) : new Date(s);
+  return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString('pt-BR');
 }
 
 function diasNaEtapa(etapaIniciada) {
