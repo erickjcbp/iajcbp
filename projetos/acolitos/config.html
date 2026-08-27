@@ -88,7 +88,7 @@ const GRUPOS = [
   // "Equipe & Permissões" e "Times" eram DUAS seções que se pisavam: pôr alguém num time
   // dava para fazer nas duas (e ainda no organograma das Casas). Viraram uma só, com duas
   // abas — mesma mecânica da seção Escala, que já tem três.
-  ['As pessoas',         [['pessoas','Pessoas & Times'], ['admins','Admins & superadmin'], ['logins','Logins (usuário/senha)'], ['atividade','Atividade & notificações'], ['cadastro','Campos do cadastro']]],
+  ['As pessoas',         [['pessoas','Pessoas & Times'], ['admins','Admins & superadmin'], ['logins','Logins (usuário/senha)'], ['barrados','Cadastros barrados'], ['atividade','Atividade & notificações'], ['cadastro','Campos do cadastro']]],
   ['Os módulos',         [['escala','Escala'], ['agenda','Agenda'], ['tesouraria','Tesouraria'], ['ausencias','Ausências'], ['jornada','Jornada'], ['crm','CRM']]],
   ['Como o app funciona',[['navegacao','Navegação'], ['gerador','Regras do gerador'], ['missoes','Missões & XP']]],
 ];
@@ -108,6 +108,7 @@ const CONTEUDO = {
                 { nome:'Times',                fn:renderTimes }],
   admins:      [{ nome:'Admins & superadmin',  fn:renderAdmins }],
   logins:      [{ nome:'Logins',               fn:renderLogins }],
+  barrados:    [{ nome:'Cadastros barrados',   fn:renderBarrados }],
   atividade:   [{ nome:'Atividade',            fn:renderAtividade }],
   cadastro:    [{ nome:'Campos do cadastro',   fn:renderCadastro }],
   escala:      [{ nome:'Funções litúrgicas',   lista:'funcao' },
@@ -224,6 +225,79 @@ function desenharSecao(body) {
   const it = itens[i];
   if (it.lista) renderListaUnica(alvo, it.lista); else it.fn(alvo);
 }
+// ── Cadastros barrados ────────────────────────────────────────────────
+// Quem tentou se cadastrar, o app viu que o nome bate com alguém que JÁ está na
+// pastoral, e a prova (data de nascimento ou nome da mãe) não conferiu. O cadastro
+// trava — decisão do dono — e a pessoa cai aqui. Sem esta tela ela sumiria na porta
+// sem ninguém ficar sabendo, que é o preço de travar.
+async function renderBarrados(b){
+  b.textContent='';
+  const hint=document.createElement('p'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 8px;line-height:1.5;';
+  hint.innerHTML='Alguém tentou se cadastrar com um nome que já existe no cadastro e não conseguiu provar que é a pessoa. '
+    +'Confira por fora (ligue, pergunte) e resolva aqui: <b>ligar</b> junta a conta dela à ficha que já existe; '
+    +'<b>não é a mesma pessoa</b> libera para ela se cadastrar normalmente.';
+  b.appendChild(hint);
+  const box=document.createElement('div'); box.innerHTML='<span class="loading">Carregando...</span>'; b.appendChild(box);
+  const { data, error } = await sb.from('acolitos_vinculo_tentativas')
+    .select('id,quando,user_id,nome_digitado,nascimento_informado,nome_mae_informado,resultado,membro_id')
+    .eq('resolvido', false).order('quando', { ascending:false }).limit(100);
+  box.textContent='';
+  if(error){ box.textContent='Não consegui ler a fila agora.'; return; }
+  if(!data || !data.length){
+    const ok=document.createElement('p'); ok.style.cssText='font-size:13px;color:var(--text-muted);';
+    ok.textContent='Ninguém barrado. Quando alguém esbarrar, aparece aqui.';
+    box.appendChild(ok); return;
+  }
+  // Os nomes das fichas suspeitas, para a coordenação ver quem é quem.
+  const ids=[...new Set(data.map(t=>t.membro_id).filter(Boolean))];
+  const fichas={};
+  if(ids.length){
+    const { data:ms } = await sb.from('acolitos_membros').select('id,nome,data_nascimento,nome_mae').in('id', ids);
+    (ms||[]).forEach(m=>{ fichas[m.id]=m; });
+  }
+  const mini=(txt,danger)=>{ const x=document.createElement('button'); x.textContent=txt; x.style.cssText='font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;border:1px solid '+(danger?'var(--danger)':'var(--gold-dim)')+';background:var(--surface2);color:'+(danger?'var(--danger-text)':'var(--gold-light)')+';'; return x; };
+  const dia=t=>{ try{ return new Date(t).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } };
+
+  data.forEach(t=>{
+    const f=fichas[t.membro_id];
+    const row=document.createElement('div');
+    row.style.cssText='border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--surface2);';
+    const tit=document.createElement('div'); tit.style.cssText='font-weight:700;color:var(--gold-light);';
+    tit.textContent=t.nome_digitado;
+    const sub=document.createElement('div'); sub.style.cssText='font-size:12px;color:var(--text-muted);margin:4px 0 8px;line-height:1.6;';
+    sub.innerHTML='tentou em '+escHtml(dia(t.quando))
+      +'<br>informou: nascimento <b>'+escHtml(t.nascimento_informado||'—')+'</b>, mãe <b>'+escHtml(t.nome_mae_informado||'—')+'</b>'
+      +(f ? '<br>a ficha que já existe: <b>'+escHtml(f.nome)+'</b> — nascimento <b>'+escHtml(f.data_nascimento||'—')+'</b>, mãe <b>'+escHtml(f.nome_mae||'—')+'</b>' : '');
+    const acoes=document.createElement('div'); acoes.style.cssText='display:flex;gap:8px;flex-wrap:wrap;';
+    if(f && t.user_id){
+      const bl=mini('É a mesma pessoa — ligar');
+      bl.onclick=async()=>{
+        if(!(await uiConfirm('Ligar a conta de quem tentou à ficha de '+f.nome+'?'))) return;
+        const r=await apiPost('/api/acolito-admin',{action:'vincular',membro_id:f.id,user_id:t.user_id});
+        if(!r.ok){ await uiAlert('Não deu: '+((r.data&&r.data.error)||'tente de novo')); return; }
+        await sb.from('acolitos_vinculo_tentativas').update({ resolvido:true, resolvido_em:new Date().toISOString() }).eq('id', t.id);
+        await uiAlert('Pronto. '+f.nome+' entra com a ficha dela.');
+        renderBarrados(b);
+      };
+      acoes.appendChild(bl);
+    }
+    const bn=mini('Não é a mesma pessoa — liberar');
+    bn.onclick=async()=>{
+      if(!(await uiConfirm('Liberar para que essa pessoa se cadastre como alguém novo?'))) return;
+      await sb.from('acolitos_vinculo_tentativas').update({ resolvido:true, liberado:true, resolvido_em:new Date().toISOString() }).eq('id', t.id);
+      await uiAlert('Liberado. Peça para ela tentar o cadastro de novo.');
+      renderBarrados(b);
+    };
+    const bx=mini('Arquivar', true);
+    bx.onclick=async()=>{
+      await sb.from('acolitos_vinculo_tentativas').update({ resolvido:true, resolvido_em:new Date().toISOString() }).eq('id', t.id);
+      renderBarrados(b);
+    };
+    acoes.append(bn, bx);
+    row.append(tit, sub, acoes); box.appendChild(row);
+  });
+}
+
 // ── Logins (usuário/senha) — só superadmin ──
 async function renderLogins(b){
   b.textContent='';

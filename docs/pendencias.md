@@ -100,6 +100,42 @@ certo; sem ela, alguém tem de lembrar.
 
 ## Fechados em 27/08/2026
 
+**O app reconhece quem já está no cadastro na hora de se cadastrar (migration 061)**
+- **O problema, com nome e sobrenome:** vieram 170 pessoas de uma planilha e **134 ainda
+  não têm login**. Quem já é da pastoral cria conta, preenche o formulário e vira uma
+  SEGUNDA pessoa no cadastro. Aconteceu com a Isabeli Sousa Martins em 23/07/2026.
+- **NÃO reconhece por "porcentagem de semelhança".** Medido no cadastro real: comparar
+  nomes por semelhança acusou **26 pares parecidos e só UM era a mesma pessoa**.
+  "Heloísa Costa Oliveira" x "Helena Costa Moreira" dá 76% e são duas meninas; "Pedro
+  Henrique Lima" x "Davi Henrique Lima" dá 81% e têm **16 anos de diferença**. Juntar por
+  semelhança entregaria a ficha de uma criança para a família de outra.
+- **Reconhece por alinhamento de palavras** — primeiro nome igual e cada palavra achando
+  a sua, na ordem, com inicial valendo por palavra ("Maria E. Carli" = "Maria Eduarda
+  Carli"). É o mesmo alinhamento que casou 189 fichas de 189 sem um falso positivo.
+- **Mínimo de DUAS palavras.** Só o primeiro nome não reconhece ninguém: são 20 "Maria" no
+  cadastro. Ninguém está cadastrado com uma palavra só, então a régua não exclui ninguém.
+- **A prova é a que o dono escolheu:** data de nascimento exata OU nome da mãe — e o
+  formulário **já pede as duas coisas**, então não houve tela nova nem pergunta a mais.
+- **Simulado no cadastro inteiro antes de escrever a tela:** se as 170 da planilha se
+  cadastrassem hoje, **142 seriam reconhecidas na hora** e 28 cairiam na coordenação (são
+  as que não têm nem data nem nome de mãe). Dos 21 que já entraram pelo app, **20 passam
+  direto e 1 encosta** — a Isabeli, a duplicata de verdade. Zero inocente barrado.
+- **Trava quando a prova não bate** (decisão do dono). E travar tem preço: quem é barrado
+  sumiria na porta. Por isso a tabela `acolitos_vinculo_tentativas` e a tela **Config ›
+  Cadastros barrados**, com três saídas: *ligar* (junta a conta à ficha existente, ação
+  nova `vincular` na API de administração), *não é a mesma pessoa* (libera a pessoa para
+  se cadastrar normalmente — sem isso ela bateria na mesma parede para sempre) e
+  *arquivar*.
+- **Freio contra chute:** três erros em 24 horas e a conta para de tentar. Sem isso,
+  alguém com o nome de uma criança na mão chutaria datas de nascimento até acertar.
+- **A resposta do servidor nunca devolve nome, ficha ou data de ninguém** — só um
+  veredito. Quem está se cadastrando ainda não é ninguém no sistema e não pode virar uma
+  máquina de descobrir quem existe na pastoral.
+- **10 provas próprias**, e cada armadilha da medição virou uma delas.
+- **O que NÃO foi feito ainda:** a Parte 2 — gerar em lote os logins das 134 pessoas com
+  senha padrão e obrigar a troca no primeiro acesso. O botão "Criar conta" de uma pessoa
+  já existe e é o mesmo caminho; falta o lote e a troca obrigatória.
+
 **"Já foi investido?" saiu da planilha e virou campo do app (migration 060)**
 - **O que era:** a resposta existia só numa coluna INVESTIDURA de uma planilha de Excel
   que o app não sabia que existia. Ninguém no app conseguia ver, marcar ou contar.

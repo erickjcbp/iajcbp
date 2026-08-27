@@ -79,6 +79,28 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, user_id: newUid, email: synthEmail(usuario) });
   }
 
+  // Ligar uma conta que JÁ existe a uma ficha que JÁ existe. É o desfecho da fila de
+  // "cadastros barrados": a pessoa criou conta, o app reconheceu o nome mas a prova não
+  // bateu (data de nascimento errada na ficha, mãe com outro nome), e a coordenação
+  // confirmou por fora que é a mesma pessoa. Sem esta ação, o único jeito seria criar
+  // uma conta nova para quem já tem uma.
+  if (action === 'vincular') {
+    if (!membro_id || !user_id) return res.status(400).json({ error: 'Faltam dados.' });
+    const mr = await fetch(`${URL}/rest/v1/acolitos_membros?id=eq.${membro_id}&select=id,nome,nivel,user_id`, { headers: h });
+    const alvo = (await mr.json())[0];
+    if (!alvo) return res.status(404).json({ error: 'Ficha não encontrada.' });
+    if (alvo.user_id && alvo.user_id !== user_id) return res.status(409).json({ error: 'Essa ficha já está ligada a outra conta.' });
+    const outro = await fetch(`${URL}/rest/v1/acolitos_membros?user_id=eq.${user_id}&select=id&id=neq.${membro_id}`, { headers: h });
+    if ((await outro.json()).length) return res.status(409).json({ error: 'Essa conta já está ligada a outra pessoa.' });
+    await fetch(`${URL}/rest/v1/acolitos_membros?id=eq.${membro_id}`, { method: 'PATCH', headers: { ...jh, Prefer: 'return=minimal' }, body: JSON.stringify({ user_id }) });
+    const nv = alvo.nivel || '';
+    const papel = nv.startsWith('cerimoniario') ? 'cerimonario'
+      : (nv.startsWith('acolito') || nv === 'aspirante_cerimoniario') ? 'acolito'
+      : nv === 'coroinha' ? 'coroinha' : nv === 'aspirante' ? 'aspirante' : 'novo';
+    await fetch(`${URL}/rest/v1/pastoral_members`, { method: 'POST', headers: { ...jh, Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id, module_id: mod.id, role: papel }) });
+    return res.status(200).json({ ok: true, nome: alvo.nome, papel });
+  }
+
   if (action === 'get') {
     if (!user_id) return res.status(400).json({ error: 'Faltam dados.' });
     const r = await fetch(`${URL}/auth/v1/admin/users/${user_id}`, { headers: h });
