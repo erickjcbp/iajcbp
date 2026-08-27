@@ -729,13 +729,13 @@ async function renderTab(tab) {
       const val = document.createElement('span'); val.className = 'stat-value'; val.textContent = calcIdade(m.data_nascimento) + ' anos';
       row.append(lbl, val); el.appendChild(row);
     }
-    el.appendChild(editText('Telefone', 'telefone', m.telefone));
+    el.appendChild(editText('Telefone do servo (WhatsApp)', 'telefone', m.telefone));
     el.appendChild(editBool('Telefone é WhatsApp?', 'telefone_whatsapp', m.telefone_whatsapp));
     el.appendChild(editText('Responsável', 'responsavel', m.responsavel));
     el.appendChild(editSelect('Comunidade', 'comunidade', m.comunidade || 'matriz', [['matriz','Matriz'],['santo_antonio','Sto. Antônio'],['outra','Outra']]));
     el.appendChild(editBool('Pode servir em outras comunidades?', 'pode_outras_comunidades', m.pode_outras_comunidades));
-    el.appendChild(editText('Cel. mãe', 'celular_mae', m.celular_mae));
-    el.appendChild(editText('Cel. recado', 'celular_recado', m.celular_recado));
+    el.appendChild(editText('Telefone da mãe (WhatsApp)', 'celular_mae', m.celular_mae));
+    el.appendChild(editText('Telefone de recado (WhatsApp)', 'celular_recado', m.celular_recado));
     el.appendChild(editText('Endereço', 'endereco', m.endereco));
     el.appendChild(editBool('Batismo', 'batismo', m.batismo));
     el.appendChild(editBool('1ª Eucaristia', 'primeira_eucaristia', m.primeira_eucaristia));

@@ -523,6 +523,8 @@ async function provaCartaoDoCrmEComentarioObrigatorio(provas) {
       // o recado tem de aparecer mesmo morando no outro campo, e com botão de conversa
       saida.mostraRecado = /98321-3119/.test(txt);
       saida.temBotaoZap  = gaveta.querySelectorAll('a[href^="https://wa.me/"]').length > 0;
+      // e a conta do que falta não pode acusar ausência do que está ali
+      saida.naoMenteSobreTelefone = !/nenhum telefone/i.test(txt);
 
       // mudar de etapa sem escrever nada não pode mexer em nada
       abrirModal({ id: 'c1', membro_id: 'mm1', etapa: 'integracao',
@@ -545,6 +547,8 @@ async function provaCartaoDoCrmEComentarioObrigatorio(provas) {
   exigir(a.mostraRecado === true, 'o telefone aparece mesmo morando no campo do outro cadastro',
     'são dois campos para a mesma coisa: celular_recado e celular_responsavel');
   exigir(a.temBotaoZap === true, 'tem botão para falar no WhatsApp direto do cartão');
+  exigir(a.naoMenteSobreTelefone === true, 'não diz "nenhum telefone" para quem tem telefone',
+    'a conta do que falta tem de olhar os mesmos campos que a tela mostra');
   exigir(a.pedeObrigatorio === true, 'o comentário é apresentado como obrigatório');
   exigir(escritas.length === 0, 'avançar sem comentário não muda etapa nenhuma',
     'gravou: ' + JSON.stringify(escritas));

@@ -399,9 +399,9 @@ async function abrirCartao(entry) {
     // o formulário de novos grava `celular_recado`. Ler só um deixava 6 das 7 pessoas
     // do CRM sem telefone na tela, com o número ali do lado no outro campo.
     bloco('Contato', [
-      ['Celular', OU(m.telefone) + (m.telefone_whatsapp ? ' (WhatsApp)' : '')],
-      ['Celular da mãe', OU(m.celular_mae)],
-      ['Recado', OU(m.celular_recado || m.celular_responsavel) + (m.responsavel_whatsapp ? ' (WhatsApp)' : '')],
+      ['Telefone do servo', OU(m.telefone)],
+      ['Telefone da mãe', OU(m.celular_mae)],
+      ['Telefone de recado', OU(m.celular_recado || m.celular_responsavel)],
       ['No grupo do WhatsApp', SIMNAO(m.no_grupo_whatsapp), 'sempre'],
       ['Endereço', OU(m.endereco)],
     ]),
@@ -412,9 +412,14 @@ async function abrirCartao(entry) {
   ].filter(Boolean).forEach(x => ficha.appendChild(x));
 
   // O que falta — a lista que diz o que perguntar na próxima conversa.
+  // A conta do que falta tem de olhar EXATAMENTE os mesmos campos que a tela mostra.
+  // Na primeira versão ela esquecia celular_responsavel — e acusava "nenhum telefone"
+  // justamente nas 6 pessoas do funil cujo único número mora lá.
+  const telefones = [m.telefone, m.celular_recado, m.celular_responsavel, m.celular_mae]
+    .filter(t => t && String(t).trim());
   const falta = [];
   if (!m.data_nascimento) falta.push('data de nascimento');
-  if (!m.telefone && !m.celular_recado && !m.celular_mae) falta.push('nenhum telefone');
+  if (!telefones.length) falta.push('nenhum telefone');
   if (!m.endereco) falta.push('endereço');
   if (!m.nome_mae && !m.nome_pai && !m.responsavel) falta.push('nome de responsável');
   if (!m.batismo) falta.push('batismo');
@@ -430,9 +435,9 @@ async function abrirCartao(entry) {
   // quem cuida da integração passa o dia mandando mensagem, e copiar número na mão é
   // exatamente o atrito que faz a fila parar.
   const zaps = [
-    ['Falar com ' + (m.nome || '').split(' ')[0], m.telefone],
-    ['Falar com a mãe', m.celular_mae],
-    ['Falar no recado', m.celular_recado || m.celular_responsavel],
+    ['Telefone do servo', m.telefone],
+    ['Telefone da mãe', m.celular_mae],
+    ['Telefone de recado', m.celular_recado || m.celular_responsavel],
   ].filter(([, tel]) => waLink(tel));
   const vistos = {};
   if (zaps.length) {
