@@ -217,7 +217,7 @@ function addBlocoMembro() {
   grpSac.append(lblSac, togGrp); bloco.appendChild(grpSac);
 
   // Toggles sim/não
-  [['tunica','Já possui túnica?'],['telwhats','O telefone é WhatsApp? (obrigatoriamente use um número com WhatsApp)'],['whatsapp','Já está no grupo de WhatsApp?']].forEach(([id,label]) => {
+  [['investido','Já foi investido(a)?'],['tunica','Já possui túnica?'],['telwhats','O telefone é WhatsApp? (obrigatoriamente use um número com WhatsApp)'],['whatsapp','Já está no grupo de WhatsApp?']].forEach(([id,label]) => {
     const row = document.createElement('div'); row.className = 'toggle-row';
     const lbl = document.createElement('label'); lbl.textContent = label;
     const chk = document.createElement('input'); chk.type = 'checkbox'; chk.className = 'toggle-checkbox';
@@ -309,6 +309,7 @@ async function enviarCadastro() {
       batismo: !!document.getElementById('m' + idx + '-batismo')?.classList.contains('active'),
       primeira_eucaristia: !!document.getElementById('m' + idx + '-eucaristia')?.classList.contains('active'),
       crisma: !!document.getElementById('m' + idx + '-crisma')?.classList.contains('active'),
+      investido: !!document.getElementById('m' + idx + '-investido')?.checked,
       tem_tunica: !!document.getElementById('m' + idx + '-tunica')?.checked,
       telefone_whatsapp: !!document.getElementById('m' + idx + '-telwhats')?.checked,
       no_grupo_whatsapp: !!document.getElementById('m' + idx + '-whatsapp')?.checked,

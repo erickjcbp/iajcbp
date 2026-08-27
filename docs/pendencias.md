@@ -7,6 +7,17 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ## 1. Pendente
 
+**Uma prova de tela envelheceu e mente desde 21/08.** A prova "quem usou hoje aparece
+como Usou hoje" (Config › Atividade) fixa `const agora = new Date('2026-08-20T18:00...')`
+dentro dela e compara com o relógio de verdade da máquina. No dia em que foi escrita
+passava; desde o dia seguinte ela diz que a tela está errada quando a tela está certa —
+em 27/08 acusava "Usou há 1 semana · 20/08". **Não é defeito do app.**
+
+Consertar não é trocar a data fixa por `new Date()` e pronto: as outras três pessoas da
+mesma amostra usam distâncias (60 e 90 dias) que hoje só caem nos becos certos porque a
+data está congelada. Mexer sem olhar a fórmula de "há X meses" troca uma prova que mente
+por outra. Precisa de uma sentada com a fórmula na mão.
+
 **Distribuir as pessoas pelas casas.** Em 20/08 **1 das 176 pessoas ativas** tem casa
 preenchida (o dono, na Sanctaris). As 5 casas existem, os 5 brasões estão no ar e o
 encanamento inteiro está pronto e provado (ver "O brasão chega às telas de RPC", abaixo) —
@@ -84,6 +95,64 @@ barrado só na **Matriz**, pelo Kit processional. O dono decidiu que **quando el
 liberar** — mas isso **não acontece sozinho** com a `data_nascimento` em branco, porque a regra
 recusa por não saber a idade, não por compará-la. Preencher a data faz o sistema liberá-lo no dia
 certo; sem ela, alguém tem de lembrar.
+
+---
+
+## Fechados em 27/08/2026
+
+**"Já foi investido?" saiu da planilha e virou campo do app (migration 060)**
+- **O que era:** a resposta existia só numa coluna INVESTIDURA de uma planilha de Excel
+  que o app não sabia que existia. Ninguém no app conseguia ver, marcar ou contar.
+- **A decisão do dono:** só sim/não (sem data), e **o app passa a ser o dono** — a
+  planilha vira uma foto tirada dele.
+- **A coluna NÃO tem valor padrão, de propósito.** Se nascesse "não", quem nunca
+  respondeu ficaria idêntico a quem respondeu que não — e o "Complete seu cadastro" só
+  pergunta o que está REALMENTE em branco, então nunca perguntaria isso a ninguém. Em
+  branco = "ainda não perguntamos". Foi a mesma armadilha que fez a crisma de 10 pessoas
+  parecer respondida quando não era.
+- **Permissões medidas ANTES:** a tabela é liberada no nível da tabela (`relacl`), com
+  **zero** colunas de permissão própria (`attacl`) — então a coluna nova herda o acesso e
+  não derruba linha nenhuma. Provado nos dois lados: um deslogado recebe exatamente o
+  mesmo erro de antes, pedindo ou não a coluna nova.
+- **Quatro telas, todas no padrão que já existia:** ficha da pessoa (Membros), cadastro
+  novo (a própria pessoa responde), "Complete seu cadastro" e Minha Conta — estas duas de
+  graça, porque o app tem uma lista central de campos e bastou entrar nela. De brinde, o
+  Config passa a poder exigir (ou não) o campo.
+- **Conferido que o Salvar realmente grava**, nos dois caminhos: a ficha usa um pacote
+  genérico (`fichaEdits`), e o cadastro novo insere o objeto inteiro. Nenhum dos dois tem
+  lista de campos escrita à mão — que é o jeito clássico de o campo aparecer na tela e
+  não ser salvo.
+- **Carga inicial:** 126 investidas, conferidas contra a planilha uma a uma, zero
+  divergência. As 19 pessoas que só existem na planilha ficaram de fora, por decisão do
+  dono.
+
+**A planilha do cadastro passou a sair do app, formatada (planilha-xlsx.js)**
+- Botão novo em Membros › Relatório: **"Planilha do cadastro (Excel)"**, gerada no
+  instante do clique a partir do banco. Nunca fica guardada, então nunca está velha.
+- **Fechada pela porta que já existia:** a tela de Membros exige a permissão `membros`.
+- **Sem biblioteca nova.** A conhecida não escreve cor na versão livre e a que escreve
+  pesa 1 MB num app que as pessoas abrem no celular. São 226 linhas que montam o ZIP e os
+  XML na mão — cabeçalho grafite, filtro, primeira coluna e cabeçalho congelados, SIM
+  verde e NÃO vermelho, datas de verdade.
+- **Busca todo mundo, não a lista da tela.** A tela carrega só ativos OU só arquivados; a
+  planilha traz também quem está em integração, que de outro jeito sumiria.
+- **8 provas próprias**, e elas vigiam exatamente os dois erros que fizeram o Excel
+  recusar um arquivo em 26/08: a ORDEM dos elementos dentro da aba e nome de coluna
+  repetido na tabela. Um .xlsx malformado não dá erro nenhum em Python nem em JavaScript —
+  só aparece como "não foi possível abrir" na mão de quem baixou.
+
+**A ficha de papel entrou no cadastro (853 campos em 138 pessoas)**
+- Nome do pai (133), da mãe (137), endereço (133), nascimento (119), batismo (113),
+  celular (109), recado (73), primeira eucaristia (29) e crisma (7).
+- **Regra do dono para os 53 conflitos:** app vence em nascimento, celular e recado;
+  planilha vence no endereço; crisma foi decidida nome a nome. Nada foi sobrescrito fora
+  disso.
+- Cópia de segurança do cadastro inteiro, como estava antes, em
+  `Documentos/iajcbp-entregas/backup-membros-antes-da-carga_*.json`.
+- **A primeira conferência acusou 455 alterações fora do plano e era MENTIRA DELA**: a
+  segunda leitura do banco não pediu as mesmas colunas da primeira, então quatro campos
+  apareciam como apagados para todo mundo. Comparando só as colunas presentes nas duas
+  leituras: zero. Amostra tem de ter a forma real da resposta.
 
 ---
 

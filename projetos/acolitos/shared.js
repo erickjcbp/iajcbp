@@ -982,6 +982,7 @@ const CAMPOS_OBRIGATORIOS = [
   { key:'batismo', label:'É batizado(a)?', tipo:'bool', padrao:true },
   { key:'primeira_eucaristia', label:'Fez a 1ª Eucaristia?', tipo:'bool', padrao:true },
   { key:'crisma', label:'É crismado(a)?', tipo:'bool', padrao:true },
+  { key:'investido', label:'Já foi investido(a)?', tipo:'bool', padrao:true },
   { key:'tem_tunica', label:'Possui túnica própria?', tipo:'bool', padrao:true },
   { key:'no_grupo_whatsapp', label:'Está no grupo do WhatsApp da pastoral?', tipo:'bool', padrao:true },
 ];

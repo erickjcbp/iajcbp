@@ -125,6 +125,7 @@
 <script src="portao-notificacoes-core.js"></script>
 <script src="boas-vindas-core.js"></script>
 <script src="shared.js"></script>
+<script src="planilha-xlsx.js"></script>
 <script>
 const FUNCOES = [
   {id:'apoio',          label:'Apoio',           cat:'Básica'},
@@ -259,13 +260,15 @@ function abrirRelatorioMembros(){
   const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
   const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='420px';
   md.innerHTML='<div class="modal-title">📄 Relatório de Membros</div>'
-    +'<p style="font-size:12px;color:var(--text-muted);margin:-4px 0 12px;">PDF = resumo legível. CSV = backup completo (todos os dados + funções + frequência).</p>'
+    +'<p style="font-size:12px;color:var(--text-muted);margin:-4px 0 12px;">PDF = resumo legível. Planilha = a ficha de todo mundo, pronta pro Excel. CSV = backup cru (todos os campos + funções + frequência).</p>'
     +'<div style="display:flex;flex-direction:column;gap:8px;">'
     +'<button class="btn-sm gold" id="rm-pdf" style="width:100%;">🖨 Imprimir/PDF</button>'
+    +'<button class="btn-sm" id="rm-xlsx" style="width:100%;background:transparent;border:1px solid var(--gold-dim);color:var(--gold-light);">⬇️ Planilha do cadastro (Excel)</button>'
     +'<button class="btn-sm" id="rm-csv" style="width:100%;background:transparent;border:1px solid var(--gold-dim);color:var(--gold-light);">⬇️ CSV (backup completo)</button>'
     +'<button class="btn-sm gray" id="rm-x" style="width:100%;">Fechar</button></div>';
   ov.appendChild(md); document.body.appendChild(ov);
   md.querySelector('#rm-pdf').onclick=()=>relatorioMembrosPDF();
+  md.querySelector('#rm-xlsx').onclick=()=>planilhaCadastroXLSX();
   md.querySelector('#rm-csv').onclick=()=>relatorioMembrosCSV();
   md.querySelector('#rm-x').onclick=()=>ov.remove();
 }
@@ -280,6 +283,50 @@ function relatorioMembrosPDF(){
   });
   abrirRelatorio({ titulo:'Relatório de Membros', subtitulo:'Acólitos · '+todos.length+' '+(verArquivados?'arquivados':'ativos'), corpo });
 }
+// Planilha do cadastro: a ficha de TODO MUNDO, direto do banco, no momento do clique.
+// Não busca em `todos` de propósito — aquela lista traz só ativos OU só arquivados,
+// e deixaria de fora quem está em integração.
+async function planilhaCadastroXLSX(){
+  const { data, error } = await sbAdmin.from('acolitos_membros').select('*').order('nome');
+  if (error || !data) { await uiAlert('Não consegui ler o cadastro agora. Tente de novo.'); return; }
+  const SITUACAO = { ativo:'Ativo', afastado:'Afastado', desligado:'Desligado', em_integracao:'Em integração' };
+  const simNao = v => v === null || v === undefined ? '' : (v ? 'Sim' : 'Não');
+  const data0 = t => dataLocal(t);   // data pura não pode voltar um dia (fuso)
+  const colunas = [
+    { titulo:'NOME', largura:34, tipo:'texto' },
+    { titulo:'INVESTIDO?', largura:13, tipo:'centro' },
+    { titulo:'NASCIMENTO', largura:13, tipo:'data' },
+    { titulo:'IDADE', largura:8, tipo:'centro' },
+    { titulo:'BATIZADO', largura:11, tipo:'centro' },
+    { titulo:'PRIMEIRA EUCARISTIA', largura:14, tipo:'centro' },
+    { titulo:'CRISMA', largura:9, tipo:'centro' },
+    { titulo:'PAIS SÃO MINISTROS?', largura:15, tipo:'centro' },
+    { titulo:'PAI', largura:26, tipo:'texto' },
+    { titulo:'MÃE', largura:26, tipo:'texto' },
+    { titulo:'ENDEREÇO', largura:42, tipo:'texto' },
+    { titulo:'CELULAR', largura:17, tipo:'texto' },
+    { titulo:'RECADO', largura:17, tipo:'texto' },
+    { titulo:'NÍVEL', largura:23, tipo:'texto' },
+    { titulo:'SITUAÇÃO', largura:14, tipo:'centro' },
+    { titulo:'ENTROU NO APP EM', largura:15, tipo:'data' },
+  ];
+  const linhas = data.map(m => {
+    const idade = (typeof idadeAnos === 'function') ? idadeAnos(m.data_nascimento) : null;
+    return [
+      m.nome || '',
+      m.investido === null || m.investido === undefined ? '' : (m.investido ? 'SIM' : 'NÃO'),
+      data0(m.data_nascimento),
+      idade == null ? '' : idade,
+      simNao(m.batismo), simNao(m.primeira_eucaristia), simNao(m.crisma),
+      simNao(m.tem_pai_ministro || m.tem_mae_ministro),
+      m.nome_pai || '', m.nome_mae || '', m.endereco || '',
+      m.telefone || '', m.celular_recado || '',
+      _nivelLabel(m), SITUACAO[m.status] || m.status || '', data0(m.created_at),
+    ];
+  });
+  baixarXLSX('cadastro-da-pastoral', colunas, linhas, { aba:'CADASTRO', colunaSimNao:1 });
+}
+
 async function relatorioMembrosCSV(){
   if(!todos.length){ baixarCSV('membros-backup', [['(sem membros)']]); return; }
   const { data: habs } = await sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia');
@@ -693,6 +740,7 @@ async function renderTab(tab) {
     el.appendChild(editBool('Batismo', 'batismo', m.batismo));
     el.appendChild(editBool('1ª Eucaristia', 'primeira_eucaristia', m.primeira_eucaristia));
     el.appendChild(editBool('Crisma', 'crisma', m.crisma));
+    el.appendChild(editBool('Investido', 'investido', m.investido));
     el.appendChild(editBool('Túnica própria', 'tem_tunica', m.tem_tunica));
     el.appendChild(editBool('No grupo do WhatsApp', 'no_grupo_whatsapp', m.no_grupo_whatsapp));
     el.appendChild(editArea('Necessidades especiais (TEA, TDAH, limitações...)', 'necessidades_especiais', m.necessidades_especiais));
