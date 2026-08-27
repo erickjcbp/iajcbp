@@ -1888,7 +1888,9 @@ function waMembro(m) {
   if (!m) return null;
   const idade = (typeof idadeAnos === 'function') ? idadeAnos(m.data_nascimento) : null;
   const proprio = m.telefone;
-  const resp = m.celular_responsavel || m.celular_mae;
+  // celular_recado entra aqui porque é onde o formulário de novos grava o número do
+  // responsável — sem ele, quem só tivesse esse campo ficaria sem botão de WhatsApp.
+  const resp = m.celular_responsavel || m.celular_recado || m.celular_mae;
   const ordem = (idade !== null && idade >= 13)
     ? [proprio, resp, m.celular_mae]            // 13+ : número do membro como principal
     : [resp, m.celular_mae, proprio];           // menor: celular da mãe/responsável como principal

@@ -487,7 +487,10 @@ async function provaCartaoDoCrmEComentarioObrigatorio(provas) {
     status: 'em_integracao', batismo: true, primeira_eucaristia: false, crisma: false,
     investido: null, tem_tunica: true, nome_pai: 'Pai Teste', nome_mae: 'Mãe Teste',
     responsavel: 'Mãe Teste', tem_pai_ministro: false, tem_mae_ministro: false, grupo_irmaos: null,
-    telefone: '(19) 90000-0000', telefone_whatsapp: true, celular_mae: null, celular_recado: null,
+    // De propósito: o número mora SÓ em celular_responsavel, que é onde o cadastro de
+    // família grava. Era assim com 6 das 7 pessoas do CRM, e a tela mostrava '—'.
+    telefone: null, telefone_whatsapp: false, celular_mae: null, celular_recado: null,
+    celular_responsavel: '(19) 98321-3119',
     no_grupo_whatsapp: false, endereco: 'Rua de Teste, 10', necessidades_especiais: null,
     observacoes: null, user_id: 'u9', created_at: '2026-08-01T12:00:00Z', apelido: null, foto_url: null,
   };
@@ -517,6 +520,9 @@ async function provaCartaoDoCrmEComentarioObrigatorio(provas) {
       // data COM hora não pode virar "Invalid Date"
       saida.dataBoa     = /01.08.2026/.test(txt) && !/Invalid/i.test(txt);
       saida.temLinha    = /Linha do tempo/.test(txt);
+      // o recado tem de aparecer mesmo morando no outro campo, e com botão de conversa
+      saida.mostraRecado = /98321-3119/.test(txt);
+      saida.temBotaoZap  = gaveta.querySelectorAll('a[href^="https://wa.me/"]').length > 0;
 
       // mudar de etapa sem escrever nada não pode mexer em nada
       abrirModal({ id: 'c1', membro_id: 'mm1', etapa: 'integracao',
@@ -536,6 +542,9 @@ async function provaCartaoDoCrmEComentarioObrigatorio(provas) {
   exigir(a.temFalta === true, 'diz o que falta na ficha', 'é a lista do que perguntar na próxima conversa');
   exigir(a.dataBoa === true, 'data com hora não vira "Invalid Date"');
   exigir(a.temLinha === true, 'o cartão tem a linha do tempo');
+  exigir(a.mostraRecado === true, 'o telefone aparece mesmo morando no campo do outro cadastro',
+    'são dois campos para a mesma coisa: celular_recado e celular_responsavel');
+  exigir(a.temBotaoZap === true, 'tem botão para falar no WhatsApp direto do cartão');
   exigir(a.pedeObrigatorio === true, 'o comentário é apresentado como obrigatório');
   exigir(escritas.length === 0, 'avançar sem comentário não muda etapa nenhuma',
     'gravou: ' + JSON.stringify(escritas));

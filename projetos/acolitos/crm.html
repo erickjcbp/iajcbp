@@ -394,10 +394,14 @@ async function abrirCartao(entry) {
       ['Escalar junto com irmão', m.escalar_com_irmao ? 'Sim' : '—'],
       ['Escalar junto com os pais', m.escalar_com_pais ? 'Sim' : '—'],
     ]),
+    // ATENÇÃO: o número de recado mora em DOIS campos diferentes, porque há dois
+    // cadastros. O de família (feito na tela de entrada) grava `celular_responsavel`;
+    // o formulário de novos grava `celular_recado`. Ler só um deixava 6 das 7 pessoas
+    // do CRM sem telefone na tela, com o número ali do lado no outro campo.
     bloco('Contato', [
       ['Celular', OU(m.telefone) + (m.telefone_whatsapp ? ' (WhatsApp)' : '')],
       ['Celular da mãe', OU(m.celular_mae)],
-      ['Recado', OU(m.celular_recado) + (m.responsavel_whatsapp ? ' (WhatsApp)' : '')],
+      ['Recado', OU(m.celular_recado || m.celular_responsavel) + (m.responsavel_whatsapp ? ' (WhatsApp)' : '')],
       ['No grupo do WhatsApp', SIMNAO(m.no_grupo_whatsapp), 'sempre'],
       ['Endereço', OU(m.endereco)],
     ]),
@@ -420,6 +424,33 @@ async function abrirCartao(entry) {
     av.style.cssText = 'border:1px solid var(--gold-dim);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.6;color:var(--text-muted);';
     av.innerHTML = '<b style="color:var(--gold-light);">Falta nesta ficha:</b> ' + escHtml(falta.join(' · '));
     ficha.appendChild(av);
+  }
+
+  // Falar com a pessoa em um toque. Um botão por número que existe, dizendo de quem é —
+  // quem cuida da integração passa o dia mandando mensagem, e copiar número na mão é
+  // exatamente o atrito que faz a fila parar.
+  const zaps = [
+    ['Falar com ' + (m.nome || '').split(' ')[0], m.telefone],
+    ['Falar com a mãe', m.celular_mae],
+    ['Falar no recado', m.celular_recado || m.celular_responsavel],
+  ].filter(([, tel]) => waLink(tel));
+  const vistos = {};
+  if (zaps.length) {
+    const cx = document.createElement('div');
+    cx.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin:0 0 14px;';
+    zaps.forEach(([rot, tel]) => {
+      const chave = String(tel).replace(/\D/g, '');
+      if (vistos[chave]) return;                 // mesmo número em dois campos = um botão só
+      vistos[chave] = 1;
+      const a = document.createElement('a');
+      a.href = waLink(tel); a.target = '_blank'; a.rel = 'noopener';
+      a.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;'
+        + 'border:1px solid #25D366;color:#25D366;border-radius:8px;padding:9px 12px;'
+        + 'font-size:13px;font-weight:700;text-decoration:none;';
+      a.textContent = '💬 ' + rot + ' · ' + tel;
+      cx.appendChild(a);
+    });
+    ficha.appendChild(cx);
   }
 
   const acao = document.createElement('button');

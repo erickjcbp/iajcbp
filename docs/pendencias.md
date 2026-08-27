@@ -7,6 +7,22 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ## 1. Pendente
 
+**Dois campos para o mesmo telefone.** O número do responsável mora em
+`celular_responsavel` OU em `celular_recado`, dependendo de por onde a pessoa se
+cadastrou: o cadastro de família (tela de entrada, `api/signup-familia.js`) grava o
+primeiro; o formulário de novos (`novos.html`) grava o segundo. Hoje são 11 pessoas num
+campo e 111 no outro.
+
+Isso já mordeu em 27/08: o cartão do CRM lia só um dos dois e mostrava "—" para **6 das 7
+pessoas do funil**, com o número ali do lado. Foi remendado — quem lê agora olha os dois —
+mas o remendo tem de ser repetido em toda tela nova que mostrar telefone, e alguém vai
+esquecer.
+
+O conserto de verdade é escolher um campo, migrar o outro e fazer os dois cadastros
+gravarem no mesmo lugar. Não é grande: é uma migration de cópia, um `coalesce` nas telas e
+uma linha em cada cadastro. Mas mexe em dado de contato de 122 pessoas, então merece uma
+sessão própria e prova de que ninguém ficou sem telefone.
+
 **Uma prova de tela envelheceu e mente desde 21/08.** A prova "quem usou hoje aparece
 como Usou hoje" (Config › Atividade) fixa `const agora = new Date('2026-08-20T18:00...')`
 dentro dela e compara com o relógio de verdade da máquina. No dia em que foi escrita
