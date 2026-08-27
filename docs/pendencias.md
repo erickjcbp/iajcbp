@@ -116,6 +116,22 @@ certo; sem ela, alguém tem de lembrar.
 
 ## Fechados em 27/08/2026
 
+**Passar da etapa do WhatsApp passa a marcar a ficha (e 13 fichas foram corrigidas)**
+- **O que era:** a etapa "WhatsApp" do CRM só termina quando a pessoa é posta no grupo — mas
+  a ficha dela continuava com "não está no grupo do WhatsApp". Duas verdades sobre a mesma
+  coisa, no mesmo banco. **19 pessoas passaram pela etapa e só 6 tinham a ficha marcada.**
+- **As 13 foram corrigidas** pelo histórico do CRM (`etapa_de = 'whatsapp'`), que é o registro
+  de quem de fato passou. Conferido depois: nenhuma sobrou, e ninguém foi marcado sem ter
+  passado pela etapa.
+- **Agora é automático:** confirmar a saída dessa etapa marca a ficha.
+- **E o modal avisa ANTES**, com a frase escrita — automação que ninguém vê é automação que
+  ninguém confere, e era exatamente disso que a divergência tinha nascido.
+- **Voltar a etapa NÃO desmarca.** Ninguém sai de um grupo de WhatsApp porque a coordenação
+  corrigiu o funil.
+- **Ponto de atenção:** o gatilho olha o slug `whatsapp`. Se alguém renomear o slug dessa
+  etapa no Config (o rótulo pode mudar à vontade, o slug não), a marcação para de acontecer
+  em silêncio.
+
 **O CRM ganhou o cartão da pessoa, e mudar de etapa passou a exigir comentário (migration 063)**
 - **O pedido:** "torne obrigatório o preenchimento da observação; e transforma numa coluna
   lateral de comentário, tipo quando abre uma task no ClickUp; e explore mais os dados

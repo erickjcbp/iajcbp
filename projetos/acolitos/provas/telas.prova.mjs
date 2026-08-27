@@ -475,6 +475,42 @@ async function provaCasaChegaPelasFuncoesDoBanco(provas) {
   exigir(a.nivelContinua === true, 'o emblema de nível continua junto');
 }
 
+async function provaSairDoWhatsappMarcaAFicha(provas) {
+  console.log('\n\x1b[1mCRM: sair da etapa do WhatsApp marca a ficha\x1b[0m');
+
+  // A etapa "WhatsApp" só termina quando a pessoa é posta no grupo — mas a ficha dela
+  // continuava dizendo "não está no grupo". Em 27/08/2026 eram 19 pessoas que passaram
+  // pela etapa e 13 com a ficha negando. Duas verdades sobre a mesma coisa.
+  const pessoa = { id: 'mm2', nome: 'Servo de Teste', data_nascimento: '2012-02-02',
+                   no_grupo_whatsapp: false, status: 'em_integracao', comunidade: 'matriz' };
+  const r = await provas.abrir('crm.html', {
+    papel: PAPEIS.admin,
+    tabelas: {
+      acolitos_crm: { data: [{ id: 'c2', membro_id: 'mm2', etapa: 'whatsapp',
+                               etapa_iniciada_em: '2026-08-20T12:00:00Z', acolitos_membros: pessoa }] },
+      acolitos_crm_comentarios: { data: [] },
+      acolitos_crm_historico: { data: [] },
+    },
+    avaliar: `
+      abrirModal({ id: 'c2', membro_id: 'mm2', etapa: 'whatsapp',
+                   etapa_iniciada_em: '2026-08-20T12:00:00Z', acolitos_membros: { nome: 'Servo de Teste' } });
+      var aviso = document.getElementById('modal-aviso-zap');
+      var saida = { avisaAntes: !!aviso && aviso.style.display !== 'none' };
+      document.getElementById('modal-obs').value = 'entrou no grupo hoje';
+      await confirmarAvancar();
+      await new Promise(function (s) { setTimeout(s, 300); });
+      return saida;
+    `,
+  });
+  const a = r.avaliado || {};
+  const marcou = (r.gravacoes || []).some(g => g.tabela === 'acolitos_membros'
+    && g.dados && g.dados.no_grupo_whatsapp === true);
+  exigir(a.avisaAntes === true, 'o modal avisa que a ficha será marcada',
+    'automação que ninguém vê é automação que ninguém confere');
+  exigir(marcou === true, 'sair da etapa do WhatsApp marca "está no grupo" na ficha',
+    'gravou: ' + JSON.stringify((r.gravacoes || []).filter(g => g.tabela === 'acolitos_membros')));
+}
+
 async function provaCartaoDoCrmEComentarioObrigatorio(provas) {
   console.log('\n\x1b[1mCRM: o cartão mostra a pessoa inteira, e mudar de etapa exige comentário\x1b[0m');
 
@@ -884,6 +920,7 @@ try {
     await provaBrasaoNoAvatar(provas);
     await provaCasaChegaPelasFuncoesDoBanco(provas);
     await provaCartaoDoCrmEComentarioObrigatorio(provas);
+    await provaSairDoWhatsappMarcaAFicha(provas);
     await provaLoginsMostraQuemEstaEmIntegracao(provas);
     await provaAtividadeDeUsuario(provas);
     await provaAtividadeNaoTransformaErroEmZero(provas);

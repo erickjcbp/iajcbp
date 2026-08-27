@@ -122,6 +122,12 @@
     <div class="modal-title" id="modal-title">Avançar Etapa</div>
     <p id="modal-desc" style="color:var(--text-muted);font-size:13px;margin-bottom:16px;line-height:1.5;"></p>
 
+    <p id="modal-aviso-zap" style="display:none;font-size:12px;line-height:1.6;color:var(--text-muted);
+          border-left:2px solid var(--gold-dim);padding-left:10px;margin:0 0 14px;">
+      Ao confirmar, a ficha desta pessoa passa a dizer que ela <b style="color:var(--gold-light);">está no
+      grupo do WhatsApp</b> — que é o que sair desta etapa significa.
+    </p>
+
     <div id="bloco-role" style="display:none;" class="form-group">
       <label class="form-label">Definir nível do membro</label>
       <select class="form-select" id="sel-role">
@@ -586,6 +592,9 @@ function abrirModal(entry) {
 
   document.getElementById('modal-title').textContent = nome;
   document.getElementById('modal-desc').textContent = ETAPA_ACAO[entry.etapa];
+  // Automação que ninguém vê é automação que ninguém confere.
+  const avisoZap = document.getElementById('modal-aviso-zap');
+  if (avisoZap) avisoZap.style.display = (entry.etapa === 'whatsapp') ? '' : 'none';
   document.getElementById('modal-obs').value = '';
   // Seletor de role só aparece para coord_admin/subadmin ao integrar
   document.getElementById('bloco-role').style.display =
@@ -672,6 +681,16 @@ async function confirmarAvancar() {
     etapa_para: proximaEtapa,
     changed_by: ctx.user.id
   });
+
+  // Sair da etapa do WhatsApp É a informação de que a pessoa foi posta no grupo — é o
+  // que a etapa significa. Sem marcar a ficha, o app guardava duas verdades diferentes
+  // sobre a mesma coisa: 19 pessoas passaram pela etapa e 13 delas tinham "não está no
+  // grupo" escrito na ficha, corrigidas à mão em 27/08/2026.
+  // Voltar a etapa NÃO desmarca: ninguém sai de um grupo de WhatsApp porque a
+  // coordenação corrigiu o funil.
+  if (etapaAtual === 'whatsapp') {
+    await sbAdmin.from('acolitos_membros').update({ no_grupo_whatsapp: true }).eq('id', membroId);
+  }
 
   // Se integrado → "sobe" o membro (status ativo) e atualiza role (apenas coord_admin e subadmin)
   if (proximaEtapa === 'integrado') {
