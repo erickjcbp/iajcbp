@@ -659,8 +659,28 @@ async function provaAtividadeDeUsuario(provas) {
   // estados possíveis, que é o ponto da tela: "nunca entrou" e "a sessão expirou"
   // são coisas diferentes, e um traço no lugar das duas faria a coordenação
   // tratar igual quem nunca abriu o app e quem sumiu depois de usar.
-  const agora = new Date('2026-08-20T18:00:00-03:00');
-  const iso = (dias, h) => new Date(agora.getTime() - dias * 86400000 - (h || 0) * 3600000).toISOString();
+  // A amostra é ancorada na MEIA-NOITE DE HOJE, do relógio da máquina — nunca numa
+  // data escrita à mão. A tela também trunca para a meia-noite antes de subtrair,
+  // então o `dias` daqui é EXATAMENTE o número que ela vai calcular: cada pessoa
+  // cai sempre no mesmo beco, rode a prova no dia que rodar. (O `Math.min` só
+  // impede que a pessoa de hoje fique com hora no futuro se a prova rodar de
+  // madrugada; o beco continua o mesmo.)
+  //
+  // CICATRIZ, de 21/08 a 30/08/2026: a primeira versão cravava
+  // `new Date('2026-08-20T18:00:00-03:00')` e comparava com o relógio de verdade.
+  // No dia em que foi escrita passava; no dia SEGUINTE já mentia. Em 27/08 acusava
+  // "Usou há 1 semana · 20/08" numa tela CERTA, e em 30/08 escorregava 10 dias.
+  //
+  // E as distâncias não são número solto: cada uma tem de cair no MEIO do beco, não
+  // na beirada. Os becos da tela são n=0 hoje · n=1 ontem · n<7 dias · n<30 semanas
+  // · n>=30 meses, com o mês saindo de floor(n/30). Por isso 0 e 75 — 75 é o meio de
+  // 60..89, a faixa inteira que sai como "2 meses". Com a data congelada isso também
+  // estava escorregando: em 04/09 os 75 dias viravam 90 e a prova de "há 2 meses"
+  // cairia igual, cinco dias depois desta.
+  const agora = Date.now();
+  const meiaNoite = new Date(); meiaNoite.setHours(0, 0, 0, 0);
+  const iso = (dias) => new Date(Math.min(
+    meiaNoite.getTime() - dias * 86400000 + 10 * 3600000, agora)).toISOString();
   const base = { apelido: null, foto_url: null, nivel: 'aspirante', casa_id: null, aparelhos: 0, sino_desde: null };
 
   const r = await provas.abrir('config.html', {
@@ -673,7 +693,7 @@ async function provaAtividadeDeUsuario(provas) {
                     { id: 'x2', nome: 'Sem Login Dois', nivel: 'aspirante' }],
         contas: [
           { ...base, id: 'a', nome: 'Pessoa Aa',      usuario: 'hoje',
-            ultimo_uso: iso(0, 2), entrou_em: iso(60), criada_em: iso(90),
+            ultimo_uso: iso(0), entrou_em: iso(60), criada_em: iso(90),
             sino: true, sino_desde: iso(1), aparelhos: 2, casa_id: 'c1' },
           { ...base, id: 'b', nome: 'Pessoa Bb', usuario: 'sumiu',
             ultimo_uso: iso(75), entrou_em: iso(80), criada_em: iso(90), sino: false },

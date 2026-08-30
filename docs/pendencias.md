@@ -1,6 +1,6 @@
 # Acólitos — o que está pendente
 
-Atualizado em 20/08/2026. Esta é A LISTA: abrir aqui antes de decidir o que fazer.
+Atualizado em 30/08/2026. Esta é A LISTA: abrir aqui antes de decidir o que fazer.
 Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi commitado.
 
 ---
@@ -22,17 +22,6 @@ O conserto de verdade é escolher um campo, migrar o outro e fazer os dois cadas
 gravarem no mesmo lugar. Não é grande: é uma migration de cópia, um `coalesce` nas telas e
 uma linha em cada cadastro. Mas mexe em dado de contato de 122 pessoas, então merece uma
 sessão própria e prova de que ninguém ficou sem telefone.
-
-**Uma prova de tela envelheceu e mente desde 21/08.** A prova "quem usou hoje aparece
-como Usou hoje" (Config › Atividade) fixa `const agora = new Date('2026-08-20T18:00...')`
-dentro dela e compara com o relógio de verdade da máquina. No dia em que foi escrita
-passava; desde o dia seguinte ela diz que a tela está errada quando a tela está certa —
-em 27/08 acusava "Usou há 1 semana · 20/08". **Não é defeito do app.**
-
-Consertar não é trocar a data fixa por `new Date()` e pronto: as outras três pessoas da
-mesma amostra usam distâncias (60 e 90 dias) que hoje só caem nos becos certos porque a
-data está congelada. Mexer sem olhar a fórmula de "há X meses" troca uma prova que mente
-por outra. Precisa de uma sentada com a fórmula na mão.
 
 **Distribuir as pessoas pelas casas.** Em 20/08 **1 das 176 pessoas ativas** tem casa
 preenchida (o dono, na Sanctaris). As 5 casas existem, os 5 brasões estão no ar e o
@@ -113,6 +102,31 @@ recusa por não saber a idade, não por compará-la. Preencher a data faz o sist
 certo; sem ela, alguém tem de lembrar.
 
 ---
+
+## Fechados em 30/08/2026
+
+**A prova de tela que mentia desde 21/08 parou de mentir (Config › Atividade)**
+- **O que era:** a prova "quem usou hoje aparece como Usou hoje" montava as quatro pessoas de
+  amostra a partir de uma data escrita à mão (`2026-08-20T18:00`), mas a **tela** conta os dias
+  a partir do relógio de verdade da máquina. Cada distância da amostra escorregava um dia por
+  dia. Em 27/08 a prova acusava "Usou há 1 semana · 20/08"; em 30/08, dez dias de escorregão.
+  **Nunca foi defeito do app.**
+- **Tinha uma segunda bomba armada, que ninguém tinha visto:** a "Pessoa Bb" usava 75 dias e a
+  prova exigia "há 2 meses". A tela faz `floor(n/30)`, então em **04/09** os 75 dias virariam 90,
+  sairia "há 3 meses" e essa prova cairia também — cinco dias depois da outra.
+- **O conserto:** a amostra passou a ser ancorada na **meia-noite de hoje**, do relógio da
+  máquina. A tela também trunca para a meia-noite antes de subtrair, então o número de dias
+  escrito na prova é exatamente o número que a tela vai calcular. Não é "trocar a data fixa por
+  `new Date()`": a escolha das distâncias faz parte do conserto — **cada uma tem de cair no meio
+  do beco, não na beirada** (os becos são n=0 hoje · n=1 ontem · n<7 dias · n<30 semanas ·
+  n>=30 meses). 75 ficou porque é o meio de 60..89, a faixa inteira que sai como "2 meses".
+- **Provado em três relógios**, dois deles a 26 horas de distância um do outro — ou seja, em
+  dias de calendário diferentes: São Paulo, `Pacific/Kiritimati` (UTC+14) e `Etc/GMT+12`. As 11
+  provas da Atividade passam nos três. Antes do conserto, 125 de 126; agora 126 de 126.
+- **Achado de brinde, NÃO consertado:** rodando em UTC+14, uma prova *diferente* cai — "data com
+  hora não vira Invalid Date", do cartão do CRM. Ela compara com `01/08` escrito à mão, e em
+  UTC+14 aquela data cai no dia 02. É fragilidade da prova em fuso extremo, não defeito do app
+  para quem está no Brasil. Fica registrado aqui para não assustar quem rodar as provas viajando.
 
 ## Fechados em 27/08/2026
 
