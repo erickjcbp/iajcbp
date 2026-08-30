@@ -23,15 +23,23 @@ gravarem no mesmo lugar. Não é grande: é uma migration de cópia, um `coalesc
 uma linha em cada cadastro. Mas mexe em dado de contato de 122 pessoas, então merece uma
 sessão própria e prova de que ninguém ficou sem telefone.
 
-**Distribuir as pessoas pelas casas.** Em 20/08 **1 das 176 pessoas ativas** tem casa
-preenchida (o dono, na Sanctaris). As 5 casas existem, os 5 brasões estão no ar e o
-encanamento inteiro está pronto e provado (ver "O brasão chega às telas de RPC", abaixo) —
-o que falta é gente dentro das casas. Enquanto isso, o brasão só aparece no avatar de uma
-pessoa em todo o app.
+**Distribuir as pessoas pelas casas.** Medido no banco em **30/08: ZERO das 172 pessoas
+ativas** tem casa preenchida. **Este parágrafo dizia "1 das 176 (o dono, na Sanctaris)" e
+estava errado** — a `casa_id` do dono está vazia; ou foi limpa depois de 20/08, ou nunca foi
+gravada. Contado com `select count(*) filter (where casa_id is not null) from
+acolitos_membros where status='ativo'`, e não de cabeça: número escrito à mão envelhece.
+
+As 5 casas existem, os 5 brasões estão no ar e o encanamento está pronto — e em **30/08 foi
+provado numa CONTA REAL**, não só na prova de tela: pus o dono na Sanctaris pelo banco, ele
+abriu o app e o brasão apareceu no avatar dele; depois a ficha foi devolvida idêntica ao que
+estava (casa vazia, os 3 times, os 9 acessos), conferida campo a campo. O que falta é só gente
+dentro das casas. Enquanto isso, **o brasão não aparece no avatar de ninguém em todo o app**.
 
 Não é trabalho de código: quem distribui é a coordenação, em **Casas › organograma**, uma
-pessoa por vez. **Não faço isso por SQL** — é dado de gente real, e o dono não pediu. Se o
-volume incomodar (são 175), o que dá para fazer é uma tela de distribuir vários de uma vez;
+pessoa por vez.
+
+**Não faço isso por SQL** — é dado de gente real, e o dono não pediu. Se o
+volume incomodar (são 172), o que dá para fazer é uma tela de distribuir vários de uma vez;
 é feature nova, precisa ser pedida.
 
 
