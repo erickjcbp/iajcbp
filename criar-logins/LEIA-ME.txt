@@ -19,6 +19,12 @@ COMO RODAR
   node criar-logins/gerar.mjs --valendo
       Cria de verdade. Só depois de olhar o modo seco.
 
+  node criar-logins/gerar.mjs --marcados --folha folha.html
+      REIMPRIME a folha de quem ainda está com a senha impressa. Só leitura, não cria
+      nada. É o que usar quando a coordenação perder a folha, e é como se vê quem
+      ainda não entrou pela primeira vez. Aqui o usuário é LIDO do login de verdade,
+      nunca gerado de novo.
+
 O QUE ELE DECIDE SOZINHO
   O usuário  = primeiro nome + último sobrenome, sem acento (carolsantos, liviapaula).
                Quando dois dão no mesmo, o segundo ganha número (manuelasouza2).
@@ -37,3 +43,13 @@ novo continua de onde parou — quem já tem conta nem entra na lista.
 O QUE ELE NUNCA FAZ
 Não toca em quem já tem login. As 53 contas que existiam antes seguem com a senha
 que a pessoa escolheu, e ninguém é empurrado para a tela de trocar senha.
+
+
+FEITO EM 30/08/2026
+138 contas criadas, 138 de 138, sem uma falha. Conferido depois: o cadastro continua
+com 191 fichas (nenhuma pessoa nova nasceu), ninguém ficou sem login, as 53 contas
+que já existiam não foram tocadas, nenhum usuário repetido, e os papéis saíram 71
+acólitos / 45 coroinhas / 22 aspirantes.
+
+A folha entregue está em entregas/logins-da-pastoral_2026-08-30_2155_v1.html (e .csv).
+Os 138 usuários dela foram conferidos um a um contra os logins do banco.

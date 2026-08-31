@@ -18,6 +18,11 @@ const SENHA = 'coroinha2026';
 const DOMINIO = '@coroinhas.jcbplimeira.com.br';
 const VALENDO = process.argv.includes('--valendo');
 const CSV = process.argv.includes('--csv') ? process.argv[process.argv.indexOf('--csv') + 1] : null;
+// --marcados: em vez de "quem não tem conta", lista quem JÁ tem conta e ainda está com a
+// senha da folha. É como se reimprime a folha depois — para a coordenação cobrar quem
+// ficou para trás, ou quando a folha se perder. Neste modo o usuário é LIDO do login de
+// verdade, nunca gerado de novo: regerar poderia dar um nome diferente do que a pessoa usa.
+const MARCADOS = process.argv.includes('--marcados');
 
 // .env do repositório — a mesma fonte que o app usa.
 const env = {};
@@ -82,16 +87,33 @@ const rmod = await j(`${URL_}/rest/v1/pastoral_modules?slug=eq.acolitos&select=i
 const MODULO = rmod.ok && rmod.d && rmod.d[0] ? rmod.d[0].id : null;
 if (!MODULO) { console.error('Módulo acólitos não encontrado.'); process.exit(1); }
 
+const filtro = MARCADOS ? 'senha_provisoria=is.true' : 'user_id=is.null';
 const rm = await j(`${URL_}/rest/v1/acolitos_membros?select=id,nome,nivel,status,comunidade,` +
-  `data_nascimento,responsavel,nome_mae,nome_pai,user_id&user_id=is.null&status=neq.desligado&limit=2000`, { headers: h });
+  `data_nascimento,responsavel,nome_mae,nome_pai,user_id&${filtro}&status=neq.desligado&limit=2000`, { headers: h });
 if (!rm.ok) { console.error('Não consegui ler o cadastro:', rm.status, rm.d); process.exit(1); }
 
 // Ordem estável (o mesmo resultado a cada rodada) — e é a ordem da folha impressa.
-const semConta = rm.d.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-const comUsuario = gerarUsuarios(semConta, usuariosExistentes);
+const lista = rm.d.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+let comUsuario;
+if (MARCADOS) {
+  // o usuário sai do login que a pessoa realmente tem
+  const porId = {};
+  for (let pag = 1; pag <= 40; pag++) {
+    const r = await j(`${URL_}/auth/v1/admin/users?page=${pag}&per_page=200`, { headers: h });
+    const us = (r.d && r.d.users) || [];
+    us.forEach(u => { porId[u.id] = String(u.email || '').split('@')[0]; });
+    if (us.length < 200) break;
+  }
+  comUsuario = lista.map(p => Object.assign({}, p, { usuario: porId[p.user_id] || '(login não encontrado)' }));
+} else {
+  comUsuario = gerarUsuarios(lista, usuariosExistentes);
+}
+const semConta = lista;
 
 console.log(`\n\x1b[1m${VALENDO ? '⚠  VALENDO — vai criar contas de verdade' : 'MODO SECO — nada será gravado'}\x1b[0m`);
-console.log(`Contas que já existem: ${usuariosExistentes.length} · Pessoas sem conta: ${semConta.length}\n`);
+console.log(MARCADOS
+  ? `Contas que já existem: ${usuariosExistentes.length} · Ainda com a senha da folha: ${semConta.length}\n`
+  : `Contas que já existem: ${usuariosExistentes.length} · Pessoas sem conta: ${semConta.length}\n`);
 console.log('NOME'.padEnd(38) + 'QUEM RESPONDE POR ELA'.padEnd(40) + 'USUÁRIO'.padEnd(24) + 'PAPEL');
 console.log('─'.repeat(112));
 const linhas = [];
@@ -180,6 +202,7 @@ if (CSV) {
   console.log('\n  folha em CSV:', path.resolve(CSV));
 }
 
+if (MARCADOS) { console.log('\n(modo --marcados: só leitura, nada é criado)\n'); process.exit(0); }
 if (!VALENDO) { console.log('\nNada foi gravado. Para criar de verdade: --valendo\n'); process.exit(0); }
 
 // ── VALENDO ──────────────────────────────────────────────────────────────────
