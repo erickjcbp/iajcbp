@@ -92,13 +92,36 @@ function acharParecidos(nome, membros) {
   return (membros || []).filter(m => ehMesmoNome(nome, m.nome));
 }
 
-// A prova: data de nascimento exata OU nome da mãe. Sem prova, não confirma nada.
+// A prova: data de nascimento exata OU o nome de quem responde pela criança.
+// Sem prova, não confirma nada.
+//
+// O NOME DE QUEM RESPONDE mora em três lugares no cadastro, e todos são o mesmo dado:
+// `nome_mae`, `nome_pai` e `responsavel`. Medido em 31/08/2026: 149 fichas têm nome_mae,
+// mas outras 14 só têm o `responsavel` preenchido — recusar essas 14 seria pedir o nome
+// duas vezes à família só para poder aceitá-lo.
+//
+// E o `responsavel` às vezes traz PAI E MÃE na mesma string ("Caio / Jucimara", como a
+// tela de cadastro monta: 8 fichas assim). Comparando a string inteira, nenhuma delas
+// bateria nunca. Por isso ele é partido no "/" e cada pedaço vale sozinho.
+//
+// Isto NÃO afrouxa a prova: cada pedaço continua passando pelo mesmo `ehMesmoNome`, que
+// exige alinhamento de palavras. Um nome diferente segue não abrindo a ficha de ninguém.
+function nomesDeQuemResponde(membro) {
+  const fontes = [membro.nome_mae, membro.nome_pai].concat(
+    String(membro.responsavel || '').split('/')
+  );
+  return fontes.map((x) => String(x == null ? '' : x).trim()).filter(Boolean);
+}
+
 function provaBate(membro, prova) {
   if (!membro || !prova) return false;
   const nasc = String(prova.nascimento || '').slice(0, 10);
   if (nasc && membro.data_nascimento && String(membro.data_nascimento).slice(0, 10) === nasc) return true;
-  if (prova.nome_mae && membro.nome_mae && ehMesmoNome(prova.nome_mae, membro.nome_mae)) return true;
+  if (prova.nome_mae) {
+    const informado = String(prova.nome_mae).trim();
+    if (informado && nomesDeQuemResponde(membro).some((n) => ehMesmoNome(informado, n))) return true;
+  }
   return false;
 }
 
-module.exports = { normalizar, pedacos, chaveGrafia, mesmaPalavra, cabeEm, ehMesmoNome, acharParecidos, provaBate };
+module.exports = { normalizar, pedacos, chaveGrafia, mesmaPalavra, cabeEm, ehMesmoNome, acharParecidos, nomesDeQuemResponde, provaBate };

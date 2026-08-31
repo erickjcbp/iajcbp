@@ -81,3 +81,37 @@ test('partícula não conta como sobrenome', () => {
   assert.ok(nomes.ehMesmoNome('Luan Aparecido Xavier de Souza', 'Luan Aparecido X. de Souza'));
   assert.deepStrictEqual(nomes.pedacos('João de Souza e Silva'), ['joao', 'souza', 'silva']);
 });
+
+test('o nome do responsável também vale como prova', () => {
+  // Medido no cadastro em 31/08/2026: 149 fichas têm nome_mae, mas outras 14 só têm o
+  // campo "responsável" preenchido — e é o MESMO dado, o nome de quem responde pela
+  // criança. Recusar essas 14 seria pedir o nome duas vezes só para poder aceitá-lo.
+  const m = { nome: 'Marina Souza Lima', data_nascimento: null,
+              nome_mae: null, responsavel: 'Jucimara Martimiano' };
+  assert.ok(nomes.provaBate(m, { nome_mae: 'Jucimara Martimiano' }));
+});
+
+test('responsável com pai E mãe no mesmo campo: qualquer um dos dois vale', () => {
+  // 8 fichas guardam "Pai / Mãe" numa string só, do jeito que a tela de cadastro monta.
+  // Comparando a string inteira, nenhuma delas jamais bateria.
+  const m = { nome: 'Rafaella Ferreira Moinhos', data_nascimento: null, nome_mae: null,
+              responsavel: 'Caio Henrique Moinhos / Jucimara Martimiano' };
+  assert.ok(nomes.provaBate(m, { nome_mae: 'Jucimara Martimiano' }), 'pela mãe');
+  assert.ok(nomes.provaBate(m, { nome_mae: 'Caio Henrique Moinhos' }), 'pelo pai');
+});
+
+test('o nome do pai guardado no campo dele também vale', () => {
+  const m = { nome: 'Marina Souza Lima', data_nascimento: null, nome_mae: null,
+              nome_pai: 'Fábio Aparecido Gomes Martins' };
+  assert.ok(nomes.provaBate(m, { nome_mae: 'Fábio Aparecido Gomes Martins' }));
+});
+
+test('mas continua sendo o NOME de alguém, não qualquer coisa parecida', () => {
+  // Afrouxar a prova é o oposto do que ela existe para fazer: um nome diferente no campo
+  // do responsável NÃO pode abrir a ficha de outra criança.
+  const m = { nome: 'Marina Souza Lima', data_nascimento: null, nome_mae: null,
+              responsavel: 'Jucimara Martimiano' };
+  assert.strictEqual(nomes.provaBate(m, { nome_mae: 'Juliana Martins' }), false);
+  assert.strictEqual(nomes.provaBate(m, { nome_mae: '' }), false);
+  assert.strictEqual(nomes.provaBate(m, {}), false);
+});

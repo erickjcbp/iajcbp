@@ -1026,7 +1026,14 @@ function campoExigido(key, padrao) {
 function camposIncompletos(membro) {
   const faltam = CAMPOS_OBRIGATORIOS.filter(c => {
     if (!campoExigido(c.key, !!c.padrao)) return false;
-    if (c.key === 'telefone' && !(idadeAnos(membro.data_nascimento) > 12)) return false; // celular só obrigatório p/ 13+
+    // Celular é obrigatório a partir dos 13. Mas IDADE DESCONHECIDA NÃO É "MENOR DE 13":
+    // a regra antiga pulava o telefone sempre que faltava a data de nascimento — e são
+    // justamente as fichas antigas, sem data e sem telefone nenhum, que mais precisam
+    // dele. O pedido só é dispensado quando a gente SABE que a pessoa tem 12 ou menos.
+    if (c.key === 'telefone') {
+      const anos = idadeAnos(membro.data_nascimento);
+      if (anos !== null && anos <= 12) return false;
+    }
     const v = membro[c.key];
     if (c.tipo === 'bool') return v === null || v === undefined;       // bool: precisa responder sim/não
     return v === null || v === undefined || String(v).trim() === '';    // texto/data/select: não pode vazio

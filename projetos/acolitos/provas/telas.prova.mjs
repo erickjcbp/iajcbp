@@ -1003,6 +1003,40 @@ async function provaNomeDaMaeTemOndeSerDigitado(provas) {
     JSON.stringify(escritas.map(e => Object.keys(e.dados || {}))));
 }
 
+async function provaTelefonePedidoQuandoAIdadeEDesconhecida(provas) {
+  console.log('\n\x1b[1mComplete seu cadastro: idade desconhecida NÃO dispensa o telefone\x1b[0m');
+
+  // O celular é obrigatório a partir dos 13. A regra antiga escrevia isso como
+  // `!(idade > 12)`, e com a data de nascimento vazia a conta dá NULO — que não é maior
+  // que 12, então o telefone era pulado. Em 31/08/2026 eram 28 fichas exatamente assim:
+  // sem data, sem telefone nenhum, e o app não pedia justamente delas.
+  const r = await provas.abrir('index.html', {
+    papel: PAPEIS.membro,
+    avaliar: `
+      function chaves(m) { return camposIncompletos(m).map(function (c) { return c.key; }); }
+      return {
+        semData: chaves({ id:'x', data_nascimento: null,         telefone: null }),
+        crianca: chaves({ id:'x', data_nascimento: '2020-01-01', telefone: null }),
+        adolesc: chaves({ id:'x', data_nascimento: '2008-01-01', telefone: null }),
+        jaTem:   chaves({ id:'x', data_nascimento: null,         telefone: '(19) 99999-0000' }),
+      };
+    `,
+  });
+
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a regra do cadastro incompleto roda', r.erroAvaliar);
+  exigir((a.semData || []).includes('telefone') === true,
+    'sem data de nascimento, o telefone É pedido',
+    'idade desconhecida não é "menor de 13" — e são essas as fichas que menos têm telefone');
+  exigir((a.crianca || []).includes('telefone') === false,
+    'de quem tem 6 anos, o telefone NÃO é pedido',
+    'a regra dos 13 anos continua valendo para quem se sabe a idade');
+  exigir((a.adolesc || []).includes('telefone') === true,
+    'de quem tem 18, o telefone é pedido');
+  exigir((a.jaTem || []).includes('telefone') === false,
+    'quem já tem telefone não é perguntado de novo');
+}
+
 // ── Partida ──────────────────────────────────────────────────────────────────
 const filtro = process.argv[2] || null;
 const provas = await iniciarProvas();
@@ -1026,6 +1060,7 @@ try {
     await provaPessoasETimesFundidas(provas);
     await provaEntrarNoTimeLiberaTarefas(provas);
     await provaNomeDaMaeTemOndeSerDigitado(provas);
+    await provaTelefonePedidoQuandoAIdadeEDesconhecida(provas);
   }
 } finally {
   await provas.encerrar();
