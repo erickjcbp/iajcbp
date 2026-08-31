@@ -321,21 +321,20 @@ async function enviarCadastro() {
     }
     const s = r.data && r.data.situacao;
     if (s === 'confirmado') { jaExiste[i] = r.data.membro_id; continue; }
-    if (s === 'sem_parecido') continue;
-    const ZAP = 'https://wa.me/5519999071702';
-    let aviso;
-    if (s === 'ja_tem_conta') {
-      aviso = 'Já existe um cadastro de ' + nomeM + ' ligado a outra conta. Se a conta é sua, '
-            + 'use "Esqueci minha senha" na tela de entrada. Se não for, fale com a coordenação.';
-    } else if (s === 'travado') {
-      aviso = 'Por segurança, o cadastro foi bloqueado depois de três tentativas. '
-            + 'Fale com a coordenação para concluir.';
-    } else {
-      aviso = 'Já existe um cadastro em nome de ' + nomeM + ' na pastoral. Para ligá-lo à sua conta, '
-            + 'a data de nascimento ou o nome da mãe precisam conferir. Confira os dados — '
-            + 'se estiverem certos, fale com a coordenação.';
-    }
-    showMsg(aviso + ' WhatsApp: ' + ZAP, 'error');
+    // SEGUE em tudo que não for "essa ficha já é de outra conta". Desde 30/08/2026,
+    // prova que não bate não levanta mais parede: o cadastro conclui e o caso aparece
+    // em Config › Cadastros barrados no mesmo dia. Parede numa tela de cadastro faz a
+    // pessoa sumir na porta sem ninguém saber, e 25 das fichas antigas não guardam nem
+    // nascimento nem nome da mãe — nelas a prova nunca teria como bater.
+    // Os nomes antigos ('sem_parecido', 'prova_nao_bateu', 'travado') continuam aceitos
+    // de propósito: durante um deploy o servidor velho ainda pode respondê-los, e a
+    // tela nova não pode transformar isso em parede.
+    if (s !== 'ja_tem_conta') continue;
+    // A ÚNICA parede que fica de pé: a prova BATEU e a ficha já tem dono. Aqui a pessoa
+    // já tem login, e o caminho certo é recuperar a senha — não uma segunda ficha.
+    showMsg('Já existe um cadastro de ' + nomeM + ' ligado a outra conta. Se a conta é sua, '
+          + 'use "Esqueci minha senha" na tela de entrada. Se não for, fale com a coordenação. '
+          + 'WhatsApp: https://wa.me/5519999071702', 'error');
     btn.disabled = false; btn.textContent = 'Concluir Cadastro'; return;
   }
 

@@ -20,6 +20,31 @@
 
 const PARTICULAS = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'di', 'del']);
 
+// VARIAÇÃO DE GRAFIA DO MESMO NOME — não é semelhança, é a mesma palavra escrita de
+// outro jeito. Em 30/08/2026 "Rafaella Ferreira Moinhos" não reconheceu "Rafaela
+// Ferreira" e virou uma segunda ficha para uma acólita com 7 habilitações, que passou
+// a aparecer no app como novata. A prova batia DOS DOIS jeitos aceitos (mesma data de
+// nascimento e mesmo nome de mãe) — a porta é que fechou antes de alguém perguntar.
+//
+// O que entra aqui: só troca de letra que não muda como o nome SOA em português.
+// O que NÃO entra: 'rr' e 'ss' (caro/carro, casa/cassa mudam a palavra), e nada de
+// distância de edição — a régua deste arquivo continua sendo alinhamento, não %.
+function chaveGrafia(p) {
+  return String(p)
+    .replace(/ph/g, 'f')                 // Sophia/Sofia, Stephanie/Stefanie
+    .replace(/ct/g, 't')                 // Victoria/Vitória
+    .replace(/([lntfmgdbpc])\1/g, '$1') // Rafaella/Rafaela, Giovanna/Giovana, Matteus/Mateus
+    .replace(/k/g, 'c')                  // Kamila/Camila, Kauã/Cauã
+    .replace(/w/g, 'v')
+    .replace(/y/g, 'i')                  // Nayara/Naiara, Kelly/Kelli
+    .replace(/h$/, '');                  // Sarah/Sara
+}
+
+// Duas palavras são a mesma? Igualdade primeiro; grafia só como segunda chance.
+function mesmaPalavra(x, y) {
+  return x === y || chaveGrafia(x) === chaveGrafia(y);
+}
+
 function normalizar(s) {
   return String(s == null ? '' : s)
     .normalize('NFD').replace(/[̀-ͯ]/g, '')   // tira acento
@@ -38,12 +63,12 @@ function pedacos(s) {
 function cabeEm(curto, longo) {
   const a = pedacos(curto), b = pedacos(longo);
   if (!a.length || !b.length) return false;
-  if (a[0] !== b[0]) return false;              // o primeiro nome tem de bater inteiro
+  if (!mesmaPalavra(a[0], b[0])) return false;  // o primeiro nome tem de bater inteiro
   let i = 1, alinhados = 1;
   for (const p of a.slice(1)) {
     let achou = false;
     while (i < b.length) {
-      if (p === b[i] || (p.length === 1 && b[i].startsWith(p))) { achou = true; i++; alinhados++; break; }
+      if (mesmaPalavra(p, b[i]) || (p.length === 1 && b[i].startsWith(p))) { achou = true; i++; alinhados++; break; }
       i++;
     }
     if (!achou) return false;
@@ -76,4 +101,4 @@ function provaBate(membro, prova) {
   return false;
 }
 
-module.exports = { normalizar, pedacos, cabeEm, ehMesmoNome, acharParecidos, provaBate };
+module.exports = { normalizar, pedacos, chaveGrafia, mesmaPalavra, cabeEm, ehMesmoNome, acharParecidos, provaBate };

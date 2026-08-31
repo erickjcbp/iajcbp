@@ -7,14 +7,21 @@
 // resposta que sai é só um veredito: nunca um nome, nunca uma ficha.
 //
 // Fluxo, por pessoa do formulário:
-//   nenhum parecido        -> 'sem_parecido'      (o cadastro segue e cria pessoa nova)
-//   parecido + prova bate  -> 'confirmado'        (liga a conta à ficha que já existe)
-//   parecido + prova falha -> 'prova_nao_bateu'   (trava; vai para a fila da coordenação)
-//   parecido já tem dono   -> 'ja_tem_conta'      (a ficha já está ligada a outra conta)
-//   três erros em 24h      -> 'travado'           (freio contra chute de data de nascimento)
-import nomes from './_nomes.js';
-
-const LIMITE_ERROS = 3;
+//   nenhum parecido        -> 'seguir'        (o cadastro segue e cria pessoa nova)
+//   parecido + prova bate  -> 'confirmado'    (liga a conta à ficha que já existe)
+//   parecido + prova falha -> 'seguir'        (segue, MAS vai para a fila da coordenação)
+//   parecido já tem dono   -> 'ja_tem_conta'  (a ficha já está ligada a outra conta)
+//   três erros em 24h      -> 'seguir'        (o freio trava a LIGAÇÃO, nunca o cadastro)
+//
+// EM 30/08/2026 A REGRA MUDOU, por decisão do dono: prova que não bate NÃO trava mais
+// o cadastro. Antes travava (decisão de 27/08). Medido: 25 das 139 fichas sem login não
+// têm nem data de nascimento nem nome da mãe guardados — nessas a prova nunca pode
+// bater, e a família bateria numa parede impossível de vencer. Agora ela entra e o caso
+// aparece em Config › Cadastros barrados no mesmo dia.
+//
+// Quem DECIDE não é este arquivo: é o api/_vinculo.js, que a porta Família usa também.
+// Enquanto a regra morou aqui dentro, a outra porta seguiu sem conferir nada.
+import { decidirVinculo, LIMITE_ERROS } from './_vinculo.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -76,23 +83,24 @@ export default async function handler(req, res) {
     `${URL}/rest/v1/acolitos_vinculo_tentativas?select=id&user_id=eq.${caller.id}&liberado=is.true&limit=1`,
     { headers: h });
   if (liberadoRes.ok && (await liberadoRes.json()).length) {
-    return res.status(200).json({ situacao: 'sem_parecido', liberado: true });
+    return res.status(200).json({ situacao: 'seguir', liberado: true });
   }
 
-  const parecidos = nomes.acharParecidos(nome, membros);
-  if (!parecidos.length) return res.status(200).json({ situacao: 'sem_parecido' });
+  const v = decidirVinculo({
+    nome, nascimento, nome_mae, membros, userId: caller.id, errosRecentes: erros,
+  });
+  if (v.registrar) await registrar(v.registrar, v.membro_id || v.parecido_id);
 
-  const bateu = parecidos.find(m => nomes.provaBate(m, { nascimento, nome_mae }));
-  if (!bateu) {
-    await registrar('prova_nao_bateu', parecidos[0].id);
-    return res.status(200).json({ situacao: 'prova_nao_bateu', tentativas_restantes: LIMITE_ERROS - erros - 1 });
-  }
-  if (ligarConta && bateu.user_id && bateu.user_id !== caller.id) {
-    await registrar('prova_nao_bateu', bateu.id);
-    return res.status(200).json({ situacao: 'ja_tem_conta' });
-  }
+  // Segue o cadastro. O caso, quando há um, já ficou registrado logo acima.
+  if (v.acao === 'seguir') return res.status(200).json({ situacao: 'seguir' });
+
+  // A ficha já é de OUTRA conta. Aqui a parede continua de pé de propósito: a prova
+  // BATEU, então a pessoa já tem login e o certo é recuperar a senha — nunca nascer
+  // uma segunda ficha por cima da que já existe.
+  if (v.acao === 'ja_tem_conta') return res.status(200).json({ situacao: 'ja_tem_conta' });
+
+  const bateu = { id: v.membro_id };
   if (!ligarConta) {                       // irmão reconhecido: não cria de novo, e só
-    await registrar('confirmado', bateu.id);
     return res.status(200).json({ situacao: 'confirmado', membro_id: bateu.id, vinculado: false });
   }
 
@@ -102,13 +110,10 @@ export default async function handler(req, res) {
     body: JSON.stringify({ user_id: caller.id })
   });
 
-  // O papel vem do NÍVEL de quem já é da pastoral. Sem isso a pessoa entra como
-  // recém-chegada e fica presa na tela de integração, mesmo servindo há anos.
-  const nivel = bateu.nivel || '';
-  const papel = nivel.startsWith('cerimoniario') ? 'cerimonario'
-    : (nivel.startsWith('acolito') || nivel === 'aspirante_cerimoniario') ? 'acolito'
-    : nivel === 'coroinha' ? 'coroinha'
-    : nivel === 'aspirante' ? 'aspirante' : 'novo';
+  // O papel vem do NÍVEL de quem já é da pastoral (quem calcula é o _vinculo.js, para
+  // a porta Família fazer igual). Sem isso a pessoa entra como recém-chegada e fica
+  // presa na tela de integração, mesmo servindo há anos.
+  const papel = v.papel;
   const modRes = await fetch(`${URL}/rest/v1/pastoral_modules?select=id&slug=eq.acolitos`, { headers: h });
   const mod = modRes.ok ? (await modRes.json())[0] : null;
   if (mod) {
@@ -117,6 +122,5 @@ export default async function handler(req, res) {
       body: JSON.stringify({ user_id: caller.id, module_id: mod.id, role: papel })
     });
   }
-  await registrar('confirmado', bateu.id);
   return res.status(200).json({ situacao: 'confirmado', membro_id: bateu.id, papel });
 }

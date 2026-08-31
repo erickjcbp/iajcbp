@@ -23,33 +23,6 @@ gravarem no mesmo lugar. Não é grande: é uma migration de cópia, um `coalesc
 uma linha em cada cadastro. Mas mexe em dado de contato de 122 pessoas, então merece uma
 sessão própria e prova de que ninguém ficou sem telefone.
 
-**A conferência de "essa pessoa já existe?" só existe em UMA das duas portas de cadastro.**
-Medido em 30/08: das 4 fichas criadas desde que a conferência subiu (27/08), **3 entraram pela
-porta que não confere**.
-
-- **Porta "Novos"** (`novos.html`) chama `/api/reconhecer-cadastro`. ✔
-- **Porta "Família"** (a tela de entrada, `login.html` → `api/signup-familia.js`) **não chama
-  nada** — cria a pessoa direto por REST. ✘
-
-Foi por aí que a **Beatriz Dutra Correia** virou duas fichas em 28/08, com o nome IDÊNTICO nas
-duas: o algoritmo teria reconhecido na hora, mas ninguém perguntou. Ela nem chegou a aparecer
-na tabela de tentativas, que continua com zero linhas — o que engana: tabela vazia parece
-"ninguém esbarrou", e na verdade era "a conferência não roda ali".
-
-**O primeiro nome tem de bater INTEIRO, e uma letra derruba tudo.** `api/_nomes.js`, na `cabeEm`:
-`if (a[0] !== b[0]) return false`. Por isso **"Rafaella Ferreira Moinhos" não reconheceu
-"Rafaela Ferreira"** em 30/08 — duas eles contra um. E a prova batia dos DOIS jeitos que o app
-aceita: mesma data de nascimento (02/05/2013) e mesmo nome de mãe (Jucimara Martimiano). A porta
-fechou antes de alguém perguntar.
-
-Medido no cadastro inteiro (194 fichas): dos **6 pares que nascem no mesmo dia**, o algoritmo
-reconhece **zero**. Só um é duplicata de verdade (a Rafaella). **O outro par é de GÊMEAS** —
-Isabelly e Lívia Campagnol, 15/02/2015, mesmo sobrenome, cada uma com o seu login. Serve de
-aviso para quem for consertar: casar por "mesma data + mesmo sobrenome" juntaria as duas irmãs
-numa ficha só. O caminho que respeita o desenho do arquivo é afrouxar a PORTA (variações de
-grafia do mesmo nome: Rafaella/Rafaela, Isabella/Isabela, Sophia/Sofia, Victoria/Vitória) e
-manter a PROVA obrigatória — que é quem de fato protege.
-
 **A Isabeli Sousa Martins continua com duas fichas.** A antiga (`caca6689`, afastada) carrega
 **6 escalas, 5 disponibilidades, 4 habilitações, 1 presença e 1 XP órfãos**; a ativa dela mostra
 zero escalas. Em 23/07 o caso foi "resolvido" marcando a antiga como afastada — isso não é um
@@ -145,6 +118,47 @@ certo; sem ela, alguém tem de lembrar.
 ---
 
 ## Fechados em 30/08/2026
+
+**As duas portas de cadastro passaram a conferir, e pela MESMA regra**
+- **O que era:** a conferência de "essa pessoa já existe?" só rodava na porta "Novos". A porta
+  "Família" (a tela de entrada) criava a pessoa direto por REST, sem perguntar nada — e 3 das 4
+  fichas criadas desde 27/08 entraram por ali.
+- **E, na porta que conferia, uma letra derrubava tudo:** o primeiro nome tinha de bater inteiro,
+  então "Rafaella" não reconhecia "Rafaela" e o algoritmo desistia ANTES de olhar a prova — que
+  batia dos dois jeitos aceitos.
+- **A decisão virou um arquivo só: `api/_vinculo.js`**, puro (sem banco, sem tela), em CommonJS
+  como o `_nomes.js` para `node --test` carregar direto. As duas portas chamam ele. Enquanto a
+  regra morou dentro de uma delas, a outra seguiu sem conferir — era esse o defeito de fundo.
+- **Grafia:** `_nomes.js` passou a aceitar variação de escrita do mesmo nome (ph→f, ct→t, letra
+  dobrada, k→c, y→i, h final). **Não é semelhança por porcentagem** — a régua continua sendo
+  alinhamento de palavras. `rr` e `ss` ficaram de fora de propósito (caro/carro, casa/cassa).
+- **Medido nos 18.721 pares do cadastro real:** o algoritmo velho reconhece 2 pares, o novo
+  reconhece 3. O par a mais é **a duplicata verdadeira**. Zero falso positivo. E as **gêmeas**
+  Isabelly e Lívia Campagnol (mesma data, mesmo sobrenome, cada uma com seu login) continuam
+  separadas — tem prova escrita para isso.
+- **A regra de quando a prova não bate MUDOU, por decisão do dono em 30/08:** antes travava
+  (decisão de 27/08), agora **segue e avisa**. Motivo medido: 25 das 139 fichas sem login não
+  guardam nem data de nascimento nem nome da mãe — nelas a prova nunca poderia bater, e a
+  família bateria numa parede impossível de vencer, numa tela pública, sem ninguém para ajudar.
+- **A única parede que ficou de pé, nas duas portas:** a prova BATEU e a ficha já é de outra
+  conta. Ali a pessoa já tem login e o certo é "Esqueci minha senha", não uma segunda ficha por
+  cima da que existe.
+- **O freio contra chutar data de nascimento ficou MAIS necessário, não menos** — sem parede,
+  chutar não custa nada a quem chuta, e um acerto entrega a ficha de uma criança. Ele continua
+  em 3 erros por 24h, mas agora trava **a ligação**, nunca o cadastro. Na porta Família não há
+  conta logada para contar por ela, então a contagem é pelo **nome digitado**, que é o que se
+  repete quando alguém insiste numa criança só.
+- **ARMADILHA fechada no caminho:** o `rollback` do `signup-familia.js` apaga ficha por id. Se
+  ele apagasse uma ficha LIGADA (de uma criança que já existia), uma falha no meio do cadastro
+  destruiria escalas, habilitações e XP de quem serve há anos. Agora ficha ligada só tem o
+  `user_id` devolvido para nulo; apagar, só o que este cadastro criou.
+- **Conferido:** 201 provas de regra + 126 de tela, todas passando (9 provas novas). E simulado
+  contra o cadastro como ele estava no dia: a **Rafaella** teria sido LIGADA à ficha dela, com
+  papel `acolito`, sem duplicata; a **Beatriz** ainda entraria (a ficha antiga dela não tem como
+  provar nada), mas apareceria em Cadastros barrados no mesmo dia, em vez de ficar 2 dias
+  invisível.
+- **Não provado no ar:** ninguém se cadastrou de verdade depois da mudança. As duas portas só se
+  provam com uma família real passando por elas.
 
 **Duas duplicatas de gente real foram juntadas (Rafaella e Beatriz)**
 - **O que era:** duas meninas com DUAS fichas cada — uma antiga, com a vida delas na pastoral,
