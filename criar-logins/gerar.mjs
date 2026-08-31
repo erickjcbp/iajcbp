@@ -139,58 +139,102 @@ console.log('  sem RESPONSÁVEL guardado:    ', semResponsavel.length + ' (na fo
 console.log('  usuários repetidos entre si: ', new Set(linhas.map(l => l.usuario)).size === linhas.length ? 'nenhum ✔' : '⚠ TEM REPETIDO');
 
 // ── A FOLHA para imprimir ─────────────────────────────────────────────────────
-// Uma linha por criança, ordenada por nome. Impressa em retrato, com a linha da senha
-// destacada: é o que a família vai procurar. O rodapé repete a senha porque a folha pode
-// ser recortada por família na hora de entregar.
+// Uma linha por criança, ordenada por nome, com letra separando os blocos: numa folha de
+// 138 nomes, achar o seu é o trabalho de verdade. A cara é a do app — vinho e ouro, Sora
+// e Lora —, e o corpo é claro porque isto se imprime.
 const FOLHA = process.argv.includes('--folha') ? process.argv[process.argv.indexOf('--folha') + 1] : null;
 if (FOLHA) {
   const esc = (v) => String(v == null ? '' : v)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const hoje = new Date().toLocaleDateString('pt-BR');
-  const corpo = linhas.map((l, i) => `<tr class="${i % 2 ? 'z' : ''}">` +
-    `<td class="nome">${esc(l.nome)}</td>` +
-    `<td class="resp">${esc(l.reconhecer)}</td>` +
-    `<td class="user">${esc(l.usuario)}</td>` +
-    `<td class="senha">${esc(l.senha)}</td></tr>`).join('\n');
+  const inicial = (n) => {
+    const c = String(n || '').trim().normalize('NFD').replace(/[̀-ͯ]/g, '')[0];
+    return (c || '#').toUpperCase();
+  };
+  let letra = null;
+  const corpo = linhas.map((l) => {
+    const ini = inicial(l.nome);
+    let sep = '';
+    if (ini !== letra) { letra = ini; sep = `<tr class="letra"><td colspan="4">${esc(ini)}</td></tr>`; }
+    return sep + '<tr>' +
+      `<td class="nome">${esc(l.nome)}</td>` +
+      `<td class="resp">${esc(l.reconhecer)}</td>` +
+      `<td class="user">${esc(l.usuario)}</td>` +
+      `<td class="senha">${esc(l.senha)}</td></tr>`;
+  }).join('\n');
+
   fs.writeFileSync(FOLHA, `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
-<title>Logins da Pastoral dos Acólitos e Coroinhas</title>
+<title>Acesso ao aplicativo — Pastoral dos Acólitos e Coroinhas</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
 <style>
-  @page { size: A4 portrait; margin: 14mm 12mm; }
+  :root { --wine:#1a0a0e; --gold:#8a6a24; --gold-lit:#ffd97a; --gold-deep:#6b5106;
+          --texto:#241f1c; --suave:#6f665c; --creme:#faf7f0; --linha:#e6e0d2; }
+  @page { size: A4 portrait; margin: 16mm 13mm 15mm; }
   * { box-sizing: border-box; }
-  body { font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #1a1a1a; margin: 0; }
-  h1 { font-size: 19px; margin: 0 0 2px; }
-  .sub { font-size: 12px; color: #555; margin-bottom: 10px; }
-  .aviso { border: 1.5px solid #b8860b; background: #fdf7e3; border-radius: 6px;
-           padding: 9px 12px; font-size: 12.5px; margin-bottom: 12px; line-height: 1.45; }
-  .aviso b { color: #7a5c06; }
-  table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
-  th { text-align: left; border-bottom: 1.5px solid #333; padding: 5px 6px; font-size: 10.5px;
-       text-transform: uppercase; letter-spacing: .04em; color: #444; }
-  td { padding: 4px 6px; border-bottom: .5px solid #ddd; vertical-align: top; }
-  tr.z td { background: #f6f6f6; }
-  .nome { font-weight: 600; width: 30%; }
-  .resp { color: #555; width: 30%; }
-  .user { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 700; width: 22%; }
-  .senha { font-family: ui-monospace, Menlo, Consolas, monospace; width: 18%; color: #7a5c06; }
-  tr { break-inside: avoid; }
+  body { margin:0; color:var(--texto); font-size:10.6px; line-height:1.5;
+         font-family: Sora, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+
+  /* A faixa sangra só PARA OS LADOS. Sangrando para CIMA ela passava da margem da folha
+     e a impressão cortava a primeira linha — foi assim que "Pastoral dos Acólitos e
+     Coroinhas" sumiu do topo. */
+  .capa-band { background: radial-gradient(120% 160% at 18% 0%, #3a1520 0%, var(--wine) 70%);
+    color:#fff; margin:0 -13mm 7mm; padding: 8mm 13mm 7mm; border-bottom:2px solid var(--gold); }
+  .capa-band .selo { font-size:10px; letter-spacing:.2em; color:var(--gold-lit);
+                     text-transform:uppercase; font-weight:600; }
+  .capa-band h1 { font-size:25px; margin:4px 0 2px; font-weight:800; line-height:1.15; }
+  .capa-band h1 em { font-style:normal; color:var(--gold-lit); }
+  .capa-band .sub { font-family:Lora,Georgia,serif; font-style:italic; font-size:12.5px;
+                    color:#dcc3b8; }
+
+  .comoentrar { border:1.5px solid var(--gold); background:var(--creme);
+                border-radius:8px; padding:10px 13px; margin-bottom:8mm; font-size:11px; line-height:1.6; }
+  .comoentrar .tit { font-weight:800; color:var(--gold-deep); font-size:12.5px; margin-bottom:3px; }
+  .comoentrar b { color:var(--gold-deep); }
+  .comoentrar .destaque { display:inline-block; font-family:ui-monospace,Menlo,Consolas,monospace;
+    background:var(--wine); color:var(--gold-lit); padding:2px 8px; border-radius:5px; font-weight:700; }
+
+  table { width:100%; border-collapse:collapse; }
   thead { display: table-header-group; }
-  .rodape { margin-top: 14px; font-size: 11px; color: #666; border-top: .5px solid #ccc; padding-top: 7px; }
+  th { text-align:left; background:var(--wine); color:var(--gold-lit); padding:6px 8px;
+       font-size:9.4px; text-transform:uppercase; letter-spacing:.07em; font-weight:600; }
+  td { padding:5px 8px; border-bottom:1px solid var(--linha); vertical-align:middle; }
+  tr { break-inside: avoid; }
+  tr:nth-child(even) td { background:#fbf9f4; }
+  tr.letra td { background:none; border-bottom:1.5px solid var(--gold);
+    color:var(--gold-deep); font-weight:800; font-size:12px; letter-spacing:.1em;
+    padding:9px 8px 3px; }
+  .nome { font-weight:700; width:31%; }
+  .resp { color:var(--suave); width:30%; font-size:10.2px; }
+  .user { font-family:ui-monospace,Menlo,Consolas,monospace; font-weight:700;
+          color:var(--gold-deep); width:21%; font-size:11px; }
+  .senha { font-family:ui-monospace,Menlo,Consolas,monospace; color:var(--suave); width:18%; }
 </style></head><body>
-<h1>Acesso ao aplicativo &mdash; Pastoral dos Acólitos e Coroinhas</h1>
-<div class="sub">Paróquia Jesus Cristo Bom Pastor &middot; Limeira/SP &middot; lista gerada em ${hoje} &middot; ${linhas.length} pessoas</div>
-<div class="aviso">
-  <b>Como entrar:</b> abra <b>coroinhas.jcbplimeira.com.br</b>, digite o <b>usuário</b> da linha do seu filho
-  ou da sua filha e a senha <b>${SENHA}</b>.<br>
-  <b>Na primeira vez o aplicativo vai pedir para você criar uma senha nova.</b> A senha desta folha
-  deixa de funcionar nesse momento &mdash; ela serve só para entrar da primeira vez.<br>
-  Procure pelo <b>nome completo</b>. A coluna do meio traz quem responde pela criança, para não confundir
-  nomes parecidos.
+
+<div class="capa-band">
+  <div class="selo">Pastoral dos Acólitos e Coroinhas</div>
+  <h1>Acesso ao <em>aplicativo</em></h1>
+  <div class="sub">Paróquia Jesus Cristo Bom Pastor &middot; Limeira/SP</div>
 </div>
-<table><thead><tr><th>Nome</th><th>Quem responde por ela</th><th>Usuário</th><th>Senha</th></tr></thead>
-<tbody>
+
+<div class="comoentrar">
+  <div class="tit">Como entrar, em quatro passos</div>
+  <b>1.</b> Abra <b>coroinhas.jcbplimeira.com.br</b> no celular. &nbsp;
+  <b>2.</b> Procure abaixo o <b>nome completo</b> do seu filho ou da sua filha. &nbsp;
+  <b>3.</b> Digite o <b>usuário</b> da linha dele e a senha <span class="destaque">${SENHA}</span> &nbsp;
+  <b>4.</b> O aplicativo vai pedir para <b>criar uma senha nova</b> — e a senha desta folha
+  para de funcionar nesse momento.<br>
+  <span style="color:var(--suave);">A coluna do meio diz quem responde pela criança: ela existe
+  porque há nomes que se repetem. Perdeu a senha ou não conseguiu entrar? Fale com a
+  coordenação no WhatsApp <b>(19) 99907-1702</b>.</span>
+</div>
+
+<table>
+  <thead><tr><th>Nome</th><th>Quem responde por ela</th><th>Usuário</th><th>Senha</th></tr></thead>
+  <tbody>
 ${corpo}
-</tbody></table>
-<div class="rodape">Perdeu a senha ou não conseguiu entrar? Fale com a coordenação no WhatsApp (19) 99907-1702.</div>
+  </tbody>
+</table>
 </body></html>`, 'utf8');
   console.log('  folha para imprimir:', path.resolve(FOLHA));
 }

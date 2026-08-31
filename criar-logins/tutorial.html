@@ -72,18 +72,14 @@
   /* SEM moldura e SEM corte seco. A borda com sombra deixava um retângulo cinza em volta
      de cada tela, e o pé da foto terminava numa linha reta no meio do conteúdo — como se
      alguém tivesse cortado com tesoura. Agora a tela nasce do papel e se dissolve nele. */
-  .tela img, .par img { width: 100%; display: block; }
-  /* A moldura RECORTA a altura e dissolve o pé. Sem recortar, a parte transparente da
-     foto continua ocupando espaço e a legenda ou fica longe demais ou sobe por cima
-     dela. Aqui a caixa tem altura própria: o texto que vem depois começa onde a foto
-     realmente acaba de ser vista. */
-  .moldura { border: 0; padding: 0; background: none; box-shadow: none;
-    overflow: hidden; border-radius: 10px 10px 0 0;
-    -webkit-mask-image: linear-gradient(to bottom, #000 80%, transparent 100%);
-            mask-image: linear-gradient(to bottom, #000 80%, transparent 100%); }
-  .duas .moldura { height: 118mm; }
-  .par .moldura  { height: 84mm; }
-  .legenda { font-size: 9.5px; color: var(--suave); text-align: center; margin-top: 1.5mm;
+  /* A TELA APARECE INTEIRA. Nem moldura cinza (era a borda com sombra), nem corte no pé
+     (era o recorte de altura, que decepava uma linha de conteúdo no meio). A tela do
+     celular já termina sozinha, na barra de navegação do app — é esse o fim natural
+     dela, e nenhum outro. Cantos arredondados e nada mais: o escuro da foto contra o
+     branco do papel já desenha a borda. */
+  .tela img, .par img { width: 100%; display: block; border-radius: 10px; }
+  .moldura { border: 0; padding: 0; background: none; box-shadow: none; }
+  .legenda { font-size: 9.5px; color: var(--suave); text-align: center; margin-top: 2mm;
              font-family: Lora, Georgia, serif; font-style: italic; line-height: 1.4; }
 
   .larga { max-width: 74mm; margin: 4mm auto 0; }
