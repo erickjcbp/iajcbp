@@ -963,6 +963,16 @@ async function provaNomeDaMaeTemOndeSerDigitado(provas) {
       var pai = campoDe('Nome do pai');
       var saida = { temMae: !!mae, temPai: !!pai };
 
+      // E o nome NÃO pode ser pedido duas vezes. A aba tinha "Nome da mãe ministra" e
+      // "Nome do pai ministro", que guardavam o MESMO nome — medido no cadastro em
+      // 31/08/2026: 10 iguais na mãe, 9 no pai, zero divergindo. Ficaram só as marcas
+      // de SER ministro; o nome mora num lugar só.
+      var txt = (document.getElementById('main-content') || document.body).innerText || '';
+      // SEM caixa fixa: innerText devolve o texto COMO O CSS MOSTRA, e estes rótulos saem
+      // em maiúsculas. Regex sensível a caixa aqui acusa defeito num app correto.
+      saida.pedeNomeDuasVezes = /nome da m[ãa]e ministra|nome do pai ministro/i.test(txt);
+      saida.aindaPerguntaSeEhMinistro = /m[ãa]e [ée] ministra/i.test(txt) && /pai [ée] ministro/i.test(txt);
+
       // E o que interessa de verdade: digitar e mandar salvar tem de MANDAR para o banco.
       if (mae) {
         mae.value = 'Joana Ferreira dos Santos';
@@ -982,6 +992,12 @@ async function provaNomeDaMaeTemOndeSerDigitado(provas) {
   exigir(a.temMae === true, 'existe um campo "Nome da mãe"',
     'sem ele, ninguém consegue preencher o dado que o próprio CRM cobra');
   exigir(a.temPai === true, 'existe um campo "Nome do pai"');
+  exigir(a.pedeNomeDuasVezes === false,
+    'o nome do pai e da mãe NÃO é pedido duas vezes',
+    'voltaram os campos "Nome da mãe ministra"/"Nome do pai ministro", que guardavam o mesmo nome');
+  exigir(a.aindaPerguntaSeEhMinistro === true,
+    'mas continua perguntando SE o pai e a mãe são ministros',
+    'essa é outra informação, e a Escala precisa dela');
   exigir(mandouMae === true, 'digitar o nome da mãe e salvar MANDA nome_mae para o banco',
     'o campo aparecer não basta: o Salvar tem de levar. Mandou: ' +
     JSON.stringify(escritas.map(e => Object.keys(e.dados || {}))));

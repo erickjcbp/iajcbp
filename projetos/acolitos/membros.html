@@ -787,10 +787,12 @@ async function renderTab(tab) {
     // e o cartão do CRM avisa "falta nome de responsável" sem oferecer onde preencher.
     el.appendChild(editText('Nome da mãe', 'nome_mae', m.nome_mae));
     el.appendChild(editText('Nome do pai', 'nome_pai', m.nome_pai));
+    // O NOME DO PAI E DA MÃE JÁ FOI PERGUNTADO ACIMA. Aqui só se pergunta se eles SÃO
+    // ministros — o nome de "pai ministro" era o mesmo nome, digitado de novo. Medido no
+    // cadastro em 31/08/2026: dos que tinham os dois campos, 10 iguais na mãe e 9 no pai,
+    // e ZERO divergindo. Nunca foi outro dado; sempre foi cópia.
     el.appendChild(editBool('Pai é ministro?', 'tem_pai_ministro', m.tem_pai_ministro));
-    el.appendChild(editText('Nome do pai ministro', 'nome_pai_ministro', m.nome_pai_ministro));
     el.appendChild(editBool('Mãe é ministra?', 'tem_mae_ministro', m.tem_mae_ministro));
-    el.appendChild(editText('Nome da mãe ministra', 'nome_mae_ministro', m.nome_mae_ministro));
     el.appendChild(editText('Comunidade dos ministros', 'comunidade_ministro', m.comunidade_ministro));
     el.appendChild(editBool('Escalar junto com os pais?', 'escalar_com_pais', m.escalar_com_pais));
 

@@ -48,10 +48,11 @@ export default async function handler(req, res) {
     celular_responsavel: String(p.celular || '').trim() || null,
     responsavel_whatsapp: !!p.whatsapp,
     responsavel: responsavelNome,
+    // Só a MARCA de ser ministro. O nome já está em nome_mae/nome_pai logo acima —
+    // gravar de novo em nome_*_ministro era o mesmo dado em dois lugares, e dois lugares
+    // para a mesma verdade é como nascem as divergências.
     tem_mae_ministro: !!p.mae_ministra,
-    nome_mae_ministro: p.mae_ministra ? nomeMae : null,
     tem_pai_ministro: !!p.pai_ministro,
-    nome_pai_ministro: p.pai_ministro ? nomePai : null,
     comunidade_ministro: (p.mae_ministra || p.pai_ministro) ? (String(p.comunidade_ministro || '').trim() || null) : null,
     grupo_irmaos: grupo,
     escalar_com_irmao: true,

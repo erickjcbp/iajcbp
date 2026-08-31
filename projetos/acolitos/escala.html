@@ -504,7 +504,7 @@ async function loadDados() {
       escalasMap[e.celebracao_id].push(e);
     });
     const [{ data: mems }, { data: habs }, { data: disps }, freqData, { data: auss }, { data: chs }] = await Promise.all([
-      sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,casa_id,pode_outras_comunidades,data_nascimento,foto_url,observacoes,necessidades_especiais,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro,grupo_irmaos,escalar_com_irmao').eq('status','ativo').order('nome'),
+      sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,casa_id,pode_outras_comunidades,data_nascimento,foto_url,observacoes,necessidades_especiais,nome_pai,nome_mae,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro,grupo_irmaos,escalar_com_irmao').eq('status','ativo').order('nome'),
       sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia'),
       sb.from('acolitos_disponibilidade').select('membro_id,dia,horario,restricao'),
       fetchFrequencia(),
@@ -1514,8 +1514,12 @@ function renderPlanilha() {
     // MECE (pais ministros)
     const tdM=document.createElement('td');tdM.style.textAlign='center';
     const mece=[];
-    if(m.tem_pai_ministro&&m.nome_pai_ministro)mece.push('Pai: '+m.nome_pai_ministro);
-    if(m.tem_mae_ministro&&m.nome_mae_ministro)mece.push('Mãe: '+m.nome_mae_ministro);
+    // O nome vem do campo DE VERDADE (nome_pai/nome_mae). O nome_*_ministro fica só como
+    // reserva para as fichas antigas, que foram gravadas quando o nome era pedido duas
+    // vezes — sem a reserva, quem já estava no cadastro perderia o nome da tela.
+    const paiMin=m.nome_pai||m.nome_pai_ministro, maeMin=m.nome_mae||m.nome_mae_ministro;
+    if(m.tem_pai_ministro&&paiMin)mece.push('Pai: '+paiMin);
+    if(m.tem_mae_ministro&&maeMin)mece.push('Mãe: '+maeMin);
     if(m.comunidade_ministro)mece.push('Comunidade: '+(m.comunidade_ministro==='matriz'?'Matriz':m.comunidade_ministro==='santo_antonio'?'Sto. Antônio':m.comunidade_ministro));
     if(mece.length){const b=document.createElement('button');b.className='cell-ico';b.textContent='👪';b.onclick=()=>openInfo('Pais ministros — '+m.nome,mece);tdM.appendChild(b);}
     else{tdM.style.color='var(--border)';tdM.textContent='—';}

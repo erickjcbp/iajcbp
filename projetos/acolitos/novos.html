@@ -363,10 +363,14 @@ async function enviarCadastro() {
       endereco: resp.endereco || null,
       celular_mae: resp.celMae || null,
       celular_recado: resp.celRecado || null,
+      // O nome do pai e da mãe vai para o campo DELES, sempre — e não só quando são
+      // ministros. Antes esta porta gravava só em nome_*_ministro, então quem entrava por
+      // aqui ficava SEM nome_mae — que é uma das duas provas que o app usa para reconhecer
+      // quem já está no cadastro. Era ela mesma alimentando o problema da ficha duplicada.
+      nome_pai: resp.pai || null,
+      nome_mae: resp.mae || null,
       tem_pai_ministro: resp.ministros && !!resp.pai,
-      nome_pai_ministro: resp.ministros ? (resp.pai || null) : null,
       tem_mae_ministro: resp.ministros && !!resp.mae,
-      nome_mae_ministro: resp.ministros ? (resp.mae || null) : null,
       comunidade_ministro: resp.ministros ? resp.ministroComunidade || null : null,
       escalar_com_pais: resp.ministros,
     };
