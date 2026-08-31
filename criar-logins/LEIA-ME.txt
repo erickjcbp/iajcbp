@@ -53,3 +53,23 @@ acólitos / 45 coroinhas / 22 aspirantes.
 
 A folha entregue está em entregas/logins-da-pastoral_2026-08-30_2155_v1.html (e .csv).
 Os 138 usuários dela foram conferidos um a um contra os logins do banco.
+
+
+O GUIA DAS FAMÍLIAS (o PDF)
+O texto do guia é o tutorial.html desta pasta. Ele é o ORIGINAL: para mudar o guia,
+mude esse arquivo e gere o PDF de novo.
+
+  node <script de pdf> criar-logins/tutorial.html entregas/guia_<data>_v<N>.pdf
+
+Ele tem 16 páginas: capa, entrar com a folha, criar a senha, instalar no celular,
+ligar o sino, as 6 etapas da integração, a tela inicial, escalas, ausências, agenda,
+a jornada (níveis e funções), conquistas/casas/destaques, tarefas dos times, o que
+fazer quando dá errado, e o combinado.
+
+A ORDEM DAS PÁGINAS 4 E 5 NÃO É ACIDENTE: instalar vem ANTES de ligar o sino porque
+no iPhone a notificação só funciona com o app instalado na tela de início. Inverter
+as duas faria metade das famílias travar.
+
+Os textos das telas citadas no guia foram COPIADOS do app (parede do sino, parede da
+senha, botões das escalas e das ausências), não escritos de memória. Se alguma dessas
+frases mudar no app, o guia fica mentindo — vale reler as páginas 3, 5, 8 e 9.
