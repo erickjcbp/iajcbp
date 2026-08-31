@@ -134,6 +134,11 @@ export default async function handler(req, res) {
       // criança já tem login, e o certo é recuperar a senha — nunca uma segunda ficha
       // por cima da que já existe.
       if (v.acao === 'ja_tem_conta') {
+        // REGISTRA ANTES DE RECUSAR. Lançando o erro direto, a coordenação nunca ficava
+        // sabendo: na porta "Novos" este caso aparece em Config › Cadastros barrados, e aqui
+        // não aparecia — as duas portas voltavam a divergir, que é a doença que o
+        // _vinculo.js existe para curar. Descoberto testando a porta de verdade em 31/08.
+        if (v.registrar) await registrar(v.registrar, nome, f.data_nascimento, v.membro_id);
         throw new Error('Já existe um cadastro de ' + nome + ' ligado a outra conta. Se a conta '
           + 'é sua, use "Esqueci minha senha" na tela de entrada. Se não for, fale com a coordenação.');
       }
