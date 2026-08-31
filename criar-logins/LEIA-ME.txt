@@ -77,6 +77,17 @@ Três pedras desse caminho, todas já resolvidas no código (não repita):
    NA FRENTE. Agora ela olha o que está por cima.
  - O BALÃO DE INSTALAR tapa o rodapé. Ele tem a sua própria página no guia; nas outras
    fotos é fechado.
+ - A FOTO É DA JANELA, não do documento. Recortando a partir do topo do documento, uma
+   tela ROLADA sai com a barra fixa CARIMBADA no meio. É captureBeyondViewport:false.
+ - AMOSTRA COM A FORMA ERRADA VIRA LIXO NA TELA. Devolver [] onde a função devolve um
+   objeto fez a tela escrever "faltam undefined XP" — e quase foi impresso. Agora o
+   motor RECUSA foto que tenha undefined, NaN, [object Object] ou Invalid Date à vista.
+
+AS QUESTS DAS FOTOS SÃO REAIS. Os títulos ("Apto no Sinão", "Encare o Missal",
+"Caçador de sorrisos", "Caça ao santo") saíram da tabela acolitos_missoes, que é
+configuração da pastoral e não dado de criança. A FORMA da resposta saiu do corpo da
+função acolitos_missoes_board — pelo psql ela devolve 'sem_permissao', porque confere
+auth.uid(). Poder executar não é passar pela trava de dentro.
 
 A pessoa das fotos ("Marina Souza Lima") NÃO existe no cadastro, de propósito: guia
 impresso circula, e ninguém precisa ver o nome de uma criança de verdade num exemplo.

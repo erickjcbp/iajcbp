@@ -102,7 +102,7 @@ async function foto(o) {
 
   await pg.goto(url, { waitUntil: 'networkidle0', timeout: 40000 });
 
-  const resultado = await pg.evaluate(async (papel, membro, tabelas, rpcs, passos, fecharBanner, ficarNaAbertura) => {
+  const resultado = await pg.evaluate(async (papel, membro, tabelas, rpcs, passos, fecharBanner, ficarNaAbertura, rolarAte) => {
     const ctx = { membership: { role: papel.role }, membro, conta: membro,
                   user: { id: membro.user_id, email: papel.email || 'foto@teste' } };
     // hideSplash() mora no initModulo DE VERDADE. Sem chamar aqui, a tela de abertura
@@ -156,6 +156,19 @@ async function foto(o) {
     // página no guia; nas outras fotos ele só atrapalha.
     if (fecharBanner) { const b = document.getElementById('pwa-banner'); if (b) b.remove(); }
     await new Promise((s) => setTimeout(s, 2600));
+    // Rola até o trecho pedido: uma tela de celular é alta, e o que interessa nem sempre
+    // está no topo. Procura pelo TEXTO, não por posição em pixels, que muda a cada edição.
+    if (rolarAte) {
+      const alvo = Array.from(document.querySelectorAll('div,h2,h3,section'))
+        .find((e) => (e.textContent || '').trim().startsWith(rolarAte));
+      if (alvo) {
+        // 70px de folga: colado na borda de cima, a seção fica escondida atrás da barra.
+        window.scrollTo(0, alvo.getBoundingClientRect().top + window.scrollY - 70);
+        await new Promise((s) => setTimeout(s, 600));
+      }
+      // Rolar pedido e alvo não encontrado é falha: a foto sairia do lugar errado sem avisar.
+      else falhos.push('não achei para rolar: "' + rolarAte + '"');
+    }
     const raiz = document.getElementById('main-content') || document.body;
     // A conferência olha o que está NA FRENTE, não só o texto do documento. Medir texto
     // deu "✔" para nove fotos que eram todas a mesma tela de abertura.
@@ -166,24 +179,35 @@ async function foto(o) {
       return e.display !== 'none' && e.visibility !== 'hidden' && Number(e.opacity) > 0.05;
     };
     const tapando = ficarNaAbertura ? [] : ['splash', 'splash-screen', 'loading'].filter(naFrente);
-    return { estourou: null, falhos, tapando, texto: (raiz.innerText || '').trim().length,
+    // LIXO DE PROGRAMADOR NA TELA. "faltam undefined XP" chegou a sair numa foto porque a
+    // minha amostra tinha a forma errada — e um guia impresso com isso vai para cem
+    // famílias. Barrar é mais barato que reparar depois.
+    const visivel = (raiz.innerText || '') + ' ' + (document.body.innerText || '');
+    const lixo = ['undefined', 'NaN', '[object Object]', 'null null', 'Invalid Date']
+      .filter((x) => visivel.includes(x));
+    return { estourou: null, falhos, tapando, lixo, texto: (raiz.innerText || '').trim().length,
              amostra: (raiz.innerText || '').trim().slice(0, 70).replace(/\n/g, ' · ') };
-  }, o.papel, o.membro, o.tabelas || {}, o.rpcs || {}, o.passos || [], o.fecharBanner !== false, !!o.ficarNaAbertura);
+  }, o.papel, o.membro, o.tabelas || {}, o.rpcs || {}, o.passos || [], o.fecharBanner !== false, !!o.ficarNaAbertura, o.rolarAte || null);
 
   const destino = path.join(SAIDA, o.nome + '.png');
-  await pg.screenshot({ path: destino, clip: { x: 0, y: 0, width: 390, height: o.altura || 844 } });
+  // A foto é da JANELA, não do documento. Com `clip` a partir do topo do documento, uma
+  // tela rolada sai com a barra fixa CARIMBADA no meio — foi o que aconteceu na foto das
+  // quests bônus. captureBeyondViewport:false prende o recorte ao que se vê.
+  await pg.screenshot({ path: destino, captureBeyondViewport: false });
   await pg.close();
 
   // Foto de tela vazia não entra no guia. Melhor faltar uma foto do que ensinar
   // uma tela em branco a cem famílias.
   const tapada = (resultado.tapando || []).length > 0;
   const vazia = !resultado.estourou && !o.ficarNaAbertura && resultado.texto < 60;
+  const temLixo = (resultado.lixo || []).length > 0;
   const marca = resultado.estourou ? '✖ estourou'
     : tapada ? '✖ TAPADA por #' + resultado.tapando.join(', #')
+    : temLixo ? '✖ LIXO NA TELA: ' + resultado.lixo.join(', ')
     : vazia ? '✖ VAZIA' : '✔';
   const passoRuim = (resultado.falhos || []).length ? '  ⚠ passo: ' + resultado.falhos.join('; ') : '';
   console.log(`  ${marca}  ${o.nome.padEnd(22)} ${!desligou ? '(partida não desligada!) ' : ''}${resultado.estourou || resultado.amostra}${passoRuim}`);
-  return { nome: o.nome, ok: !resultado.estourou && !vazia && !tapada };
+  return { nome: o.nome, ok: !resultado.estourou && !vazia && !tapada && !temLixo };
 }
 
 export { foto, nav, servidor, barrados, SAIDA };
