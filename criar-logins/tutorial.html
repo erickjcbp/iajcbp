@@ -3,443 +3,556 @@
 <head>
 <meta charset="utf-8">
 <title>Guia da Pastoral dos Acólitos e Coroinhas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
-  @page { size: A4 portrait; margin: 16mm 15mm 14mm; }
+  /* ── A paleta é a do app: vinho e ouro, Sora e Lora. As telas escuras das fotos
+       continuam a mesma casa; o corpo do texto é claro porque isto se imprime. ── */
+  :root {
+    --wine:      #1a0a0e;
+    --wine2:     #26101a;
+    --surface:   #2b1620;
+    --gold:      #8a6a24;
+    --gold-lit:  #ffd97a;
+    --gold-deep: #6b5106;
+    --texto:     #241f1c;
+    --suave:     #6b625a;
+    --papel:     #ffffff;
+    --creme:     #faf7f0;
+    --linha:     #e3dccd;
+    --perigo:    #a33c2a;
+  }
+  @page { size: A4 portrait; margin: 0; }
   * { box-sizing: border-box; }
-  body { margin: 0; color: #1c1a17; background: #fff;
-         font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-         font-size: 12.2px; line-height: 1.62; }
+  html, body { margin: 0; padding: 0; }
+  body { color: var(--texto); background: var(--papel);
+         font-family: Sora, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+         font-size: 11.4px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
 
-  .pagina { page-break-after: always; }
+  .pagina { page-break-after: always; position: relative;
+            width: 210mm; min-height: 297mm; padding: 14mm 15mm 12mm; }
   .pagina:last-child { page-break-after: auto; }
 
   /* ── capa ── */
-  .capa { text-align: center; padding-top: 52mm; }
-  .capa .selo { font-size: 62px; line-height: 1; margin-bottom: 16px; }
-  .capa h1 { font-size: 30px; line-height: 1.2; margin: 0 0 10px; color: #6b5106; font-weight: 800; }
-  .capa .linha { width: 78px; height: 3px; background: #b8912a; margin: 18px auto; border-radius: 2px; }
-  .capa .sub { font-size: 15px; color: #4a463f; margin-bottom: 4px; }
-  .capa .rodape-capa { margin-top: 46mm; font-size: 12px; color: #7b756b; }
+  /* A capa É a tela de abertura do app, inteira. O turíbulo em ouro e o "SOMOS DO ALTAR"
+     são a marca que a pastoral já reconhece — recortar em quadradinho fazia parecer print
+     colado, e ainda repetia o lema duas vezes na mesma página. */
+  .capa { background: var(--wine) url('fotos/00-abertura.png') center 18% / cover no-repeat;
+          color: #fff; text-align: center; padding: 0; }
+  .capa .veu { position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(13,5,7,0) 58%, rgba(13,5,7,.88) 72%, #0d0507 86%); }
+  .capa .titulo { position: absolute; left: 15mm; right: 15mm; bottom: 34mm; }
+  .capa h1 { font-size: 31px; line-height: 1.18; margin: 0; font-weight: 800; color: #fff;
+             letter-spacing: -.01em; }
+  .capa h1 em { font-style: normal; color: var(--gold-lit); }
+  .capa .fio { width: 58px; height: 2px; background: var(--gold-lit); margin: 6mm auto; opacity: .75; }
+  .capa .sub { font-family: Lora, Georgia, serif; font-style: italic; font-size: 14px;
+               color: #e2cdc2; line-height: 1.7; }
+  .capa .pe { position: absolute; left: 0; right: 0; bottom: 20mm;
+              font-size: 10.5px; color: #a8918a; letter-spacing: .07em; }
 
-  h2 { font-size: 19px; color: #6b5106; margin: 0 0 3px; font-weight: 800; line-height: 1.25; }
-  h2 .num { display: inline-block; min-width: 30px; color: #b8912a; }
-  .chapeu { font-size: 11.5px; text-transform: uppercase; letter-spacing: .09em;
-            color: #9a927f; margin-bottom: 12px; border-bottom: 1px solid #e4e0d6; padding-bottom: 7px; }
-  h3 { font-size: 13.5px; margin: 17px 0 5px; color: #2a2620; font-weight: 700; }
-  p { margin: 0 0 9px; }
+  /* ── cabeçalho das páginas ── */
+  .faixa { background: var(--wine); color: #fff; margin: -14mm -15mm 8mm; padding: 7mm 15mm 6mm;
+           border-bottom: 2px solid var(--gold); }
+  .faixa .num { font-size: 10.5px; letter-spacing: .18em; color: var(--gold-lit);
+                text-transform: uppercase; font-weight: 600; }
+  .faixa h2 { font-size: 21px; margin: 2px 0 0; font-weight: 800; color: #fff; line-height: 1.2; }
+  .faixa .linha-fina { font-family: Lora, Georgia, serif; font-style: italic;
+                       font-size: 12.5px; color: #d9bfb4; margin-top: 3px; }
 
-  ol.passos { margin: 6px 0 12px; padding-left: 0; list-style: none; counter-reset: p; }
-  ol.passos > li { counter-increment: p; position: relative; padding-left: 30px; margin-bottom: 9px; }
-  ol.passos > li::before { content: counter(p); position: absolute; left: 0; top: 1px;
-    width: 21px; height: 21px; border-radius: 50%; background: #6b5106; color: #fff;
-    font-size: 11.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
-  ul { margin: 5px 0 10px; padding-left: 19px; }
-  ul li { margin-bottom: 5px; }
+  h3 { font-size: 12.8px; margin: 14px 0 4px; color: var(--gold-deep); font-weight: 700; }
+  p { margin: 0 0 8px; }
+  b { font-weight: 700; }
 
-  .caixa { border-radius: 7px; padding: 10px 13px; margin: 11px 0; font-size: 11.8px; line-height: 1.55; }
-  .aviso  { border: 1.5px solid #b8912a; background: #fdf8e8; }
-  .atencao{ border: 1.5px solid #b4553a; background: #fdf0ec; }
-  .calma  { border: 1.5px solid #cfc9bb; background: #f7f6f2; }
-  .caixa b { color: #6b5106; }
-  .atencao b { color: #8f3f28; }
+  /* ── duas colunas: texto e foto da tela ── */
+  .duas { display: flex; gap: 7mm; align-items: flex-start; }
+  .duas .texto { flex: 1 1 auto; min-width: 0; }
+  .duas .tela { flex: 0 0 64mm; }
+  .tela img, .par img { width: 100%; display: block; border-radius: 7px; }
+  .moldura { border: 2.5px solid var(--wine); border-radius: 11px; padding: 3px;
+             background: var(--wine); box-shadow: 0 2px 7px rgba(0,0,0,.22); }
+  .legenda { font-size: 9.5px; color: var(--suave); text-align: center; margin-top: 4px;
+             font-family: Lora, Georgia, serif; font-style: italic; line-height: 1.4; }
 
-  .tela { border: 1px solid #d8d3c6; border-radius: 8px; padding: 11px 13px; margin: 11px 0;
-          background: #fbfaf7; font-size: 11.6px; }
-  .tela .t { font-weight: 800; color: #6b5106; margin-bottom: 5px; font-size: 12.4px; }
+  .larga { max-width: 74mm; margin: 4mm auto 0; }
+  /* Duas telas na mesma página não cabem empilhadas numa coluna (um celular já ocupa
+     ~138mm de altura). Lado a lado, embaixo do texto, cabem as duas. */
+  .par { display: flex; gap: 10mm; justify-content: center; margin-top: 5mm; }
+  .par > div { flex: 0 0 44mm; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 11.6px; margin: 9px 0 12px; }
-  th { text-align: left; background: #f2efe6; padding: 6px 8px; font-size: 10.5px;
-       text-transform: uppercase; letter-spacing: .05em; color: #6b5106; border: 1px solid #ddd8ca; }
-  td { padding: 6px 8px; border: 1px solid #e6e1d4; vertical-align: top; }
+  ol.passos { margin: 6px 0 10px; padding: 0; list-style: none; counter-reset: p; }
+  ol.passos > li { counter-increment: p; position: relative; padding-left: 27px; margin-bottom: 7px; }
+  ol.passos > li::before { content: counter(p); position: absolute; left: 0; top: 0;
+    width: 19px; height: 19px; border-radius: 50%; background: var(--wine); color: var(--gold-lit);
+    font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  ul { margin: 4px 0 9px; padding-left: 17px; }
+  ul li { margin-bottom: 4px; }
 
-  .trilha { margin: 12px 0 14px; }
-  .etapa { display: flex; gap: 11px; margin-bottom: 9px; align-items: flex-start; }
-  .etapa .bolinha { flex: 0 0 22px; height: 22px; border-radius: 50%; background: #b8912a; color: #fff;
-    font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
-  .etapa .txt b { display: block; color: #2a2620; font-size: 12.6px; }
-  .etapa .txt span { color: #57524a; }
+  .caixa { border-radius: 6px; padding: 9px 12px; margin: 10px 0; font-size: 10.9px; line-height: 1.55;
+           border-left: 3px solid var(--gold); background: var(--creme); }
+  .caixa.forte { border-left-color: var(--perigo); background: #fdf1ee; }
+  .caixa .rot { font-weight: 700; color: var(--gold-deep); }
+  .caixa.forte .rot { color: var(--perigo); }
 
-  .rodape { margin-top: 16px; border-top: 1px solid #e4e0d6; padding-top: 7px;
-            font-size: 10.5px; color: #918a7c; }
+  table { width: 100%; border-collapse: collapse; font-size: 10.8px; margin: 8px 0 10px; }
+  th { text-align: left; background: var(--wine); color: var(--gold-lit); padding: 6px 8px;
+       font-size: 9.8px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--linha); vertical-align: top; }
+  tr:nth-child(even) td { background: #fbf9f4; }
+
+  .trilha { margin: 8px 0 10px; }
+  .etapa { display: flex; gap: 9px; margin-bottom: 7px; align-items: flex-start; }
+  .etapa .bolha { flex: 0 0 19px; height: 19px; border-radius: 50%; background: var(--gold);
+    color: #fff; font-size: 10px; font-weight: 700; display: flex;
+    align-items: center; justify-content: center; margin-top: 1px; }
+  .etapa b { display: block; color: var(--texto); font-size: 11.6px; }
+  .etapa span { color: var(--suave); }
+
   .senha { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 700;
-           background: #f2efe6; padding: 1px 6px; border-radius: 4px; color: #6b5106; }
+           background: var(--wine); color: var(--gold-lit); padding: 1px 6px; border-radius: 4px;
+           font-size: 10.6px; }
+
+  .rodape { position: absolute; left: 15mm; right: 15mm; bottom: 8mm;
+            border-top: 1px solid var(--linha); padding-top: 5px;
+            font-size: 9.3px; color: #a49a8d; display: flex; justify-content: space-between; }
 </style>
 </head>
 <body>
 
-<!-- ══════════════ CAPA ══════════════ -->
+<!-- ═══════════════ CAPA ═══════════════ -->
 <section class="pagina capa">
-  <div class="selo">🕯️</div>
-  <h1>Guia da Pastoral dos<br>Acólitos e Coroinhas</h1>
-  <div class="linha"></div>
-  <div class="sub">Como entrar no aplicativo, o caminho da integração</div>
-  <div class="sub">e o que fazer no dia a dia</div>
-  <div class="rodape-capa">
-    Paróquia São João Batista &middot; Limeira<br>
-    Para as famílias e para quem serve ao altar
+  <div class="veu"></div>
+  <div class="titulo">
+    <h1>Guia da Pastoral<br>dos <em>Acólitos e Coroinhas</em></h1>
+    <div class="fio"></div>
+    <div class="sub">Como entrar no aplicativo, o caminho da integração<br>e o que fazer no dia a dia</div>
   </div>
+  <div class="pe">PARÓQUIA SÃO JOÃO BATISTA &middot; LIMEIRA</div>
 </section>
 
-<!-- ══════════════ 1 ══════════════ -->
+<!-- ═══════════════ 1 ═══════════════ -->
 <section class="pagina">
-  <h2><span class="num">1.</span>O que é este aplicativo</h2>
-  <div class="chapeu">Antes de tudo</div>
-
-  <p>É onde a pastoral vive o dia a dia: você vê <b>quando vai servir</b>, avisa <b>quando não puder ir</b>,
-  acompanha a sua <b>jornada</b> — as funções que já sabe fazer e as que ainda vai aprender —, e recebe
-  no celular todo aviso importante.</p>
-
-  <p>Ele não substitui a coordenação nem o grupo do WhatsApp. Ele resolve a parte que sempre se perdia:
-  <b>quem serve em qual missa, e quem avisou que não vai poder ir.</b></p>
-
-  <h3>Quem usa</h3>
-  <ul>
-    <li><b>A criança ou o jovem que serve.</b> A conta é dela.</li>
-    <li><b>O pai, a mãe ou o responsável</b>, junto — principalmente com os menores.
-        Pode usar a mesma conta, no mesmo celular.</li>
-  </ul>
-
-  <h3>Onde ele fica</h3>
-  <p>Não precisa baixar nada de loja nenhuma. O endereço é:</p>
-  <div class="caixa aviso" style="text-align:center;font-size:15px;">
-    <b>coroinhas.jcbplimeira.com.br</b>
-  </div>
-  <p>Abre no celular, no tablet e no computador. Mais adiante o guia mostra como
-  <b>colocar o ícone dele na tela do celular</b>, que é como quase todo mundo usa.</p>
-
-  <div class="caixa calma">
-    <b>Uma coisa que assusta e não deveria:</b> na primeira vez o aplicativo vai pedir para você criar
-    uma senha e ligar os avisos, e não deixa passar sem isso. Não é erro — é de propósito, e são
-    dois minutos. As páginas 2 a 5 levam você por esse caminho, passo a passo.
+  <div class="faixa">
+    <div class="num">Antes de tudo</div>
+    <h2>O que é este aplicativo</h2>
+    <div class="linha-fina">A pastoral inteira na palma da mão</div>
   </div>
 
-  <div class="rodape">Guia da Pastoral dos Acólitos e Coroinhas &middot; página 1</div>
+  <div class="duas">
+    <div class="texto">
+      <p>É onde a pastoral vive o dia a dia: você vê <b>quando vai servir</b>, avisa <b>quando não
+      puder ir</b>, acompanha a sua jornada — as funções que já sabe fazer e as que ainda vai
+      aprender — e recebe no celular todo aviso importante.</p>
+
+      <p>Ele não substitui a coordenação nem o grupo do WhatsApp. Ele resolve a parte que sempre se
+      perdia: <b>quem serve em qual missa, e quem avisou que não vai poder ir.</b></p>
+
+      <h3>Quem usa</h3>
+      <ul>
+        <li><b>A criança ou o jovem que serve.</b> A conta é dela.</li>
+        <li><b>O pai, a mãe ou o responsável</b>, junto — principalmente com os menores.
+            Pode ser o mesmo celular.</li>
+      </ul>
+
+      <h3>Onde ele fica</h3>
+      <p>Não precisa baixar nada de loja nenhuma:</p>
+      <div class="caixa" style="text-align:center;font-size:13.5px;">
+        <b>coroinhas.jcbplimeira.com.br</b>
+      </div>
+    </div>
+    <div class="tela">
+      <div class="moldura"><img src="fotos/04-home.png" alt="Tela inicial do aplicativo"></div>
+      <div class="legenda">A tela inicial, no celular</div>
+    </div>
+  </div>
+
+  <div class="caixa">
+    <span class="rot">Uma coisa que assusta e não deveria:</span> na primeira vez o aplicativo pede
+    para você criar uma senha e ligar os avisos, e <b>não deixa passar sem isso</b>. Não é erro — é
+    de propósito, e são dois minutos. As próximas quatro páginas levam você por esse caminho.
+  </div>
+
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>1</span></div>
 </section>
 
-<!-- ══════════════ 2 ══════════════ -->
+<!-- ═══════════════ 2 ═══════════════ -->
 <section class="pagina">
-  <h2><span class="num">2.</span>Entrar pela primeira vez</h2>
-  <div class="chapeu">Você vai precisar da folha que a coordenação entregou</div>
+  <div class="faixa">
+    <div class="num">Passo 1 de 4</div>
+    <h2>Entrar pela primeira vez</h2>
+    <div class="linha-fina">Com a folha que a coordenação entregou</div>
+  </div>
 
   <p>A pastoral entregou uma folha com o nome de cada pessoa e o <b>usuário</b> dela.
-  Procure ali o nome completo do seu filho ou da sua filha.</p>
+  Procure ali o <b>nome completo</b> do seu filho ou da sua filha.</p>
 
-  <div class="tela">
-    <div class="t">Como a folha é</div>
-    <table style="margin:6px 0 0;">
-      <tr><th>Nome</th><th>Quem responde por ela</th><th>Usuário</th><th>Senha</th></tr>
-      <tr><td>Ana Caroline Carli</td><td>Márcia Batista Barbosa Carli</td>
-          <td style="font-family:ui-monospace,Menlo,monospace"><b>anacarli</b></td>
-          <td style="font-family:ui-monospace,Menlo,monospace">coroinha2026</td></tr>
-    </table>
-    <p style="margin:8px 0 0;color:#57524a;">A coluna do meio existe para os nomes que se repetem —
-    há 14 "Maria" e 8 "Miguel" na pastoral. Confira <b>o nome completo</b>, não só o primeiro.</p>
+  <table>
+    <tr><th>Nome</th><th>Quem responde por ela</th><th>Usuário</th><th>Senha</th></tr>
+    <tr><td>Ana Caroline Carli</td><td>Márcia Batista Barbosa Carli</td>
+        <td style="font-family:ui-monospace,Menlo,monospace"><b>anacarli</b></td>
+        <td style="font-family:ui-monospace,Menlo,monospace">coroinha2026</td></tr>
+  </table>
+  <p style="color:var(--suave);font-size:10.5px;margin-top:-4px;">A coluna do meio existe para os
+  nomes que se repetem — há <b>14 "Maria"</b> e <b>8 "Miguel"</b> na pastoral.</p>
+
+  <div class="duas" style="margin-top:10px;">
+    <div class="texto">
+      <h3>Os passos</h3>
+      <ol class="passos">
+        <li>Abra <b>coroinhas.jcbplimeira.com.br</b> no navegador do celular.</li>
+        <li>Na aba <b>Entrar</b>, escreva o <b>usuário</b> da folha no campo "seu usuário".
+            Tudo junto, sem espaço, tudo minúsculo.</li>
+        <li>Na senha, escreva <span class="senha">coroinha2026</span>.</li>
+        <li>Toque em <b>Entrar</b>.</li>
+      </ol>
+
+      <div class="caixa forte">
+        <span class="rot">Essa senha é a mesma de todo mundo.</span> Ela serve só para entrar da
+        primeira vez. Na tela seguinte o aplicativo pede que você crie uma senha só sua — e a partir
+        daí a senha da folha não abre mais a conta.
+      </div>
+
+      <div class="caixa">
+        <span class="rot">Se disser que está errado:</span> confira se não sobrou espaço no fim, se
+        está tudo em minúsculo e se você copiou a linha certa (nomes parecidos são muitos).
+      </div>
+    </div>
+    <div class="tela">
+      <div class="moldura"><img src="fotos/01-parede-senha.png" alt="Tela de criar a senha"></div>
+      <div class="legenda">É esta tela que aparece<br>logo depois de entrar</div>
+    </div>
   </div>
 
-  <h3>Os passos</h3>
-  <ol class="passos">
-    <li>Abra <b>coroinhas.jcbplimeira.com.br</b> no navegador do celular.</li>
-    <li>Na aba <b>Entrar</b>, escreva o <b>usuário</b> da folha no campo "seu usuário".
-        Tudo junto, sem espaço, tudo minúsculo.</li>
-    <li>No campo da senha, escreva <span class="senha">coroinha2026</span>.</li>
-    <li>Toque em <b>Entrar</b>.</li>
-  </ol>
-
-  <div class="caixa atencao">
-    <b>Essa senha é a mesma de todo mundo.</b> Ela serve só para entrar da primeira vez. Na próxima
-    tela o aplicativo vai pedir que você crie uma senha só sua — e a partir daí a senha desta folha
-    não abre mais a conta.
-  </div>
-
-  <div class="caixa calma">
-    <b>Se disser que usuário ou senha estão errados:</b> confira se não sobrou espaço no fim, se está
-    tudo em minúsculo e se você copiou a linha certa da folha (nomes parecidos são muitos). Se ainda
-    assim não entrar, chame a coordenação — o WhatsApp está na última página.
-  </div>
-
-  <div class="rodape">Guia da Pastoral dos Acólitos e Coroinhas &middot; página 2</div>
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>2</span></div>
 </section>
 
-<!-- ══════════════ 3 ══════════════ -->
+<!-- ═══════════════ 3 ═══════════════ -->
 <section class="pagina">
-  <h2><span class="num">3.</span>Criar a sua senha</h2>
-  <div class="chapeu">A primeira tela depois de entrar</div>
-
-  <p>Assim que você entra, o aplicativo mostra uma tela com o <b>primeiro nome da criança</b> e o
-  pedido para criar uma senha. Ele não abre nada antes disso.</p>
-
-  <div class="tela">
-    <div class="t">🔑 &nbsp;Katarina, crie a sua senha</div>
-    <p style="margin:0 0 8px;">Você entrou com a senha que veio na folha, e ela é a mesma de todo mundo.
-    Escolha agora uma senha que só você saiba — a da folha para de funcionar.</p>
-    <p style="margin:0;color:#8a8377;">[ sua senha nova ] &nbsp; [ escreva de novo ] &nbsp;
-    <b style="color:#6b5106;">Guardar a minha senha</b></p>
+  <div class="faixa">
+    <div class="num">Passo 2 de 4</div>
+    <h2>Criar a sua senha</h2>
+    <div class="linha-fina">O aplicativo não abre antes disso</div>
   </div>
 
-  <h3>O que vale como senha</h3>
-  <ul>
-    <li>Ao menos <b>6 letras ou números</b>.</li>
-    <li>As duas caixas precisam ter <b>exatamente a mesma coisa</b>.</li>
-    <li><b>Não pode ser <span class="senha">coroinha2026</span></b>, nem escrita com letra maiúscula.
-        Essa é a senha da folha: se a sua fosse igual, qualquer pessoa com a folha na mão entraria
-        na conta do seu filho.</li>
-  </ul>
+  <div class="duas">
+    <div class="texto">
+      <p>Assim que você entra, aparece uma tela com o <b>primeiro nome da criança</b> pedindo uma
+      senha nova. Escreva a mesma senha nas duas caixas e toque em
+      <b>Guardar a minha senha</b>.</p>
 
-  <div class="caixa aviso">
-    <b>Escolha uma senha que a criança consiga lembrar</b> — e anote em algum lugar seguro.
-    Quem esquece a senha precisa da coordenação para voltar a entrar.
+      <h3>O que vale como senha</h3>
+      <ul>
+        <li>Ao menos <b>6 letras ou números</b>.</li>
+        <li>As duas caixas com <b>exatamente a mesma coisa</b>.</li>
+        <li><b>Não pode ser <span class="senha">coroinha2026</span></b>, nem escrita com maiúscula.
+            Essa é a senha da folha: se a sua fosse igual, qualquer pessoa com a folha na mão
+            entraria na conta do seu filho.</li>
+      </ul>
+
+      <div class="caixa">
+        <span class="rot">Escolha uma senha que a criança consiga lembrar</span> — e anote em lugar
+        seguro. Quem esquece precisa da coordenação para voltar a entrar.
+      </div>
+
+      <p>Depois de guardar, o aplicativo recarrega sozinho e você já está dentro.
+      <b>Essa tela não aparece nunca mais.</b></p>
+
+      <h3>Por que é obrigatório</h3>
+      <p>Foram criadas <b>138 contas de uma vez</b>, todas com a mesma senha impressa. Enquanto uma
+      criança não trocar a dela, quem tiver a folha pode abrir a conta dela. A troca fecha essa
+      porta.</p>
+    </div>
+    <div class="tela">
+      <div class="moldura"><img src="fotos/01-parede-senha.png" alt="Tela de criar a senha"></div>
+      <div class="legenda">Marina é um exemplo &mdash;<br>ali vai o nome do seu filho</div>
+    </div>
   </div>
 
-  <p>Depois de guardar, o aplicativo recarrega sozinho e você já está dentro. Essa tela não aparece
-  nunca mais.</p>
-
-  <h3>Por que isso é obrigatório</h3>
-  <p>Foram criadas mais de cem contas de uma vez, todas com a mesma senha impressa. Enquanto uma
-  criança não trocar a dela, quem tiver a folha em mãos pode abrir a conta dela. A troca fecha essa
-  porta — por isso o aplicativo não deixa passar sem ela.</p>
-
-  <div class="rodape">Guia da Pastoral dos Acólitos e Coroinhas &middot; página 3</div>
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>3</span></div>
 </section>
 
-<!-- ══════════════ 4 ══════════════ -->
+<!-- ═══════════════ 4 ═══════════════ -->
 <section class="pagina">
-  <h2><span class="num">4.</span>Colocar o aplicativo na tela do celular</h2>
-  <div class="chapeu">Faça isto antes de ligar os avisos</div>
-
-  <p>Assim o aplicativo ganha um ícone como qualquer outro, abre em tela cheia e fica fácil de achar.</p>
-
-  <div class="caixa atencao">
-    <b>No iPhone isso não é opcional.</b> A Apple só deixa o aviso chegar se o aplicativo estiver
-    instalado na tela de início. Pelo navegador, não funciona. Por isso instale <b>antes</b> de
-    passar para a próxima página.
+  <div class="faixa">
+    <div class="num">Passo 3 de 4</div>
+    <h2>Pôr o aplicativo na tela do celular</h2>
+    <div class="linha-fina">Faça isto antes de ligar os avisos</div>
   </div>
 
-  <h3>No iPhone (Safari)</h3>
-  <ol class="passos">
-    <li>Com o site aberto, toque no botão <b>Compartilhar</b> — o quadradinho com a seta para cima,
-        embaixo na tela.</li>
-    <li>Desça a lista e toque em <b>"Adicionar à Tela de Início"</b>.</li>
-    <li>Toque em <b>Adicionar</b>, no canto de cima.</li>
-  </ol>
+  <div class="duas">
+    <div class="texto">
+      <p>Assim ele ganha um ícone como qualquer outro aplicativo, abre em tela cheia e fica fácil de
+      achar. O próprio aplicativo oferece isso num balão embaixo da tela.</p>
 
-  <h3>No Android (Chrome)</h3>
-  <ol class="passos">
-    <li>Com o site aberto, toque no <b>menu (⋮)</b> do Chrome, no canto de cima.</li>
-    <li>Toque em <b>"Instalar app"</b> (em alguns aparelhos aparece como
-        "Adicionar à tela inicial").</li>
-    <li>Confirme.</li>
-  </ol>
+      <div class="caixa forte">
+        <span class="rot">No iPhone isto não é opcional.</span> A Apple só deixa o aviso chegar se o
+        aplicativo estiver instalado na tela de início. Pelo navegador, não funciona. Por isso
+        instale <b>antes</b> de passar para a próxima página.
+      </div>
 
-  <div class="caixa calma">
-    <b>Depois de instalar, use sempre o ícone</b>, não o navegador. É por ele que os avisos chegam
-    e é ali que o aplicativo fica atualizado.
+      <h3>No iPhone (Safari)</h3>
+      <ol class="passos">
+        <li>Toque no botão <b>Compartilhar</b> — o quadradinho com a seta para cima.</li>
+        <li>Desça e toque em <b>"Adicionar à Tela de Início"</b>.</li>
+        <li>Toque em <b>Adicionar</b>, no canto de cima.</li>
+      </ol>
+
+      <h3>No Android (Chrome)</h3>
+      <ol class="passos">
+        <li>Toque no <b>menu (⋮)</b> do Chrome, no canto de cima.</li>
+        <li>Toque em <b>"Instalar app"</b> (ou "Adicionar à tela inicial").</li>
+        <li>Confirme.</li>
+      </ol>
+
+      <div class="caixa">
+        <span class="rot">Depois de instalar, use sempre o ícone</span>, não o navegador. É por ele
+        que os avisos chegam.
+      </div>
+    </div>
+    <div class="tela">
+      <div class="moldura"><img src="fotos/03-instalar.png" alt="O convite para instalar o aplicativo"></div>
+      <div class="legenda">O balão "Instale o app na sua<br>tela inicial", embaixo da tela</div>
+    </div>
   </div>
 
-  <div class="rodape">Guia da Pastoral dos Acólitos e Coroinhas &middot; página 4</div>
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>4</span></div>
 </section>
 
-<!-- ══════════════ 5 ══════════════ -->
+<!-- ═══════════════ 5 ═══════════════ -->
 <section class="pagina">
-  <h2><span class="num">5.</span>Ligar o sino (os avisos)</h2>
-  <div class="chapeu">Também é obrigatório — e é o que faz a pastoral funcionar</div>
-
-  <p>Abrindo o aplicativo, aparece uma tela pedindo para ligar o sino. Assim como a senha,
-  <b>ela não deixa passar</b>.</p>
-
-  <div class="tela">
-    <div class="t">🔔 &nbsp;Ative as notificações</div>
-    <p style="margin:0;">Para usar o app é preciso ligar o sino. É assim que você fica sabendo quando
-    for escalado, quando sua ausência for respondida, quando alguém pedir troca com você e quando a
-    coordenação avisar algo.</p>
+  <div class="faixa">
+    <div class="num">Passo 4 de 4</div>
+    <h2>Ligar o sino</h2>
+    <div class="linha-fina">É o que faz a pastoral funcionar</div>
   </div>
 
-  <ol class="passos">
-    <li>Toque em <b>🔔 Ativar agora</b>.</li>
-    <li>O celular vai perguntar se permite as notificações. Toque em <b>Permitir</b>.</li>
-    <li>Pronto — o aplicativo abre normalmente.</li>
-  </ol>
+  <div class="duas">
+    <div class="texto">
+      <p>Abrindo o aplicativo, aparece esta tela pedindo para ligar o sino. Assim como a senha,
+      <b>ela não deixa passar</b>.</p>
 
-  <div class="caixa atencao">
-    <b>Se você tocar em "Não Permitir" por engano</b>, o celular não pergunta de novo sozinho.
-    Aí é preciso religar nos <b>Ajustes do celular</b>, nas notificações do aplicativo — e o próprio
-    aplicativo mostra o caminho na tela. É o problema mais comum, e por isso vale a pena ler a
-    perguntinha antes de tocar.
+      <ol class="passos">
+        <li>Toque em <b>🔔 Ativar agora</b>.</li>
+        <li>O celular pergunta se permite as notificações. Toque em <b>Permitir</b>.</li>
+        <li>Pronto — o aplicativo abre normalmente.</li>
+      </ol>
+
+      <div class="caixa forte">
+        <span class="rot">Se tocar em "Não Permitir" por engano</span>, o celular não pergunta de
+        novo sozinho. Aí é preciso religar nos <b>Ajustes do celular</b>, nas notificações do
+        aplicativo — e a própria tela mostra o caminho. É o problema mais comum: vale ler a
+        perguntinha antes de tocar.
+      </div>
+
+      <h3>O que chega por ali</h3>
+      <ul>
+        <li>Quando você <b>é escalado</b> para uma missa.</li>
+        <li>Quando a sua <b>ausência é respondida</b>.</li>
+        <li>Quando alguém <b>pede troca</b> com você.</li>
+        <li><b>Avisos da coordenação</b> para todos.</li>
+      </ul>
+    </div>
+    <div class="tela">
+      <div class="moldura"><img src="fotos/02-parede-sino.png" alt="Tela de ativar as notificações"></div>
+      <div class="legenda">A tela do sino, palavra<br>por palavra como ela é</div>
+    </div>
   </div>
 
-  <h3>O que chega por ali</h3>
-  <ul>
-    <li>Quando você <b>é escalado</b> para uma missa.</li>
-    <li>Quando a sua <b>ausência é respondida</b>.</li>
-    <li>Quando alguém <b>pede troca</b> com você.</li>
-    <li><b>Avisos da coordenação</b> para todo mundo.</li>
-  </ul>
-
-  <div class="rodape">Guia da Pastoral dos Acólitos e Coroinhas &middot; página 5</div>
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>5</span></div>
 </section>
 
-<!-- ══════════════ 6 ══════════════ -->
+<!-- ═══════════════ 6 ═══════════════ -->
 <section class="pagina">
-  <h2><span class="num">6.</span>A integração: o caminho até servir</h2>
-  <div class="chapeu">Você acompanha isso na tela inicial</div>
+  <div class="faixa">
+    <div class="num">O caminho</div>
+    <h2>A integração, etapa por etapa</h2>
+    <div class="linha-fina">Você acompanha isso na tela inicial</div>
+  </div>
 
-  <p>Quem chega na pastoral passa por um caminho de seis etapas. Na tela inicial do aplicativo há um
-  bloco chamado <b>"Sua Integração na Pastoral"</b>, que mostra em qual delas você está.</p>
+  <p>Quem chega na pastoral passa por seis etapas. Na tela inicial há um bloco chamado
+  <b>"Sua Integração na Pastoral"</b>, que mostra em qual delas você está.</p>
 
   <div class="trilha">
-    <div class="etapa"><div class="bolinha">1</div><div class="txt">
-      <b>Aprovação</b><span>A coordenação confere o cadastro e aprova a entrada.</span></div></div>
-    <div class="etapa"><div class="bolinha">2</div><div class="txt">
-      <b>Integração</b><span>A conversa de acolhida: a família conhece a pastoral e a pastoral conhece a família.</span></div></div>
-    <div class="etapa"><div class="bolinha">3</div><div class="txt">
-      <b>WhatsApp</b><span>Entrada no grupo, onde o dia a dia é combinado.</span></div></div>
-    <div class="etapa"><div class="bolinha">4</div><div class="txt">
-      <b>Túnica</b><span>A veste para servir ao altar.</span></div></div>
-    <div class="etapa"><div class="bolinha">5</div><div class="txt">
-      <b>Disponível para Escala</b><span>A partir daqui o nome já entra nas escalas das missas.</span></div></div>
-    <div class="etapa"><div class="bolinha">6</div><div class="txt">
-      <b>Integrado ✓</b><span>Faz parte da pastoral, servindo normalmente.</span></div></div>
+    <div class="etapa"><div class="bolha">1</div><div><b>Aprovação</b>
+      <span>A coordenação confere o cadastro e aprova a entrada.</span></div></div>
+    <div class="etapa"><div class="bolha">2</div><div><b>Integração</b>
+      <span>A conversa de acolhida: a família conhece a pastoral, e a pastoral conhece a família.</span></div></div>
+    <div class="etapa"><div class="bolha">3</div><div><b>WhatsApp</b>
+      <span>Entrada no grupo, onde o dia a dia é combinado.</span></div></div>
+    <div class="etapa"><div class="bolha">4</div><div><b>Túnica</b>
+      <span>A veste para servir ao altar.</span></div></div>
+    <div class="etapa"><div class="bolha">5</div><div><b>Disponível para Escala</b>
+      <span>A partir daqui o nome já entra nas escalas das missas.</span></div></div>
+    <div class="etapa"><div class="bolha">6</div><div><b>Integrado ✓</b>
+      <span>Faz parte da pastoral, servindo normalmente.</span></div></div>
   </div>
 
-  <div class="caixa calma">
-    <b>Quem já serve há tempo entra direto no fim desse caminho.</b> Se o seu filho já servia antes
-    do aplicativo existir, a conta dele já nasce como acólito ou coroinha, com o nível e as funções
-    que ele já tinha — não é preciso recomeçar nada.
+  <div class="caixa">
+    <span class="rot">Quem já serve há tempo entra direto no fim desse caminho.</span> Se o seu filho
+    já servia antes do aplicativo existir, a conta dele já nasce como acólito ou coroinha, com o
+    nível e as funções que ele já tinha. Não é preciso recomeçar nada.
   </div>
 
-  <p>Andar de uma etapa para outra é a coordenação que faz. Você não precisa pedir: quando muda,
+  <p>Andar de uma etapa para outra é a coordenação que faz — você não precisa pedir. Quando muda,
   o aplicativo mostra.</p>
 
-  <div class="rodape">Guia da Pastoral dos Acólitos e Coroinhas &middot; página 6</div>
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>6</span></div>
 </section>
 
-<!-- ══════════════ 7 ══════════════ -->
+<!-- ═══════════════ 7 ═══════════════ -->
 <section class="pagina">
-  <h2><span class="num">7.</span>A tela inicial</h2>
-  <div class="chapeu">O que aparece quando você abre</div>
-
-  <p>É a página de casa do aplicativo. Nela você encontra:</p>
-  <ul>
-    <li><b>Seu nome e seu nível</b> — aspirante, coroinha, acólito, e assim por diante.</li>
-    <li><b>Sua integração</b>, quando ainda está a caminho (a página anterior).</li>
-    <li><b>Avisos que chegaram</b> — inclusive a festa de boas-vindas quando você entra num time.</li>
-    <li><b>Continuar</b> — um atalho que leva de volta à última tela em que você estava.</li>
-  </ul>
-
-  <h3>A barra de baixo</h3>
-  <p>É por ela que se anda no aplicativo. O que aparece ali depende do que cada pessoa faz na
-  pastoral: quem serve vê a sua jornada; quem também é de uma equipe da coordenação tem um segundo
-  modo, com as ferramentas de quem organiza.</p>
-
-  <div class="caixa calma">
-    <b>Não estranhe se o aplicativo do seu filho for diferente do de outro.</b> Ele mostra só o que
-    cada um pode usar. Um coroinha não vê as telas da coordenação, e está certo.
+  <div class="faixa">
+    <div class="num">Dia a dia</div>
+    <h2>Escalas: quando eu sirvo</h2>
+    <div class="linha-fina">A tela mais usada de todas</div>
   </div>
 
-  <h3>Conta de família</h3>
-  <p>Quando há <b>irmãos na pastoral</b> cadastrados juntos, a mesma conta pode alternar entre eles —
-  assim o pai ou a mãe acompanha os dois filhos sem sair e entrar de novo.</p>
+  <div class="duas">
+    <div class="texto">
+      <p>É aqui que a pastoral acontece. A tela tem quatro partes:</p>
 
-  <div class="rodape">Guia da Pastoral dos Acólitos e Coroinhas &middot; página 7</div>
-</section>
+      <h3>Minhas missas</h3>
+      <p>Um cartão para cada missa em que você foi escalado, com <b>o dia, o horário, a comunidade e
+      a sua função</b> — Cruz, Vela, Turíbulo, e assim por diante. Se não puder ir naquela missa
+      específica, o próprio cartão traz <b>⚠ Pedir troca</b>.</p>
 
-<!-- ══════════════ 8 ══════════════ -->
-<section class="pagina">
-  <h2><span class="num">8.</span>Escalas: quando eu sirvo</h2>
-  <div class="chapeu">A tela mais usada de todas</div>
+      <h3>ESCALA EU!</h3>
+      <p>As vagas que ninguém pegou ainda. Quando houver alguma, ela aparece aqui para você se
+      oferecer. Quando não houver, diz <i>"Tudo escalado por enquanto — volte depois"</i>.</p>
 
-  <p>Na tela <b>Escalas</b> ficam as missas em que você foi escalado, separadas em duas abas:</p>
-  <ul>
-    <li><b>Próximas</b> — o que ainda vai acontecer. É o que interessa no dia a dia.</li>
-    <li><b>Histórico</b> — o que já passou.</li>
-  </ul>
+      <h3>Meus pedidos</h3>
+      <p>Os <b>convites recebidos</b> (alguém pediu troca com você) e os <b>pedidos que você fez</b>.</p>
 
-  <p><b>Toque numa missa</b> para ver quem mais está escalado com você e qual função cada um vai
-  fazer. Serve para se organizar e para saber com quem contar.</p>
+      <h3>Todas as missas</h3>
+      <p>A escala inteira da pastoral. Toque numa missa para ver quem está escalado nela.</p>
 
-  <div class="caixa aviso">
-    <b>Quando você é escalado, chega um aviso no celular.</b> Mas vale o hábito de abrir a tela de
-    escalas no começo da semana — é o combinado que evita falta de última hora.
+      <div class="caixa">
+        <span class="rot">Vale o hábito</span> de abrir esta tela no começo da semana. O aviso chega
+        no celular quando você é escalado, mas quem olha a semana inteira não é pego de surpresa.
+      </div>
+    </div>
+    <div class="tela">
+      <div class="moldura"><img src="fotos/05-escalas.png" alt="A tela de escalas"></div>
+      <div class="legenda">As missas com dia, horário,<br>comunidade e função</div>
+    </div>
   </div>
 
-  <h3>Os dois botões que importam</h3>
-  <ul>
-    <li><b>Não poderei ir em alguma missa</b> — leva à tela de ausência (próxima página).</li>
-    <li><b>Registrar ausência de alguém</b> — para quem tem essa responsabilidade na pastoral.
-        A maioria das famílias não vai usar.</li>
-  </ul>
-
-  <div class="rodape">Guia da Pastoral dos Acólitos e Coroinhas &middot; página 8</div>
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>7</span></div>
 </section>
 
-<!-- ══════════════ 9 ══════════════ -->
+<!-- ═══════════════ 8 ═══════════════ -->
 <section class="pagina">
-  <h2><span class="num">9.</span>Quando não puder ir</h2>
-  <div class="chapeu">Avisar cedo é o que mantém o altar coberto</div>
-
-  <p>Ninguém está livre de um imprevisto, e a pastoral não trata isso como falta grave —
-  <b>trata como aviso</b>. O que faz falta é o silêncio: uma vaga que ninguém sabia que ia ficar vazia.</p>
-
-  <h3>Como avisar</h3>
-  <ol class="passos">
-    <li>Na tela de escalas, toque em <b>"Não poderei ir em alguma missa"</b>.</li>
-    <li>Aparece a lista das próximas missas em que você está escalado, com o título
-        <b>"Missas em que estarei ausente"</b>.</li>
-    <li><b>Marque uma ou mais</b> — há também "Selecionar todas", para quando você vai viajar.</li>
-    <li>Toque em <b>Informar Ausência</b>.</li>
-  </ol>
-
-  <p>A coordenação recebe o aviso e cuida da vaga. Quando a sua ausência for respondida,
-  <b>chega um aviso no seu celular</b>.</p>
-
-  <div class="caixa atencao">
-    <b>Avise assim que souber.</b> Uma ausência avisada com dias de antecedência é resolvida sem
-    ninguém se apertar. Avisada no sábado à noite, vira corrida.
+  <div class="faixa">
+    <div class="num">Dia a dia</div>
+    <h2>Quando não puder ir</h2>
+    <div class="linha-fina">Avisar cedo é o que mantém o altar coberto</div>
   </div>
 
-  <h3>Cobrir a vaga de outra pessoa</h3>
-  <p>Quando alguém avisa que não vai poder ir, a vaga fica aberta e pode ser <b>coberta</b> por outra
-  pessoa da pastoral. Quem cobre recebe a confirmação no celular: <i>"Você cobriu uma vaga na escala.
-  Confira no app."</i></p>
-  <p>É assim que a escala se conserta sozinha, sem a coordenação precisar ligar para dez famílias.</p>
+  <div class="duas">
+    <div class="texto">
+      <p>Ninguém está livre de um imprevisto, e a pastoral não trata isso como falta grave —
+      <b>trata como aviso</b>. O que faz falta é o silêncio: uma vaga que ninguém sabia que ia ficar
+      vazia.</p>
 
-  <div class="rodape">Guia da Pastoral dos Acólitos e Coroinhas &middot; página 9</div>
-</section>
+      <h3>Como avisar</h3>
+      <ol class="passos">
+        <li>Na tela de escalas, toque em <b>"Não poderei ir em alguma missa"</b>.</li>
+        <li>Abre a tela <b>Informar Ausência</b>, com as próximas missas.</li>
+        <li><b>Marque</b> aquelas em que você não poderá servir.</li>
+        <li>Confirme.</li>
+      </ol>
 
-<!-- ══════════════ 10 ══════════════ -->
-<section class="pagina">
-  <h2><span class="num">10.</span>Agenda: encontros, ensaios e formações</h2>
-  <div class="chapeu">Além das missas</div>
+      <p>A coordenação recebe o aviso e cuida da vaga. Quando a sua ausência for respondida,
+      <b>chega um aviso no seu celular</b>.</p>
 
-  <p>A <b>Agenda</b> mostra o mês da pastoral: as celebrações e também os eventos próprios —
-  reuniões, ensaios, formações, encontros.</p>
+      <div class="caixa forte">
+        <span class="rot">Avise assim que souber.</span> Uma ausência avisada com dias de
+        antecedência se resolve sem ninguém se apertar. Avisada no sábado à noite, vira corrida.
+      </div>
 
-  <h3>"Você vai?"</h3>
-  <p>Nos eventos aparece essa pergunta. Responder ajuda quem organiza a saber quanta gente esperar —
-  quantas cadeiras, quanto lanche, se vale mesmo a pena manter a data.</p>
-
-  <div class="caixa calma">
-    <b>Responder "não vou" é útil</b>, não é falta de educação. O silêncio é que atrapalha:
-    quem organiza fica sem saber se você não viu ou se não vai.
+      <h3>Cobrir a vaga de outro</h3>
+      <p>Quando alguém avisa que não vai, a vaga fica aberta e outra pessoa pode <b>cobrir</b>.
+      Quem cobre recebe a confirmação no celular. É assim que a escala se conserta sozinha.</p>
+    </div>
+    <div class="tela">
+      <div class="moldura"><img src="fotos/06-ausencias.png" alt="A tela de informar ausência"></div>
+      <div class="legenda">"Marque as missas em que você<br>NÃO poderá servir"</div>
+    </div>
   </div>
 
-  <h3>Convocação</h3>
-  <p>Alguns eventos são <b>convocados</b> — a coordenação chama um grupo específico, por nível
-  (só os coroinhas, por exemplo) ou por time da pastoral. Quando você é convocado, o aviso chega.</p>
-
-  <h3>Chamada</h3>
-  <p>Nos ensaios e encontros há <b>chamada de presença</b>. Quem conduz marca quem veio, e isso
-  entra no seu histórico na pastoral.</p>
-
-  <div class="rodape">Guia da Pastoral dos Acólitos e Coroinhas &middot; página 10</div>
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>8</span></div>
 </section>
 
-<!-- ══════════════ 11 ══════════════ -->
+<!-- ═══════════════ 9 ═══════════════ -->
 <section class="pagina">
-  <h2><span class="num">11.</span>Minha Jornada: níveis e funções</h2>
-  <div class="chapeu">O caminho de quem serve ao altar</div>
+  <div class="faixa">
+    <div class="num">Dia a dia</div>
+    <h2>Agenda</h2>
+    <div class="linha-fina">Celebrações, ensaios, formações e encontros</div>
+  </div>
 
-  <p>Servir ao altar se aprende por partes. A <b>Minha Jornada</b> mostra o que você já sabe fazer,
-  o que a coordenação pediu que você aprenda, e o próximo nível.</p>
+  <div class="duas">
+    <div class="texto">
+      <p>A Agenda mostra o mês da pastoral. <b>Toque num dia</b> para ver as celebrações e os eventos
+      daquela data.</p>
+
+      <h3>"Você vai?"</h3>
+      <p>Nos eventos aparece essa pergunta. Responder ajuda quem organiza a saber quanta gente
+      esperar — quantas cadeiras, quanto lanche, se vale manter a data.</p>
+
+      <div class="caixa">
+        <span class="rot">Responder "não vou" é útil</span>, não é falta de educação. O silêncio é
+        que atrapalha: quem organiza fica sem saber se você não viu ou se não vai.
+      </div>
+
+      <h3>Convocação</h3>
+      <p>Alguns eventos são <b>convocados</b>: a coordenação chama um grupo específico, por nível
+      (só os coroinhas, por exemplo) ou por time da pastoral. Quando você é convocado, o aviso chega.</p>
+
+      <h3>Chamada</h3>
+      <p>Nos ensaios e encontros há <b>chamada de presença</b>. Quem conduz marca quem veio, e isso
+      entra no seu histórico.</p>
+    </div>
+    <div class="tela">
+      <div class="moldura"><img src="fotos/07-agenda.png" alt="A tela da agenda"></div>
+      <div class="legenda">"Toque num dia para ver celebrações<br>e eventos. Confirme sua presença."</div>
+    </div>
+  </div>
+
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>9</span></div>
+</section>
+
+<!-- ═══════════════ 10 ═══════════════ -->
+<section class="pagina">
+  <div class="faixa">
+    <div class="num">A jornada</div>
+    <h2>Quests: níveis e funções</h2>
+    <div class="linha-fina">O caminho de quem serve ao altar</div>
+  </div>
+
+  <div class="duas">
+    <div class="texto">
+      <p>Na barra de baixo, o item <b>QUESTS</b> abre a <b>Minha Jornada</b>: o que você já sabe
+      fazer, o que a coordenação pediu que você aprenda, e o próximo nível.</p>
+
+      <h3>As duas listas</h3>
+      <ul>
+        <li><b>"Já faço"</b> — as funções em que você está habilitado. São elas que fazem você entrar
+            na escala.</li>
+        <li><b>"A coordenação pediu"</b> — o que ela quer que você aprenda em seguida.</li>
+      </ul>
+
+      <h3>Pedir uma função</h3>
+      <p>Você pode <b>pedir</b> para ser habilitado numa função. O aplicativo pede que você
+      <b>explique como se serve nela</b>. Não é burocracia: é como se mostra que aprendeu de verdade,
+      e não só que quer o título. A coordenação lê e responde.</p>
+    </div>
+    <div class="tela">
+      <div class="moldura"><img src="fotos/08-jornada.png" alt="A tela Minha Jornada"></div>
+      <div class="legenda">Minha Jornada</div>
+    </div>
+  </div>
 
   <h3>Os níveis</h3>
   <table>
@@ -452,84 +565,59 @@
     <tr><td><b>Cerimoniário</b> (e acima)</td><td>Conduz a celebração e forma os outros.</td></tr>
   </table>
 
-  <h3>As funções</h3>
-  <p>São as tarefas concretas do altar — missal, cruz, velas, turíbulo, naveta, sineta, apoio,
-  e as funções de cerimoniário. Na tela aparecem duas listas:</p>
-  <ul>
-    <li><b>"Já faço"</b> — o que você está habilitado a fazer, e é por elas que você entra na escala.</li>
-    <li><b>"A coordenação pediu"</b> — o que ela quer que você aprenda em seguida.</li>
-  </ul>
-
-  <h3>Pedir uma função</h3>
-  <p>Você pode <b>pedir</b> para ser habilitado numa função. O aplicativo pede que você
-  <b>explique como se serve nela</b> — não é burocracia: é a forma de mostrar que aprendeu de
-  verdade, e não só que quer o título. A coordenação lê e responde.</p>
-
-  <div class="rodape">Guia da Pastoral dos Acólitos e Coroinhas &middot; página 11</div>
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>10</span></div>
 </section>
 
-<!-- ══════════════ 12 ══════════════ -->
+<!-- ═══════════════ 11 ═══════════════ -->
 <section class="pagina">
-  <h2><span class="num">12.</span>Conquistas, Casas e Destaques</h2>
-  <div class="chapeu">O lado que celebra quem serve</div>
+  <div class="faixa">
+    <div class="num">A jornada</div>
+    <h2>Conquistas, Casas e Destaques</h2>
+    <div class="linha-fina">O lado que celebra quem serve</div>
+  </div>
 
   <h3>Conquistas</h3>
-  <p>Guarda o que você já conquistou:</p>
-  <ul>
-    <li><b>🎖️ Insígnias de nível</b> — uma para cada degrau alcançado.</li>
-    <li><b>🏆 Troféus de temporada</b> — de quem se destacou numa temporada.</li>
-    <li><b>🏅 Medalhas</b> — reconhecimentos por coisas específicas.</li>
-  </ul>
-  <p>Quando você alcança um nível novo, o aplicativo faz uma pequena festa na tela, com
+  <p><i>"Sua coleção de insígnias e troféus na jornada do altar."</i> Guarda as
+  <b>🎖️ insígnias de nível</b>, os <b>🏆 troféus de temporada</b> e as <b>🏅 medalhas</b>.
+  Quando você alcança um nível novo, o aplicativo faz uma festa na tela, com
   <b>"NÍVEL ALCANÇADO"</b>, e dá para compartilhar com a família.</p>
 
   <h3>Minha Casa</h3>
-  <p>A pastoral é dividida em <b>casas</b>, cada uma com o seu brasão. Na tela <b>Minha Casa</b> você vê
-  a sua casa, o brasão dela — que passa a aparecer no seu retrato pelo aplicativo — e
-  <b>os irmãos da sua casa</b>. Dá para ver também as outras casas.</p>
-
-  <div class="caixa calma">
-    <b>Se a sua tela disser que você ainda não tem casa</b>, é porque a distribuição está sendo feita
-    pela coordenação, uma pessoa por vez. Não é erro do aplicativo, e não falta nada com você.
+  <p>A pastoral é dividida em <b>casas</b>, cada uma com o seu brasão. Você vê a sua casa, o brasão
+  — que passa a aparecer no seu retrato pelo aplicativo — e os <b>irmãos da sua casa</b>.</p>
+  <div class="caixa">
+    <span class="rot">Se disser que você ainda não tem casa</span>, é porque a distribuição está
+    sendo feita pela coordenação, uma pessoa por vez. Não é erro, e não falta nada com você.
   </div>
 
   <h3>Destaques</h3>
-  <p>Mostra quem tem se dedicado na temporada — <b>"Um reconhecimento à dedicação de cada um"</b>.
-  Não é competição de quem é melhor: é a pastoral olhando para quem tem estado presente.</p>
+  <p><i>"Um reconhecimento à dedicação de cada um."</i> Mostra quem tem estado presente na
+  temporada — não é competição de quem é melhor.</p>
 
-  <div class="rodape">Guia da Pastoral dos Acólitos e Coroinhas &middot; página 12</div>
-</section>
-
-<!-- ══════════════ 13 ══════════════ -->
-<section class="pagina">
-  <h2><span class="num">13.</span>Tarefas (para quem é de um time)</h2>
-  <div class="chapeu">Só aparece para quem faz parte de uma equipe da pastoral</div>
-
-  <p>Além de servir ao altar, algumas pessoas ajudam a <b>organizar</b> a pastoral, em times como
-  Escala, Formação, Mídia, Secretaria, Espiritualidade, Ordem e Disciplina, Almoxarifado,
-  Eventos e Viagens, Tesouraria e Compras.</p>
-
-  <p>Quem entra num time ganha a aba <b>Tarefas</b>, com o que aquele time precisa fazer. Cada time
-  vê <b>só as tarefas dele</b>.</p>
-
-  <div class="caixa aviso">
-    <b>Ao entrar num time, o aplicativo faz uma festa de boas-vindas</b> na abertura seguinte, com um
-    recado escrito pela coordenação — e um aviso chega no seu celular.
+  <div class="par">
+    <div>
+      <div class="moldura"><img src="fotos/09-conquistas.png" alt="A tela de conquistas"></div>
+      <div class="legenda">Conquistas</div>
+    </div>
+    <div>
+      <div class="moldura"><img src="fotos/10-minha-casa.png" alt="A tela Minha Casa"></div>
+      <div class="legenda">Minha Casa</div>
+    </div>
   </div>
 
-  <p>Se a aba Tarefas não aparece para você, é porque você não é de um time. Entrar num time é
-  convite da coordenação; se você quiser ajudar, converse com ela.</p>
-
-  <div class="rodape">Guia da Pastoral dos Acólitos e Coroinhas &middot; página 13</div>
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>11</span></div>
 </section>
 
-<!-- ══════════════ 14 ══════════════ -->
+<!-- ═══════════════ 12 ═══════════════ -->
 <section class="pagina">
-  <h2><span class="num">14.</span>Quando algo dá errado</h2>
-  <div class="chapeu">Os casos que mais aparecem</div>
+  <div class="faixa">
+    <div class="num">Ajuda</div>
+    <h2>Quando algo dá errado</h2>
+    <div class="linha-fina">Os casos que mais aparecem</div>
+  </div>
 
   <table>
-    <tr><th style="width:38%">O que acontece</th><th>O que fazer</th></tr>
+    <tr><th style="width:36%">O que acontece</th><th>O que fazer</th></tr>
 
     <tr><td><b>"Usuário ou senha inválidos"</b> na primeira vez</td>
         <td>Confira a linha da folha (nomes se repetem muito), escreva tudo minúsculo e sem espaço
@@ -540,63 +628,75 @@
 
     <tr><td><b>A tela de senha fica voltando</b></td>
         <td>A senha nova não pode ser <span class="senha">coroinha2026</span>, precisa ter 6 letras
-        ou números, e as duas caixas têm de ser iguais. A frase em vermelho na tela diz qual das três
+        ou números, e as duas caixas têm de ser iguais. A frase em vermelho diz qual das três
         faltou.</td></tr>
 
     <tr><td><b>Não consigo passar da tela do sino</b></td>
         <td>Se você tocou em "Não Permitir", o celular não pergunta de novo. Vá aos <b>Ajustes do
-        celular</b>, ache o aplicativo e ligue as notificações. No iPhone, confira antes se o
-        aplicativo está instalado na tela de início — sem isso não funciona.</td></tr>
+        celular</b>, ache o aplicativo e ligue as notificações. No iPhone, confira antes se ele está
+        instalado na tela de início — sem isso não funciona.</td></tr>
 
     <tr><td><b>Não chega aviso nenhum</b></td>
-        <td>Abra pelo <b>ícone</b> instalado, não pelo navegador. Confira as notificações nos Ajustes.
-        No iPhone, o aplicativo precisa estar instalado.</td></tr>
+        <td>Abra pelo <b>ícone</b> instalado, não pelo navegador. Confira as notificações nos
+        Ajustes.</td></tr>
 
     <tr><td><b>O aplicativo parece desatualizado</b></td>
         <td>Feche de vez (não só minimize) e abra outra vez pelo ícone.</td></tr>
 
     <tr><td><b>Meu filho aparece duas vezes</b>, ou o nome está errado</td>
-        <td>Avise a coordenação. Isso se conserta no cadastro, e é melhor consertar cedo.</td></tr>
+        <td>Avise a coordenação. Isso se conserta no cadastro, e é melhor cedo.</td></tr>
 
     <tr><td><b>Não vejo as telas que outra pessoa vê</b></td>
-        <td>É assim mesmo: cada um vê o que lhe cabe.</td></tr>
+        <td>É assim mesmo: o aplicativo mostra a cada um o que lhe cabe. Um coroinha não vê as telas
+        da coordenação.</td></tr>
+
+    <tr><td><b>Tenho dois filhos na pastoral</b></td>
+        <td>Quando estão cadastrados juntos, a mesma conta alterna entre eles — sem sair e entrar de
+        novo.</td></tr>
   </table>
 
-  <div class="rodape">Guia da Pastoral dos Acólitos e Coroinhas &middot; página 14</div>
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>12</span></div>
 </section>
 
-<!-- ══════════════ 15 ══════════════ -->
+<!-- ═══════════════ 13 ═══════════════ -->
 <section class="pagina">
-  <h2><span class="num">15.</span>O combinado</h2>
-  <div class="chapeu">Última página &mdash; e a mais importante</div>
+  <div class="faixa">
+    <div class="num">Para terminar</div>
+    <h2>O combinado</h2>
+    <div class="linha-fina">O aplicativo não serve por ninguém</div>
+  </div>
 
-  <p>O aplicativo não serve por ninguém. Ele só funciona se a gente fizer a nossa parte:</p>
-
-  <ol class="passos">
+  <ol class="passos" style="font-size:12.2px;">
     <li><b>Abra as escalas no começo da semana.</b> É o hábito que evita quase todo problema.</li>
     <li><b>Avise cedo quando não puder ir.</b> Cedo se resolve; em cima da hora, vira aperto.</li>
     <li><b>Responda "Você vai?" na agenda.</b> Mesmo quando for "não".</li>
     <li><b>Deixe o sino ligado.</b> É por ele que tudo chega.</li>
   </ol>
 
-  <div class="caixa aviso">
-    <b>Uma palavra aos pais e responsáveis:</b> acompanhem junto, principalmente com os menores.
-    Servir ao altar é compromisso assumido com a comunidade, e o aplicativo é só a ferramenta que
-    torna esse compromisso visível — para a criança e para vocês.
+  <div class="caixa">
+    <span class="rot">Uma palavra aos pais e responsáveis:</span> acompanhem junto, principalmente
+    com os menores. Servir ao altar é compromisso assumido com a comunidade, e o aplicativo é só a
+    ferramenta que torna esse compromisso visível — para a criança e para vocês.
   </div>
 
   <h3>Precisou de ajuda?</h3>
   <p>Fale com a coordenação da pastoral no WhatsApp:</p>
-  <div class="caixa calma" style="text-align:center;font-size:15px;">
+  <div class="caixa" style="text-align:center;font-size:14px;">
     <b>(19) 99907-1702</b>
   </div>
 
-  <p style="margin-top:22px;text-align:center;color:#7b756b;">
-    Pastoral dos Acólitos e Coroinhas &middot; Paróquia São João Batista &middot; Limeira<br>
-    <span style="font-size:22px;">🕯️</span>
-  </p>
+  <div style="margin-top:16mm;text-align:center;padding:9mm 0;
+              background:radial-gradient(90% 120% at 50% 40%, #3a1520 0%, var(--wine) 70%);
+              border-radius:10px;color:#e8d5c8;">
+    <div style="width:30mm;height:26mm;overflow:hidden;margin:0 auto;position:relative;">
+      <img src="fotos/00-abertura.png" alt="" style="position:absolute;left:0;width:100%;top:-11.5mm;"></div>
+    <div style="font-family:Lora,Georgia,serif;font-style:italic;font-size:14px;margin-top:6px;">
+      Somos do altar</div>
+    <div style="font-size:10.5px;color:#b39a90;margin-top:5px;letter-spacing:.05em;">
+      PASTORAL DOS ACÓLITOS E COROINHAS &middot; PARÓQUIA SÃO JOÃO BATISTA &middot; LIMEIRA</div>
+  </div>
 
-  <div class="rodape">Guia da Pastoral dos Acólitos e Coroinhas &middot; página 15</div>
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>13</span></div>
 </section>
 
 </body>

@@ -59,17 +59,38 @@ O GUIA DAS FAMÍLIAS (o PDF)
 O texto do guia é o tutorial.html desta pasta. Ele é o ORIGINAL: para mudar o guia,
 mude esse arquivo e gere o PDF de novo.
 
-  node <script de pdf> criar-logins/tutorial.html entregas/guia_<data>_v<N>.pdf
+AS FOTOS SÃO DE VERDADE. Estão em criar-logins/fotos/ e saem do tirar-fotos.mjs:
 
-Ele tem 16 páginas: capa, entrar com a folha, criar a senha, instalar no celular,
-ligar o sino, as 6 etapas da integração, a tela inicial, escalas, ausências, agenda,
-a jornada (níveis e funções), conquistas/casas/destaques, tarefas dos times, o que
-fazer quando dá errado, e o combinado.
+  node criar-logins/tirar-fotos-guia.mjs
 
-A ORDEM DAS PÁGINAS 4 E 5 NÃO É ACIDENTE: instalar vem ANTES de ligar o sino porque
-no iPhone a notificação só funciona com o app instalado na tela de início. Inverter
-as duas faria metade das famílias travar.
+Ele sobe um servidor local, abre as telas REAIS do app (mesmo HTML, mesmo CSS, mesmas
+fontes) com uma sessão de mentira, e fotografa. Só a resposta do banco é inventada, e
+o navegador não alcança nada além do servidor local e das fontes do Google. No fim ele
+imprime TUDO o que tentou sair para fora — é essa lista que prova que a produção não
+foi tocada.
 
-Os textos das telas citadas no guia foram COPIADOS do app (parede do sino, parede da
-senha, botões das escalas e das ausências), não escritos de memória. Se alguma dessas
-frases mudar no app, o guia fica mentindo — vale reler as páginas 3, 5, 8 e 9.
+Três pedras desse caminho, todas já resolvidas no código (não repita):
+ - A TELA DE ABERTURA tapa tudo. O hideSplash() mora no initModulo de verdade, que a
+   foto substitui. Sem chamar à mão, TODAS as fotos saem iguais: o turíbulo.
+ - CONFERIR TEXTO NÃO BASTA. A primeira rodada deu "✔" em nove fotos que eram todas a
+   mesma abertura, porque a conferência media o texto do documento, não o que estava
+   NA FRENTE. Agora ela olha o que está por cima.
+ - O BALÃO DE INSTALAR tapa o rodapé. Ele tem a sua própria página no guia; nas outras
+   fotos é fechado.
+
+A pessoa das fotos ("Marina Souza Lima") NÃO existe no cadastro, de propósito: guia
+impresso circula, e ninguém precisa ver o nome de uma criança de verdade num exemplo.
+
+A IDENTIDADE do guia é a do app: vinho (#1a0a0e), ouro (#8a6a24 e #ffd97a), Sora e
+Lora. A capa é a tela de abertura do próprio app. O corpo do texto é claro porque
+isto se imprime.
+
+Tem 14 páginas. A ORDEM DAS PÁGINAS 4 E 5 NÃO É ACIDENTE: instalar vem ANTES de ligar
+o sino porque no iPhone a notificação só funciona com o app instalado na tela de
+início. Inverter as duas faria metade das famílias travar.
+
+Os textos das telas citadas no guia foram COPIADOS do app, não escritos de memória.
+E as fotos já corrigiram o guia duas vezes: a tela de escalas não tem abas
+"Próximas/Histórico" (tem ESCALA EU!, Minhas missas, Meus pedidos e Todas as missas),
+e na barra o item chama QUESTS, não "Jornada". Se alguma tela mudar, tire as fotos de
+novo ANTES de reescrever o texto.
