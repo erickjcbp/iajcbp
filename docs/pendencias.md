@@ -73,10 +73,16 @@ Faltam **41 das 47 contas**. Elas esbarram no portão sozinhas, na primeira aber
 nada a fazer aqui além de acompanhar o número subir. Para medir de novo:
 `select count(*), count(distinct user_id) from acolitos_push_subs;`
 
-*Da boas-vinda:* a animação e o texto estão provados no navegador, mas **o caminho inteiro
-não** — incluir alguém de verdade no Config › Times, ver o toque chegar no celular dela e a
-festa aparecer na abertura seguinte. O tipo `boas_vindas` do `api/enviar-push` só se prova
-mandando um de verdade: pelo ar não dá, a função recusa antes de olhar o tipo.
+> **✔ A BOAS-VINDA AO TIME ESTÁ PROVADA INTEIRA, em 31/08/2026.** O dono se incluiu no time
+> **Formação** pelo Config, e as três metades aconteceram: o banco guardou o aviso
+> (`{"time":"formacao","tipo":"boas_vindas_time"}`), ele **viu a festa** na abertura seguinte
+> (o aviso ficou `seen: true`), e **o toque chegou no celular dele** — confirmado por ele.
+> Depois saiu do time; os `setores` voltaram aos três de sempre e o aviso ficou guardado.
+>
+> O toque era a metade que nenhuma prova alcança: o tipo `boas_vindas` do `api/enviar-push`
+> só se prova mandando um de verdade, porque a função confere o login antes de olhar o tipo.
+> E ele **não deixa rastro no banco** — o envio acontece na função da Vercel e não é gravado
+> em lugar nenhum. A única evidência possível é a pessoa dizer que o celular tocou.
 
 **O que esperar:** os que ainda não ligaram o sino batem na parede na primeira abertura. Quem tocar em "Não Permitir" na caixinha do sistema não entra até
 religar nos Ajustes — a parede ensina o caminho, mas vai gerar ligação para a coordenação. É
