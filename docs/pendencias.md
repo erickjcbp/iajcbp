@@ -23,12 +23,6 @@ gravarem no mesmo lugar. Não é grande: é uma migration de cópia, um `coalesc
 uma linha em cada cadastro. Mas mexe em dado de contato de 122 pessoas, então merece uma
 sessão própria e prova de que ninguém ficou sem telefone.
 
-**A Isabeli Sousa Martins continua com duas fichas.** A antiga (`caca6689`, afastada) carrega
-**6 escalas, 5 disponibilidades, 4 habilitações, 1 presença e 1 XP órfãos**; a ativa dela mostra
-zero escalas. Em 23/07 o caso foi "resolvido" marcando a antiga como afastada — isso não é um
-link, é um abandono. Juntar as duas é o mesmo procedimento usado na Rafaella e na Beatriz em
-30/08 (ver abaixo), e leva minutos. Só não foi feito porque não foi pedido.
-
 **Distribuir as pessoas pelas casas.** Medido no banco em **30/08: ZERO das 172 pessoas
 ativas** tem casa preenchida. **Este parágrafo dizia "1 das 176 (o dono, na Sanctaris)" e
 estava errado** — a `casa_id` do dono está vazia; ou foi limpa depois de 20/08, ou nunca foi
@@ -119,6 +113,16 @@ certo; sem ela, alguém tem de lembrar.
 
 ## Fechados em 30/08/2026
 
+- **A Isabeli fechou a dívida de 23/07.** Naquele dia o caso foi "resolvido" marcando a ficha
+  antiga como **afastada** — isso não é juntar, é abandonar: até 30/08 ela seguia com 6 escalas,
+  5 disponibilidades, 4 habilitações, 1 presença e 1 XP pendurados numa ficha afastada, enquanto
+  a ficha que ela usava mostrava zero de tudo. **Armadilha desse caso:** o único campo em que a
+  ficha antiga "ganhava" era o `status`, e ele dizia `afastado`. Manter a regra cega ali teria
+  posto a menina de escanteio — aquele `afastado` era o remendo de julho, não um fato sobre ela.
+  Foi a segunda sobrescrita deliberada do dia, ao lado do nome da Rafaella.
+- **Conferido no cadastro inteiro depois das três:** nenhuma ficha duplicada de nome, e **zero
+  linha órfã nas 25 ligações** que apontam para `acolitos_membros`.
+
 **As duas portas de cadastro passaram a conferir, e pela MESMA regra**
 - **O que era:** a conferência de "essa pessoa já existe?" só rodava na porta "Novos". A porta
   "Família" (a tela de entrada) criava a pessoa direto por REST, sem perguntar nada — e 3 das 4
@@ -160,7 +164,7 @@ certo; sem ela, alguém tem de lembrar.
 - **Não provado no ar:** ninguém se cadastrou de verdade depois da mudança. As duas portas só se
   provam com uma família real passando por elas.
 
-**Duas duplicatas de gente real foram juntadas (Rafaella e Beatriz)**
+**As TRÊS duplicatas de gente real foram juntadas (Rafaella, Beatriz e Isabeli) — não sobrou nenhuma**
 - **O que era:** duas meninas com DUAS fichas cada — uma antiga, com a vida delas na pastoral,
   e uma nova, com o login e os dados que a família acabou de preencher. A Rafaella aparecia no
   app como **novata presa na tela de integração**, tendo 7 habilitações e patente de sentinela.
