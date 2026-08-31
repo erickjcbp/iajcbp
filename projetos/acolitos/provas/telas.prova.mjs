@@ -924,6 +924,69 @@ async function provaEntrarNoTimeLiberaTarefas(provas) {
     'gravaria: ' + JSON.stringify(perms[1]));
 }
 
+async function provaNomeDaMaeTemOndeSerDigitado(provas) {
+  console.log('\n\x1b[1mFicha da pessoa: o nome da mãe e do pai têm onde ser digitados\x1b[0m');
+
+  // Até 31/08/2026 a aba Família começava em "Pai é ministro?" — perguntava se o pai é
+  // ministro sem nunca ter perguntado QUEM é o pai. `nome_mae` e `nome_pai` não tinham
+  // campo em NENHUMA tela: só eram gravados quando a própria família se cadastrava pela
+  // tela de entrada, e para as 170 pessoas vindas da planilha ficavam vazios para sempre.
+  // Não é campo decorativo: o nome da mãe é uma das DUAS provas que o app aceita para
+  // reconhecer quem já existe no cadastro, e o cartão do CRM avisa "falta nome de
+  // responsável" sem oferecer onde preencher.
+  const PESSOA = {
+    id: 'p1', nome: 'Pessoa de Teste', nivel: 'coroinha', status: 'ativo', serve: true,
+    comunidade: 'matriz', permissoes: [], nome_mae: null, nome_pai: null, foto_url: null,
+  };
+  const r = await provas.abrir('membros.html', {
+    papel: PAPEIS.admin,
+    tabelas: { acolitos_membros: { data: [PESSOA] } },
+    avaliar: `
+      // abre a ficha e vai para a aba Família
+      await abrirFicha(${JSON.stringify(PESSOA)});
+      await new Promise(function (s) { setTimeout(s, 250); });
+      await renderTab('Família');
+      await new Promise(function (s) { setTimeout(s, 250); });
+
+      // Procura pelo RÓTULO, não por posição: campo novo entra no meio e desloca índice.
+      // E exige o rótulo EXATO — "Nome da mãe ministra" já existia e não é a mesma coisa;
+      // medir por "contém nome da mãe" daria verde com o campo errado.
+      function campoDe(rotulo) {
+        var alvo = Array.from(document.querySelectorAll('label,div'))
+          .filter(function (e) { return (e.textContent || '').trim() === rotulo; })
+          .pop();
+        if (!alvo) return null;
+        var caixa = alvo.parentElement;
+        return caixa ? caixa.querySelector('input') : null;
+      }
+      var mae = campoDe('Nome da mãe');
+      var pai = campoDe('Nome do pai');
+      var saida = { temMae: !!mae, temPai: !!pai };
+
+      // E o que interessa de verdade: digitar e mandar salvar tem de MANDAR para o banco.
+      if (mae) {
+        mae.value = 'Joana Ferreira dos Santos';
+        mae.dispatchEvent(new Event('input', { bubbles: true }));
+        await salvarFicha();
+        await new Promise(function (s) { setTimeout(s, 250); });
+      }
+      return saida;
+    `,
+  });
+
+  const a = r.avaliado || {};
+  const escritas = (r.gravacoes || []).filter(g => g.tabela === 'acolitos_membros' && g.acao === 'update');
+  const mandouMae = escritas.some(g => g.dados && 'nome_mae' in g.dados
+                                    && g.dados.nome_mae === 'Joana Ferreira dos Santos');
+  exigir(!r.erroAvaliar, 'a ficha abre e a aba Família desenha', r.erroAvaliar);
+  exigir(a.temMae === true, 'existe um campo "Nome da mãe"',
+    'sem ele, ninguém consegue preencher o dado que o próprio CRM cobra');
+  exigir(a.temPai === true, 'existe um campo "Nome do pai"');
+  exigir(mandouMae === true, 'digitar o nome da mãe e salvar MANDA nome_mae para o banco',
+    'o campo aparecer não basta: o Salvar tem de levar. Mandou: ' +
+    JSON.stringify(escritas.map(e => Object.keys(e.dados || {}))));
+}
+
 // ── Partida ──────────────────────────────────────────────────────────────────
 const filtro = process.argv[2] || null;
 const provas = await iniciarProvas();
@@ -946,6 +1009,7 @@ try {
     await provaAtividadeNaoTransformaErroEmZero(provas);
     await provaPessoasETimesFundidas(provas);
     await provaEntrarNoTimeLiberaTarefas(provas);
+    await provaNomeDaMaeTemOndeSerDigitado(provas);
   }
 } finally {
   await provas.encerrar();

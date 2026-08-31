@@ -778,6 +778,15 @@ async function renderTab(tab) {
   }
 
   if (tab === 'Família') {
+    // QUEM são os pais vem ANTES de perguntar se eles são ministros — esta aba começava
+    // direto no ministério, e o nome da mãe e do pai não tinham onde ser digitados em
+    // NENHUMA tela do app. Só eram gravados quando a própria família se cadastrava pela
+    // tela de entrada; para as 170 pessoas que vieram da planilha, ficavam vazios para
+    // sempre. E não é campo decorativo: o nome da mãe é uma das DUAS provas que o app
+    // aceita para reconhecer quem já existe no cadastro (a outra é a data de nascimento),
+    // e o cartão do CRM avisa "falta nome de responsável" sem oferecer onde preencher.
+    el.appendChild(editText('Nome da mãe', 'nome_mae', m.nome_mae));
+    el.appendChild(editText('Nome do pai', 'nome_pai', m.nome_pai));
     el.appendChild(editBool('Pai é ministro?', 'tem_pai_ministro', m.tem_pai_ministro));
     el.appendChild(editText('Nome do pai ministro', 'nome_pai_ministro', m.nome_pai_ministro));
     el.appendChild(editBool('Mãe é ministra?', 'tem_mae_ministro', m.tem_mae_ministro));
