@@ -1,0 +1,39 @@
+CRIAR OS LOGINS DE QUEM AINDA NÃO TEM
+=====================================
+
+O QUE ESTA PASTA FAZ
+Cria a conta de acesso das pessoas que JÁ estão no cadastro da pastoral mas nunca
+tiveram login. Em 30/08/2026 eram 138 pessoas.
+
+Ela NÃO cria gente nova. A ficha da pessoa já existe há meses, com as escalas e as
+habilitações dela; o que faltava era a conta para entrar. Por isso o script só põe
+um dono na ficha que já está lá.
+
+COMO RODAR
+  node criar-logins/gerar.mjs
+      Modo seco. NÃO grava nada. Só mostra o que faria. É assim que se confere.
+
+  node criar-logins/gerar.mjs --folha folha.html --csv folha.csv
+      Mesma coisa, e ainda escreve a folha para imprimir e a planilha.
+
+  node criar-logins/gerar.mjs --valendo
+      Cria de verdade. Só depois de olhar o modo seco.
+
+O QUE ELE DECIDE SOZINHO
+  O usuário  = primeiro nome + último sobrenome, sem acento (carolsantos, liviapaula).
+               Quando dois dão no mesmo, o segundo ganha número (manuelasouza2).
+               A regra e as provas dela estão em projetos/acolitos/usuario-core.js.
+  O papel    = vem do NÍVEL da pessoa. Quem é acólita entra como acólita, não como
+               novata presa na tela de integração. Mesma regra do api/_vinculo.js.
+  A senha    = a mesma para todos, e a ficha nasce marcada como "senha provisória".
+               O app não deixa passar da tela "crie sua senha" enquanto essa marca
+               estiver de pé (migration 064, portão dentro do initModulo).
+
+SE PARAR NO MEIO
+Ele para na PRIMEIRA falha e desfaz o que ficou pela metade daquela pessoa. É de
+propósito: 137 contas certas e 1 errada é pior do que parar e alguém olhar. Rodar de
+novo continua de onde parou — quem já tem conta nem entra na lista.
+
+O QUE ELE NUNCA FAZ
+Não toca em quem já tem login. As 53 contas que existiam antes seguem com a senha
+que a pessoa escolheu, e ninguém é empurrado para a tela de trocar senha.

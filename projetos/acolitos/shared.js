@@ -278,6 +278,17 @@ async function initModulo(requiredRoles = null, opts = null) {
     }
   }
 
+  // PORTÃO DA SENHA — quem entrou com a senha impressa da folha cria a sua antes de
+  // qualquer outra coisa. Fica ANTES do portão do sino de propósito: pedir o sino a quem
+  // ainda está com a senha que 137 outras pessoas têm é pedir a segunda coisa primeiro.
+  // Olha a CONTA (quem logou), NUNCA o `membro`: numa conta de família o `membro` pode ser
+  // o irmão selecionado, e a senha é da conta, não da criança escolhida no seletor.
+  if (conta && conta.senha_provisoria) {
+    mostrarParedeSenha(conta);
+    hideSplash();
+    return null;   // as 20 telas param no `if (!ctx) return` — nada carrega atrás da parede
+  }
+
   // PORTÃO DE NOTIFICAÇÕES — sem o sino ligado ninguém usa o app. Fica DEPOIS dos guards de
   // papel e permissão (não adianta pedir o sino a quem seria mandado embora de qualquer
   // jeito) e ANTES da fila de pop-ups, senão os avisos apareceriam atrás da parede.
@@ -1546,6 +1557,88 @@ const _PAREDES = {
 
 // A parede. Tela cheia, sem X, sem fechar clicando fora, sem "agora não". O conteúdo do app
 // até carrega atrás, mas o initModulo devolve nada e as 19 telas param no `if (!ctx) return`.
+// ── PAREDE DA SENHA ──────────────────────────────────────────────────────────
+// Em 30/08/2026 foram criados 138 logins com a MESMA senha, impressa numa folha entregue
+// às famílias. Enquanto a criança não trocar, quem tiver a folha entra na conta dela.
+// Por isso é PAREDE e não convite: o app não abre até a senha nova existir.
+function mostrarParedeSenha(conta) {
+  if (document.getElementById('parede-senha')) return;
+
+  const tela = document.createElement('div');
+  tela.id = 'parede-senha';
+  tela.style.cssText = 'position:fixed;inset:0;z-index:9000;background:var(--bg,#0a0406);overflow-y:auto;' +
+    'display:flex;align-items:center;justify-content:center;padding:24px 18px;';
+
+  const cartao = document.createElement('div');
+  cartao.style.cssText = 'width:100%;max-width:420px;text-align:center;';
+
+  const ic = document.createElement('div');
+  ic.style.cssText = 'font-size:46px;line-height:1;margin-bottom:14px;';
+  ic.textContent = '🔑';
+
+  const tt = document.createElement('div');
+  tt.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:21px;color:var(--gold-light,#ffd97a);margin-bottom:10px;';
+  const primeiro = String(conta.apelido || conta.nome || '').trim().split(' ')[0];
+  tt.textContent = primeiro ? primeiro + ', crie a sua senha' : 'Crie a sua senha';
+
+  const p = document.createElement('p');
+  p.style.cssText = 'font-size:14.5px;line-height:1.65;color:var(--text,#fff);margin:0 0 18px;';
+  p.textContent = 'Você entrou com a senha que veio na folha, e ela é a mesma de todo mundo. ' +
+    'Escolha agora uma senha que só você saiba — a da folha para de funcionar.';
+
+  const campo = (ph) => {
+    const i = document.createElement('input');
+    i.type = 'password'; i.placeholder = ph; i.autocomplete = 'new-password';
+    i.style.cssText = 'width:100%;padding:13px 14px;margin-bottom:10px;border-radius:10px;' +
+      'border:1px solid var(--border,#3a2a2f);background:var(--surface2,#1a0f13);color:var(--text,#fff);font-size:16px;';
+    return i;
+  };
+  const s1 = campo('sua senha nova');
+  const s2 = campo('escreva de novo');
+
+  const erro = document.createElement('div');
+  erro.style.cssText = 'font-size:13.5px;line-height:1.5;color:var(--danger-text,#ff9c9c);margin:0 0 10px;min-height:19px;';
+
+  const btn = document.createElement('button');
+  btn.className = 'btn gold'; btn.style.cssText = 'width:100%;';
+  btn.textContent = 'Guardar a minha senha';
+
+  btn.onclick = async () => {
+    // Se o senha-nova-core.js não carregou nesta tela, a regra mínima vale aqui mesmo:
+    // ficar sem parede seria deixar a conta com a senha da folha. A prova
+    // senha-nova-imports.test.js existe para este caminho nunca ser usado.
+    const valida = (typeof validarSenhaNova === 'function') ? validarSenhaNova
+      : (o) => (String(o.senha).trim().length < 6 ? { ok: false, erro: 'A senha precisa ter ao menos 6 letras ou números.' }
+        : o.senha !== o.repetida ? { ok: false, erro: 'As duas senhas precisam ser iguais.' }
+        : String(o.senha).trim().toLowerCase() === 'coroinha2026' ? { ok: false, erro: 'Essa é a senha da folha. Escolha uma senha que só você saiba.' }
+        : { ok: true, erro: null });
+    const v = valida({ senha: s1.value, repetida: s2.value });
+    if (!v.ok) { erro.textContent = v.erro; return; }
+
+    erro.textContent = ''; btn.disabled = true; btn.textContent = 'Um instante...';
+    try {
+      const { error: e1 } = await sb.auth.updateUser({ password: s1.value });
+      if (e1) throw e1;
+      // A marca cai DEPOIS de a senha trocar de verdade. Na ordem contrária, uma falha no
+      // meio deixaria a pessoa sem parede E com a senha da folha ainda valendo.
+      const { error: e2 } = await sb.from('acolitos_membros')
+        .update({ senha_provisoria: false }).eq('id', conta.id);
+      if (e2) throw e2;
+      location.reload();   // recarrega: a tela precisa nascer inteira, sem a parede
+    } catch (e) {
+      btn.disabled = false; btn.textContent = 'Guardar a minha senha';
+      erro.textContent = 'Não consegui guardar a sua senha agora. Tente de novo em instantes.';
+      console.warn('Parede da senha:', e);
+    }
+  };
+  s2.onkeydown = (e) => { if (e.key === 'Enter') btn.click(); };
+
+  cartao.append(ic, tt, p, s1, s2, erro, btn);
+  tela.appendChild(cartao);
+  document.body.appendChild(tela);
+  setTimeout(() => s1.focus(), 60);
+}
+
 function mostrarParedeNotificacoes(qual, userId) {
   if (document.getElementById('parede-notif')) return;
   const cfg = _PAREDES[qual] || _PAREDES.pedir;
