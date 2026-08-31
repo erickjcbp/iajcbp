@@ -23,6 +23,39 @@ gravarem no mesmo lugar. Não é grande: é uma migration de cópia, um `coalesc
 uma linha em cada cadastro. Mas mexe em dado de contato de 122 pessoas, então merece uma
 sessão própria e prova de que ninguém ficou sem telefone.
 
+**A conferência de "essa pessoa já existe?" só existe em UMA das duas portas de cadastro.**
+Medido em 30/08: das 4 fichas criadas desde que a conferência subiu (27/08), **3 entraram pela
+porta que não confere**.
+
+- **Porta "Novos"** (`novos.html`) chama `/api/reconhecer-cadastro`. ✔
+- **Porta "Família"** (a tela de entrada, `login.html` → `api/signup-familia.js`) **não chama
+  nada** — cria a pessoa direto por REST. ✘
+
+Foi por aí que a **Beatriz Dutra Correia** virou duas fichas em 28/08, com o nome IDÊNTICO nas
+duas: o algoritmo teria reconhecido na hora, mas ninguém perguntou. Ela nem chegou a aparecer
+na tabela de tentativas, que continua com zero linhas — o que engana: tabela vazia parece
+"ninguém esbarrou", e na verdade era "a conferência não roda ali".
+
+**O primeiro nome tem de bater INTEIRO, e uma letra derruba tudo.** `api/_nomes.js`, na `cabeEm`:
+`if (a[0] !== b[0]) return false`. Por isso **"Rafaella Ferreira Moinhos" não reconheceu
+"Rafaela Ferreira"** em 30/08 — duas eles contra um. E a prova batia dos DOIS jeitos que o app
+aceita: mesma data de nascimento (02/05/2013) e mesmo nome de mãe (Jucimara Martimiano). A porta
+fechou antes de alguém perguntar.
+
+Medido no cadastro inteiro (194 fichas): dos **6 pares que nascem no mesmo dia**, o algoritmo
+reconhece **zero**. Só um é duplicata de verdade (a Rafaella). **O outro par é de GÊMEAS** —
+Isabelly e Lívia Campagnol, 15/02/2015, mesmo sobrenome, cada uma com o seu login. Serve de
+aviso para quem for consertar: casar por "mesma data + mesmo sobrenome" juntaria as duas irmãs
+numa ficha só. O caminho que respeita o desenho do arquivo é afrouxar a PORTA (variações de
+grafia do mesmo nome: Rafaella/Rafaela, Isabella/Isabela, Sophia/Sofia, Victoria/Vitória) e
+manter a PROVA obrigatória — que é quem de fato protege.
+
+**A Isabeli Sousa Martins continua com duas fichas.** A antiga (`caca6689`, afastada) carrega
+**6 escalas, 5 disponibilidades, 4 habilitações, 1 presença e 1 XP órfãos**; a ativa dela mostra
+zero escalas. Em 23/07 o caso foi "resolvido" marcando a antiga como afastada — isso não é um
+link, é um abandono. Juntar as duas é o mesmo procedimento usado na Rafaella e na Beatriz em
+30/08 (ver abaixo), e leva minutos. Só não foi feito porque não foi pedido.
+
 **Distribuir as pessoas pelas casas.** Medido no banco em **30/08: ZERO das 172 pessoas
 ativas** tem casa preenchida. **Este parágrafo dizia "1 das 176 (o dono, na Sanctaris)" e
 estava errado** — a `casa_id` do dono está vazia; ou foi limpa depois de 20/08, ou nunca foi
@@ -112,6 +145,26 @@ certo; sem ela, alguém tem de lembrar.
 ---
 
 ## Fechados em 30/08/2026
+
+**Duas duplicatas de gente real foram juntadas (Rafaella e Beatriz)**
+- **O que era:** duas meninas com DUAS fichas cada — uma antiga, com a vida delas na pastoral,
+  e uma nova, com o login e os dados que a família acabou de preencher. A Rafaella aparecia no
+  app como **novata presa na tela de integração**, tendo 7 habilitações e patente de sentinela.
+- **O procedimento, igual ao do `/api/reconhecer-cadastro`:** o login passa para a ficha que já
+  existia, o papel vem do NÍVEL dela, e nenhuma segunda pessoa fica de pé. Preenchi só campo
+  VAZIO e nunca troquei um "sim" por um "não" — a mesma regra que o app usa ("não se sobrescreve
+  nada do que já está lá").
+- **Uma sobrescrita deliberada:** o nome da Rafaella, de "Rafaela Ferreira" para "Rafaella
+  Ferreira Moinhos". A grafia da planilha era justamente a causa do engano, e quem escreve o
+  nome de alguém é a família.
+- **ARMADILHA que quase custou caro:** `acolitos_crm`, `acolitos_crm_historico` e
+  `acolitos_crm_comentarios` são **ON DELETE CASCADE** em `membro_id`. Apagar a ficha duplicada
+  levaria junto o histórico e o comentário que a coordenação escreveu. Por isso o CRM da Beatriz
+  foi REAPONTADO antes; só o da Rafaella foi apagado, porque tinha nascido no mesmo dia do
+  engano, sem histórico nem comentário dentro.
+- **Conferido depois:** uma ficha de cada, as 6 escalas e 7 habilitações da Rafaella e as 5
+  escalas da Beatriz ainda penduradas nelas, o histórico e o comentário do CRM da Beatriz de pé,
+  os papéis corrigidos (`novo` → `acolito` e `aspirante`). Cópia integral do "antes" guardada.
 
 **A prova de tela que mentia desde 21/08 parou de mentir (Config › Atividade)**
 - **O que era:** a prova "quem usou hoje aparece como Usou hoje" montava as quatro pessoas de
