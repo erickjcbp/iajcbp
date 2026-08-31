@@ -78,6 +78,21 @@
   .larga { max-width: 74mm; margin: 4mm auto 0; }
   /* Duas telas na mesma página não cabem empilhadas numa coluna (um celular já ocupa
      ~138mm de altura). Lado a lado, embaixo do texto, cabem as duas. */
+  /* Os degraus da jornada */
+  .degrau { display: flex; gap: 8px; align-items: flex-start; padding: 5.5px 0;
+            border-bottom: 1px solid var(--linha); }
+  .degrau:last-child { border-bottom: none; }
+  .degrau .ico { flex: 0 0 22px; font-size: 15px; line-height: 1.25; text-align: center; }
+  .degrau .txt { flex: 1 1 auto; min-width: 0; }
+  .degrau .nome { font-weight: 700; font-size: 11.8px; color: var(--texto); }
+  .degrau .nome em { font-style: normal; font-weight: 400; color: var(--gold-deep);
+                     font-family: Lora, Georgia, serif; font-style: italic; }
+  .degrau .desc { color: var(--suave); font-size: 10.6px; line-height: 1.5; }
+  .degrau .verbo { flex: 0 0 25mm; text-align: right; font-weight: 700; font-size: 10.6px;
+                   color: var(--gold-deep); padding-top: 1px; white-space: nowrap; }
+  .familia { font-size: 9.6px; text-transform: uppercase; letter-spacing: .12em;
+             color: var(--gold); font-weight: 600; margin: 9px 0 2px; }
+
   .par { display: flex; gap: 10mm; justify-content: center; margin-top: 5mm; }
   .par > div { flex: 0 0 44mm; }
 
@@ -527,40 +542,49 @@
 <section class="pagina">
   <div class="faixa">
     <div class="num">A jornada</div>
-    <h2>Quests: a sua jornada</h2>
-    <div class="linha-fina">Servir ao altar se aprende por partes &mdash; e cada parte conta</div>
+    <h2>Por que existem níveis</h2>
+    <div class="linha-fina">Ninguém serve ao altar sabendo tudo no primeiro dia</div>
   </div>
 
-  <div class="duas">
-    <div class="texto">
-      <p>Na barra de baixo, <b>QUESTS</b> abre a <b>Minha Jornada</b>. É a tela que responde
-      "o que eu já sei fazer, e o que falta para o próximo nível".</p>
+  <p>Ninguém chega ao altar sabendo tudo. Aprende-se olhando, errando um pouco, sendo corrigido com
+  carinho e voltando no domingo seguinte. Isso sempre foi assim — a diferença é que antes esse
+  caminho ficava só na cabeça da coordenação, e agora ele está escrito.</p>
 
-      <h3>O cartão de cima</h3>
-      <ul>
-        <li><b>O escudo</b> do seu nível, com os losangos que marcam o degrau.</li>
-        <li><b>Próximo:</b> o nível que vem a seguir.</li>
-        <li><b>O XP</b> conquistado na jornada principal.</li>
-        <li><b>As estrelas</b> ganhas neste nível, e quanto falta para a próxima.</li>
-        <li><b>Quantos capítulos</b> você já concluiu.</li>
-      </ul>
+  <p><b>É disso que os níveis tratam.</b> Não são notas, não são um ranking de quem é melhor.
+  São o retrato de onde você está no caminho — e, principalmente, de <b>onde dá para chegar</b>.</p>
 
-      <h3>Os capítulos</h3>
-      <p>As quests vêm em capítulos. Cada quest tem o <b>título</b>, o que é preciso fazer e
-      <b>quanto XP</b> ela vale. À esquerda, a bolinha diz o estado:</p>
-      <table style="margin-top:5px;">
-        <tr><th style="width:26%">Sinal</th><th>Quer dizer</th></tr>
-        <tr><td><b>✓ verde</b></td><td>Concluída.</td></tr>
-        <tr><td><b>○ vazia</b></td><td>Ainda por fazer.</td></tr>
-        <tr><td><b>⏳ ampulheta</b></td><td>Você mandou, e está <b>em análise pela coordenação</b>.</td></tr>
-      </table>
-      <p>Quando a quest é de contar (servir missas, ir a ensaios), aparece uma
-      <b>barrinha de progresso</b> — <b>4/6</b> quer dizer quatro de seis.</p>
-    </div>
-    <div class="tela">
-      <div class="moldura"><img src="fotos/08-jornada.png" alt="A tela Minha Jornada com as quests"></div>
-      <div class="legenda">Capítulo 1: quests concluídas,<br>em andamento e em análise</div>
-    </div>
+  <h3>Três coisas que valem ficar claras</h3>
+
+  <div class="caixa">
+    <span class="rot">1. Quem sobe você de nível é a coordenação.</span> Não existe contador
+    automático que promove ninguém. São pessoas que acompanham você servindo, veem como você trata o
+    altar e os colegas, e decidem. O aplicativo só ajuda a lembrar do que já foi feito.
+  </div>
+
+  <div class="caixa">
+    <span class="rot">2. Não tem prazo, e não tem reprovado.</span> Ninguém fica para trás por
+    demorar. Tem gente que sobe rápido e gente que leva um ano em cada degrau — as duas coisas estão
+    certas. O que conta é estar presente e servir bem, não a velocidade.
+  </div>
+
+  <div class="caixa">
+    <span class="rot">3. As quests bônus são de graça.</span> Aquelas marcadas como
+    <b>opcional</b> — "faça um colega sorrir antes da missa", "conte quantas imagens de santos tem na
+    igreja" — não são exigidas para nada. Valem XP e existem porque servir também é alegre. Fazer ou
+    não fazer é escolha sua.
+  </div>
+
+  <h3>E o XP, as estrelas, os escudos?</h3>
+  <p>São o jeito de <b>tornar visível</b> uma coisa que sempre foi invisível. O XP não compra nada.
+  A estrela não dá privilégio. O escudo do seu nível é o mesmo desenho que aparece no seu retrato
+  para os outros verem — e isso, sim, quer dizer alguma coisa: quer dizer que a pastoral reconhece o
+  seu caminho.</p>
+
+  <div class="caixa forte">
+    <span class="rot">Uma coisa que este aplicativo não é:</span> um jogo em que se ganha pontos por
+    aparecer. Cada quest é uma coisa que um servidor do altar precisa mesmo saber — o nome dos
+    paramentos, o significado do incenso, chegar cedo e ajudar a montar tudo. O XP é só o jeito de
+    marcar que você aprendeu.
   </div>
 
   <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>10</span></div>
@@ -570,37 +594,148 @@
 <section class="pagina">
   <div class="faixa">
     <div class="num">A jornada</div>
-    <h2>Capítulos trancados, bônus e funções</h2>
+    <h2>Os dez degraus</h2>
+    <div class="linha-fina">De quem acaba de chegar a quem guarda a tradição</div>
+  </div>
+
+  <p style="margin-bottom:4px;">Cada nível tem um <b>título</b> e uma <b>missão de uma palavra só</b>
+  &mdash; o que se espera de você naquele degrau.</p>
+
+  <div class="familia">Começo</div>
+  <div class="degrau"><div class="ico">🌱</div><div class="txt">
+    <div class="nome">Aspirante &middot; <em>Aprendiz do Altar</em></div>
+    <div class="desc">Você acaba de ingressar. Ainda está conhecendo o caminho e descobrindo o
+    significado do serviço ao altar.</div></div><div class="verbo">Aprender</div></div>
+  <div class="degrau"><div class="ico">🕯️</div><div class="txt">
+    <div class="nome">Coroinha &middot; <em>Coroinha do Senhor</em></div>
+    <div class="desc">Já faz parte da equipe. Não é mais observador: participa da celebração e ajuda
+    a tornar a liturgia mais bela.</div></div><div class="verbo">Servir</div></div>
+
+  <div class="familia">Acólitos</div>
+  <div class="degrau"><div class="ico">⚜️</div><div class="txt">
+    <div class="nome">Acólito Aspirante &middot; <em>Servo do Altar</em></div>
+    <div class="desc">O altar fica mais próximo e as responsabilidades aumentam. Hora de aprofundar e
+    aperfeiçoar o serviço.</div></div><div class="verbo">Crescer</div></div>
+  <div class="degrau"><div class="ico">🛡️</div><div class="txt">
+    <div class="nome">Acólito Guardião &middot; <em>Guardião do Altar</em></div>
+    <div class="desc">Conquistou a confiança da pastoral. Seu exemplo começa a influenciar os mais
+    novos.</div></div><div class="verbo">Proteger</div></div>
+  <div class="degrau"><div class="ico">👁️</div><div class="txt">
+    <div class="nome">Acólito Sentinela &middot; <em>Sentinela do Altar</em></div>
+    <div class="desc">Entre os mais experientes. Percebe o que os outros não percebem e é referência
+    para os demais.</div></div><div class="verbo">Vigiar</div></div>
+
+  <div class="familia">O chamado dos cerimoniários</div>
+  <div class="degrau"><div class="ico">📖</div><div class="txt">
+    <div class="nome">Aspirante a Cerimoniário &middot; <em>Aprendiz dos Ritos</em></div>
+    <div class="desc">Um chamado especial: começa a aprender não só a servir, mas a conduzir e
+    organizar.</div></div><div class="verbo">Preparar-se</div></div>
+  <div class="degrau"><div class="ico">🎖️</div><div class="txt">
+    <div class="nome">Cerimoniário Aspirante &middot; <em>Cerimoniário Iniciado</em></div>
+    <div class="desc">Ingressou na Ordem dos Cerimoniários e começa a pôr em prática o que
+    aprendeu.</div></div><div class="verbo">Aperfeiçoar-se</div></div>
+  <div class="degrau"><div class="ico">⚔️</div><div class="txt">
+    <div class="nome">Cerimoniário Guardião &middot; <em>Guardião das Celebrações</em></div>
+    <div class="desc">Domina todas as funções. Pode assumir qualquer posição e socorrer qualquer
+    necessidade da liturgia.</div></div><div class="verbo">Garantir</div></div>
+  <div class="degrau"><div class="ico">⚜️</div><div class="txt">
+    <div class="nome">Cerimoniário Magistral &middot; <em>Mestre dos Ritos Sagrados</em></div>
+    <div class="desc">Virou referência. Seu conhecimento e sua postura inspiram os outros
+    servidores.</div></div><div class="verbo">Ensinar</div></div>
+  <div class="degrau"><div class="ico">👑</div><div class="txt">
+    <div class="nome">Cerimoniário Mor &middot; <em>Guardião Supremo das Celebrações</em></div>
+    <div class="desc">O ápice da jornada: um dos principais guardiões da tradição, da organização e
+    da beleza da liturgia.</div></div><div class="verbo">Liderar</div></div>
+
+  <div class="caixa" style="margin-top:11px;">
+    <span class="rot">Repare nos verbos.</span> Eles mudam de <i>Aprender</i> para <i>Servir</i>,
+    <i>Proteger</i>, <i>Ensinar</i>, <i>Liderar</i>. A jornada inteira é essa virada: de quem recebe
+    para quem cuida dos outros.
+  </div>
+
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>11</span></div>
+</section>
+
+<!-- ═══════════════ 10c ═══════════════ -->
+<section class="pagina">
+  <div class="faixa">
+    <div class="num">A jornada</div>
+    <h2>Quests: a tela</h2>
+    <div class="linha-fina">O que cada coisa ali quer dizer</div>
+  </div>
+
+  <div class="duas">
+    <div class="texto">
+      <p>Na barra de baixo, <b>QUESTS</b> abre a <b>Minha Jornada</b>.</p>
+
+      <h3>O cartão de cima</h3>
+      <ul>
+        <li><b>O escudo</b> do seu nível, com os losangos do degrau.</li>
+        <li><b>Próximo:</b> o nível que vem a seguir.</li>
+        <li><b>O XP</b> da jornada principal.</li>
+        <li><b>As estrelas</b> deste nível, e quanto falta para a próxima.</li>
+        <li><b>Quantos capítulos</b> você concluiu.</li>
+      </ul>
+
+      <h3>Cada quest</h3>
+      <p>Tem o título, o que fazer e quanto XP vale. A bolinha da esquerda diz o estado:</p>
+      <table style="margin-top:5px;">
+        <tr><th style="width:28%">Sinal</th><th>Quer dizer</th></tr>
+        <tr><td><b>✓ verde</b></td><td>Concluída.</td></tr>
+        <tr><td><b>○ vazia</b></td><td>Ainda por fazer.</td></tr>
+        <tr><td><b>⏳ ampulheta</b></td><td>Você mandou e está <b>em análise pela coordenação</b>.</td></tr>
+      </table>
+      <p>Quando a quest é de contar — servir missas, ir a ensaios — aparece uma
+      <b>barrinha</b>: <b>4/6</b> quer dizer quatro de seis.</p>
+
+      <div class="caixa">
+        <span class="rot">Nada some.</span> O que você já fez fica marcado, mesmo que você fique um
+        tempo sem aparecer.
+      </div>
+    </div>
+    <div class="tela">
+      <div class="moldura"><img src="fotos/08-jornada.png" alt="A tela Minha Jornada com as quests"></div>
+      <div class="legenda">Concluída, em andamento<br>e em análise</div>
+    </div>
+  </div>
+
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>12</span></div>
+</section>
+
+<!-- ═══════════════ 10d ═══════════════ -->
+<section class="pagina">
+  <div class="faixa">
+    <div class="num">A jornada</div>
+    <h2>Capítulos, bônus e pedir uma função</h2>
     <div class="linha-fina">Onde mora a graça da coisa</div>
   </div>
 
   <div class="duas">
     <div class="texto">
       <h3>Um capítulo de cada vez</h3>
-      <p>O <b>Capítulo 2</b> aparece <b>🔒 bloqueado</b> até você terminar o primeiro:
-      <i>"Conclua o capítulo anterior pra desbloquear."</i> Não é castigo — é a ordem em que as
-      coisas se aprendem no altar.</p>
+      <p>O <b>Capítulo 2</b> fica <b>🔒 bloqueado</b> até o primeiro terminar:
+      <i>"Conclua o capítulo anterior pra desbloquear."</i> Não é castigo — é a ordem em que as coisas
+      se aprendem no altar. Não adianta pegar o turíbulo antes de saber por que ele existe.</p>
 
       <h3>Missões bônus</h3>
-      <p>Fora dos capítulos existem as <b>bônus</b>, marcadas como <b>opcional</b>. Elas não são
-      exigidas para subir de nível; existem porque servir também é alegre:</p>
+      <p>Fora dos capítulos moram as <b>bônus</b>, marcadas <b>opcional</b>. Nenhuma delas é exigida
+      para nada:</p>
       <ul>
         <li><b>Caçador de sorrisos</b> — faça um colega sorrir antes da missa. <b>+10 XP</b></li>
         <li><b>Caça ao santo</b> — conte quantas imagens de santos tem na igreja. <b>+10 XP</b></li>
         <li><b>Dupla dinâmica</b> — combine um sinal secreto com seu parceiro de altar. <b>+10 XP</b></li>
       </ul>
-      <p>E há as de <b>surpresa</b>, que aparecem sem avisar e valem bem mais — uma delas se chama
-      <i>NPC Secreto</i>, e a pastoral não conta o que é.</p>
+      <p>E existem as de <b>surpresa</b>, que aparecem sem avisar e valem bem mais. Uma delas se
+      chama <i>NPC Secreto</i>. A pastoral não conta o que é.</p>
 
       <h3>Pedir uma função</h3>
-      <p>Na mesma tela você pode <b>pedir</b> para ser habilitado numa função — Cruz, Vela, Turíbulo,
-      Missal. O aplicativo pede que você <b>explique como se serve nela</b>. Não é burocracia: é como
-      se mostra que aprendeu de verdade, e não só que quer o título. A coordenação lê e responde.</p>
+      <p>Você pode <b>pedir</b> para ser habilitado numa função — Cruz, Vela, Turíbulo, Missal. O
+      aplicativo pede que você <b>explique como se serve nela</b>. Não é burocracia: é o jeito de
+      mostrar que aprendeu de verdade, e não só que quer o título. A coordenação lê e responde.</p>
 
       <div class="caixa">
-        <span class="rot">Quest não é jogo à toa.</span> Cada uma delas é uma coisa que um acólito
-        precisa saber. O XP e as estrelas são só o jeito de tornar visível um caminho que antes
-        ficava na cabeça da coordenação.
+        <span class="rot">Dica de quem já passou por isso:</span> escreva do seu jeito, com as suas
+        palavras. Ninguém está corrigindo português — estão querendo saber se você entendeu.
       </div>
     </div>
     <div class="tela">
@@ -609,18 +744,7 @@
     </div>
   </div>
 
-  <h3>Os níveis, do começo ao fim</h3>
-  <table>
-    <tr><th>Nível</th><th>O que é</th></tr>
-    <tr><td><b>Aspirante</b></td><td>Chegou agora e está conhecendo.</td></tr>
-    <tr><td><b>Coroinha</b></td><td>Já serve, nas funções da idade dele.</td></tr>
-    <tr><td><b>Acólito Aspirante</b></td><td>Começou o caminho do acólito.</td></tr>
-    <tr><td><b>Acólito Guardião</b></td><td>Firme nas funções, ajuda os menores.</td></tr>
-    <tr><td><b>Acólito Sentinela</b></td><td>Referência no altar.</td></tr>
-    <tr><td><b>Cerimoniário</b> (e acima)</td><td>Conduz a celebração e forma os outros.</td></tr>
-  </table>
-
-  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>11</span></div>
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>13</span></div>
 </section>
 
 <!-- ═══════════════ 11 ═══════════════ -->
@@ -660,7 +784,7 @@
     </div>
   </div>
 
-  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>12</span></div>
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>14</span></div>
 </section>
 
 <!-- ═══════════════ 12 ═══════════════ -->
@@ -710,7 +834,7 @@
         novo.</td></tr>
   </table>
 
-  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>13</span></div>
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>15</span></div>
 </section>
 
 <!-- ═══════════════ 13 ═══════════════ -->
@@ -751,7 +875,7 @@
       PASTORAL DOS ACÓLITOS E COROINHAS &middot; PARÓQUIA SÃO JOÃO BATISTA &middot; LIMEIRA</div>
   </div>
 
-  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>14</span></div>
+  <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>16</span></div>
 </section>
 
 </body>
