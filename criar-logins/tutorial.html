@@ -69,10 +69,21 @@
   .duas { display: flex; gap: 7mm; align-items: flex-start; }
   .duas .texto { flex: 1 1 auto; min-width: 0; }
   .duas .tela { flex: 0 0 64mm; }
-  .tela img, .par img { width: 100%; display: block; border-radius: 7px; }
-  .moldura { border: 2.5px solid var(--wine); border-radius: 11px; padding: 3px;
-             background: var(--wine); box-shadow: 0 2px 7px rgba(0,0,0,.22); }
-  .legenda { font-size: 9.5px; color: var(--suave); text-align: center; margin-top: 4px;
+  /* SEM moldura e SEM corte seco. A borda com sombra deixava um retângulo cinza em volta
+     de cada tela, e o pé da foto terminava numa linha reta no meio do conteúdo — como se
+     alguém tivesse cortado com tesoura. Agora a tela nasce do papel e se dissolve nele. */
+  .tela img, .par img { width: 100%; display: block; }
+  /* A moldura RECORTA a altura e dissolve o pé. Sem recortar, a parte transparente da
+     foto continua ocupando espaço e a legenda ou fica longe demais ou sobe por cima
+     dela. Aqui a caixa tem altura própria: o texto que vem depois começa onde a foto
+     realmente acaba de ser vista. */
+  .moldura { border: 0; padding: 0; background: none; box-shadow: none;
+    overflow: hidden; border-radius: 10px 10px 0 0;
+    -webkit-mask-image: linear-gradient(to bottom, #000 80%, transparent 100%);
+            mask-image: linear-gradient(to bottom, #000 80%, transparent 100%); }
+  .duas .moldura { height: 118mm; }
+  .par .moldura  { height: 84mm; }
+  .legenda { font-size: 9.5px; color: var(--suave); text-align: center; margin-top: 1.5mm;
              font-family: Lora, Georgia, serif; font-style: italic; line-height: 1.4; }
 
   .larga { max-width: 74mm; margin: 4mm auto 0; }
@@ -143,7 +154,7 @@
     <div class="fio"></div>
     <div class="sub">Como entrar no aplicativo, o caminho da integração<br>e o que fazer no dia a dia</div>
   </div>
-  <div class="pe">PARÓQUIA SÃO JOÃO BATISTA &middot; LIMEIRA</div>
+  <div class="pe">PARÓQUIA JESUS CRISTO BOM PASTOR &middot; LIMEIRA/SP</div>
 </section>
 
 <!-- ═══════════════ 1 ═══════════════ -->
@@ -872,7 +883,7 @@
     <div style="font-family:Lora,Georgia,serif;font-style:italic;font-size:14px;margin-top:6px;">
       Somos do altar</div>
     <div style="font-size:10.5px;color:#b39a90;margin-top:5px;letter-spacing:.05em;">
-      PASTORAL DOS ACÓLITOS E COROINHAS &middot; PARÓQUIA SÃO JOÃO BATISTA &middot; LIMEIRA</div>
+      PASTORAL DOS ACÓLITOS E COROINHAS &middot; PARÓQUIA JESUS CRISTO BOM PASTOR &middot; LIMEIRA/SP</div>
   </div>
 
   <div class="rodape"><span>Guia da Pastoral dos Acólitos e Coroinhas</span><span>16</span></div>

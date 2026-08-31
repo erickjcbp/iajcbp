@@ -177,7 +177,7 @@ if (FOLHA) {
   .rodape { margin-top: 14px; font-size: 11px; color: #666; border-top: .5px solid #ccc; padding-top: 7px; }
 </style></head><body>
 <h1>Acesso ao aplicativo &mdash; Pastoral dos Acólitos e Coroinhas</h1>
-<div class="sub">Paróquia São João Batista &middot; lista gerada em ${hoje} &middot; ${linhas.length} pessoas</div>
+<div class="sub">Paróquia Jesus Cristo Bom Pastor &middot; Limeira/SP &middot; lista gerada em ${hoje} &middot; ${linhas.length} pessoas</div>
 <div class="aviso">
   <b>Como entrar:</b> abra <b>coroinhas.jcbplimeira.com.br</b>, digite o <b>usuário</b> da linha do seu filho
   ou da sua filha e a senha <b>${SENHA}</b>.<br>
