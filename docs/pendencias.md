@@ -1,6 +1,6 @@
 # Acólitos — o que está pendente
 
-Atualizado em 31/08/2026. Esta é A LISTA: abrir aqui antes de decidir o que fazer.
+Atualizado em 01/09/2026. Esta é A LISTA: abrir aqui antes de decidir o que fazer.
 Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi commitado.
 
 ---
@@ -26,6 +26,10 @@ foi esquecido:
 - **As casas continuam vazias** — zero de 191 pessoas tem casa, então o brasão não aparece
   no avatar de ninguém. Quem distribui é a coordenação, uma pessoa por vez, e o dono pediu
   para desconsiderar.
+- **O convite da foto ainda não foi visto por ninguém de verdade.** O recado está na ficha
+  de 26 pessoas e o código está no ar (conferido nas 20 telas da produção em 01/09), mas
+  como zero das 138 contas entrou, o pop-up nunca abriu para uma pessoa real. Sai daqui
+  quando a primeira abrir — ou quando a primeira foto nova aparecer no bucket.
 
 Quando alguma dessas coisas acontecer no mundo, ela volta para cá com data.
 
@@ -41,6 +45,15 @@ verde e o cabelo sumiram. Os arquivos no ar são melhores. A franja fica.
 conferir a saída **composta sobre magenta** antes de subir — foi só assim que apareceu que a faixa
 do CONSILIUM tinha ficado transparente com o limite 40.
 
+**Não tirar a policy de SELECT do bucket `avatars` sem pôr outra no lugar.** Já derrubou o
+envio de foto DUAS vezes (a 009 consertou em 2025, a 002_p1 refez em 09/06/2026 e ficou 84
+dias assim). Quem grava precisa LER a linha que gravou — `upsert` vira `on conflict do
+update` e o storage-api devolve a linha com `returning`; os dois exigem SELECT. O erro que
+aparece é *"new row violates row-level security policy"*, que fala de **gravar** quando o
+que falta é **ler** — e é por isso que se procura no lugar errado. O recorte certo está na
+065 (cada um lê a própria pasta, a equipe lê `membro/`) e `provar-065-foto-sobe.sql` fica
+vermelho se alguém afrouxar **ou** apertar demais de novo.
+
 **Não reabrir o kit do Lucas Bernardo nem do André de Souza Ribeiro** — os dois estão fora por
 opção do dono (o André tem menos de 14 mesmo).
 
@@ -50,6 +63,54 @@ barrado só na **Matriz**, pelo Kit processional. O dono decidiu que **quando el
 liberar** — mas isso **não acontece sozinho** com a `data_nascimento` em branco, porque a regra
 recusa por não saber a idade, não por compará-la. Preencher a data faz o sistema liberá-lo no dia
 certo; sem ela, alguém tem de lembrar.
+
+---
+
+## Fechados em 01/09/2026
+
+**A foto voltou a subir — estava barrada para TODO MUNDO havia 84 dias**
+- **O que era:** quem tentava pôr foto de perfil levava *"não foi possível enviar a foto.
+  new row violates row-level security policy"*. Não era um caso isolado: a última foto que
+  entrou no armazenamento é de **07/06**, e o endurecimento subiu em **09/06**. De lá até
+  01/09, **nenhuma foto de ninguém**.
+- **A causa não era a permissão de GRAVAR, era a de LER.** A `002_p1` derrubou a policy de
+  SELECT do bucket `avatars` — e com razão, porque qualquer logado LISTAVA a foto de todo
+  mundo, e são fotos de menores. Só que não pôs nada no lugar, e quem grava precisa ler a
+  linha que acabou de gravar: o front sobe com `upsert`, que no banco vira `on conflict do
+  update`, e o storage-api devolve a linha com `returning`. Os dois exigem SELECT, e o
+  Postgres relata os dois com a MESMA frase — a que fala de gravar.
+- **Já tinha acontecido.** A migration 009 consertou isto em 2025 e deixou o aviso escrito
+  no próprio arquivo (*"re-adiciona SELECT, o upload com upsert precisa"*). A 002_p1 refez o
+  buraco sem ver o aviso. Está registrado agora na seção "o que NÃO se deve fazer".
+- **A 065 devolve o SELECT RECORTADO** no mesmo desenho das policies de escrita: cada um lê
+  a própria pasta `{uid}/`, a equipe lê `membro/`. **A enumeração que a 002_p1 fechou
+  continua fechada** — não foi trocada segurança por conveniência.
+- **Provado:** `docs/provar-065-foto-sobe.sql`, 8 linhas. Rodado ANTES ficava vermelho nos
+  4 caminhos de envio e verde nas 3 travas; depois, verde nas 8. Ele escreve dentro de um
+  `begin` e termina em `rollback` — não deixa arquivo nem linha.
+
+**Quem apanhou recebeu o convite de volta**
+- **O que é:** um pop-up que avisa que a foto já sobe. Está na ficha de **26 pessoas**.
+- **Por que 26, e não 159:** não existe registro de quem foi barrado — a falha só aparecia
+  na tela da pessoa e nada era anotado. O recorte é o mais estreito que **não deixa ninguém
+  de fora**: ativo, sem foto, e que já abriu o app pelo menos uma vez. Quem nunca abriu
+  nunca chegou a tentar. Filtrar pela data do último login seria mais estreito e **erraria**:
+  o app fica instalado e a sessão não expira, então quem entrou em maio e seguiu usando não
+  aparece nessa conta.
+- **O texto não acusa ninguém.** É *"se você tentou e não conseguiu"*, nunca *"você
+  tentou"* — parte de quem recebe nunca tentou, e não há como saber quem é quem.
+- **Ele quebra a regra da fila de propósito:** todo aviso deste app some por ter APARECIDO;
+  este some por a foto ter SUBIDO. Enquanto ela não sobe o recado fica pendente no banco, e
+  aparece no máximo 1x por sessão para não virar cobrança. A regra mora em
+  `foto-recado-core.js` com 10 provas, e a guarda de imports cobre as 20 telas.
+- **Provado:** `docs/provar-066-recado-da-foto.sql` (6 linhas: chegou a quem devia, ninguém
+  do grupo ficou de fora, ninguém com foto foi incomodado, ninguém que nunca abriu o app
+  recebeu, rodar de novo não duplica, e nasce NÃO visto). Mais o pop-up **desenhado numa
+  tela de verdade** pelo motor de provas. Suíte: 146 de 146.
+- **Erro de sequência, registrado:** apliquei a 066 **antes** de publicar o código. Nesse
+  intervalo, quem abrisse o app receberia uma caixa vazia de "Aviso da Coordenação" e o
+  convite seria marcado como visto para sempre. Medi na hora — ninguém abriu, 26 pendentes
+  e 0 consumidos —, mas a ordem certa é **código no ar primeiro, dado depois**.
 
 ---
 
