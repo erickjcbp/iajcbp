@@ -21,4 +21,10 @@ test('toda tela com os *-core carrega também a senha-nova-core.js', () => {
   // reserva de dentro da função e volta a mostrar um telefone diferente das outras.
   const semTel = telas.filter(f => !fs.readFileSync(path.join(dir, f), 'utf8').includes('telefones-core.js'));
   assert.deepStrictEqual(semTel, [], 'estas telas não carregam a regra dos telefones: ' + semTel.join(', '));
+
+  // E para a regra do RECADO DA FOTO: sem o <script>, a tela quebra no primeiro aviso
+  // da fila — `temFotoDePerfil` não existiria e o pop-up de QUALQUER aviso morreria
+  // junto. Não é só o convite da foto que se perde: é a fila inteira daquela tela.
+  const semFoto = telas.filter(f => !fs.readFileSync(path.join(dir, f), 'utf8').includes('foto-recado-core.js'));
+  assert.deepStrictEqual(semFoto, [], 'estas telas não carregam a regra do recado da foto: ' + semFoto.join(', '));
 });

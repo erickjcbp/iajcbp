@@ -1037,6 +1037,59 @@ async function provaTelefonePedidoQuandoAIdadeEDesconhecida(provas) {
     'quem já tem telefone não é perguntado de novo');
 }
 
+async function provaRecadoDaFotoAparece(provas) {
+  console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
+
+  // De 09/06 a 01/09/2026 nenhuma foto subia no app (migration 065). O recado é o
+  // convite de volta, e ele quebra a regra de toda a fila: os outros avisos somem por
+  // terem APARECIDO, este some por a foto ter SUBIDO. É uma exceção — e exceção é o
+  // que alguém "padroniza" sem querer. Aqui ela fica desenhada na tela, não só no teste.
+  const r = await provas.abrir('index.html', {
+    papel: PAPEIS.membro,
+    avaliar: `
+      const recado = { tipo: 'foto_conserto', seen: false };
+      const membro = { id: 'prova-065', foto_url: null, avisos: [recado] };
+      showFotoConsertoPop(membro, function () {});
+      const modal = document.querySelector('.modal-overlay.open .modal');
+      const botoes = modal ? [...modal.querySelectorAll('button')].map(function (b) { return b.textContent.trim(); }) : [];
+      return {
+        texto: modal ? (modal.innerText || '').trim() : '',
+        botoes: botoes,
+        temSeletorDeFoto: !!(modal && modal.querySelector('input[type=file]')),
+        // A regra, medida na própria tela que a usa:
+        pendenteSemFoto: recadoDaFotoFicaPendente(recado, false),
+        renderSeTemFoto:  recadoDaFotoFicaPendente(recado, true),
+        outroAviso: recadoDaFotoFicaPendente({ tipo: 'medalha', seen: false }, false),
+      };
+    `,
+  });
+
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'o pop-up do recado abre sem estourar', r.erroAvaliar);
+  // Comparação sem caixa de propósito: o `.modal-title` do app tem text-transform
+  // uppercase, então o innerText volta gritado. Medir a caixa aqui acusaria a tela
+  // certa de estar errada.
+  exigir(/sua foto pode subir agora/i.test(a.texto || ''),
+    'o convite desenha na tela, com o título',
+    'saiu: ' + JSON.stringify((a.texto || '').slice(0, 120)));
+  exigir(/se você tentou/i.test(a.texto || ''),
+    'o texto NÃO acusa a pessoa de ter tentado',
+    'parte de quem recebe nunca tentou — não dá para saber quem é quem');
+  exigir((a.botoes || []).some((b) => /colocar minha foto/i.test(b)),
+    'tem o botão que abre a foto');
+  exigir((a.botoes || []).some((b) => /agora não/i.test(b)),
+    'tem saída — o convite não vira parede');
+  exigir(a.temSeletorDeFoto === true,
+    'o seletor de arquivo está montado no pop-up',
+    'sem ele o botão dourado não abre nada');
+  exigir(a.pendenteSemFoto === true,
+    'SEM foto o recado fica pendente (não some por ter aparecido)');
+  exigir(a.renderSeTemFoto === false,
+    'COM foto o recado se rende — é isto que faz ele sumir');
+  exigir(a.outroAviso === false,
+    'os outros avisos seguem a regra normal da fila');
+}
+
 // ── Partida ──────────────────────────────────────────────────────────────────
 const filtro = process.argv[2] || null;
 const provas = await iniciarProvas();
@@ -1061,6 +1114,7 @@ try {
     await provaEntrarNoTimeLiberaTarefas(provas);
     await provaNomeDaMaeTemOndeSerDigitado(provas);
     await provaTelefonePedidoQuandoAIdadeEDesconhecida(provas);
+    await provaRecadoDaFotoAparece(provas);
   }
 } finally {
   await provas.encerrar();

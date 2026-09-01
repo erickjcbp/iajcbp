@@ -430,17 +430,31 @@ function queueNotificacoes(membro) {
   const avisos = Array.isArray(membro.avisos) ? membro.avisos : [];
   const naoVistos = avisos.filter(a => a && !a.seen);
   if (naoVistos.length) {
-    const atualizados = avisos.map(a => ({ ...a, seen: true }));
+    // O recado da foto é a ÚNICA exceção da fila. Todos os outros avisos somem por
+    // terem APARECIDO; ele some por a foto ter SUBIDO (regra em foto-recado-core.js).
+    // Enquanto ela não sobe, o recado fica pendente no banco — e por isso aparece no
+    // máximo 1x por sessão, senão viraria cobrança a cada tela aberta.
+    const _temFoto = temFotoDePerfil(membro);
+    const atualizados = avisos.map(a => recadoDaFotoFicaPendente(a, _temFoto) ? a : ({ ...a, seen: true }));
+    const _mudou = atualizados.some((a, i) => a !== avisos[i]);
     membro.avisos = atualizados;
-    sb.from('acolitos_membros').update({ avisos: atualizados }).eq('id', membro.id).then(() => {}, () => {});
+    if (_mudou) sb.from('acolitos_membros').update({ avisos: atualizados }).eq('id', membro.id).then(() => {}, () => {});
     const b = document.getElementById('sino-badge'); if (b) b.style.display = 'none';
     const _celebTipos = { xp_ganho: 1, medalha: 1, campeao: 1, estrela_nova: 1, quest_exclusiva: 1 };
     // A boas-vinda ao time vem à FRENTE das outras celebrações: entrar na equipe é a
     // notícia daquela abertura, e ela é que explica por que as tarefas do time apareceram.
     const _prio = (a) => (a && a.logout) ? -10
       : (a && a.tipo === 'boas_vindas_time') ? 30
+      : (a && a.tipo === TIPO_RECADO_DA_FOTO) ? 20
       : (a && _celebTipos[a.tipo]) ? 10 : 0;
-    naoVistos.forEach(a => enqueueNotif(_prio(a), (done) => showAvisoUnico(a, membro, done)));
+    const _chaveFoto = 'foto-recado-' + membro.id;
+    naoVistos.forEach(a => {
+      if (a.tipo === TIPO_RECADO_DA_FOTO) {
+        if (_temFoto || sessionStorage.getItem(_chaveFoto)) return;  // já pôs a foto, ou já viu nesta sessão
+        sessionStorage.setItem(_chaveFoto, '1');
+      }
+      enqueueNotif(_prio(a), (done) => showAvisoUnico(a, membro, done));
+    });
   }
   _notifStart();
   // 4) Lembrete diário de XP (assíncrono; só se ainda não pontuou hoje)
@@ -970,6 +984,7 @@ function showAvisoUnico(aviso, membro, done) {
   if (aviso && aviso.tipo === 'medalha') { showMedalha(aviso.label || '', done); return; }
   if (aviso && aviso.tipo === 'campeao') { showCampeao(aviso.liga, aviso.temporada, done); return; }
   if (aviso && aviso.tipo === 'boas_vindas_time') { showBoasVindasTime(aviso, done); return; }
+  if (aviso && aviso.tipo === TIPO_RECADO_DA_FOTO) { showFotoConsertoPop(membro, done); return; }
   if (aviso && aviso.tipo === 'levelup_demo') { if (typeof window.showLevelUp === 'function') window.showLevelUp(aviso.nivel, aviso.nome || '', done); else if (typeof done === 'function') done(); return; }
   const precisaLogout = !!(aviso && aviso.logout);
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '500';
@@ -984,6 +999,74 @@ function showAvisoUnico(aviso, membro, done) {
     ov.remove(); if (typeof done === 'function') done();
   };
   modal.appendChild(btn);
+  ov.appendChild(modal); document.body.appendChild(ov);
+}
+
+// ── RECADO DA FOTO (o convite depois do defeito do armazenamento) ─────────
+// De 09/06 a 01/09/2026 nenhuma foto subia: a trava do armazenamento barrava todo
+// mundo (migration 065). Quem tentou levou um erro e desistiu. Este é o convite de
+// volta. A REGRA de quando ele some está em foto-recado-core.js; aqui é só a tela.
+//
+// Ele não fecha por ter aparecido: fecha quando a foto sobe de verdade. Se o envio
+// falhar de novo, o recado continua pendente e ela reencontra o convite na próxima
+// abertura — um convite que some antes de a foto existir não teria servido de nada.
+function showFotoConsertoPop(membro, done) {
+  const txt = textoDoRecadoDaFoto();
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '500';
+  const modal = document.createElement('div'); modal.className = 'modal';
+  const handle = document.createElement('div'); handle.className = 'modal-handle';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = txt.titulo;
+  modal.append(handle, tt);
+  txt.linhas.forEach((linha, i) => {
+    const p = document.createElement('p');
+    p.style.cssText = 'font-size:13px;color:var(--text-muted);font-weight:600;line-height:1.5;'
+      + 'margin:' + (i ? '8px' : '-4px') + ' 0 0;';
+    p.textContent = linha;
+    modal.appendChild(p);
+  });
+
+  const msg = document.createElement('div'); msg.className = 'msg'; modal.appendChild(msg);
+
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*'; input.style.display = 'none';
+
+  const btn = document.createElement('button'); btn.className = 'btn gold';
+  btn.style.marginTop = '14px'; btn.textContent = txt.botao;
+  btn.onclick = () => input.click();
+
+  // Saída sempre visível: sem ela o convite vira parede.
+  const depois = document.createElement('button'); depois.type = 'button';
+  depois.style.cssText = 'display:block;width:100%;margin-top:10px;padding:8px;background:none;border:0;'
+    + "font-family:'Oxanium',sans-serif;font-weight:700;font-size:12px;letter-spacing:.8px;"
+    + 'text-transform:uppercase;color:var(--text-muted);cursor:pointer;';
+  depois.textContent = txt.depois;
+  depois.onclick = () => { ov.remove(); if (typeof done === 'function') done(); };
+
+  input.onchange = () => {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+    openCropper(file, async (cortada) => {
+      btn.disabled = true; depois.disabled = true; btn.textContent = 'Enviando...';
+      msg.className = 'msg'; msg.textContent = '';
+      try {
+        await uploadAvatar(cortada, membro);
+        // A foto está no ar: o recado fecha agora, no banco — não volta em aparelho nenhum.
+        const atualizados = marcarRecadoDaFotoVisto(membro.avisos);
+        membro.avisos = atualizados;
+        sb.from('acolitos_membros').update({ avisos: atualizados }).eq('id', membro.id).then(() => {}, () => {});
+        msg.className = 'msg success'; msg.textContent = 'Pronto! Sua foto está no ar.';
+        btn.style.display = 'none';
+        depois.textContent = 'Fechar'; depois.disabled = false;
+      } catch (err) {
+        msg.className = 'msg error';
+        msg.textContent = 'Ainda não deu. ' + ((err && err.message) || 'Tente de novo daqui a pouco.');
+        btn.disabled = false; depois.disabled = false; btn.textContent = txt.botao;
+      }
+    });
+  };
+
+  modal.append(btn, depois, input);
   ov.appendChild(modal); document.body.appendChild(ov);
 }
 
