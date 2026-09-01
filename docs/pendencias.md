@@ -1,6 +1,6 @@
 # Acólitos — o que está pendente
 
-Atualizado em 30/08/2026. Esta é A LISTA: abrir aqui antes de decidir o que fazer.
+Atualizado em 31/08/2026. Esta é A LISTA: abrir aqui antes de decidir o que fazer.
 Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi commitado.
 
 ---
@@ -22,6 +22,35 @@ O conserto de verdade é escolher um campo, migrar o outro e fazer os dois cadas
 gravarem no mesmo lugar. Não é grande: é uma migration de cópia, um `coalesce` nas telas e
 uma linha em cada cadastro. Mas mexe em dado de contato de 122 pessoas, então merece uma
 sessão própria e prova de que ninguém ficou sem telefone.
+
+**As 28 fichas sem responsável, sem telefone e sem data de nascimento.** Resíduo da
+planilha de junho — não é vazamento em andamento: as duas portas de cadastro sempre
+capturam pelo menos uma prova (a "Novos" exige data de nascimento, a "Família" exige o
+nome da mãe ou do pai).
+
+**A maior parte se resolve sozinha quando elas entrarem.** Conferido na configuração REAL
+do banco (`acolitos_config.cadastro_campos`, não no padrão do código): o "Complete seu
+cadastro" vai pedir **data de nascimento, nome do responsável, endereço, telefone da mãe,
+telefone de recado e foto** — e o formulário mostra também batismo, crisma e túnica
+preenchidos, para a pessoa corrigir. O pedido APARECE para elas: só é suprimido para quem
+está na etapa "aprovação" do CRM, e as 28 não têm ficha no CRM.
+
+O que NÃO vem por aí: **o nome da mãe e do pai** (têm campo na ficha desde 31/08, mas não
+entram no "Complete seu cadastro"), e os **3 cerimoniários** da lista, que pela patente
+devem ser os mais velhos e provavelmente precisam de telefone próprio, não de responsável.
+
+A lista dos 28 saiu em `entregas/faltam-dados-destas-28-pessoas_*.csv`.
+
+**Nenhuma família de verdade passou pelas portas depois de 30/08.** A porta Família foi
+provada na produção em 31/08 com uma família de mentira, apagada em seguida (criou,
+reconheceu a segunda tentativa e registrou o caso para a coordenação). A porta Novos não
+foi provada assim. E o que nenhuma prova alcança é o mundo: uma família real entrando,
+criando senha, instalando e ligando o sino.
+
+**Uma conta com um acesso que não foi dela.** A ficha da **Katarina Leão** registra um
+login de 30/08 que fui eu, provando a parede da senha. Ela aparece como "usou hoje" em
+Config › Atividade até entrar de verdade. Se for preciso provar a parede outra vez, usar a
+MESMA conta, para não sujar várias.
 
 **Distribuir as pessoas pelas casas.** Medido no banco em **30/08: ZERO das 172 pessoas
 ativas** tem casa preenchida. **Este parágrafo dizia "1 das 176 (o dono, na Sanctaris)" e
@@ -116,6 +145,52 @@ recusa por não saber a idade, não por compará-la. Preencher a data faz o sist
 certo; sem ela, alguém tem de lembrar.
 
 ---
+
+## Fechados em 31/08/2026
+
+**O nome do pai e da mãe: passou a ter onde ser digitado, e deixou de ser pedido duas vezes**
+- **O que era:** a aba Família da ficha começava em "Pai é ministro?" — perguntava se o pai é
+  ministro sem nunca ter perguntado QUEM é o pai. `nome_mae` e `nome_pai` não tinham campo em
+  tela nenhuma: só eram gravados quando a própria família se cadastrava. Para as 170 pessoas
+  vindas da planilha, ficavam vazios para sempre — e o cartão do CRM **cobrava** "falta nome de
+  responsável" sem oferecer onde preencher.
+- **E o dono viu a duplicação:** se a ficha já tem o nome da mãe, por que "Nome da mãe
+  ministra" de novo? Medido: dos que tinham os dois campos, **10 iguais na mãe, 9 no pai, ZERO
+  divergindo**. Nunca foi outro dado. O `signup-familia` gravava literalmente
+  `nome_mae_ministro: p.mae_ministra ? nomeMae : null`.
+- **Agora:** o nome mora num lugar só; ficaram as marcas de SEREM ministros, que é outra coisa
+  e a Escala precisa. A Escala lê `nome_pai`/`nome_mae` com `nome_*_ministro` de **reserva** —
+  sem isso, as fichas antigas perderiam o nome na tela.
+- **De quebra, um defeito que alimentava as duplicatas:** a porta "Novos" gravava o nome dos
+  pais SÓ em `nome_*_ministro`, e apenas quando eram ministros. Quem entrava por ali ficava sem
+  `nome_mae` — uma das duas provas de reconhecimento. A porta criava o buraco que a conferência
+  não conseguia tapar. Agora grava `nome_pai`/`nome_mae` sempre.
+
+**Idade desconhecida deixou de dispensar o telefone**
+- "Celular obrigatório a partir dos 13" estava escrito `!(idade > 12)`. Com a data de
+  nascimento vazia a conta dá **nulo**, que não é maior que 12 — então o telefone era pulado.
+  E são justamente as fichas sem data que também não têm telefone nenhum: as 28.
+- Agora só é dispensado quando se **sabe** que a pessoa tem 12 ou menos. Cinco provas cobrem os
+  quatro becos: sem data, criança, adolescente, e quem já tem telefone.
+
+**A porta Família registra o cadastro barrado antes de recusar**
+- Achado batendo na porta de VERDADE, na produção. Ela cria e reconhece — mas quando recusava
+  ("essa ficha já é de outra conta"), o caso **não chegava** em Config › Cadastros barrados: o
+  erro era lançado antes de registrar. As duas portas tinham voltado a divergir, dentro do
+  arquivo escrito para curar exatamente isso.
+- **Nenhuma prova automática pegaria:** é ordem de execução dentro de um endpoint.
+
+**A prova de duplicata passou a aceitar `responsavel` e `nome_pai`**
+- Os três campos guardam o mesmo dado. O `responsavel` às vezes traz pai E mãe na mesma string
+  ("Caio / Jucimara" — 8 fichas), então é partido no "/" e cada pedaço vale sozinho.
+- **Ganho medido hoje: ZERO pessoa.** Eu tinha dito "recupera 14" e estava errado — as 14 sem
+  `nome_mae` têm data de nascimento e já davam para provar. Fica porque a regra é a certa, não
+  porque conserta algo agora.
+
+**Os 138 logins e as duas entregas** (a folha de acesso e o guia das famílias) — ver os
+arquivos em `entregas/`. As versões com o nome ERRADO da paróquia ("São João Batista", que eu
+inventei) estão em `entregas/OBSOLETOS-nao-usar`. **A paróquia é JESUS CRISTO BOM PASTOR,
+Limeira/SP** — está no app, na sigla do projeto e no domínio.
 
 ## Fechados em 30/08/2026
 
