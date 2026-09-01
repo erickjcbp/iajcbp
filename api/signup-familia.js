@@ -45,7 +45,11 @@ export default async function handler(req, res) {
     nome_mae: nomeMae,
     nome_pai: nomePai,
     contato_principal: contatoPrincipal,
-    celular_responsavel: String(p.celular || '').trim() || null,
+    // GRAVA NO CAMPO QUE O APP MANTÉM. Esta porta escrevia em `celular_responsavel` e a
+    // outra em `celular_recado`, então o mesmo dado morava em dois lugares conforme a
+    // porta — e cada tela juntava os dois numa ordem diferente. O `celular_responsavel`
+    // continua sendo lido como reserva, para as fichas gravadas antes de 31/08/2026.
+    celular_recado: String(p.celular || '').trim() || null,
     responsavel_whatsapp: !!p.whatsapp,
     responsavel: responsavelNome,
     // Só a MARCA de ser ministro. O nome já está em nome_mae/nome_pai logo acima —

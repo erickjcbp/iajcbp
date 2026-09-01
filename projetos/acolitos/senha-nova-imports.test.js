@@ -16,4 +16,9 @@ test('toda tela com os *-core carrega também a senha-nova-core.js', () => {
   assert.ok(telas.length >= 20, 'esperava 20+ telas, achei ' + telas.length + ' — sumiu arquivo?');
   const faltando = telas.filter(f => !fs.readFileSync(path.join(dir, f), 'utf8').includes('senha-nova-core.js'));
   assert.deepStrictEqual(faltando, [], 'estas telas não carregam a regra da senha: ' + faltando.join(', '));
+
+  // O mesmo vale para a regra dos TELEFONES: se uma tela esquecer o <script>, ela cai na
+  // reserva de dentro da função e volta a mostrar um telefone diferente das outras.
+  const semTel = telas.filter(f => !fs.readFileSync(path.join(dir, f), 'utf8').includes('telefones-core.js'));
+  assert.deepStrictEqual(semTel, [], 'estas telas não carregam a regra dos telefones: ' + semTel.join(', '));
 });

@@ -1988,9 +1988,12 @@ function waMembro(m) {
   if (!m) return null;
   const idade = (typeof idadeAnos === 'function') ? idadeAnos(m.data_nascimento) : null;
   const proprio = m.telefone;
-  // celular_recado entra aqui porque é onde o formulário de novos grava o número do
-  // responsável — sem ele, quem só tivesse esse campo ficaria sem botão de WhatsApp.
-  const resp = m.celular_responsavel || m.celular_recado || m.celular_mae;
+  // A ordem de onde tirar o número mora num lugar só (telefones-core.js). Aqui ela era
+  // `celular_responsavel || celular_recado`, e no CRM era o contrário — as 4 pessoas com
+  // os dois campos preenchidos e diferentes apareciam com um telefone em cada tela.
+  const resp = (typeof telefoneDeRecado === 'function')
+    ? telefoneDeRecado(m)
+    : (m.celular_recado || m.celular_responsavel || m.celular_mae);
   const ordem = (idade !== null && idade >= 13)
     ? [proprio, resp, m.celular_mae]            // 13+ : número do membro como principal
     : [resp, m.celular_mae, proprio];           // menor: celular da mãe/responsável como principal

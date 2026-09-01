@@ -163,6 +163,7 @@
 <script src="portao-notificacoes-core.js"></script>
 <script src="boas-vindas-core.js"></script>
 <script src="senha-nova-core.js"></script>
+<script src="telefones-core.js"></script>
 <script src="shared.js"></script>
 <script>
 // Etapas padrão (fallback). O Config (cfg('crm_etapas') = lista ordenada) substitui tudo no init.
@@ -427,7 +428,7 @@ async function abrirCartao(entry) {
     bloco('Contato', [
       ['Telefone do servo', OU(m.telefone)],
       ['Telefone da mãe', OU(m.celular_mae)],
-      ['Telefone de recado', OU(m.celular_recado || m.celular_responsavel)],
+      ['Telefone de recado', OU(typeof telefoneDeRecado === 'function' ? telefoneDeRecado(m) : (m.celular_recado || m.celular_responsavel))],
       ['No grupo do WhatsApp', SIMNAO(m.no_grupo_whatsapp), 'sempre'],
       ['Endereço', OU(m.endereco)],
     ]),
@@ -441,8 +442,8 @@ async function abrirCartao(entry) {
   // A conta do que falta tem de olhar EXATAMENTE os mesmos campos que a tela mostra.
   // Na primeira versão ela esquecia celular_responsavel — e acusava "nenhum telefone"
   // justamente nas 6 pessoas do funil cujo único número mora lá.
-  const telefones = [m.telefone, m.celular_recado, m.celular_responsavel, m.celular_mae]
-    .filter(t => t && String(t).trim());
+  const telefones = (typeof telefonesDe === 'function') ? telefonesDe(m)
+    : [m.telefone, m.celular_recado, m.celular_responsavel, m.celular_mae].filter(t => t && String(t).trim());
   const falta = [];
   if (!m.data_nascimento) falta.push('data de nascimento');
   if (!telefones.length) falta.push('nenhum telefone');
@@ -463,7 +464,7 @@ async function abrirCartao(entry) {
   const zaps = [
     ['Telefone do servo', m.telefone],
     ['Telefone da mãe', m.celular_mae],
-    ['Telefone de recado', m.celular_recado || m.celular_responsavel],
+    ['Telefone de recado', typeof telefoneDeRecado === 'function' ? telefoneDeRecado(m) : (m.celular_recado || m.celular_responsavel)],
   ].filter(([, tel]) => waLink(tel));
   const vistos = {};
   if (zaps.length) {

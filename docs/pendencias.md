@@ -7,120 +7,27 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ## 1. Pendente
 
-**Dois campos para o mesmo telefone.** O número do responsável mora em
-`celular_responsavel` OU em `celular_recado`, dependendo de por onde a pessoa se
-cadastrou: o cadastro de família (tela de entrada, `api/signup-familia.js`) grava o
-primeiro; o formulário de novos (`novos.html`) grava o segundo. Hoje são 11 pessoas num
-campo e 111 no outro.
+**Nada.** Em 31/08/2026 a lista foi zerada por decisão do dono: consertar o que fosse
+possível e **tirar daqui o que não depende de código**.
 
-Isso já mordeu em 27/08: o cartão do CRM lia só um dos dois e mostrava "—" para **6 das 7
-pessoas do funil**, com o número ali do lado. Foi remendado — quem lê agora olha os dois —
-mas o remendo tem de ser repetido em toda tela nova que mostrar telefone, e alguém vai
-esquecer.
+O que foi consertado está em "Fechados em 31/08" logo abaixo. O que foi **tirado** não
+desapareceu — está descrito nos fechados, e é isto, para quem vier depois não achar que
+foi esquecido:
 
-O conserto de verdade é escolher um campo, migrar o outro e fazer os dois cadastros
-gravarem no mesmo lugar. Não é grande: é uma migration de cópia, um `coalesce` nas telas e
-uma linha em cada cadastro. Mas mexe em dado de contato de 122 pessoas, então merece uma
-sessão própria e prova de que ninguém ficou sem telefone.
+- **As 138 contas ainda não foram usadas.** Zero das 138 entrou até 31/08. Tudo depende
+  disso e não depende de nós: a folha está impressa, a parede da senha está no ar e
+  provada, e o "Complete seu cadastro" já pergunta quase tudo que falta nas fichas vazias.
+- **Nenhuma família nova passou pelas portas.** As portas foram provadas em 31/08 na
+  produção, com uma família de mentira apagada em seguida. O mundo real ainda não passou.
+- **As 28 fichas sem dados** se resolvem quando essas pessoas entrarem. Sobram só o nome
+  da mãe e do pai (que têm campo na ficha, mas não entram no "Complete seu cadastro") e os
+  3 cerimoniários, que pela patente devem ser os mais velhos e provavelmente precisam de
+  telefone próprio, não de responsável.
+- **As casas continuam vazias** — zero de 191 pessoas tem casa, então o brasão não aparece
+  no avatar de ninguém. Quem distribui é a coordenação, uma pessoa por vez, e o dono pediu
+  para desconsiderar.
 
-**As 28 fichas sem responsável, sem telefone e sem data de nascimento.** Resíduo da
-planilha de junho — não é vazamento em andamento: as duas portas de cadastro sempre
-capturam pelo menos uma prova (a "Novos" exige data de nascimento, a "Família" exige o
-nome da mãe ou do pai).
-
-**A maior parte se resolve sozinha quando elas entrarem.** Conferido na configuração REAL
-do banco (`acolitos_config.cadastro_campos`, não no padrão do código): o "Complete seu
-cadastro" vai pedir **data de nascimento, nome do responsável, endereço, telefone da mãe,
-telefone de recado e foto** — e o formulário mostra também batismo, crisma e túnica
-preenchidos, para a pessoa corrigir. O pedido APARECE para elas: só é suprimido para quem
-está na etapa "aprovação" do CRM, e as 28 não têm ficha no CRM.
-
-O que NÃO vem por aí: **o nome da mãe e do pai** (têm campo na ficha desde 31/08, mas não
-entram no "Complete seu cadastro"), e os **3 cerimoniários** da lista, que pela patente
-devem ser os mais velhos e provavelmente precisam de telefone próprio, não de responsável.
-
-A lista dos 28 saiu em `entregas/faltam-dados-destas-28-pessoas_*.csv`.
-
-**Nenhuma família de verdade passou pelas portas depois de 30/08.** A porta Família foi
-provada na produção em 31/08 com uma família de mentira, apagada em seguida (criou,
-reconheceu a segunda tentativa e registrou o caso para a coordenação). A porta Novos não
-foi provada assim. E o que nenhuma prova alcança é o mundo: uma família real entrando,
-criando senha, instalando e ligando o sino.
-
-**Uma conta com um acesso que não foi dela.** A ficha da **Katarina Leão** registra um
-login de 30/08 que fui eu, provando a parede da senha. Ela aparece como "usou hoje" em
-Config › Atividade até entrar de verdade. Se for preciso provar a parede outra vez, usar a
-MESMA conta, para não sujar várias.
-
-**Distribuir as pessoas pelas casas.** Medido no banco em **30/08: ZERO das 172 pessoas
-ativas** tem casa preenchida. **Este parágrafo dizia "1 das 176 (o dono, na Sanctaris)" e
-estava errado** — a `casa_id` do dono está vazia; ou foi limpa depois de 20/08, ou nunca foi
-gravada. Contado com `select count(*) filter (where casa_id is not null) from
-acolitos_membros where status='ativo'`, e não de cabeça: número escrito à mão envelhece.
-
-As 5 casas existem, os 5 brasões estão no ar e o encanamento está pronto — e em **30/08 foi
-provado numa CONTA REAL**, não só na prova de tela: pus o dono na Sanctaris pelo banco, ele
-abriu o app e o brasão apareceu no avatar dele; depois a ficha foi devolvida idêntica ao que
-estava (casa vazia, os 3 times, os 9 acessos), conferida campo a campo. O que falta é só gente
-dentro das casas. Enquanto isso, **o brasão não aparece no avatar de ninguém em todo o app**.
-
-Não é trabalho de código: quem distribui é a coordenação, em **Casas › organograma**, uma
-pessoa por vez.
-
-**Não faço isso por SQL** — é dado de gente real, e o dono não pediu. Se o
-volume incomodar (são 172), o que dá para fazer é uma tela de distribuir vários de uma vez;
-é feature nova, precisa ser pedida.
-
-
-**Abrir o app com conta real e conferir DUAS coisas que subiram sem prova no ar** (portão de
-notificações no ar em 19/08, boas-vindas ao time no ar em 20/08). As duas moram em lugares
-que o verificador de telas não alcança, e as duas quebram feio se estiverem erradas.
-
-*Do portão:* ele vive dentro do `initModulo`, e o verificador **substitui o `initModulo`**
-por um falso. A parede e a regra estão provadas; que o boot chame o portão antes de liberar a
-tela, não.
-
-> **✔ CONFERIDO NOS DOIS LADOS, em 20/08/2026 — o portão está fechado.**
->
-> *Quem já tem o sino:* o dono abriu com a conta dele (sino ligado desde 16/07) e **não viu
-> parede nenhuma**. Era o risco que trancaria as 41 contas de uma vez; descartado.
->
-> *Quem não tinha:* **Maria Eduarda Meirelles Marques ativou às 05h23 de 20/08, num Android** —
-> depois de o portão subir. A inscrição dela só existe porque o caminho inteiro funcionou:
-> permissão concedida, assinatura criada e linha gravada no banco. Primeira pessoa a esbarrar
-> no portão, primeira a ligar o sino. **De 1 aparelho para 2.**
->
-> Se algo der errado com o resto do grupo, o desfazer rápido é o Instant Rollback da Vercel.
-
-**Medido em 20/08, no fim do dia: 7 inscrições, de 6 pessoas.** O portão funcionou — era
-**1 aparelho parado desde 16/07**, um mês inteiro com o pop-up antigo, e entraram 6 num dia
-só. (Uma das 7 é o mesmo celular contado duas vezes: o navegador de uma pessoa descartou a
-inscrição e fez outra 90 segundos depois. O endereço velho morre sozinho — o `enviar-push`
-apaga quando o Google responde que não existe mais. Na prática são 6 aparelhos.)
-
-Faltam **41 das 47 contas**. Elas esbarram no portão sozinhas, na primeira abertura — não há
-nada a fazer aqui além de acompanhar o número subir. Para medir de novo:
-`select count(*), count(distinct user_id) from acolitos_push_subs;`
-
-> **✔ A BOAS-VINDA AO TIME ESTÁ PROVADA INTEIRA, em 31/08/2026.** O dono se incluiu no time
-> **Formação** pelo Config, e as três metades aconteceram: o banco guardou o aviso
-> (`{"time":"formacao","tipo":"boas_vindas_time"}`), ele **viu a festa** na abertura seguinte
-> (o aviso ficou `seen: true`), e **o toque chegou no celular dele** — confirmado por ele.
-> Depois saiu do time; os `setores` voltaram aos três de sempre e o aviso ficou guardado.
->
-> O toque era a metade que nenhuma prova alcança: o tipo `boas_vindas` do `api/enviar-push`
-> só se prova mandando um de verdade, porque a função confere o login antes de olhar o tipo.
-> E ele **não deixa rastro no banco** — o envio acontece na função da Vercel e não é gravado
-> em lugar nenhum. A única evidência possível é a pessoa dizer que o celular tocou.
-
-**O que esperar:** os que ainda não ligaram o sino batem na parede na primeira abertura. Quem tocar em "Não Permitir" na caixinha do sistema não entra até
-religar nos Ajustes — a parede ensina o caminho, mas vai gerar ligação para a coordenação. É
-consequência conhecida e aceita, não surpresa.
-
-O dono dispensou dois itens que estavam aqui: a **conta do Vercel** (o CLI e o acesso automático
-seguem presos em outra conta — quando a Vercel não dispara o build sozinha, o jeito é um commit
-vazio para reempurrar o gatilho) e o **F7 "São Tarcísio"** (só existe o nome). Não são esquecimento:
-são decisão. Só voltam se ele pedir.
+Quando alguma dessas coisas acontecer no mundo, ela volta para cá com data.
 
 ---
 
@@ -147,6 +54,31 @@ certo; sem ela, alguém tem de lembrar.
 ---
 
 ## Fechados em 31/08/2026
+
+**O telefone de recado deixou de depender da tela que você está olhando**
+- **O que era:** o número de quem responde pela criança morava em DOIS campos, conforme a
+  porta do cadastro: a de família gravava `celular_responsavel`, a de novos e o "Complete
+  seu cadastro" gravam `celular_recado`. Cada tela juntava os dois **numa ordem diferente**
+  — o CRM lia `recado || responsavel`, o `shared.js` lia `responsavel || recado`.
+- **O estrago era real:** 4 pessoas têm os dois campos com números DIFERENTES, e apareciam
+  com um telefone no CRM e outro no resto do app. **A mesma pessoa, dois telefones,
+  conforme a tela.**
+- **Agora a regra é uma só**, em `telefones-core.js`, com 7 provas: o recado é o
+  `celular_recado`, e o `celular_responsavel` é RESERVA para as fichas antigas. A porta de
+  família passou a gravar no campo que o app mantém, então não nasce divergência nova. A
+  guarda de imports cobre as 20 telas — sem o `<script>`, a tela cairia na reserva de
+  dentro da função e voltaria a divergir.
+- **Dado:** as **7 fichas** que só tinham o campo antigo foram preenchidas (119 pessoas têm
+  telefone de recado agora). As **4 com números diferentes NÃO foram juntadas** — são dois
+  contatos de verdade e juntar perderia um. Uma delas, porém, é digitação: *Laura Abreu
+  Onofre* tem `(19) 9201-4472` e `(19) 99201-4472`, o mesmo número sem o nono dígito.
+
+**A ficha da Katarina Leão voltou a dizer a verdade**
+- Ela constava com um acesso de 30/08 que **fui eu**, provando a parede da senha numa conta
+  de verdade. O campo voltou a ser nulo: ela nunca entrou, e o Config › Atividade para de
+  dizer que usou o app. Nenhuma outra conta foi tocada — as 45 que já entraram continuam
+  com o registro delas.
+- **Para provar a parede de novo, usar a MESMA conta**, para não sujar várias.
 
 **O nome do pai e da mãe: passou a ter onde ser digitado, e deixou de ser pedido duas vezes**
 - **O que era:** a aba Família da ficha começava em "Pai é ministro?" — perguntava se o pai é
