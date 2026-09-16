@@ -16,11 +16,6 @@ quando a data chegar — foi combinado assim com o dono.
 
 Os arquivos de hoje
 -------------------
-  2026-08-17-saidas-do-kit-processional.txt
-      Quem saiu do Kit processional em 17/08.
-      ATENÇÃO: este arquivo tem prazo escrito dentro dele —
-      apagar em 16/09/2026 se ninguém tiver precisado.
-
   2026-08-18-aplicar-tarefas-no-banco.md
       O que faltava aplicar no banco em 18/08. Hoje: nada.
       Está aqui como registro de que foi aplicado e conferido.
@@ -30,5 +25,26 @@ Os arquivos de hoje
       Hoje está vazio de tarefas: "NADA PENDENTE".
 
 Foram movidos para cá em 16/09/2026 — antes ficavam soltos em docs/.
+
+
+UM ARQUIVO FOI APAGADO DAQUI EM 16/09/2026
+------------------------------------------
+  2026-08-17-saidas-do-kit-processional.txt
+
+Era a lista das 51 pessoas que passaram de "apto" para "não treinado"
+em cruz e vela, em 17/08/2026, quando o Kit processional da Matriz
+ganhou regra própria (14 anos comprovados, ou liberação nome a nome).
+O próprio arquivo trazia o prazo: apagar em 16/09 se ninguém tivesse
+precisado. Ninguém precisou, e o dono confirmou.
+
+ELE NÃO SE PERDEU — está no histórico do Git. Para ler sem restaurar:
+
+  git show f15629c:docs/anotacoes/2026-08-17-saidas-do-kit-processional.txt
+
+POR QUE ISSO IMPORTA, se o assunto voltar: aquela lista NÃO se refaz
+com consulta ao banco. Duas pessoas já estavam "não treinadas" ANTES
+de 17/08 e não constavam dela. Quem reverter "todo mundo que está não
+treinado" devolve "apto" a essas duas por engano. Puxe o arquivo do
+Git em vez de perguntar ao banco.
 
 ==================================================================
