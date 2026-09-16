@@ -1037,6 +1037,94 @@ async function provaTelefonePedidoQuandoAIdadeEDesconhecida(provas) {
     'quem já tem telefone não é perguntado de novo');
 }
 
+async function provaAvisoDaCoordenacaoFicaNoApp(provas) {
+  console.log('\n\x1b[1mAviso da coordenação: fica DENTRO do app, e o push é só o extra\x1b[0m');
+
+  // O defeito: "Enviar aviso" mandava SÓ push. Push é tarja de celular — some quando a
+  // pessoa dispensa, e só chega a quem ligou notificação. Nada era gravado, então o
+  // sininho ficava vazio e o pop-up nunca abria. O leitor já existia (prioridade 0 da
+  // fila, "avisos da coordenação"); só faltava alguém escrever.
+  //
+  // A ORDEM é o conserto, e é ela que esta prova defende: grava no app PRIMEIRO, manda o
+  // push DEPOIS. Se inverterem, um push que falha volta a levar o aviso embora junto.
+  //
+  // Nada sai daqui para a rede: sb.rpc e apiPost são trocados por gravadores de chamada.
+  // (sb é const — troca-se o MÉTODO, nunca a variável.)
+  const r = await provas.abrir('caixa.html', {
+    papel: PAPEIS.admin,
+    avaliar: `
+      const chamadas = [];
+      sb.rpc = async function (nome, args) {
+        chamadas.push({ quem: 'app', nome: nome, texto: args && args.p_texto, membros: args && args.p_membros });
+        return { data: { ok: true, notificados: 177 }, error: null };
+      };
+      // O push FALHA de propósito: é o cenário que importa. O aviso já está no app.
+      window.apiPost = async function (url, body) {
+        chamadas.push({ quem: 'push', url: url });
+        return { ok: false, data: { error: 'push fora do ar' } };
+      };
+      let ultimoToast = null;
+      window.toast = function (msg, tipo) { ultimoToast = { msg: msg, tipo: tipo }; };
+
+      avisarTodos();
+      const modal = document.querySelector('.modal-overlay.open .modal');
+      modal.querySelector('#av-msg').value = 'Reunião no sábado às 9h';
+      modal.querySelector('#av-enviar').click();
+      for (let i = 0; i < 60 && chamadas.length < 2; i++) await new Promise(function (f) { setTimeout(f, 25); });
+      // Guardar AGORA: o 2º cenário escreve por cima de ultimoToast, e a prova passaria a
+      // medir o toast errado — verde ou vermelho pelo motivo errado, que é pior que vermelho.
+      const toast1 = ultimoToast;
+
+      // 2º cenário: o app RECUSA a gravação. O push não pode sair.
+      const chamadas2 = [];
+      sb.rpc = async function () { chamadas2.push('app'); return { data: { erro: 'sem_permissao' }, error: null }; };
+      window.apiPost = async function () { chamadas2.push('push'); return { ok: true, data: { enviados: 9 } }; };
+      avisarTodos();
+      const m2 = document.querySelector('.modal-overlay.open .modal');
+      m2.querySelector('#av-msg').value = 'não pode passar';
+      m2.querySelector('#av-enviar').click();
+      for (let i = 0; i < 40 && !chamadas2.length; i++) await new Promise(function (f) { setTimeout(f, 25); });
+      await new Promise(function (f) { setTimeout(f, 200); });
+
+      return {
+        ordem: chamadas.map(function (c) { return c.quem; }),
+        texto: (chamadas[0] || {}).texto,
+        membros: (chamadas[0] || {}).membros,
+        nome: (chamadas[0] || {}).nome,
+        toast: toast1,
+        recusado: chamadas2,
+        aviso: (modal.innerText || ''),
+      };
+    `,
+  });
+
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'o envio de aviso roda sem estourar', r.erroAvaliar);
+  exigir(a.nome === 'acolitos_avisar_todos',
+    'o aviso é gravado no app (a função do banco é chamada)',
+    'chamou: ' + JSON.stringify(a.nome));
+  exigir(JSON.stringify(a.ordem) === JSON.stringify(['app', 'push']),
+    'grava no app ANTES de mandar o push — nesta ordem',
+    'ordem observada: ' + JSON.stringify(a.ordem));
+  exigir(a.texto === 'Reunião no sábado às 9h',
+    'o texto digitado chega inteiro ao banco',
+    'chegou: ' + JSON.stringify(a.texto));
+  exigir(a.membros === null || a.membros === undefined,
+    '"Todos os membros" manda alvo vazio, que no banco significa todos');
+  exigir(!!(a.toast && a.toast.tipo === 'success'),
+    'push fora do ar NÃO vira erro: o aviso já está no app',
+    'toast: ' + JSON.stringify(a.toast));
+  exigir(/no app/i.test((a.toast && a.toast.msg) || ''),
+    'e a mensagem diz à coordenação que foi entregue no app',
+    'toast: ' + JSON.stringify(a.toast && a.toast.msg));
+  exigir(JSON.stringify(a.recusado) === JSON.stringify(['app']),
+    'se o app RECUSA a gravação, o push não sai',
+    'chamadas: ' + JSON.stringify(a.recusado));
+  exigir(/dentro do app/i.test(a.aviso || ''),
+    'a tela não promete mais que só quem tem notificação recebe',
+    'texto do modal: ' + JSON.stringify((a.aviso || '').slice(0, 160)));
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -1115,6 +1203,7 @@ try {
     await provaNomeDaMaeTemOndeSerDigitado(provas);
     await provaTelefonePedidoQuandoAIdadeEDesconhecida(provas);
     await provaRecadoDaFotoAparece(provas);
+    await provaAvisoDaCoordenacaoFicaNoApp(provas);
   }
 } finally {
   await provas.encerrar();

@@ -1490,7 +1490,7 @@ async function avisarTodos() {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '460px';
   md.innerHTML = '<div class="modal-title">📣 Enviar aviso</div>'
-    + '<p style="font-size:12px;color:var(--text-muted);margin:-4px 0 10px;">Escolha quem recebe. Só quem ativou notificações no celular recebe.</p>'
+    + '<p style="font-size:12px;color:var(--text-muted);margin:-4px 0 10px;">Escolha quem recebe. Todos veem o aviso dentro do app, no sininho e ao abrir. Quem ativou notificação recebe também no celular.</p>'
     + '<label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;margin-bottom:8px;cursor:pointer;"><input type="checkbox" id="av-todos" checked> Todos os membros</label>'
     + '<div id="av-sel" style="display:none;">'
     +   '<input id="av-busca" class="form-input" placeholder="Buscar pessoa..." style="width:100%;margin-bottom:6px;">'
@@ -1534,10 +1534,33 @@ async function avisarTodos() {
       body.membros = ids;
     }
     const btn = md.querySelector('#av-enviar'); btn.disabled = true; btn.textContent = 'Enviando...';
+
+    // A ORDEM AQUI É O CONSERTO, não é estilo. Antes isto era só o push, e push é tarja de
+    // celular: some quando a pessoa dispensa e só chega a quem ligou notificação. O aviso
+    // não ficava em lugar nenhum — sininho vazio, pop-up nunca abria.
+    //
+    // 1) PRIMEIRO grava DENTRO do app (migration 067). É o canal que não depende do celular,
+    //    e é o que showAvisoUnico e openNotificacoes leem. Uma instrução só no banco, então
+    //    não trava nem avisando os 191. Se esta falhar, para tudo e avisa — sem ela o aviso
+    //    não existiria em lugar nenhum.
+    const rpc = await sb.rpc('acolitos_avisar_todos', { p_texto: msg, p_membros: body.membros || null });
+    const gravou = rpc && rpc.data;
+    if ((rpc && rpc.error) || !gravou || gravou.erro) {
+      btn.disabled = false; btn.textContent = 'Enviar';
+      toast(gravou && gravou.erro === 'sem_permissao' ? 'Você não tem permissão para enviar avisos.'
+        : 'Falha ao gravar o aviso no app. Nada foi enviado.', 'error');
+      return;
+    }
+
+    // 2) DEPOIS o push, que é o extra. Se ele falhar, o aviso já está no app: a pessoa vê
+    //    no próximo acesso. Por isso a falha do push não vira erro da operação inteira.
     const r = await apiPost('/api/enviar-push', body);
     btn.disabled = false; btn.textContent = 'Enviar';
-    if (r && r.ok) { toast('Aviso enviado (' + (r.data && r.data.enviados != null ? r.data.enviados : 0) + ' aparelho(s)).', 'success'); ov.remove(); }
-    else toast((r && r.data && r.data.error) || 'Falha ao enviar.', 'error');
+    const nApp = gravou.notificados || 0;
+    const nPush = (r && r.ok && r.data && r.data.enviados != null) ? r.data.enviados : 0;
+    toast('Aviso enviado a ' + nApp + ' pessoa(s) no app'
+      + (nPush ? ' — e ' + nPush + ' aparelho(s) receberam no celular.' : '.'), 'success');
+    ov.remove();
   };
 }
 

@@ -12,6 +12,33 @@ chance de já ter acontecido antes é grande, e a resposta costuma estar aqui.
 
 ---
 
+## Fechados em 16/09/2026
+
+**O aviso da coordenação passa a ficar no app — antes só ia para o celular**
+- **O que era:** o dono mandava aviso pela Caixa e ele não aparecia em Notificações. O botão
+  "Enviar aviso" (`avisarTodos()`, usado pela Caixa e pelas Ausências) chamava SÓ
+  `/api/enviar-push`. Push é tarja de celular: some quando a pessoa dispensa, e só chega a quem
+  ligou notificação. Nada era gravado.
+- **A causa:** o app tem dois canais que não se falam. O sininho e o pop-up leem
+  `acolitos_membros.avisos`; o push não escreve ali. O leitor já existia e já esperava por esses
+  avisos (a fila de notificações reserva a prioridade 0 para "avisos da coordenação") — só
+  ninguém escrevia. Era defeito, não funcionalidade faltando.
+- **O conserto:** função `acolitos_avisar_todos` (migration 067, aplicada em 16/09). UMA
+  instrução para os 177 ativos com login — o dono pediu "automático e sem risco de travar", e um
+  laço de gravações na API arriscava o tempo limite da Vercel. A tela grava no app PRIMEIRO e
+  manda o push DEPOIS: push que falha não leva o aviso junto; gravação recusada não deixa o
+  push sair. O texto do modal dizia "Só quem ativou notificações no celular recebe" e foi
+  corrigido.
+- **Provado:** `docs/provas/provar-067-aviso-fica-no-app.sql` (177 de 177, nasce não visto,
+  forma que a tela desenha, não-coordenação recusada, texto vazio recusado, seleção avisa só
+  quem foi escolhido, nada fica gravado) e `provaAvisoDaCoordenacaoFicaNoApp` no
+  `telas.prova.mjs` (ordem app→push, push fora do ar não vira erro, recusa impede o push).
+  238 regras + 155 provas de tela, todas verdes.
+- **Não repetir:** a forma do aviso tem o campo `msg` — é o que `avisoEl()` lê. Com outro nome a
+  notificação aparece EM BRANCO e nada quebra.
+
+---
+
 ## Fechados em 01/09/2026
 
 **A foto voltou a subir — estava barrada para TODO MUNDO havia 84 dias**
