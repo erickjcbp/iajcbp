@@ -34,7 +34,7 @@
 -- O grant NÃO é o portão: quem executa e não é superadmin recebe
 -- `{"erro":"sem_permissao"}` e nenhum dado. O anônimo não executa nem isso.
 --
--- COMO CONFERIR: docs/provar-059-atividade.sql — roda como anônimo, como pessoa
+-- COMO CONFERIR: docs/provas/provar-059-atividade.sql — roda como anônimo, como pessoa
 -- comum e como superadmin, e não escreve nada.
 
 begin;

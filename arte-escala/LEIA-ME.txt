@@ -1,0 +1,63 @@
+==================================================================
+ PASTA: arte-escala/   —  O ROBÔ QUE DESENHA A ARTE DA ESCALA
+==================================================================
+
+O que esta pasta faz?
+---------------------
+Gera sozinha a IMAGEM da escala do fim de semana — aquela arte que
+aparece na tela de Escala e que dá para baixar e mandar no grupo.
+
+O caminho completo, em ordem:
+  1. descobre qual é o fim de semana alvo        (fim-de-semana.mjs)
+  2. lê as escalas no banco                      (dados.mjs)
+  3. resolve a cor e a festa litúrgica do dia    (liturgico.mjs)
+  4. desenha o HTML e vira PNG                   (render.mjs + template.html)
+  5. publica a imagem e anota na tabela          (gerar.mjs)
+
+
+QUEM DÁ A PARTIDA (isto importa)
+--------------------------------
+Duas coisas chamam este robô, e as duas passam pelo GitHub Actions:
+
+  - O CRON DA VERCEL, domingo às 22h (horário de Brasília).
+    Está no vercel.json, apontando para /api/cron-arte.
+
+  - O BOTÃO "Gerar/Atualizar" da tela de Escala,
+    que passa por api/regenerar-arte.js.
+
+ATENÇÃO — NÃO RECOLOCAR O "schedule:" NO ARQUIVO
+.github/workflows/arte-escala.yml.
+Ele foi tirado de propósito: o agendamento do GitHub não tem hora
+certa. Nas duas únicas vezes que rodou agendado, atrasou 3h e 3h38,
+e a arte de domingo à noite saía perto das 2h da manhã de segunda.
+Se alguém recolocar sem tirar o cron da Vercel, a arte é gerada
+DUAS VEZES.
+
+
+Os arquivos
+-----------
+  gerar.mjs         o maestro: chama todos os outros na ordem
+  fim-de-semana.mjs qual sábado/domingo é o alvo
+  dados.mjs         busca as escalas no banco
+  liturgico.mjs     a cor e a festa do dia (cálculo + ajuste manual)
+  rotulos.js        traduz nomes internos para nomes de gente
+                    (acolito_guardiao -> Acólito Guardião)
+  render.mjs        transforma o HTML em imagem PNG
+  template.html     o desenho da arte
+  assets/           fontes e imagens que a arte usa
+  _slice.mjs        utilitário interno
+
+  *.test.mjs        os testes (20 no total). Rodar com:
+                        cd arte-escala && npx vitest run
+
+
+Por que tem package.json próprio?
+---------------------------------
+Porque é um projetinho Node separado, com as próprias bibliotecas
+(o Puppeteer, que é pesado). Ele não sobe junto com o site: roda no
+GitHub Actions, numa máquina de lá.
+
+LEIA-ME escrito em 16/09/2026 — esta era a única pasta do projeto
+que não tinha um.
+
+==================================================================

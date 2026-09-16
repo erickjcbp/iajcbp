@@ -1,0 +1,38 @@
+==================================================================
+ PASTA: docs/provas/   —  OS TESTES DO BANCO DE DADOS
+==================================================================
+
+O que é isto?
+-------------
+Cada arquivo aqui confere se uma mudança no banco fez mesmo o que
+prometeu. Não é leitura: o arquivo RODA, cria situações de mentira
+e mede o que o banco responde.
+
+O número casa com a migration: provar-065 prova a migration 065.
+
+Como rodar
+----------
+  psql "$SUPABASE_DB_URL" -f docs/provas/provar-065-foto-sobe.sql
+
+Cada um imprime linha por linha o que esperava e o que aconteceu.
+Se algo ficar VERMELHO, a regra do banco mudou e alguém precisa
+olhar antes de seguir.
+
+Por que isso importa
+--------------------
+O provar-065 existe porque a permissão de ver as fotos foi apertada
+demais em 09/06/2026 e NINGUÉM conseguiu subir foto por 84 dias, sem
+que ninguém percebesse. Ele fica vermelho se alguém afrouxar OU
+apertar demais de novo.
+
+Os arquivos de hoje
+-------------------
+  provar-057-tarefas-por-time.sql  -> tarefa é do time, não da pessoa
+  provar-058-casa-nas-rpcs.sql     -> a casa aparece nas consultas
+  provar-059-atividade.sql         -> quem pode ler a atividade
+  provar-065-foto-sobe.sql         -> a foto de perfil sobe mesmo
+  provar-066-recado-da-foto.sql    -> o convite da foto vai a quem devia
+
+Foram movidos para cá em 16/09/2026 — antes ficavam soltos em docs/.
+
+==================================================================

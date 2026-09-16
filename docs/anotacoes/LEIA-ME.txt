@@ -1,0 +1,34 @@
+==================================================================
+ PASTA: docs/anotacoes/   —  BILHETES DE UMA ÉPOCA
+==================================================================
+
+O que é isto?
+-------------
+Anotações pontuais, com a data no nome. NÃO são a lista de
+pendências (essa é docs/pendencias.md) nem o histórico (esse é
+docs/pendencias-fechados.md).
+
+São recados que fizeram sentido num dia específico e foram
+guardados para o caso de alguém perguntar depois.
+
+Se um bilhete disser "apagar em tal data", é para apagar mesmo
+quando a data chegar — foi combinado assim com o dono.
+
+Os arquivos de hoje
+-------------------
+  2026-08-17-saidas-do-kit-processional.txt
+      Quem saiu do Kit processional em 17/08.
+      ATENÇÃO: este arquivo tem prazo escrito dentro dele —
+      apagar em 16/09/2026 se ninguém tiver precisado.
+
+  2026-08-18-aplicar-tarefas-no-banco.md
+      O que faltava aplicar no banco em 18/08. Hoje: nada.
+      Está aqui como registro de que foi aplicado e conferido.
+
+  APLICAR-NO-BANCO.sql
+      A mesma coisa em forma de arquivo para colar no banco.
+      Hoje está vazio de tarefas: "NADA PENDENTE".
+
+Foram movidos para cá em 16/09/2026 — antes ficavam soltos em docs/.
+
+==================================================================

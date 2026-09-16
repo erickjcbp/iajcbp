@@ -1,5 +1,5 @@
 -- Prova da 057 SEM gravar nada: cria tarefas de mentira, testa fingindo ser cada pessoa, e desfaz.
--- Rodar:  psql "$SUPABASE_DB_URL" -f docs/provar-057-tarefas-por-time.sql
+-- Rodar:  psql "$SUPABASE_DB_URL" -f docs/provas/provar-057-tarefas-por-time.sql
 -- Regra do projeto: trava se prova RODANDO, não lendo o SQL.
 \set ON_ERROR_STOP on
 \timing off

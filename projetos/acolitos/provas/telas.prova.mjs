@@ -289,7 +289,7 @@ async function provaBoasVindasAoTime(provas) {
 async function provaTarefasSoDoMeuTime(provas) {
   console.log('\n\x1b[1mCada time só enxerga as tarefas dele\x1b[0m');
 
-  // Quem TRANCA é o banco (migration 057, provada por docs/provar-057-tarefas-por-time.sql).
+  // Quem TRANCA é o banco (migration 057, provada por docs/provas/provar-057-tarefas-por-time.sql).
   // O que se prova aqui é o espelho na tela: que ela não OFERECE um time que o banco vai
   // recusar. Oferecer e ser recusado na hora de salvar é erro sem explicação na cara de quem
   // só queria criar uma tarefa.

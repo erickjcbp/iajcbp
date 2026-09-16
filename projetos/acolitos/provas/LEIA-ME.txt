@@ -98,7 +98,7 @@ O QUE ELE **NÃO** PROVA (para ninguém confiar demais)
 
 · Não prova TRAVA DE BANCO. As provas de tela rodam com um banco de mentira, que não tem
   RLS nenhuma. Quem enxerga o quê nas Tarefas é decidido pelo banco (migration 057), e isso
-  se prova com `psql -f docs/provar-057-tarefas-por-time.sql` — que cria tarefas de mentira,
+  se prova com `psql -f docs/provas/provar-057-tarefas-por-time.sql` — que cria tarefas de mentira,
   consulta fingindo ser cada pessoa e desfaz tudo com rollback. A prova de tela daqui só
   confere o ESPELHO: que a tela não oferece um time que o banco vai recusar.
 

@@ -39,11 +39,29 @@ O que é cada pasta da raiz?
 
   db/         -> Scripts de SEGURANÇA do banco de dados (SQL).
 
-  docs/       -> Documentação: o histórico de "migrations" (mudanças
-                 no banco) e os planos/projetos de cada funcionalidade.
+  docs/       -> A memória escrita. Comece por docs/pendencias.md:
+                 é A LISTA do que falta. Também guarda o histórico
+                 do banco (migrations), os testes do banco (provas),
+                 os bilhetes antigos (anotacoes) e os planos de cada
+                 funcionalidade (superpowers).
 
   coletor/    -> Espaço dos "robôs" (tarefas automáticas). Hoje está
                  praticamente vazio aqui no seu computador.
+
+  arte-escala/ -> O robô que DESENHA a arte da escala do fim de
+                 semana. É um projetinho Node separado: roda no
+                 GitHub Actions, não junto com o site. Quem dá a
+                 partida é o cron da Vercel no domingo às 22h e o
+                 botão "Gerar/Atualizar" da tela de Escala.
+
+  criar-logins/ -> As ferramentas que geraram as 138 contas e a
+                 folha de senhas impressa para a pastoral.
+
+  entregas/   -> Os arquivos prontos PARA VOCÊ (guia, folha de
+                 logins, planilha da escala). ATENÇÃO: tem nome de
+                 gente real e está no .gitignore de propósito — o
+                 site é publicado a partir da raiz, então um arquivo
+                 destes que subisse viraria endereço público.
 
 
 O que são os arquivos soltos na raiz?
@@ -79,5 +97,11 @@ Conceitos rápidos (pra quem está aprendendo)
              escalas, etc.) + login dos usuários.
   - Front-end: o que roda no navegador (as telas, pastas projetos/).
   - Back-end : o que roda no servidor (a pasta api/).
+
+TODA pasta deste projeto tem o seu próprio LEIA-ME.txt, escrito em
+português e sem jargão. Se entrar numa pasta e não souber o que é,
+abra o LEIA-ME dela antes de qualquer outra coisa.
+
+Arrumado em 16/09/2026.
 
 ==================================================================

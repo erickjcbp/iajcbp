@@ -23,7 +23,7 @@
 -- outra casa. Distribuir a gente pelas casas é ato da coordenação, em Casas, e
 -- não se faz por SQL.
 --
--- COMO CONFERIR: docs/provar-058-casa-nas-rpcs.sql — roda antes e depois, mede o
+-- COMO CONFERIR: docs/provas/provar-058-casa-nas-rpcs.sql — roda antes e depois, mede o
 -- que está valendo e não escreve nada. A coluna `itens` tem de dar o MESMO número
 -- nas duas rodadas; se cair, alguma tela ficou vazia.
 --
