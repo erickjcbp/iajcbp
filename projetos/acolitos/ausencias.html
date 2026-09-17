@@ -221,13 +221,13 @@ function argsFaltas(estado, comLimite) {
   if (comLimite) args.p_limite = 80;
   return args;
 }
-async function recarregarFaltas() {
+async function recarregarFaltas(estadoInicial) {
   const lista = document.getElementById('lista-faltas');
   if (!lista) return false;
   const meu = ++pedidoFaltas;
   lista.textContent = '';
   const ld = document.createElement('span'); ld.className = 'loading'; ld.textContent = 'Carregando...'; lista.appendChild(ld);
-  const estado = filtroFaltas ? filtroFaltas.estado() : FiltroLista.estadoInicial(configFiltroFaltas([]));
+  const estado = filtroFaltas ? filtroFaltas.estado() : (estadoInicial || FiltroLista.estadoInicial(configFiltroFaltas([])));
   const [{ data, error }, { data: total, error: eTotal }] = await Promise.all([
     sb.rpc('acolitos_faltas_filtradas', argsFaltas(estado, true)),
     sb.rpc('acolitos_faltas_contar', argsFaltas(estado, false)),
@@ -246,7 +246,17 @@ async function recarregarFaltas() {
     aviso(FiltroLista.contar(estado) > 0 ? 'Nenhuma falta com esses filtros.' : 'Nenhuma falta registrada ainda.');
     return true;
   }
-  if (!eTotal && typeof total === 'number' && total > data.length) {
+  if (eTotal) {
+    console.error('Faltas: contagem falhou', eTotal);
+    // A lista veio certa; só não sabemos o TOTAL. Com 80 linhas (o limite da página), calar
+    // isso esconderia que pode haver mais — melhor avisar do que fingir que são todas.
+    if (data.length >= 80) {
+      const info = document.createElement('p');
+      info.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0 0 8px;';
+      info.textContent = 'Mostrando as ' + data.length + ' mais recentes. Não foi possível contar o total.';
+      lista.appendChild(info);
+    }
+  } else if (typeof total === 'number' && total > data.length) {
     const info = document.createElement('p');
     info.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0 0 8px;';
     info.textContent = 'Mostrando ' + data.length + ' de ' + total + '. Use os filtros para achar o resto.';
@@ -635,11 +645,16 @@ async function renderAbaFaltas(main) {
   const lista = document.createElement('div'); lista.id = 'lista-faltas';
   main.append(alvoFiltro, lista);
   filtroFaltas = null;
-  const pode = await recarregarFaltas();
+  // A primeira carga já usa o filtro GUARDADO (mesma leitura que montarFiltroLista faz por
+  // dentro) — sem isto, quem tinha uma pessoa escolhida via "Mostrando 80 de 357" sem filtro
+  // nenhum por um instante, antes da lista filtrada substituir.
+  const cfg = configFiltroFaltas(membros);
+  let salvo;
+  try { salvo = FiltroLista.restaurar(localStorage.getItem('filtro-lista:' + cfg.chave), cfg); }
+  catch (e) { salvo = FiltroLista.estadoInicial(cfg); }
+  const pode = await recarregarFaltas(salvo);
   if (!pode) return;   // sem permissão: nada de barra, só o recado
-  filtroFaltas = montarFiltroLista(alvoFiltro, configFiltroFaltas(membros), () => recarregarFaltas());
-  // a primeira carga foi sem filtro; se havia escolha guardada, recarrega com ela
-  if (FiltroLista.contar(filtroFaltas.estado()) > 0) await recarregarFaltas();
+  filtroFaltas = montarFiltroLista(alvoFiltro, cfg, () => recarregarFaltas());
 }
 
 async function renderViewEquipe() {

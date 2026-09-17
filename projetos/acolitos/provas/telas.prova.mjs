@@ -2004,6 +2004,44 @@ async function provaFaltasFiltramNaConsulta(provas) {
   const c = r3.avaliado || {};
   exigir(/Não foi possível carregar as faltas/.test(c.texto || '') && !/Nenhuma/.test(c.texto || ''),
     'erro de consulta mostra erro, não "nenhuma"', 'saiu: ' + JSON.stringify(c.texto));
+  exigir(c.temBarra === true, 'erro genérico não é falta de acesso — a barra continua ali', 'temBarra: ' + c.temBarra);
+
+  // "Fix round 1", achado 1: a primeira carga tem de usar o filtro GUARDADO, não o padrão —
+  // senão quem já tinha escolhido uma pessoa vê "Mostrando 80 de 357" SEM filtro por um
+  // instante, antes da lista filtrada substituir (o "flash" sem filtro).
+  const cenarioSalvo = `
+    const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+    try { localStorage.removeItem('filtro-lista:ausencias-faltas'); } catch (e) {}
+    await carregarRosterAus();
+    const cfg = configFiltroFaltas(rosterMembrosAus);
+    const estadoSalvo = FiltroLista.alternar(FiltroLista.estadoInicial(cfg), cfg, 'pessoa', 'u-ana');
+    try { localStorage.setItem('filtro-lista:ausencias-faltas', FiltroLista.guardar(estadoSalvo)); } catch (e) {}
+    const chamadas = [];
+    const origRpc = sb.rpc.bind(sb);
+    sb.rpc = async (nome, args) => { chamadas.push([nome, args || null]); return origRpc(nome, args); };
+    abaAusencias = 'faltas'; await renderViewEquipe(); await esperar(80);
+    const listas = chamadas.filter(c => c[0] === 'acolitos_faltas_filtradas');
+    const out = {
+      primeiraTemPessoa: !!listas[0] && JSON.stringify(listas[0][1] && listas[0][1].p_membros) === JSON.stringify(['u-ana']),
+      quantasListas: listas.length,
+    };
+    try { localStorage.removeItem('filtro-lista:ausencias-faltas'); } catch (e) {}
+    sb.rpc = origRpc;
+    return out;
+  `;
+  const r4 = await abrirFaltas({ acolitos_roster_substituicao: { data: roster }, acolitos_faltas_filtradas: { data: faltas }, acolitos_faltas_contar: { data: 357 } }, cenarioSalvo);
+  const d = r4.avaliado || {};
+  exigir(!r4.erroAvaliar, 'a prova do filtro guardado roda sem estourar', r4.erroAvaliar);
+  exigir(d.primeiraTemPessoa === true, 'a PRIMEIRA carga já sai com o filtro guardado — sem flash sem filtro', 'saiu: ' + JSON.stringify(d));
+  exigir(d.quantasListas === 1, 'só UMA consulta na primeira carga — nada de recarregar em seguida', 'chamadas: ' + d.quantasListas);
+
+  // "Fix round 1", achado 2: a contagem pode falhar sem que a LISTA falhe. Calar isso faz
+  // exatamente 80 linhas (o limite da página) parecerem "são todas", quando pode haver mais.
+  const r5 = await abrirFaltas({ acolitos_roster_substituicao: { data: roster }, acolitos_faltas_filtradas: { data: faltas }, acolitos_faltas_contar: { error: { message: 'fora do ar' } } }, cenario);
+  const e = r5.avaliado || {};
+  exigir(!r5.erroAvaliar, 'a prova da contagem que falha roda sem estourar', r5.erroAvaliar);
+  exigir(/Não foi possível contar o total/.test(e.texto || ''), 'contagem que falha AVISA, não cala', 'saiu: ' + JSON.stringify(e.texto));
+  exigir(/Ana Souza/.test(e.texto || '') && /faltou/.test(e.texto || ''), 'mesmo sem o total, a lista continua aparecendo', 'saiu: ' + JSON.stringify((e.texto || '').slice(0, 200)));
 }
 
 async function provaRecadoDaFotoAparece(provas) {
