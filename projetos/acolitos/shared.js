@@ -1646,6 +1646,7 @@ function montarFiltroLista(alvo, config, aoMudar) {
   btn.onclick = () => {
     let rascunho = estado;
     let pedido = 0;
+    const termos = {};   // o que foi digitado em cada filtro com busca — sobrevive ao redesenho
     const ov = document.createElement('div'); ov.className = 'modal-overlay open';
     ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
     const md = document.createElement('div'); md.className = 'modal filtro-painel';
@@ -1692,9 +1693,35 @@ function montarFiltroLista(alvo, config, aoMudar) {
       }
       (config.filtros || []).forEach((f) => {
         const gf = secao(f.nome);
-        f.opcoes.forEach((op) => opcao(gf, op.nome, F.estaLigado(rascunho, f.id, op.id), 'checkbox', () => {
-          rascunho = F.alternar(rascunho, config, f.id, op.id); desenharCorpo(); atualizarVer();
-        }));
+        const papel = f.unico ? 'radio' : 'checkbox';
+        const tocar = (op) => () => { rascunho = F.alternar(rascunho, config, f.id, op.id); desenharCorpo(); atualizarVer(); };
+        if (!f.busca) {
+          f.opcoes.forEach((op) => opcao(gf, op.nome, F.estaLigado(rascunho, f.id, op.id), papel, tocar(op)));
+          return;
+        }
+        // Lista longa (ex.: 177 pessoas): campo de busca dentro do painel. As já escolhidas
+        // aparecem sempre; as outras só quando se digita, até o limite.
+        const inp = document.createElement('input');
+        inp.className = 'search-input filtro-painel-busca'; inp.type = 'search';
+        inp.placeholder = f.busca.placeholder || 'Buscar...';
+        inp.value = termos[f.id] || '';
+        gf.parentNode.insertBefore(inp, gf);
+        const desenharAchadas = () => {
+          gf.textContent = '';
+          const termo = F.normalizar(inp.value);
+          const escolhidas = f.opcoes.filter((op) => F.estaLigado(rascunho, f.id, op.id));
+          const achadas = termo
+            ? f.opcoes.filter((op) => !F.estaLigado(rascunho, f.id, op.id) && F.normalizar(op.nome).indexOf(termo) >= 0).slice(0, f.busca.max || 8)
+            : [];
+          escolhidas.concat(achadas).forEach((op) => opcao(gf, op.nome, F.estaLigado(rascunho, f.id, op.id), papel, tocar(op)));
+          if (!escolhidas.length && !achadas.length) {
+            const dica = document.createElement('div'); dica.className = 'filtro-painel-dica';
+            dica.textContent = termo ? 'Ninguém com esse nome.' : 'Digite para buscar.';
+            gf.appendChild(dica);
+          }
+        };
+        inp.oninput = () => { termos[f.id] = inp.value; desenharAchadas(); };
+        desenharAchadas();
       });
     }
     ver.onclick = () => { estado = rascunho; ov.remove(); mudou(); };

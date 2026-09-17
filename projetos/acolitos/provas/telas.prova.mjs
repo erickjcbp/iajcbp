@@ -1745,6 +1745,87 @@ async function provaChamadaFiltra(provas) {
   exigir(a.missasSADepoisDeReabrirSelecao === 1, 'já a comunidade da escolha de missa é preferência normal e continua valendo', 'saiu: ' + a.missasSADepoisDeReabrirSelecao);
 }
 
+async function provaBarraBuscaNoPainelEEscolhaUnica(provas) {
+  console.log('\n\x1b[1mBarra de filtro: busca dentro do painel e escolha única\x1b[0m');
+
+  // Ausências filtra por pessoa: são 177, não cabem em botões. O painel mostra as escolhidas
+  // e só as que batem com o que se digita. Período é de escolha única.
+  const r = await provas.abrir('caixa.html', {
+    papel: PAPEIS.admin,
+    avaliar: `
+      const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+      try { localStorage.removeItem('filtro-lista:prova-busca'); } catch (e) {}
+      const nomes = ['Ana Clara', 'Ana Lúcia'];
+      for (let i = 1; i <= 30; i++) nomes.push('Pessoa ' + String(i).padStart(2, '0'));
+      const cfg = {
+        chave: 'prova-busca', rotulo: ['item', 'itens'], ordemPadrao: 'x',
+        ordens: [{ id: 'x', nome: 'X', valor: () => '' }],
+        filtros: [
+          { id: 'pessoa', nome: 'Pessoa', busca: { placeholder: 'Buscar pessoa...', max: 8 },
+            opcoes: nomes.map((n, i) => ({ id: 'p' + i, nome: n, testa: () => true })) },
+          { id: 'periodo', nome: 'Período', unico: true, opcoes: [
+            { id: 'este_mes', nome: 'Este mês', testa: () => true },
+            { id: 'mes_passado', nome: 'Mês passado', testa: () => true },
+          ] },
+        ],
+        contar: () => 0,
+      };
+      const alvo = document.createElement('div'); document.body.appendChild(alvo);
+      montarFiltroLista(alvo, cfg, () => {});
+      const painel = () => document.querySelector('.modal-overlay.open .filtro-painel');
+      const secao = (i) => painel().querySelectorAll('.filtro-painel-secao')[i];
+      const botoes = (i) => [...secao(i).querySelectorAll('.form-toggle')].map(b => b.textContent.trim());
+      const dica = (i) => ((secao(i).querySelector('.filtro-painel-dica') || {}).textContent || '').trim();
+      const digitar = async (txt) => { const inp = secao(0).querySelector('.filtro-painel-busca'); inp.value = txt; inp.dispatchEvent(new Event('input')); await esperar(20); };
+      const out = {};
+
+      alvo.querySelector('.filtro-btn').click(); await esperar(30);
+      out.temCampo = !!secao(0).querySelector('.filtro-painel-busca');
+      out.semTermo = botoes(0);
+      out.dicaSemTermo = dica(0);
+      await digitar('ana');
+      out.comAna = botoes(0);
+      await digitar('pessoa');
+      out.quantasPessoa = botoes(0).length;
+      await digitar('zzz');
+      out.dicaSemAchar = dica(0);
+      await digitar('ana');
+      [...secao(0).querySelectorAll('.form-toggle')].find(b => b.textContent.trim() === 'Ana Lúcia').click(); await esperar(30);
+      out.termoDepoisDeTocar = secao(0).querySelector('.filtro-painel-busca').value;
+      out.depoisDeTocar = botoes(0);
+      await digitar('');
+      out.soEscolhida = botoes(0);
+
+      const tocarPeriodo = async (txt) => { [...secao(1).querySelectorAll('.form-toggle')].find(b => b.textContent.trim() === txt).click(); await esperar(30); };
+      await tocarPeriodo('Este mês');
+      await tocarPeriodo('Mês passado');
+      out.periodoLigados = [...secao(1).querySelectorAll('.form-toggle')].filter(b => b.getAttribute('aria-checked') === 'true').map(b => b.textContent.trim());
+      out.papelPeriodo = secao(1).querySelector('.form-toggle').getAttribute('role');
+      out.papelPessoa = secao(0).querySelector('.form-toggle').getAttribute('role');
+
+      painel().querySelector('.filtro-ver').click(); await esperar(120);
+      out.etiquetas = [...alvo.querySelectorAll('.filtro-etiqueta')].map(b => b.textContent.trim());
+      try { localStorage.removeItem('filtro-lista:prova-busca'); } catch (e) {}
+      alvo.remove();
+      return out;
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a busca no painel roda sem estourar', r.erroAvaliar);
+  exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova da busca chegou ao fim (a página não saiu do lugar)', 'avaliado: ' + JSON.stringify(r.avaliado));
+  exigir(a.temCampo === true, 'filtro com lista longa ganha campo de busca no painel');
+  exigir(JSON.stringify(a.semTermo) === '[]' && a.dicaSemTermo === 'Digite para buscar.', 'sem digitar, não despeja a lista inteira', 'botões: ' + JSON.stringify(a.semTermo) + ' dica: ' + JSON.stringify(a.dicaSemTermo));
+  exigir(JSON.stringify(a.comAna) === JSON.stringify(['Ana Clara', 'Ana Lúcia']), 'a busca acha pelo nome, com ou sem acento', 'saiu: ' + JSON.stringify(a.comAna));
+  exigir(a.quantasPessoa === 8, 'a busca mostra no máximo o limite (8)', 'saiu: ' + a.quantasPessoa);
+  exigir(a.dicaSemAchar === 'Ninguém com esse nome.', 'busca sem resultado diz isso', 'saiu: ' + JSON.stringify(a.dicaSemAchar));
+  exigir(a.termoDepoisDeTocar === 'ana', 'tocar numa pessoa não apaga o que foi digitado', 'campo: ' + JSON.stringify(a.termoDepoisDeTocar));
+  exigir(JSON.stringify(a.depoisDeTocar) === JSON.stringify(['Ana Lúcia', 'Ana Clara']), 'a escolhida vem primeiro', 'saiu: ' + JSON.stringify(a.depoisDeTocar));
+  exigir(JSON.stringify(a.soEscolhida) === JSON.stringify(['Ana Lúcia']), 'com o campo vazio, a escolhida continua à vista', 'saiu: ' + JSON.stringify(a.soEscolhida));
+  exigir(JSON.stringify(a.periodoLigados) === JSON.stringify(['Mês passado']), 'período é de escolha única', 'saiu: ' + JSON.stringify(a.periodoLigados));
+  exigir(a.papelPeriodo === 'radio' && a.papelPessoa === 'checkbox', 'escolha única é anunciada como opção única', 'papéis: ' + a.papelPeriodo + '/' + a.papelPessoa);
+  exigir(JSON.stringify(a.etiquetas) === JSON.stringify(['Ana Lúcia', 'Mês passado']), 'as escolhas viram etiquetas', 'saiu: ' + JSON.stringify(a.etiquetas));
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -1830,6 +1911,7 @@ try {
     await provaAgendaFiltra(provas);
     await provaCrmOrdenaEBusca(provas);
     await provaChamadaFiltra(provas);
+    await provaBarraBuscaNoPainelEEscolhaUnica(provas);
   }
 } finally {
   await provas.encerrar();
