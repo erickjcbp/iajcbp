@@ -249,7 +249,11 @@ function configFiltroMembros() {
     ordens: [
       { id: 'nome', nome: 'Nome A–Z', valor: m => m.nome },
       { id: 'recentes', nome: 'Mais recentes', desc: true, valor: m => m.created_at || null,
-        legenda: m => m.created_at ? 'cadastro ' + diaMes(m.created_at.slice(0, 10)) : '' },
+        // created_at é timestamptz (instante), não data pura: fatiar a string pega o dia em
+        // UTC, e das 21h à meia-noite em Brasília isso mostra o dia de AMANHÃ. formatDate()
+        // já resolve isso (converte para o fuso de quem olha); diaMes() continua certo logo
+        // abaixo, para data_nascimento, que é data pura (sem hora, sem fuso a converter).
+        legenda: m => m.created_at ? 'cadastro ' + formatDate(m.created_at).slice(0, 5) : '' },
       { id: 'aniversario', nome: 'Próximos aniversários', valor: m => { const p = proximoAniversario(m); return p ? p.dias : null; },
         legenda: m => { const p = proximoAniversario(m); return p ? 'faz ' + p.idade + ' anos em ' + diaMes(m.data_nascimento) : ''; } },
       { id: 'nivel', nome: 'Nível', valor: m => { const r = NIVEL_ORDEM[nivelBaseDe(m)]; return r == null ? 9 : r; } },

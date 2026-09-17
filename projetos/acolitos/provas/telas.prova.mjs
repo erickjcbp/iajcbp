@@ -1231,6 +1231,12 @@ async function provaMembrosMostraQuemEntrouPorUltimo(provas) {
     { id: 'm-ana', nome: 'Ana Lote', created_at: '2026-06-01T10:00:00+00:00', comunidade: 'matriz', foto_url: 'https://x/a.jpg', nivel: 'acolito_aspirante', status: 'ativo', data_nascimento: null },
     { id: 'm-carla', nome: 'Carla Nova', created_at: '2026-08-27T12:00:00+00:00', comunidade: 'santo_antonio', foto_url: null, nivel: 'cerimoniario_aspirante', status: 'ativo', data_nascimento: null },
     { id: 'm-davi', nome: 'Davi Recente', created_at: '2026-08-10T12:00:00+00:00', comunidade: 'matriz', foto_url: null, nivel: 'coroinha', status: 'ativo', data_nascimento: null },
+    // Instante real do lote de 01/06: 01:29:43 UTC, que em Brasília ainda é noite de 31/05
+    // (22:29). É o mais antigo do lote — some no fim de "Mais recentes" — e serve para
+    // provar que a legenda usa a data LOCAL, não a fatiada direto do UTC. Nome sem "lote"
+    // e nível fora de "acolito" para não entrar na lista migrada (filtro nivel=acolito +
+    // busca="lote") lá embaixo.
+    { id: 'm-elisa', nome: 'Elisa Madrugada', created_at: '2026-06-01T01:29:43.956873+00:00', comunidade: 'matriz', foto_url: null, nivel: 'coroinha', status: 'ativo', data_nascimento: null },
   ];
   const cenario = (rpc) => `
     const esperar = (ms) => new Promise(f => setTimeout(f, ms));
@@ -1258,6 +1264,14 @@ async function provaMembrosMostraQuemEntrouPorUltimo(provas) {
     painel().querySelector('.filtro-ver').click(); await esperar(50);
     r.recentes = nomes();
     r.legendas = [...document.querySelectorAll('#grid .filtro-legenda')].map(e => e.textContent.trim());
+    // A prova não pode CRAVAR "31/05": o navegador que roda isto pode estar em qualquer
+    // fuso. Em vez disso ela calcula, DENTRO da própria tela, o que a regra local e a
+    // fatia ingênua de UTC dariam para o mesmo instante — e compara contra a legenda de
+    // verdade. Se o fuso daqui não separar os dois (não vira dia anterior), a prova avisa
+    // em vez de fingir que provou algo.
+    const isoElisa = '2026-06-01T01:29:43.956873+00:00';
+    r.dataUtcElisa = isoElisa.slice(8, 10) + '/' + isoElisa.slice(5, 7);
+    r.dataLocalEsperadaElisa = new Date(isoElisa).toLocaleDateString('pt-BR').slice(0, 5);
     // estado antigo (antes da barra): nível "acolito" e busca "lote" têm de sobreviver
     try { localStorage.removeItem('filtro-lista:membros'); localStorage.setItem('estado-membros', JSON.stringify({ filtro: 'acolito', busca: 'lote', y: 0 })); } catch (e) {}
     await loadMembros(); await esperar(50);
@@ -1278,17 +1292,24 @@ async function provaMembrosMostraQuemEntrouPorUltimo(provas) {
   exigir((r.erros || []).length === 0, 'nenhum erro de JavaScript na tela', (r.erros || []).join(' | '));
   exigir(a.temBarra === true, 'a busca mora na barra nova');
   exigir(a.botoesVelhos === 0, 'os botões de nível antigos saíram (viraram filtro no painel)');
-  exigir(JSON.stringify(a.padrao) === JSON.stringify(['Ana Lote', 'Bruno Lote', 'Carla Nova', 'Davi Recente']),
+  exigir(JSON.stringify(a.padrao) === JSON.stringify(['Ana Lote', 'Bruno Lote', 'Carla Nova', 'Davi Recente', 'Elisa Madrugada']),
     'abre em ordem alfabética, como antes', 'saiu: ' + JSON.stringify(a.padrao));
   exigir(JSON.stringify(a.filtrosNoPainel) === JSON.stringify(['Ordenar por', 'Nível', 'Comunidade', 'App', 'Foto']),
     'o painel oferece nível, comunidade, app e foto', 'saiu: ' + JSON.stringify(a.filtrosNoPainel));
   exigir((a.rotulosCortados || []).length === 0,
     'nenhuma opção do painel corta o texto em largura de celular', 'cortadas: ' + JSON.stringify(a.rotulosCortados));
   exigir(a.ver === 'Ver 1 membro', '"já entrou no app" conta pelo banco', 'mostrou: ' + JSON.stringify(a.ver));
-  exigir(JSON.stringify(a.recentes) === JSON.stringify(['Carla Nova', 'Davi Recente', 'Ana Lote', 'Bruno Lote']),
-    'MAIS RECENTES: quem entrou por último no topo, o lote em ordem alfabética', 'saiu: ' + JSON.stringify(a.recentes));
+  exigir(JSON.stringify(a.recentes) === JSON.stringify(['Carla Nova', 'Davi Recente', 'Ana Lote', 'Bruno Lote', 'Elisa Madrugada']),
+    'MAIS RECENTES: quem entrou por último no topo, o lote em ordem alfabética, e o instante mais antigo do lote (madrugada) por último',
+    'saiu: ' + JSON.stringify(a.recentes));
   exigir((a.legendas || [])[0] === 'cadastro 27/08',
     'a data do cadastro aparece embaixo do nome', 'saiu: ' + JSON.stringify(a.legendas));
+  exigir(a.dataLocalEsperadaElisa !== a.dataUtcElisa,
+    'esta prova precisa rodar num fuso onde 01:29 UTC ainda é o dia anterior (Brasília serve) — sem essa diferença o teste não tem como pegar o defeito',
+    'UTC deu ' + a.dataUtcElisa + ' e a data local também deu ' + a.dataLocalEsperadaElisa + ' — rode com o relógio do sistema em America/Sao_Paulo');
+  exigir((a.legendas || [])[4] === 'cadastro ' + a.dataLocalEsperadaElisa,
+    'a legenda de "cadastro" usa a data LOCAL do created_at, não a fatia crua do UTC (01:29 UTC de 01/06 é 22:29 de 31/05 em Brasília)',
+    'saiu: ' + JSON.stringify(a.legendas) + ' — esperava terminar em "cadastro ' + a.dataLocalEsperadaElisa + '"');
   exigir(JSON.stringify(a.migrado) === JSON.stringify(['Ana Lote', 'Bruno Lote']),
     'o filtro guardado antes da barra (nível + busca) não se perde', 'saiu: ' + JSON.stringify(a.migrado));
   exigir(a.buscaMigrada === 'lote', 'e a busca guardada volta para o campo', 'campo: ' + JSON.stringify(a.buscaMigrada));
