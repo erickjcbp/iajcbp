@@ -1873,7 +1873,10 @@ async function provaAvisosDeAusenciaFiltramNaConsulta(provas) {
 
       abaAusencias = 'avisos'; await renderViewEquipe(); await esperar(80);
       const primeira = ultimaLista();
-      out.semFiltroSemIn = !!primeira && !primeira.chamadas.some(x => x[0] === 'in' || x[0] === 'gte' || x[0] === 'lte');
+      // Sem período, a aba abre com "próximas primeiro" (Fix 1 da revisão de 17/09) — ISSO
+      // sempre acrescenta um gte(missa_data), que não é filtro escolhido pela pessoa. O que
+      // continua valendo é: sem pessoa/comunidade/motivo escolhidos, nenhum IN entra na consulta.
+      out.semFiltroSemIn = !!primeira && !primeira.chamadas.some(x => x[0] === 'in');
       out.ordemPadrao = tem(primeira, 'order', 'missa_data');
       out.limite = tem(primeira, 'limit', 60);
       out.mostrando = /Mostrando 60 de 1202/.test(texto());
@@ -2044,6 +2047,105 @@ async function provaFaltasFiltramNaConsulta(provas) {
   exigir(/Ana Souza/.test(e.texto || '') && /faltou/.test(e.texto || ''), 'mesmo sem o total, a lista continua aparecendo', 'saiu: ' + JSON.stringify((e.texto || '').slice(0, 200)));
 }
 
+// "Fix wave final" da revisão de 17/09/2026, achado 1 (Crítico, decisão do dono): em
+// produção, 1.202 avisos, 141 deles de missas FUTURAS (28 no dia 19, 31 no 20...). Ordenar
+// só por "mais recente" (created_at ou missa_data decrescente) enterrava o fim de semana que
+// vem atrás de mais de mil avisos de missas que já aconteceram. O dono escolheu: abrir
+// mostrando quem vai faltar nas PRÓXIMAS missas primeiro; as passadas completam depois.
+async function provaAvisosAbreComAsProximasMissas(provas) {
+  console.log('\n\x1b[1mAusências › Avisos: abre com as PRÓXIMAS missas, as passadas completam depois\x1b[0m');
+
+  const roster = { membros: [{ id: 'u-ana', nome: 'Ana Souza', apelido: null }], habs: [] };
+  const r = await provas.abrir('ausencias.html', {
+    papel: PAPEIS.admin,
+    rpcs: { acolitos_roster_substituicao: { data: roster } },
+    avaliar: `
+      const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+      try { localStorage.removeItem('filtro-lista:ausencias-avisos'); } catch (e) {}
+      const linha = (id, data, com) => ({ id, membro_id: 'u-ana', celebracao_id: 'c' + id, motivo: 'viagem',
+        observacao: null, created_at: '2026-09-01T12:00:00+00:00', missa_data: data,
+        missa_horario: '19:00', missa_comunidade: com });
+      // Menos de 60 na 1ª consulta — força a 2ª (passadas) a acontecer, como no dia a dia
+      // (60 é o pedaço da tela; a produção tem só 141 avisos futuros no total).
+      const proximas = [linha('p1', '2026-09-19', 'matriz')];
+      const passadas = [linha('a1', '2026-09-01', 'santo_antonio')];
+      const periodo = [linha('m1', '2026-09-10', 'matriz')];
+      const total = 2;
+      let consultas = [];
+      const orig = sb.from.bind(sb);
+      sb.from = (t) => {
+        if (t !== 'acolitos_ausencias_v') return orig(t);
+        const reg = { chamadas: [] }; consultas.push(reg);
+        const resp = () => {
+          const cs = reg.chamadas;
+          const head = cs.some(c => c[0] === 'select' && c[2] && c[2].head);
+          const temGte = cs.some(c => c[0] === 'gte' && c[1] === 'missa_data');
+          const temLte = cs.some(c => c[0] === 'lte' && c[1] === 'missa_data');
+          const temLt = cs.some(c => c[0] === 'lt' && c[1] === 'missa_data');
+          if (head) return { data: null, count: total, error: null };
+          if (temGte && temLte) return { data: periodo, count: total, error: null };
+          if (temGte) return { data: proximas, count: null, error: null };
+          if (temLt) return { data: passadas, count: null, error: null };
+          return { data: [], count: total, error: null };
+        };
+        const p = new Proxy({}, { get: (_, k) => k === 'then'
+          ? (ok, ko) => Promise.resolve(resp()).then(ok, ko)
+          : (...args) => { reg.chamadas.push([k, ...args]); return p; } });
+        return p;
+      };
+      const naoHead = (c) => !c.chamadas.some(x => x[0] === 'select' && x[2] && x[2].head);
+      const tem = (c, ...alvo) => !!c && c.chamadas.some(x => JSON.stringify(x.slice(0, alvo.length)) === JSON.stringify(alvo));
+      const ordemAsc = (c, campo, valor) => !!c && c.chamadas.some(x => x[0] === 'order' && x[1] === campo && x[2] && x[2].ascending === valor);
+      const painel = () => document.querySelector('.modal-overlay.open .filtro-painel');
+      const abrir = async () => { document.querySelector('#filtro-avisos .filtro-btn').click(); await esperar(40); };
+      const ver = async () => { painel().querySelector('.filtro-ver').click(); await esperar(150); };
+      const tocar = (txt) => { const b = [...painel().querySelectorAll('.form-toggle')].find(x => x.textContent.trim() === txt); if (!b) throw new Error('sem opção ' + txt); b.click(); };
+      const limpar = async () => { const l = document.querySelector('#filtro-avisos .filtro-limpar'); if (l) { l.click(); await esperar(150); } };
+      const texto = () => (document.getElementById('lista-avisos') || {}).textContent || '';
+      const out = {};
+
+      // (a) e (b): sem período, DUAS consultas — próximas (gte, crescente) e, como a 1ª não
+      // enche 60, passadas (lt, decrescente) — e a lista mostra as duas.
+      abaAusencias = 'avisos'; await renderViewEquipe(); await esperar(100);
+      const listasAbertura = consultas.filter(naoHead);
+      out.duasConsultasSemPeriodo = listasAbertura.length === 2;
+      out.primeiraGteAsc = tem(listasAbertura[0], 'gte', 'missa_data', hojeLocal()) && ordemAsc(listasAbertura[0], 'missa_data', true);
+      out.segundaLtDesc = listasAbertura.length > 1 && tem(listasAbertura[1], 'lt', 'missa_data', hojeLocal()) && ordemAsc(listasAbertura[1], 'missa_data', false);
+      out.rendeuAsDuas = /Matriz/.test(texto()) && /Sto\\. Antônio/.test(texto());
+      consultas = [];
+
+      // (c): com período escolhido, UMA consulta só, crescente, com o gte/lte do período.
+      await abrir(); tocar('Este mês'); await ver();
+      const listasPeriodo = consultas.filter(naoHead);
+      out.periodoUmaConsulta = listasPeriodo.length === 1;
+      const iv = FiltroLista.intervaloDoPeriodo('este_mes', hojeLocal());
+      out.periodoAsc = tem(listasPeriodo[0], 'gte', 'missa_data', iv.desde) && tem(listasPeriodo[0], 'lte', 'missa_data', iv.ate) && ordemAsc(listasPeriodo[0], 'missa_data', true);
+      await limpar();
+      consultas = [];
+
+      // (d): "Quando avisou" continua como sempre foi — uma consulta, created_at decrescente.
+      await abrir(); tocar('Quando avisou'); await ver();
+      const listasAviso = consultas.filter(naoHead);
+      out.avisoUmaConsulta = listasAviso.length === 1;
+      out.avisoOrdenaCreated = tem(listasAviso[0], 'order', 'created_at');
+
+      sb.from = orig;
+      return out;
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a prova das próximas missas roda sem estourar', r.erroAvaliar);
+  exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova das próximas missas chegou ao fim', 'avaliado: ' + JSON.stringify(r.avaliado));
+  exigir(a.duasConsultasSemPeriodo === true, 'sem período, a lista faz DUAS consultas (próximas + passadas)', 'saiu: ' + JSON.stringify(a));
+  exigir(a.primeiraGteAsc === true, 'a 1ª consulta pega missa_data >= hoje, crescente (mais perto primeiro)');
+  exigir(a.segundaLtDesc === true, 'a 2ª consulta pega missa_data < hoje, decrescente, quando a 1ª não enche 60');
+  exigir(a.rendeuAsDuas === true, 'a lista mostra linhas das DUAS consultas juntas');
+  exigir(a.periodoUmaConsulta === true, 'com período escolhido, é UMA consulta só');
+  exigir(a.periodoAsc === true, 'dentro do período, a ordem é crescente (mais perto do início primeiro)');
+  exigir(a.avisoUmaConsulta === true, '"Quando avisou" continua sendo uma consulta só');
+  exigir(a.avisoOrdenaCreated === true, '"Quando avisou" continua ordenando por created_at');
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -2132,6 +2234,7 @@ try {
     await provaBarraBuscaNoPainelEEscolhaUnica(provas);
     await provaAvisosDeAusenciaFiltramNaConsulta(provas);
     await provaFaltasFiltramNaConsulta(provas);
+    await provaAvisosAbreComAsProximasMissas(provas);
   }
 } finally {
   await provas.encerrar();

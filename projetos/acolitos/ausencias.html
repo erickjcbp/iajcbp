@@ -107,7 +107,7 @@ function configFiltroAvisos(membros) {
     rotulo: ['aviso', 'avisos'],
     ordemPadrao: 'missa',
     ordens: [
-      { id: 'missa', nome: 'Data da missa', desc: true, valor: () => null },
+      { id: 'missa', nome: 'Data da missa (próximas primeiro)', desc: true, valor: () => null },
       { id: 'aviso', nome: 'Quando avisou', desc: true, valor: () => null },
     ],
     filtros: [
@@ -123,7 +123,9 @@ function configFiltroAvisos(membros) {
     },
   };
 }
-function consultaAvisos(estado, soContar) {
+// Monta a consulta SEM o pedaço de data/ordem — pessoa, comunidade e motivo valem para
+// qualquer jeito de olhar a lista (contagem, próximas, passadas ou dentro de um período).
+function baseQueryAvisos(estado, soContar) {
   const E = (f) => FiltroLista.escolhidos(estado, f);
   let q = soContar
     ? sb.from('acolitos_ausencias_v').select('id', { count: 'exact', head: true })
@@ -131,17 +133,75 @@ function consultaAvisos(estado, soContar) {
   if (E('pessoa').length) q = q.in('membro_id', E('pessoa'));
   if (E('comunidade').length) q = q.in('missa_comunidade', E('comunidade'));
   if (E('motivo').length) q = q.in('motivo', E('motivo'));
+  return q;
+}
+// A contagem ("Ver N" e "Mostrando X de N") é SEMPRE uma pergunta só, com o período se
+// houver — nunca dividida em próximas/passadas. Dividir o total não faz sentido: o número
+// tem de significar "tudo que combina com o filtro", ponto.
+function consultaAvisosContagem(estado) {
+  const E = (f) => FiltroLista.escolhidos(estado, f);
+  let q = baseQueryAvisos(estado, true);
   const per = E('periodo')[0];
   if (per) {
     const iv = FiltroLista.intervaloDoPeriodo(per, hojeLocal());
     if (iv.desde) q = q.gte('missa_data', iv.desde);
     if (iv.ate) q = q.lte('missa_data', iv.ate);
   }
-  if (soContar) return q;
-  q = estado.ordem === 'aviso'
-    ? q.order('created_at', { ascending: false })
-    : q.order('missa_data', { ascending: false, nullsFirst: false }).order('missa_minutos', { ascending: false, nullsFirst: false });
-  return q.limit(60);
+  return q;
+}
+function consultaAvisos(estado, soContar) {
+  if (soContar) return consultaAvisosContagem(estado);
+  const E = (f) => FiltroLista.escolhidos(estado, f);
+  const per = E('periodo')[0];
+  if (estado.ordem === 'aviso') {
+    let q = baseQueryAvisos(estado, false);
+    if (per) {
+      const iv = FiltroLista.intervaloDoPeriodo(per, hojeLocal());
+      if (iv.desde) q = q.gte('missa_data', iv.desde);
+      if (iv.ate) q = q.lte('missa_data', iv.ate);
+    }
+    return q.order('created_at', { ascending: false }).limit(60);
+  }
+  if (per) {
+    // Dentro de UM período escolhido não existe "hoje" para dividir — a ordem natural é do
+    // começo do período para o fim.
+    const iv = FiltroLista.intervaloDoPeriodo(per, hojeLocal());
+    let q = baseQueryAvisos(estado, false);
+    if (iv.desde) q = q.gte('missa_data', iv.desde);
+    if (iv.ate) q = q.lte('missa_data', iv.ate);
+    return q.order('missa_data', { ascending: true, nullsFirst: false })
+             .order('missa_minutos', { ascending: true, nullsFirst: false })
+             .limit(60);
+  }
+  // Pedido do dono (17/09): em produção, 1.202 avisos, dos quais 141 de missas FUTURAS —
+  // ordenar só por "mais recente" enterrava o fim de semana que vem atrás de mais de mil
+  // avisos de missas que já aconteceram. Duas consultas com os MESMOS filtros de
+  // pessoa/comunidade/motivo: primeiro as futuras (mais perto primeiro) e, só se sobrar
+  // espaço nos 60, as passadas (mais recente primeiro) completam. O total ("Mostrando X de
+  // N") continua sendo UMA pergunta só, sem a divisão por data.
+  return (async () => {
+    const hoje = hojeLocal();
+    const { data: prox, error: eProx } = await baseQueryAvisos(estado, false)
+      .gte('missa_data', hoje)
+      .order('missa_data', { ascending: true, nullsFirst: false })
+      .order('missa_minutos', { ascending: true, nullsFirst: false })
+      .limit(60);
+    if (eProx) return { data: null, count: null, error: eProx };
+    const proximas = prox || [];
+    let passadas = [];
+    if (proximas.length < 60) {
+      const { data: pas, error: ePas } = await baseQueryAvisos(estado, false)
+        .lt('missa_data', hoje)
+        .order('missa_data', { ascending: false, nullsFirst: false })
+        .order('missa_minutos', { ascending: false, nullsFirst: false })
+        .limit(60 - proximas.length);
+      if (ePas) return { data: null, count: null, error: ePas };
+      passadas = pas || [];
+    }
+    const { count, error: eCount } = await consultaAvisosContagem(estado);
+    if (eCount) return { data: null, count: null, error: eCount };
+    return { data: proximas.concat(passadas), count, error: null };
+  })();
 }
 async function recarregarAvisos() {
   const lista = document.getElementById('lista-avisos');
