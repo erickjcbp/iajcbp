@@ -1,4 +1,4 @@
-import { rotuloFuncao, rotuloComunidade, rankHorario } from './rotulos.js'
+import { rotuloFuncao, rotuloComunidade, compararCelebracao } from './rotulos.js'
 import { resolverLiturgico } from './liturgico.mjs'
 
 const MES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
@@ -18,7 +18,7 @@ function dataLabel(iso) {
 
 export function montarMissas(celebracoes, escalasMap, funcExtra) {
   return [...celebracoes]
-    .sort((a,b) => rankHorario(a.horario) - rankHorario(b.horario))
+    .sort(compararCelebracao)   // dia primeiro, hora depois (sábado à noite antes do domingo)
     .map(c => {
       const { HH, MM } = horaPartes(c.horario)
       const d = parseISO(c.data)
