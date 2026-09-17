@@ -1826,6 +1826,117 @@ async function provaBarraBuscaNoPainelEEscolhaUnica(provas) {
   exigir(JSON.stringify(a.etiquetas) === JSON.stringify(['Ana Lúcia', 'Mês passado']), 'as escolhas viram etiquetas', 'saiu: ' + JSON.stringify(a.etiquetas));
 }
 
+async function provaAvisosDeAusenciaFiltramNaConsulta(provas) {
+  console.log('\n\x1b[1mAusências › Avisos: o filtro vai para a CONSULTA, e erro é erro\x1b[0m');
+
+  // O banco falso do harness ignora filtros. Então esta prova olha a PERGUNTA que a tela faz
+  // ao banco — é ela que garante que a pessoa com 30 ausências não aparece com 2.
+  const roster = { membros: [
+    { id: 'u-ana', nome: 'Ana Souza', apelido: null }, { id: 'u-bia', nome: 'Beatriz Lima', apelido: 'Bia' },
+  ], habs: [] };
+  const r = await provas.abrir('ausencias.html', {
+    papel: PAPEIS.admin,
+    rpcs: { acolitos_roster_substituicao: { data: roster } },
+    avaliar: `
+      const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+      const guarda = () => { try { localStorage.removeItem('filtro-lista:ausencias-avisos'); } catch (e) {} };
+      guarda();
+      const consultas = [];
+      let modo = 'ok';
+      const linhas = Array.from({ length: 60 }, (_, i) => ({ id: 'a' + i, membro_id: i % 2 ? 'u-bia' : 'u-ana',
+        celebracao_id: 'c' + i, motivo: 'viagem', observacao: null, created_at: '2026-09-0' + (1 + i % 9) + 'T12:00:00+00:00',
+        missa_data: '2026-09-1' + (i % 9), missa_horario: '19:00', missa_comunidade: 'matriz' }));
+      const orig = sb.from.bind(sb);
+      sb.from = (t) => {
+        if (t !== 'acolitos_ausencias_v') return orig(t);
+        const reg = { chamadas: [] }; consultas.push(reg);
+        const resp = () => {
+          const soContar = reg.chamadas.some(c => c[0] === 'select' && c[2] && c[2].head);
+          if (modo === 'erro') return { data: null, count: null, error: { message: 'fora do ar' } };
+          if (soContar) return { data: null, count: 1202, error: null };
+          return { data: modo === 'vazio' ? [] : linhas, count: modo === 'vazio' ? 0 : 1202, error: null };
+        };
+        const p = new Proxy({}, { get: (_, k) => k === 'then'
+          ? (ok, ko) => Promise.resolve(resp()).then(ok, ko)
+          : (...args) => { reg.chamadas.push([k, ...args]); return p; } });
+        return p;
+      };
+      const ultimaLista = () => [...consultas].reverse().find(c => !c.chamadas.some(x => x[0] === 'select' && x[2] && x[2].head));
+      const tem = (c, ...alvo) => !!c && c.chamadas.some(x => JSON.stringify(x.slice(0, alvo.length)) === JSON.stringify(alvo));
+      const painel = () => document.querySelector('.modal-overlay.open .filtro-painel');
+      const abrir = async () => { document.querySelector('#filtro-avisos .filtro-btn').click(); await esperar(40); };
+      const ver = async () => { painel().querySelector('.filtro-ver').click(); await esperar(150); };
+      const tocar = (txt) => { const b = [...painel().querySelectorAll('.form-toggle')].find(x => x.textContent.trim() === txt); if (!b) throw new Error('sem opção ' + txt); b.click(); };
+      const limpar = async () => { const l = document.querySelector('#filtro-avisos .filtro-limpar'); if (l) { l.click(); await esperar(150); } };
+      const texto = () => (document.getElementById('lista-avisos') || {}).textContent || '';
+      const out = {};
+
+      abaAusencias = 'avisos'; await renderViewEquipe(); await esperar(80);
+      const primeira = ultimaLista();
+      out.semFiltroSemIn = !!primeira && !primeira.chamadas.some(x => x[0] === 'in' || x[0] === 'gte' || x[0] === 'lte');
+      out.ordemPadrao = tem(primeira, 'order', 'missa_data');
+      out.limite = tem(primeira, 'limit', 60);
+      out.mostrando = /Mostrando 60 de 1202/.test(texto());
+      out.nomeDoRoster = /Ana Souza/.test(texto()) && /Bia/.test(texto());
+
+      await abrir();
+      out.secoes = [...painel().querySelectorAll('.filtro-painel-titulo')].map(e => e.textContent.trim());
+      const campo = painel().querySelector('.filtro-painel-busca');
+      campo.value = 'bia'; campo.dispatchEvent(new Event('input')); await esperar(20);
+      tocar('Bia · Beatriz Lima'); await esperar(60);
+      out.verComPessoa = painel().querySelector('.filtro-ver').textContent.trim();
+      const contagem = [...consultas].reverse().find(c => c.chamadas.some(x => x[0] === 'select' && x[2] && x[2].head));
+      out.contagemComPessoa = tem(contagem, 'in', 'membro_id', ['u-bia']);
+      await ver();
+      out.listaComPessoa = tem(ultimaLista(), 'in', 'membro_id', ['u-bia']);
+      await limpar();
+
+      await abrir(); tocar('Este mês'); await ver();
+      const iv = FiltroLista.intervaloDoPeriodo('este_mes', hojeLocal());
+      out.periodo = tem(ultimaLista(), 'gte', 'missa_data', iv.desde) && tem(ultimaLista(), 'lte', 'missa_data', iv.ate);
+      await limpar();
+
+      await abrir(); tocar('Santo Antônio'); tocar('Viagem'); await ver();
+      out.comunidadeEMotivo = tem(ultimaLista(), 'in', 'missa_comunidade', ['santo_antonio']) && tem(ultimaLista(), 'in', 'motivo', ['viagem']);
+      out.motivoSemEmoji = [...document.querySelectorAll('#filtro-avisos .filtro-etiqueta')].map(e => e.textContent.trim());
+      await limpar();
+
+      await abrir(); tocar('Quando avisou'); await ver();
+      out.ordemAviso = tem(ultimaLista(), 'order', 'created_at');
+
+      modo = 'vazio'; await abrir(); tocar('Santo Antônio'); await ver();
+      out.vazioComFiltro = texto();
+      await limpar();
+      modo = 'erro'; await recarregarAvisos(); await esperar(60);
+      out.comErro = texto();
+
+      guarda(); sb.from = orig;
+      return out;
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a aba Avisos filtra sem estourar', r.erroAvaliar);
+  exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova dos Avisos chegou ao fim (a página não saiu do lugar)', 'avaliado: ' + JSON.stringify(r.avaliado));
+  exigir((r.erros || []).length === 0, 'nenhum erro de JavaScript em Ausências', (r.erros || []).join(' | '));
+  exigir(a.semFiltroSemIn === true, 'sem filtro, a consulta não filtra nada');
+  exigir(a.ordemPadrao === true, 'a ordem padrão é pela data da missa');
+  exigir(a.limite === true, 'a lista continua vindo em pedaços de 60');
+  exigir(a.mostrando === true, 'a tela diz que mostra 60 de 1202 — não finge que é tudo');
+  exigir(a.nomeDoRoster === true, 'os nomes vêm do cadastro seguro (vale para o cerimoniário)');
+  exigir(JSON.stringify(a.secoes) === JSON.stringify(['Ordenar por', 'Pessoa', 'Período (data da missa)', 'Comunidade', 'Motivo']),
+    'o painel oferece ordem, pessoa, período, comunidade e motivo', 'saiu: ' + JSON.stringify(a.secoes));
+  exigir(a.contagemComPessoa === true, 'o "Ver N" pergunta ao BANCO com a pessoa escolhida');
+  exigir(a.verComPessoa === 'Ver 1202 avisos', 'o "Ver N" mostra o número que o banco deu', 'mostrou: ' + JSON.stringify(a.verComPessoa));
+  exigir(a.listaComPessoa === true, 'escolher a pessoa MUDA A CONSULTA (não filtra os 60 que vieram)');
+  exigir(a.periodo === true, 'o período vira intervalo de datas na consulta');
+  exigir(a.comunidadeEMotivo === true, 'comunidade e motivo também vão para a consulta');
+  exigir(JSON.stringify(a.motivoSemEmoji) === JSON.stringify(['Santo Antônio', 'Viagem']), 'as etiquetas de motivo saem sem emoji', 'saiu: ' + JSON.stringify(a.motivoSemEmoji));
+  exigir(a.ordemAviso === true, '"Quando avisou" ordena pela data do aviso');
+  exigir(/Nenhum aviso com esses filtros/.test(a.vazioComFiltro || ''), 'filtro sem resultado diz isso', 'saiu: ' + JSON.stringify(a.vazioComFiltro));
+  exigir(/Não foi possível carregar os avisos/.test(a.comErro || '') && !/Nenhum/.test(a.comErro || ''),
+    'consulta com erro mostra ERRO, nunca "nenhum"', 'saiu: ' + JSON.stringify(a.comErro));
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -1912,6 +2023,7 @@ try {
     await provaCrmOrdenaEBusca(provas);
     await provaChamadaFiltra(provas);
     await provaBarraBuscaNoPainelEEscolhaUnica(provas);
+    await provaAvisosDeAusenciaFiltramNaConsulta(provas);
   }
 } finally {
   await provas.encerrar();

@@ -80,6 +80,118 @@ function comLabel(c) { return c==='matriz'?'Matriz':'Sto. Antônio'; }
 
 let ctx = null;
 let abaAusencias = 'avisos';   // qual aba da tela de Ausências está aberta
+
+// ── Filtros da tela Ausências (passo 4 do ordenar e filtrar) ──
+// As duas abas vêm do banco em PEDAÇOS (60 avisos, 80 faltas). O filtro NUNCA age sobre o
+// pedaço que veio: cada escolha refaz a consulta com o filtro dentro, e os números vêm do
+// banco. Filtrar os 60 mostraria a pessoa com 30 ausências como se tivesse 2.
+let filtroAvisos = null, filtroFaltas = null;
+let pedidoAvisos = 0, pedidoFaltas = 0;
+const PERIODOS_AUSENCIA = [
+  { id: 'proximas', nome: 'Próximas missas', testa: () => true },
+  { id: 'este_mes', nome: 'Este mês', testa: () => true },
+  { id: 'mes_passado', nome: 'Mês passado', testa: () => true },
+  { id: 'ultimos_90', nome: 'Últimos 90 dias', testa: () => true },
+];
+function semEmoji(txt) { return String(txt || '').replace(/^[^\p{L}\p{N}]+/u, '').trim(); }
+function opcoesDePessoa(membros) {
+  return (membros || []).map(m => ({ id: m.id, nome: m.apelido ? m.apelido + ' · ' + m.nome : (m.nome || '—'), testa: () => true }));
+}
+const COMUNIDADES_AUSENCIA = [
+  { id: 'matriz', nome: 'Matriz', testa: () => true },
+  { id: 'santo_antonio', nome: 'Santo Antônio', testa: () => true },
+];
+function configFiltroAvisos(membros) {
+  return {
+    chave: 'ausencias-avisos',
+    rotulo: ['aviso', 'avisos'],
+    ordemPadrao: 'missa',
+    ordens: [
+      { id: 'missa', nome: 'Data da missa', desc: true, valor: () => null },
+      { id: 'aviso', nome: 'Quando avisou', desc: true, valor: () => null },
+    ],
+    filtros: [
+      { id: 'pessoa', nome: 'Pessoa', busca: { placeholder: 'Buscar pessoa...', max: 8 }, opcoes: opcoesDePessoa(membros) },
+      { id: 'periodo', nome: 'Período (data da missa)', unico: true, opcoes: PERIODOS_AUSENCIA },
+      { id: 'comunidade', nome: 'Comunidade', opcoes: COMUNIDADES_AUSENCIA },
+      { id: 'motivo', nome: 'Motivo', opcoes: Object.keys(MOTIVOS).map(k => ({ id: k, nome: semEmoji(MOTIVOS[k]), testa: () => true })) },
+    ],
+    contar: async (e) => {
+      const { count, error } = await consultaAvisos(e, true);
+      if (error) throw error;
+      return count;
+    },
+  };
+}
+function consultaAvisos(estado, soContar) {
+  const E = (f) => FiltroLista.escolhidos(estado, f);
+  let q = soContar
+    ? sb.from('acolitos_ausencias_v').select('id', { count: 'exact', head: true })
+    : sb.from('acolitos_ausencias_v').select('*', { count: 'exact' });
+  if (E('pessoa').length) q = q.in('membro_id', E('pessoa'));
+  if (E('comunidade').length) q = q.in('missa_comunidade', E('comunidade'));
+  if (E('motivo').length) q = q.in('motivo', E('motivo'));
+  const per = E('periodo')[0];
+  if (per) {
+    const iv = FiltroLista.intervaloDoPeriodo(per, hojeLocal());
+    if (iv.desde) q = q.gte('missa_data', iv.desde);
+    if (iv.ate) q = q.lte('missa_data', iv.ate);
+  }
+  if (soContar) return q;
+  q = estado.ordem === 'aviso'
+    ? q.order('created_at', { ascending: false })
+    : q.order('missa_data', { ascending: false, nullsFirst: false }).order('missa_minutos', { ascending: false, nullsFirst: false });
+  return q.limit(60);
+}
+async function recarregarAvisos() {
+  const lista = document.getElementById('lista-avisos');
+  if (!lista || !filtroAvisos) return;
+  const meu = ++pedidoAvisos;
+  lista.textContent = '';
+  const ld = document.createElement('span'); ld.className = 'loading'; ld.textContent = 'Carregando...'; lista.appendChild(ld);
+  const estado = filtroAvisos.estado();
+  const { data, count, error } = await consultaAvisos(estado, false);
+  if (meu !== pedidoAvisos) return;   // chegou resposta velha depois da nova
+  lista.textContent = '';
+  const aviso = (txt) => { const s = document.createElement('span'); s.className = 'empty'; s.textContent = txt; lista.appendChild(s); };
+  if (error) { console.warn('Avisos: consulta falhou', error); aviso('Não foi possível carregar os avisos. Tente de novo.'); return; }
+  if (!data || !data.length) {
+    aviso(FiltroLista.contar(estado) > 0 ? 'Nenhum aviso com esses filtros.' : 'Nenhuma ausência informada.');
+    return;
+  }
+  if (typeof count === 'number' && count > data.length) {
+    const info = document.createElement('p');
+    info.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0 0 8px;';
+    info.textContent = 'Mostrando ' + data.length + ' de ' + count + '. Use os filtros para achar o resto.';
+    lista.appendChild(info);
+  }
+  data.forEach(a => lista.appendChild(linhaDeAviso(a)));
+}
+function linhaDeAviso(a) {
+  const rm = rosterMapAus[a.membro_id] || {};
+  const d = a.missa_data ? new Date(a.missa_data + 'T00:00:00') : null;
+  const row = document.createElement('div'); row.className = 'equipe-row';
+  const info = document.createElement('div'); info.className = 'equipe-row-info';
+  const n = document.createElement('div'); n.className = 'equipe-row-nome';
+  n.textContent = (rm.apelido ? rm.apelido + ' · ' + rm.nome : rm.nome) || '—';
+  const m = document.createElement('div'); m.className = 'equipe-row-meta';
+  m.textContent = (d ? DIAS[d.getDay()] + ' ' + d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) + (a.missa_horario ? ' · ' + a.missa_horario : '') : '—')
+    + (a.missa_comunidade ? ' · ' + comLabel(a.missa_comunidade) : '')
+    + ' · ' + semEmoji(MOTIVOS[a.motivo] || a.motivo);
+  info.append(n, m);
+  // A lixeira: era o ÚNICO lugar do app que desfazia uma ausência (ver histórico da tela).
+  const del = document.createElement('button'); del.className = 'btn-sm gray';
+  del.style.cssText = 'flex:none;margin-left:8px;'; del.textContent = 'Remover';
+  del.onclick = async () => {
+    if (!(await uiConfirm('Remover a ausência de ' + (rm.nome || 'esta pessoa') + '?'))) return;
+    del.disabled = true;
+    const { error } = await sb.from('acolitos_ausencias').delete().eq('id', a.id);
+    if (error) { del.disabled = false; toast('Não foi possível remover.', 'error'); return; }
+    row.remove();
+  };
+  row.append(info, del);
+  return row;
+}
 let rosterMembrosAus = null, rosterMapAus = {}, rosterHabsAus = [];
 // Roster seguro (security-definer) — cobre o cerimoniário, que não lê acolitos_membros por RLS.
 async function carregarRosterAus() {
@@ -526,60 +638,29 @@ async function renderViewEquipe() {
   main.append(abas, alvoAba);
   if (abaAusencias === 'faltas') { await renderAbaFaltas(alvoAba); return; }
 
-  // KPIs
-  const { count: totalAus } = await sb.from('acolitos_ausencias')
-    .select('*',{count:'exact',head:true});
-  const { count: sem30 } = await sb.from('acolitos_ausencias')
-    .select('*',{count:'exact',head:true})
-    .gte('created_at', new Date(Date.now()-30*86400000).toISOString());
-
-  const kpi = document.createElement('div'); kpi.className='kpi-grid'; kpi.style.gridTemplateColumns='1fr 1fr';
-  [{label:'Total Registradas',value:totalAus||0,sub:'histórico'},{label:'Últimos 30 dias',value:sem30||0,sub:'recentes'}].forEach(k=>{
-    const c=document.createElement('div');c.className='kpi-card';
-    const l=document.createElement('div');l.className='kpi-label';l.textContent=k.label;
-    const v=document.createElement('div');v.className='kpi-value';v.textContent=k.value;
-    const s=document.createElement('div');s.className='kpi-sub';s.textContent=k.sub;
-    c.append(l,v,s);kpi.appendChild(c);
+  // KPIs — contagem que falha mostra "—", nunca 0.
+  const [{ count: totalAus, error: e1 }, { count: sem30, error: e2 }] = await Promise.all([
+    sb.from('acolitos_ausencias').select('*', { count: 'exact', head: true }),
+    sb.from('acolitos_ausencias').select('*', { count: 'exact', head: true })
+      .gte('created_at', new Date(Date.now() - 30 * 86400000).toISOString()),
+  ]);
+  const kpi = document.createElement('div'); kpi.className = 'kpi-grid'; kpi.style.gridTemplateColumns = '1fr 1fr';
+  [{ label: 'Total Registradas', value: e1 ? '—' : (totalAus ?? '—'), sub: 'histórico' },
+   { label: 'Últimos 30 dias', value: e2 ? '—' : (sem30 ?? '—'), sub: 'recentes' }].forEach(k => {
+    const c = document.createElement('div'); c.className = 'kpi-card';
+    const l = document.createElement('div'); l.className = 'kpi-label'; l.textContent = k.label;
+    const v = document.createElement('div'); v.className = 'kpi-value'; v.textContent = k.value;
+    const s = document.createElement('div'); s.className = 'kpi-sub'; s.textContent = k.sub;
+    c.append(l, v, s); kpi.appendChild(c);
   });
   main.appendChild(kpi);
 
-  const { data: ausencias } = await sb
-    .from('acolitos_ausencias')
-    .select('*, acolitos_membros(nome,apelido), acolitos_celebracoes(data,horario,comunidade)')
-    .order('created_at',{ascending:false}).limit(60);
-
-  if (!ausencias?.length) {
-    const em=document.createElement('span');em.className='empty';em.textContent='Nenhuma ausência informada.';main.appendChild(em);return;
-  }
-
-  // cerimoniário não lê acolitos_membros por RLS → embed volta vazio; roster (security-definer) cobre
-  await carregarRosterAus();
-  ausencias.forEach(a => {
-    const c=a.acolitos_celebracoes; const d=c?new Date(c.data+'T00:00:00'):null;
-    const rm=rosterMapAus[a.membro_id]||{};
-    const row=document.createElement('div');row.className='equipe-row';
-    const info=document.createElement('div');info.className='equipe-row-info';
-    const n=document.createElement('div');n.className='equipe-row-nome';n.textContent=a.acolitos_membros?.apelido||a.acolitos_membros?.nome||rm.apelido||rm.nome||'—';
-    const m=document.createElement('div');m.className='equipe-row-meta';
-    m.textContent=(d?DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' · '+c.horario:'—')+' · '+(MOTIVOS[a.motivo]||a.motivo);
-    info.append(n,m);
-    const badge=document.createElement('span');badge.className='badge coroinha';badge.textContent='AJ';
-    // A lixeira vivia no modal do menu da Escala, que saiu — e era o ÚNICO lugar do app
-    // que desfazia uma ausência. Sem ela, a coordenação registra para os 135 membros sem
-    // login, erra o nome ou a missa, e ninguém corrige — enquanto a ausência errada segue
-    // tirando a pessoa da escala.
-    const del=document.createElement('button'); del.className='btn-sm gray';
-    del.style.cssText='flex:none;margin-left:8px;'; del.textContent='Remover';
-    del.onclick=async()=>{
-      const nome=(a.acolitos_membros&&(a.acolitos_membros.apelido||a.acolitos_membros.nome))||rm.nome||'esta pessoa';
-      if(!(await uiConfirm('Remover a ausência de '+nome+'?'))) return;
-      del.disabled=true;
-      const { error }=await sb.from('acolitos_ausencias').delete().eq('id',a.id);
-      if(error){ del.disabled=false; toast('Não foi possível remover.','error'); return; }
-      row.remove();
-    };
-    row.append(info,badge,del);main.appendChild(row);
-  });
+  // cerimoniário não lê acolitos_membros por RLS → o nome vem do roster (security definer)
+  const membros = await carregarRosterAus();
+  const alvoFiltro = document.createElement('div'); alvoFiltro.id = 'filtro-avisos'; main.appendChild(alvoFiltro);
+  const lista = document.createElement('div'); lista.id = 'lista-avisos'; main.appendChild(lista);
+  filtroAvisos = montarFiltroLista(alvoFiltro, configFiltroAvisos(membros), () => recarregarAvisos());
+  await recarregarAvisos();
   // O editor de motivos saiu daqui: agora vive em Config › Listas › Motivos de ausência,
   // junto das outras sete listas. Ficava no fim desta tela, que é o último lugar onde alguém
   // procuraria por uma configuração.
