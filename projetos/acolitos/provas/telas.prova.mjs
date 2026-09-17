@@ -1125,6 +1125,98 @@ async function provaAvisoDaCoordenacaoFicaNoApp(provas) {
     'texto do modal: ' + JSON.stringify((a.aviso || '').slice(0, 160)));
 }
 
+async function provaBarraDeFiltroFunciona(provas) {
+  console.log('\n\x1b[1mBarra de ordenar e filtrar: abre, filtra, conta e lembra\x1b[0m');
+
+  // A barra é a mesma nas seis listas. Aqui ela é provada SOZINHA, numa lista de mentira
+  // montada dentro da Caixa (que já carrega o shared.js), para que um defeito nela não se
+  // confunda com um defeito de Membros.
+  const r = await provas.abrir('caixa.html', {
+    papel: PAPEIS.admin,
+    avaliar: `
+      try { localStorage.removeItem('filtro-lista:prova-barra'); } catch (e) {}
+      const itens = [
+        { nome: 'Ana', com: 'matriz' }, { nome: 'Bia', com: 'sa' }, { nome: 'Caio', com: 'matriz' },
+      ];
+      let erroNaContagem = false;
+      const cfg = {
+        chave: 'prova-barra', rotulo: ['pessoa', 'pessoas'], ordemPadrao: 'nome',
+        ordens: [
+          { id: 'nome', nome: 'Nome A–Z', valor: i => i.nome },
+          { id: 'inverso', nome: 'Nome Z–A', desc: true, valor: i => i.nome },
+        ],
+        filtros: [{ id: 'com', nome: 'Comunidade', opcoes: [
+          { id: 'matriz', nome: 'Matriz', testa: i => i.com === 'matriz' },
+          { id: 'sa', nome: 'Santo Antônio', testa: i => i.com === 'sa' },
+        ] }],
+        busca: { placeholder: 'Buscar nome...', campos: i => [i.nome] },
+        contar: e => { if (erroNaContagem) throw new Error('fora do ar'); return FiltroLista.aplicar(itens, e, cfg).length; },
+      };
+      const alvo = document.createElement('div'); document.body.appendChild(alvo);
+      let mudancas = 0;
+      const ctl = montarFiltroLista(alvo, cfg, () => { mudancas++; });
+      const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+      const painel = () => document.querySelector('.modal-overlay.open .filtro-painel');
+      const botaoNoPainel = (txt) => [...painel().querySelectorAll('button')].find(b => b.textContent.trim() === txt);
+
+      const temBusca = !!alvo.querySelector('.filtro-barra .search-input');
+      const contagemAntes = alvo.querySelector('.filtro-contagem').textContent;
+
+      alvo.querySelector('.filtro-btn').click();
+      const abriu = !!painel();
+      botaoNoPainel('Matriz').click(); await esperar(30);
+      const verComMatriz = painel().querySelector('.filtro-ver').textContent.trim();
+      botaoNoPainel('Nome Z–A').click(); await esperar(30);
+      painel().querySelector('.filtro-ver').click(); await esperar(30);
+      const fechou = !painel();
+      const depois = ctl.aplicar(itens).map(i => i.nome);
+      const contagemDepois = alvo.querySelector('.filtro-contagem').textContent;
+      const etiquetas = [...alvo.querySelectorAll('.filtro-etiqueta')].map(b => b.textContent.trim());
+      const ordemEscrita = (alvo.querySelector('.filtro-linha') || {}).textContent || '';
+      const guardado = (() => { try { return localStorage.getItem('filtro-lista:prova-barra'); } catch (e) { return null; } })();
+
+      // Remontar = reabrir a tela: a escolha tem de voltar.
+      const ctl2 = montarFiltroLista(alvo, cfg, () => {});
+      const lembrou = ctl2.aplicar(itens).map(i => i.nome);
+
+      // Tirar pela etiqueta.
+      alvo.querySelector('.filtro-etiqueta').click(); await esperar(30);
+      const semEtiqueta = ctl2.aplicar(itens).length;
+
+      // Contagem com erro: "Ver resultado", nunca "Ver 0".
+      erroNaContagem = true;
+      alvo.querySelector('.filtro-btn').click(); await esperar(50);
+      const verComErro = painel().querySelector('.filtro-ver').textContent.trim();
+      document.querySelector('.modal-overlay.open').click(); await esperar(30);
+      const fechouSemAplicar = !painel();
+
+      try { localStorage.removeItem('filtro-lista:prova-barra'); } catch (e) {}
+      alvo.remove();
+      return { temBusca, contagemAntes, abriu, verComMatriz, fechou, depois, contagemDepois,
+               etiquetas, ordemEscrita, guardado: !!guardado, lembrou, semEtiqueta, verComErro,
+               fechouSemAplicar, mudancas };
+    `,
+  });
+
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a barra monta e o painel roda sem estourar', r.erroAvaliar);
+  exigir(a.temBusca === true, 'com busca declarada, o campo aparece na barra');
+  exigir(a.contagemAntes === '', 'sem filtro, o botão não mostra número', 'mostrou: ' + JSON.stringify(a.contagemAntes));
+  exigir(a.abriu === true, 'o botão Filtrar abre o painel');
+  exigir(a.verComMatriz === 'Ver 2 pessoas', 'o painel conta ANTES de aplicar', 'mostrou: ' + JSON.stringify(a.verComMatriz));
+  exigir(a.fechou === true, '"Ver" fecha o painel');
+  exigir(JSON.stringify(a.depois) === JSON.stringify(['Caio', 'Ana']), 'aplica filtro E ordem juntos', 'saiu: ' + JSON.stringify(a.depois));
+  exigir(a.contagemDepois === '1', 'o botão mostra quantos filtros estão ligados', 'mostrou: ' + JSON.stringify(a.contagemDepois));
+  exigir(JSON.stringify(a.etiquetas) === JSON.stringify(['Matriz']), 'o filtro ligado vira etiqueta', 'saiu: ' + JSON.stringify(a.etiquetas));
+  exigir(/Nome Z–A/.test(a.ordemEscrita || ''), 'a ordem escolhida fica escrita na tela', 'linha: ' + JSON.stringify(a.ordemEscrita));
+  exigir(a.guardado === true, 'a escolha é guardada no aparelho');
+  exigir(JSON.stringify(a.lembrou) === JSON.stringify(['Caio', 'Ana']), 'reabrir traz a escolha de volta', 'saiu: ' + JSON.stringify(a.lembrou));
+  exigir(a.semEtiqueta === 3, 'o X da etiqueta tira o filtro', 'sobraram: ' + a.semEtiqueta);
+  exigir(a.verComErro === 'Ver resultado', 'contagem com erro NÃO vira "Ver 0"', 'mostrou: ' + JSON.stringify(a.verComErro));
+  exigir(a.fechouSemAplicar === true, 'tocar fora fecha o painel');
+  exigir(a.mudancas >= 1, 'a tela é avisada quando a escolha muda');
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -1204,6 +1296,7 @@ try {
     await provaTelefonePedidoQuandoAIdadeEDesconhecida(provas);
     await provaRecadoDaFotoAparece(provas);
     await provaAvisoDaCoordenacaoFicaNoApp(provas);
+    await provaBarraDeFiltroFunciona(provas);
   }
 } finally {
   await provas.encerrar();

@@ -811,3 +811,15 @@ body.has-switch { padding-top: calc(var(--header-h) + 46px + env(safe-area-inset
 /* Desativa zoom (pinça/duplo-toque) na web e no PWA — pan permitido, escala não */
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: pan-x pan-y; }
 body { touch-action: pan-x pan-y; }
+
+/* ── Ordenar e filtrar (montarFiltroLista, shared.js) ── */
+.filtro-barra { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.filtro-barra .search-input { flex: 1; min-width: 0; }
+.filtro-btn { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.filtro-contagem { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--red-soft); color: #fff; font-size: 11px; font-weight: 700; align-items: center; justify-content: center; }
+.filtro-linha { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 14px; font-size: 12px; color: var(--text-muted); }
+.filtro-etiqueta { display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px 3px 10px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 12px; cursor: pointer; }
+.filtro-limpar { background: none; border: 0; color: var(--red-soft); font-size: 12px; font-weight: 700; cursor: pointer; padding: 3px 4px; }
+.filtro-painel-secao { margin-bottom: 14px; }
+.filtro-painel-titulo { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+.filtro-legenda { font-size: 11px; color: var(--text-muted); margin-top: 2px; }

@@ -27,4 +27,9 @@ test('toda tela com os *-core carrega também a senha-nova-core.js', () => {
   // junto. Não é só o convite da foto que se perde: é a fila inteira daquela tela.
   const semFoto = telas.filter(f => !fs.readFileSync(path.join(dir, f), 'utf8').includes('foto-recado-core.js'));
   assert.deepStrictEqual(semFoto, [], 'estas telas não carregam a regra do recado da foto: ' + semFoto.join(', '));
+
+  // E para a regra de ORDENAR E FILTRAR: a barra mora no shared.js e usa o FiltroLista.
+  // Tela que esquecer o <script> fica sem a barra — e a lista some junto com ela.
+  const semFiltro = telas.filter(f => !fs.readFileSync(path.join(dir, f), 'utf8').includes('filtro-lista-core.js'));
+  assert.deepStrictEqual(semFiltro, [], 'estas telas não carregam a regra de ordenar e filtrar: ' + semFiltro.join(', '));
 });

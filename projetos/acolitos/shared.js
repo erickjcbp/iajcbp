@@ -1564,6 +1564,142 @@ async function avisarTodos() {
   };
 }
 
+// ── ORDENAR E FILTRAR (a barra das listas) ───────────────────────────────────
+// Pedido do dono em 16/09/2026: nenhuma lista deixava escolher a ordem. A REGRA mora em
+// filtro-lista-core.js (FiltroLista); aqui é só o desenho: a linha com busca e o botão
+// "Filtrar (n)", as etiquetas com X, e o painel que sobe de baixo.
+//
+// A barra NÃO decide onde filtrar. Lista que já veio inteira filtra na memória; lista que
+// vem do banco em pedaços tem de refazer a consulta em `aoMudar` — filtrar só o pedaço que
+// veio esconde resultado (a aba de ausências traz 60 de 1.201).
+//
+// config.contar(estado) dá o número do botão "Ver N". Se ele falhar, o botão diz
+// "Ver resultado": um "Ver 0" seria mentira.
+function montarFiltroLista(alvo, config, aoMudar) {
+  const F = window.FiltroLista;
+  if (!F) { console.error('filtro-lista-core.js não foi carregado nesta tela'); return null; }
+  const chaveGuarda = 'filtro-lista:' + config.chave;
+  let estado;
+  try { estado = F.restaurar(localStorage.getItem(chaveGuarda), config); }
+  catch (e) { estado = F.estadoInicial(config); }
+  const guardar = () => { try { localStorage.setItem(chaveGuarda, F.guardar(estado)); } catch (e) {} };
+  const rotulo = (n) => n + ' ' + (n === 1 ? config.rotulo[0] : config.rotulo[1]);
+  const icone = (nome, px) => {
+    const s = document.createElement('span');
+    s.style.cssText = 'display:inline-flex;width:' + px + 'px;height:' + px + 'px;';
+    s.innerHTML = _svgIcon(nome);  // SVG fixo do próprio app — seguro
+    return s;
+  };
+
+  alvo.textContent = '';
+  const barra = document.createElement('div'); barra.className = 'filtro-barra';
+  if (config.busca) {
+    const inp = document.createElement('input');
+    inp.className = 'search-input'; inp.type = 'search';
+    inp.placeholder = config.busca.placeholder || 'Buscar...';
+    inp.value = estado.busca;
+    inp.oninput = () => { estado = F.definirBusca(estado, inp.value); guardar(); aoMudar(estado); };
+    barra.appendChild(inp);
+  }
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'btn-sm gray filtro-btn';
+  const contagem = document.createElement('span'); contagem.className = 'filtro-contagem';
+  btn.append(icone('sliders', 16), document.createTextNode('Filtrar'), contagem);
+  barra.appendChild(btn);
+  const linha = document.createElement('div'); linha.className = 'filtro-linha';
+  alvo.append(barra, linha);
+
+  function desenharLinha() {
+    const n = F.contar(estado);
+    contagem.textContent = n ? String(n) : '';
+    contagem.style.display = n ? 'inline-flex' : 'none';
+    btn.setAttribute('aria-label', n ? 'Filtrar — ' + n + ' filtro(s) ligado(s)' : 'Filtrar');
+    linha.textContent = '';
+    const ord = document.createElement('span'); ord.className = 'filtro-ordem';
+    ord.textContent = F.nomeDaOrdem(estado, config);
+    linha.appendChild(ord);
+    F.etiquetas(estado, config).forEach((t) => {
+      const et = document.createElement('button');
+      et.type = 'button'; et.className = 'filtro-etiqueta';
+      et.setAttribute('aria-label', 'Tirar o filtro ' + t.texto);
+      et.append(document.createTextNode(t.texto), icone('x', 12));
+      et.onclick = () => { estado = F.alternar(estado, config, t.f, t.o); mudou(); };
+      linha.appendChild(et);
+    });
+    if (n) {
+      const lp = document.createElement('button');
+      lp.type = 'button'; lp.className = 'filtro-limpar'; lp.textContent = 'Limpar';
+      lp.onclick = () => { estado = F.limpar(estado); mudou(); };
+      linha.appendChild(lp);
+    }
+  }
+  function mudou() { guardar(); desenharLinha(); aoMudar(estado); }
+
+  btn.onclick = () => {
+    let rascunho = estado;
+    let pedido = 0;
+    const ov = document.createElement('div'); ov.className = 'modal-overlay open';
+    ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+    const md = document.createElement('div'); md.className = 'modal filtro-painel';
+    const handle = document.createElement('div'); handle.className = 'modal-handle';
+    const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Ordenar e filtrar';
+    const corpo = document.createElement('div');
+    const ver = document.createElement('button');
+    ver.type = 'button'; ver.className = 'btn gold filtro-ver'; ver.style.width = '100%';
+    md.append(handle, tt, corpo, ver);
+    ov.appendChild(md); document.body.appendChild(ov);
+
+    const secao = (titulo) => {
+      const s = document.createElement('div'); s.className = 'filtro-painel-secao';
+      const h = document.createElement('div'); h.className = 'filtro-painel-titulo'; h.textContent = titulo;
+      const g = document.createElement('div'); g.className = 'form-toggle-group';
+      s.append(h, g); corpo.appendChild(s);
+      return g;
+    };
+    const opcao = (grupo, texto, ligado, papel, aoTocar) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'form-toggle' + (ligado ? ' active' : '');
+      b.textContent = texto;
+      b.setAttribute('role', papel);
+      b.setAttribute('aria-checked', ligado ? 'true' : 'false');
+      b.onclick = aoTocar;
+      grupo.appendChild(b);
+    };
+
+    async function atualizarVer() {
+      const meu = ++pedido;
+      let n = null;
+      try { n = await config.contar(rascunho); } catch (e) { n = null; }
+      if (meu !== pedido) return;  // chegou resposta velha depois da nova
+      ver.textContent = (typeof n === 'number' && isFinite(n)) ? 'Ver ' + rotulo(n) : 'Ver resultado';
+    }
+    function desenharCorpo() {
+      corpo.textContent = '';
+      const g = secao('Ordenar por');
+      config.ordens.forEach((o) => opcao(g, o.nome, rascunho.ordem === o.id, 'radio', () => {
+        rascunho = F.escolherOrdem(rascunho, config, o.id); desenharCorpo();
+      }));
+      (config.filtros || []).forEach((f) => {
+        const gf = secao(f.nome);
+        f.opcoes.forEach((op) => opcao(gf, op.nome, F.estaLigado(rascunho, f.id, op.id), 'checkbox', () => {
+          rascunho = F.alternar(rascunho, config, f.id, op.id); desenharCorpo(); atualizarVer();
+        }));
+      });
+    }
+    ver.onclick = () => { estado = rascunho; ov.remove(); mudou(); };
+    ver.textContent = 'Ver resultado';
+    desenharCorpo();
+    atualizarVer();
+  };
+
+  desenharLinha();
+  return {
+    estado: () => estado,
+    aplicar: (lista) => F.aplicar(lista, estado, config),
+    legenda: (item) => F.legenda(item, estado, config),
+  };
+}
+
 // ── PORTÃO DE NOTIFICAÇÕES ───────────────────────────────────────────────────
 // Antes era um pop-up insistente, só na home, que desistia de quem tinha negado. Em um mês
 // isso rendeu UM aparelho inscrito, de 47 contas. Agora é portão: roda no initModulo, vale
@@ -2248,6 +2384,8 @@ function _svgIcon(name) {
     'time-espiritualidade':   'M12 3v18 M7 8h10 M12 21c-3 0-5-1.5-5-1.5 M12 21c3 0 5-1.5 5-1.5',
     'time-almoxarifado':      'M22 12h-6l-2 3h-4l-2-3H2 M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z',
     'time-midia':             'M23 7l-7 5 7 5V7z M14 5H3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z',
+    sliders:        'M21 4h-7 M10 4H3 M21 12h-9 M8 12H3 M21 20h-5 M12 20H3 M14 2v4 M8 10v4 M16 18v4',
+    x:              'M18 6L6 18 M6 6l12 12',
   };
   // A classe `ico` é o que faz o desenho ser TRAÇADO. Sem ela o SVG cai no padrão do navegador,
   // que é preencher — e o ícone vira uma mancha preta. Isso acontecia em todo lugar menos na
