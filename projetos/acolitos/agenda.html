@@ -17,9 +17,6 @@
     .view-tabs button { flex:1; padding:8px; border:none; background:transparent; color:var(--text-muted); font-family:'Sora',sans-serif; font-weight:700; font-size:12px; letter-spacing:.5px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
     .view-tabs button.on { background:linear-gradient(165deg, rgba(232,185,74,.18), var(--surface)); color:var(--gold-light); box-shadow:0 0 0 1px var(--gold-dim) inset; }
     .view-tabs button svg { width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-    .tl-filtros { display:flex; gap:6px; margin:2px 0 6px; }
-    .tl-filtros button { padding:5px 12px; border-radius:20px; border:1px solid var(--border-wine); background:var(--surface2); color:var(--text-muted); font-family:'Sora',sans-serif; font-weight:700; font-size:11px; letter-spacing:.3px; cursor:pointer; }
-    .tl-filtros button.on { background:linear-gradient(165deg, rgba(232,185,74,.18), var(--surface)); color:var(--gold-light); border-color:var(--gold-dim); }
     .tl-head { display:flex; align-items:center; gap:10px; margin:20px 0 10px; }
     .tl-head .lab { font-family:'Sora',sans-serif; font-size:12px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; white-space:nowrap; }
     .tl-head .ln { flex:1; height:1px; background:var(--border); }
@@ -149,7 +146,7 @@ async function carregarNomes(pres) {
 }
 let viewMode = localStorage.getItem('agenda-view') || 'cal'; // 'cal' | 'linha'
 let tlItens = [];                        // itens futuros p/ a linha do tempo
-let tlFiltro = localStorage.getItem('agenda-tl-filtro') || 'todos'; // 'todos' | 'celeb' | 'evento'
+let filtroAgenda = null;                 // controle da barra de ordenar e filtrar (montarFiltroLista)
 
 // faixas relativas da linha do tempo
 const TL_BUCKETS = [
@@ -193,6 +190,60 @@ async function init() {
 function reload() { return viewMode === 'cal' ? loadMes() : loadTimeline(); }
 function switchView(mode) { if (mode === viewMode) return; viewMode = mode; localStorage.setItem('agenda-view', mode); reload(); }
 
+// ── A barra de filtro da Agenda ──
+// Só uma ordem (data e hora), então a barra não mostra "Ordenar por". Os tipos de evento vêm
+// de EVT, que já junta o padrão com o que a paróquia configurou. Evento não tem comunidade no
+// banco: o filtro de comunidade vale só para as celebrações, e o nome da seção diz isso.
+function configFiltroAgenda() {
+  const tipoDe = (ev) => (EVT[ev.tipo] ? ev.tipo : 'outro');
+  const cfg = {
+    chave: 'agenda',
+    rotulo: ['item', 'itens'],
+    ordemPadrao: 'data',
+    ordens: [{ id: 'data', nome: 'Data', valor: it => (it.date || it.data.data) + ' ' + (it.hora || '') }],
+    desempate: () => '',
+    filtros: [
+      { id: 'mostrar', nome: 'Mostrar', opcoes: [
+        { id: 'celeb', nome: 'Celebrações', testa: it => it.kind === 'celeb' },
+        { id: 'evento', nome: 'Eventos', testa: it => it.kind === 'evento' },
+      ] },
+      { id: 'tipo', nome: 'Tipo de evento', opcoes: Object.keys(EVT).map(k => (
+        { id: k, nome: EVT[k].label, testa: it => it.kind === 'evento' && tipoDe(it.data) === k }
+      )) },
+      { id: 'comunidade', nome: 'Comunidade (missas)', opcoes: [
+        { id: 'matriz', nome: 'Matriz', testa: it => it.kind !== 'celeb' || it.data.comunidade === 'matriz' },
+        { id: 'santo_antonio', nome: 'Santo Antônio', testa: it => it.kind !== 'celeb' || it.data.comunidade === 'santo_antonio' },
+      ] },
+    ],
+  };
+  cfg.contar = (e) => FiltroLista.aplicar(itensDaVisao(), e, cfg).length;
+  return cfg;
+}
+// O que a visão atual tem para filtrar: a linha do tempo inteira, ou o mês do calendário.
+function itensDaVisao() {
+  if (viewMode !== 'cal') return tlItens;
+  return celebs.map(c => ({ kind: 'celeb', hora: c.horario, data: c }))
+    .concat(eventos.map(e => ({ kind: 'evento', hora: e.hora || '', data: e })));
+}
+// Antes da barra, a linha do tempo guardava Tudo/Celebrações/Eventos em 'agenda-tl-filtro'.
+// Converte UMA vez, para ninguém perder a escolha que tinha.
+function migrarFiltroAntigoDaAgenda(cfg) {
+  try {
+    const velho = localStorage.getItem('agenda-tl-filtro');
+    if (velho === null) return;
+    if (localStorage.getItem('filtro-lista:agenda') == null && (velho === 'celeb' || velho === 'evento')) {
+      const e = FiltroLista.alternar(FiltroLista.estadoInicial(cfg), cfg, 'mostrar', velho);
+      localStorage.setItem('filtro-lista:agenda', FiltroLista.guardar(e));
+    }
+    localStorage.removeItem('agenda-tl-filtro');
+  } catch (e) {}
+}
+function montarFiltroAgenda(alvo) {
+  const cfg = configFiltroAgenda();
+  migrarFiltroAntigoDaAgenda(cfg);
+  filtroAgenda = montarFiltroLista(alvo, cfg, () => render());
+}
+
 async function loadMes() {
   const ini = ymd(new Date(curY, curM, 1));
   const fim = ymd(new Date(curY, curM + 1, 0));
@@ -220,7 +271,7 @@ function itensDoDia(dateStr) {
   celebs.filter(c => c.data === dateStr).forEach(c => out.push({ kind:'celeb', hora:c.horario, data:c }));
   eventos.filter(e => e.data === dateStr).forEach(e => out.push({ kind:'evento', hora:e.hora || '', data:e }));
   out.sort((a,b) => String(a.hora).localeCompare(String(b.hora)));
-  return out;
+  return filtroAgenda ? filtroAgenda.aplicar(out) : out;
 }
 
 function render() {
@@ -240,6 +291,9 @@ function render() {
   tLin.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 6h13 M8 12h13 M8 18h13 M3 6h.01 M3 12h.01 M3 18h.01"/></svg> Linha do tempo'; // SVG hardcoded — seguro
   tCal.onclick = () => switchView('cal'); tLin.onclick = () => switchView('linha');
   tabs.append(tCal, tLin); main.appendChild(tabs);
+
+  const alvoFiltro = document.createElement('div'); main.appendChild(alvoFiltro);
+  montarFiltroAgenda(alvoFiltro);
 
   if (viewMode === 'cal') renderCalBody(main); else renderTimelineBody(main);
 
@@ -300,7 +354,14 @@ function renderCalBody(main) {
   dh.appendChild(dlab); main.appendChild(dh);
 
   const itens = itensDoDia(selDate);
-  if (!itens.length) { const e = document.createElement('div'); e.className = 'ag-empty'; e.textContent = 'Nada marcado neste dia.'; main.appendChild(e); }
+  if (!itens.length) {
+    const e = document.createElement('div'); e.className = 'ag-empty';
+    // Mesma regra da linha do tempo: se o dia só ficou vazio por causa do filtro, diz isso
+    // (senão a pessoa acha que não há nada marcado, quando na verdade é o filtro escondendo).
+    const comFiltro = filtroAgenda && FiltroLista.contar(filtroAgenda.estado()) > 0;
+    e.textContent = comFiltro ? 'Nada marcado neste dia com esses filtros.' : 'Nada marcado neste dia.';
+    main.appendChild(e);
+  }
   itens.forEach(it => main.appendChild(it.kind === 'celeb' ? celebCard(it.data) : eventoCard(it.data)));
 }
 
@@ -331,19 +392,11 @@ async function loadTimeline() {
 }
 
 function renderTimelineBody(main) {
-  // filtro Tudo / Celebrações / Eventos
-  const fil = document.createElement('div'); fil.className = 'tl-filtros';
-  [['todos','Tudo'], ['celeb','Celebrações'], ['evento','Eventos']].forEach(([k, lab]) => {
-    const b = document.createElement('button'); b.className = tlFiltro === k ? 'on' : ''; b.textContent = lab;
-    b.onclick = () => { tlFiltro = k; localStorage.setItem('agenda-tl-filtro', k); render(); };
-    fil.appendChild(b);
-  });
-  main.appendChild(fil);
-
-  const base = tlItens.filter(it => tlFiltro === 'todos' || it.kind === tlFiltro);
+  const base = filtroAgenda ? filtroAgenda.aplicar(tlItens) : tlItens;
   if (!base.length) {
     const e = document.createElement('div'); e.className = 'ag-empty';
-    e.textContent = tlFiltro === 'celeb' ? 'Nenhuma celebração marcada.' : (tlFiltro === 'evento' ? 'Nenhum evento marcado.' : 'Nada marcado por enquanto.');
+    const comFiltro = filtroAgenda && FiltroLista.contar(filtroAgenda.estado()) > 0;
+    e.textContent = comFiltro ? 'Nada marcado com esses filtros.' : 'Nada marcado por enquanto.';
     main.appendChild(e);
     return;
   }

@@ -1601,10 +1601,16 @@ function montarFiltroLista(alvo, config, aoMudar) {
     inp.oninput = () => { estado = F.definirBusca(estado, inp.value); guardar(); aoMudar(estado); };
     barra.appendChild(inp);
   }
+  // Só mostra o que a tela oferece: "Ordenar por" com uma opção só, ou um botão "Filtrar"
+  // que abre só ordens, são enfeite que confunde (Agenda só ordena por data; CRM não filtra).
+  const escolheOrdem = (config.ordens || []).length > 1;
+  const temFiltros = (config.filtros || []).length > 0;
+  const nomeBotao = temFiltros ? 'Filtrar' : 'Ordenar';
   const btn = document.createElement('button');
   btn.type = 'button'; btn.className = 'btn-sm gray filtro-btn';
   const contagem = document.createElement('span'); contagem.className = 'filtro-contagem';
-  btn.append(icone('sliders', 16), document.createTextNode('Filtrar'), contagem);
+  btn.append(icone('sliders', 16), document.createTextNode(nomeBotao), contagem);
+  if (!escolheOrdem && !temFiltros) btn.style.display = 'none';
   barra.appendChild(btn);
   const linha = document.createElement('div'); linha.className = 'filtro-linha';
   alvo.append(barra, linha);
@@ -1613,11 +1619,13 @@ function montarFiltroLista(alvo, config, aoMudar) {
     const n = F.contar(estado);
     contagem.textContent = n ? String(n) : '';
     contagem.style.display = n ? 'inline-flex' : 'none';
-    btn.setAttribute('aria-label', n ? 'Filtrar — ' + n + ' filtro(s) ligado(s)' : 'Filtrar');
+    btn.setAttribute('aria-label', n ? nomeBotao + ' — ' + n + ' filtro(s) ligado(s)' : nomeBotao);
     linha.textContent = '';
-    const ord = document.createElement('span'); ord.className = 'filtro-ordem';
-    ord.textContent = F.nomeDaOrdem(estado, config);
-    linha.appendChild(ord);
+    if (escolheOrdem) {
+      const ord = document.createElement('span'); ord.className = 'filtro-ordem';
+      ord.textContent = F.nomeDaOrdem(estado, config);
+      linha.appendChild(ord);
+    }
     F.etiquetas(estado, config).forEach((t) => {
       const et = document.createElement('button');
       et.type = 'button'; et.className = 'filtro-etiqueta';
@@ -1642,7 +1650,8 @@ function montarFiltroLista(alvo, config, aoMudar) {
     ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
     const md = document.createElement('div'); md.className = 'modal filtro-painel';
     const handle = document.createElement('div'); handle.className = 'modal-handle';
-    const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Ordenar e filtrar';
+    const tt = document.createElement('div'); tt.className = 'modal-title';
+    tt.textContent = temFiltros ? (escolheOrdem ? 'Ordenar e filtrar' : 'Filtrar') : 'Ordenar';
     const corpo = document.createElement('div');
     const ver = document.createElement('button');
     ver.type = 'button'; ver.className = 'btn gold filtro-ver'; ver.style.width = '100%';
@@ -1675,10 +1684,12 @@ function montarFiltroLista(alvo, config, aoMudar) {
     }
     function desenharCorpo() {
       corpo.textContent = '';
-      const g = secao('Ordenar por');
-      config.ordens.forEach((o) => opcao(g, o.nome, rascunho.ordem === o.id, 'radio', () => {
-        rascunho = F.escolherOrdem(rascunho, config, o.id); desenharCorpo();
-      }));
+      if (escolheOrdem) {
+        const g = secao('Ordenar por');
+        config.ordens.forEach((o) => opcao(g, o.nome, rascunho.ordem === o.id, 'radio', () => {
+          rascunho = F.escolherOrdem(rascunho, config, o.id); desenharCorpo();
+        }));
+      }
       (config.filtros || []).forEach((f) => {
         const gf = secao(f.nome);
         f.opcoes.forEach((op) => opcao(gf, op.nome, F.estaLigado(rascunho, f.id, op.id), 'checkbox', () => {

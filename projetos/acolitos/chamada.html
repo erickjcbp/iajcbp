@@ -94,6 +94,61 @@ function eligiveis(funcao) {
 }
 
 let _deepLink = false; // veio do botão "Chamada" de um card de escala (?celeb=<id>)
+
+// ── A barra de filtro da Chamada ──
+// Duas listas: a escolha da missa (filtra por comunidade) e a chamada da missa (filtra por
+// situação). A chamada NÃO troca a ordem — o agrupamento por função é o de sempre — e o
+// filtro ESCONDE linhas, não redesenha: redesenhar apagaria o substituto escolhido.
+let filtroMissas = null, filtroChamada = null;
+function configFiltroMissas(lista) {
+  const cfg = {
+    chave: 'chamada-missas',
+    rotulo: ['missa', 'missas'],
+    ordemPadrao: 'data',
+    ordens: [{ id: 'data', nome: 'Data', valor: c => c.data + ' ' + (c.horario || '') }],
+    desempate: () => '',
+    filtros: [{ id: 'comunidade', nome: 'Comunidade', opcoes: [
+      { id: 'matriz', nome: 'Matriz', testa: c => c.comunidade === 'matriz' },
+      { id: 'santo_antonio', nome: 'Santo Antônio', testa: c => c.comunidade === 'santo_antonio' },
+    ] }],
+  };
+  cfg.contar = (e) => FiltroLista.aplicar(lista, e, cfg).length;
+  return cfg;
+}
+function configFiltroChamada() {
+  const cfg = {
+    chave: 'chamada-lista',
+    rotulo: ['pessoa', 'pessoas'],
+    ordemPadrao: 'funcao',
+    ordens: [{ id: 'funcao', nome: 'Função', valor: () => '' }],
+    desempate: () => '',
+    filtros: [{ id: 'situacao', nome: 'Situação', opcoes: [
+      { id: 'sem', nome: 'Ainda sem marcar', testa: e => !resultados[e.id] },
+      { id: 'presente', nome: 'Presentes', testa: e => resultados[e.id] === 'presente' },
+      { id: 'atrasado', nome: 'Atrasados', testa: e => resultados[e.id] === 'atrasado' },
+      { id: 'ausente', nome: 'Ausentes', testa: e => resultados[e.id] === 'ausente' },
+    ] }],
+  };
+  cfg.contar = (e) => FiltroLista.aplicar(escalasAtuais, e, cfg).length;
+  return cfg;
+}
+// Esconde/mostra linhas e títulos de grupo. Só roda quando o FILTRO muda — nunca ao marcar
+// alguém, para a linha (e o seletor de substituto embaixo dela) não sumir da frente de quem marca.
+function aplicarFiltroChamada() {
+  if (!filtroChamada) return;
+  const visiveis = new Set(filtroChamada.aplicar(escalasAtuais).map(e => String(e.id)));
+  document.querySelectorAll('[data-escala-id]').forEach(b => {
+    b.style.display = visiveis.has(b.getAttribute('data-escala-id')) ? '' : 'none';
+  });
+  document.querySelectorAll('[data-cat]').forEach(h => {
+    const cat = h.getAttribute('data-cat');
+    const algum = [...document.querySelectorAll('[data-escala-id]')]
+      .some(b => b.getAttribute('data-escala-cat') === cat && b.style.display !== 'none');
+    h.style.display = algum ? '' : 'none';
+  });
+  const aviso = document.getElementById('chamada-filtro-vazio');
+  if (aviso) aviso.style.display = visiveis.size ? 'none' : '';
+}
 async function init() {
   // A Chamada é parte do módulo Escala (o botão vive no card da celebração), por isso
   // gateia por 'escala' — 'chamada' não existe mais como módulo liberável.
@@ -139,7 +194,11 @@ async function renderSelecao() {
     main.appendChild(em); return;
   }
 
-  comEscala.forEach(c => {
+  const alvoFiltro = document.createElement('div'); alvoFiltro.id = 'filtro-missas'; main.appendChild(alvoFiltro);
+  const listaEl = document.createElement('div'); main.appendChild(listaEl);
+  // Declarada ANTES de ser usada por desenharMissas/montarFiltroLista — hoje só funciona
+  // porque a barra nunca chama aoMudar durante a montagem, não porque a ordem esteja certa.
+  const desenharMissa = (c) => {
     const d = new Date(c.data+'T00:00:00');
     const opt = document.createElement('div'); opt.className = 'celeb-opt';
     opt.onclick = () => abrirChamada(c);
@@ -147,8 +206,19 @@ async function renderSelecao() {
     dt.textContent = DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})+' · '+c.horario;
     const sb2 = document.createElement('div'); sb2.className = 'celeb-opt-sub';
     sb2.textContent = (c.comunidade==='matriz'?'Matriz':'Sto. Antônio')+' · '+c.acolitos_escalas.length+' escalados';
-    opt.append(dt,sb2); main.appendChild(opt);
-  });
+    opt.append(dt,sb2); listaEl.appendChild(opt);
+  };
+  const desenharMissas = () => {
+    listaEl.textContent = '';
+    const lista = filtroMissas ? filtroMissas.aplicar(comEscala) : comEscala;
+    if (!lista.length) {
+      const em = document.createElement('span'); em.className = 'empty';
+      em.textContent = 'Nenhuma missa com esses filtros.'; listaEl.appendChild(em); return;
+    }
+    lista.forEach(c => desenharMissa(c));
+  };
+  filtroMissas = montarFiltroLista(alvoFiltro, configFiltroMissas(comEscala), desenharMissas);
+  desenharMissas();
 }
 
 async function abrirChamada(celeb) {
@@ -205,6 +275,15 @@ async function abrirChamada(celeb) {
   const summaryBar = document.createElement('div'); summaryBar.className = 'summary-bar'; summaryBar.id = 'summary-bar';
   main.appendChild(summaryBar); updateSummary();
 
+  // O filtro de Situação descreve ESTA missa (quem já foi marcado), não uma preferência —
+  // um filtro esquecido em "Presentes" abriria a próxima missa (ou o "Limpar chamada", que
+  // chama abrirChamada de novo) com ninguém ainda marcado e a lista inteira escondida.
+  try { localStorage.removeItem('filtro-lista:chamada-lista'); } catch (e) {}
+  const alvoFiltroCh = document.createElement('div'); alvoFiltroCh.id = 'filtro-chamada'; main.appendChild(alvoFiltroCh);
+  filtroChamada = montarFiltroLista(alvoFiltroCh, configFiltroChamada(), aplicarFiltroChamada);
+  const avisoVazio = document.createElement('span'); avisoVazio.className = 'empty'; avisoVazio.id = 'chamada-filtro-vazio';
+  avisoVazio.textContent = 'Ninguém nesta situação.'; avisoVazio.style.display = 'none'; main.appendChild(avisoVazio);
+
   // Lista por categoria
   const catMap = {};
   escalasAtuais.forEach(e=>{
@@ -214,11 +293,11 @@ async function abrirChamada(celeb) {
   });
 
   Object.entries(catMap).forEach(([cat,items])=>{
-    const catEl=document.createElement('div');catEl.className='chamada-cat';catEl.textContent=cat;main.appendChild(catEl);
+    const catEl=document.createElement('div');catEl.className='chamada-cat';catEl.textContent=cat;catEl.setAttribute('data-cat',cat);main.appendChild(catEl);
     items.forEach(e=>{
       const m=e.acolitos_membros;
       const r=rosterMap[e.membro_id]||{}; // fonte à prova de RLS (cerimoniário não lê o embed)
-      const block=document.createElement('div');
+      const block=document.createElement('div');block.setAttribute('data-escala-id',String(e.id));block.setAttribute('data-escala-cat',cat);
       const item=document.createElement('div');item.className='chamada-item';
       const av=buildAvatarEl(m?.foto_url||r.foto_url,patchRoleFromHabs(habMapCh[e.membro_id]||{}),40,{nivelSlug:m?.nivel||r.nivel||nivelFromRole(patchRoleFromHabs(habMapCh[e.membro_id]||{})),casaSlug:casaSlugDe(m||r)});av.style.flexShrink='0';
       const info=document.createElement('div');info.className='chamada-info';
@@ -255,6 +334,8 @@ async function abrirChamada(celeb) {
       main.appendChild(block);
     });
   });
+
+  aplicarFiltroChamada();
 
   // Avulsos (quem veio sem estar escalado)
   await renderAvulsos(main, celeb.id);

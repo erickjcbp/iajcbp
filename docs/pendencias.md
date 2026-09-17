@@ -7,25 +7,45 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ## 1. Pendente
 
-**Ordenar e filtrar — passos 2 a 5 da spec**
-(`docs/superpowers/specs/2026-09-16-acolitos-ordenar-e-filtrar-design.md`). O passo 1 (a barra
-+ Membros) está feito em 16/09/2026. Faltam: Agenda e CRM; Chamada; migration 069 +
-Ausências (Avisos e Faltas — a parte que filtra NA CONSULTA, porque as listas vêm em pedaços);
-Tarefas.
+**Ordenar e filtrar — passos 4 e 5 da spec**
+(`docs/superpowers/specs/2026-09-16-acolitos-ordenar-e-filtrar-design.md`). Membros (16/09),
+Agenda, CRM e Chamada (17/09) estão feitos. Faltam: migration 069 + Ausências (Avisos e
+Faltas — a parte que filtra NA CONSULTA, porque as listas vêm em pedaços); Tarefas.
+
+**A prova antiga da barra (`provaBarraDeFiltroFunciona`) ainda falha às vezes — e agora se sabe
+por quê.** O app tem um mecanismo que faz "Voltar" ao fechar qualquer janela (`shared.js`,
+perto da linha 3416): fechar chama `history.back()`, que o navegador executa DEPOIS. Se outra
+janela abre antes disso, a página pode sair do lugar no meio da prova, e o harness devolve o
+resultado vazio SEM acusar erro. Evidência, 17/09: uma rodada com 31 falhas foi 9 esperadas +
+**21 dessa prova só, todas com resultado vazio** (`/tmp/claude-501/fix3_teeth2.txt`). É a
+explicação mais forte para as **22 falhas misteriosas** logo depois de juntar o passo 1
+(mesmo tamanho). As provas novas (Agenda, CRM, Chamada e a da barra do passo 2) já esperam
+120 ms depois de fechar uma janela e conferem que o resultado não veio vazio; **a antiga
+ainda não**. Conserto: aplicar o mesmo à prova antiga. Depois, dois consertos maiores:
+(1) o harness acusar quando a página sai do lugar; (2) no app, só registrar a janela nova no
+histórico quando não houver um "voltar" pendente — o risco para gente de verdade é baixo
+(o toque é mais lento que essa janela), mas existe.
+
+**Agenda — textos para o dono decidir.** No painel, "Mostrar: Eventos" fica ao lado de "Tipo
+de evento: Evento", e escolher um tipo de evento esconde as celebrações (a contagem mostra).
+No calendário, "Ver N itens" conta o mês inteiro. E quem tinha escolhido "Celebrações" nos
+botões antigos da linha do tempo agora vê o calendário também sem eventos (a etiqueta diz por
+quê).
+
+**Pontos pequenos dos passos 2 e 3** (nenhum aparece para quem usa hoje):
+- A Agenda remonta a barra a cada redesenho; funciona porque a escolha é guardada no aparelho —
+  com o armazenamento cheio, um toque no filtro pareceria não pegar.
+- A prova do CRM, como a de Membros, assume o computador no fuso de Brasília. Conserto de
+  ambas: fixar o fuso no harness.
+- A Chamada ganhou "Presentes / Atrasados / Ausentes" além do "Ainda sem marcar" que a spec
+  pedia — ficou assim de propósito.
+- Na escolha da missa, as missas entram juntas na animação de entrada (antes entravam uma a uma).
 
 **O aviso "Instale o app" cobre o fim de TODA janela do app no celular.** Achado em 16/09 ao
 fotografar o painel de filtros: o botão "Ver N membros" fica meio escondido atrás dele. Não é
 do filtro — o aviso (`#pwa-banner`) fica numa camada acima (400) de toda janela (200). Só
 aparece no navegador, até a pessoa tocar no X. Conserto provável: esconder o aviso enquanto
 houver janela aberta — e provar em várias telas.
-
-**As provas de tela falharam uma vez sem motivo conhecido (17/09/2026).** Logo depois de
-juntar o passo 1 na `main`, uma rodada de `npm test` deu **22 falhas em 195**. O código era o
-mesmo que tinha passado 195/195 minutos antes, e as três rodadas seguintes passaram inteiras.
-Só o total foi guardado, não quais provas falharam — então a causa é desconhecida. Suspeita não
-confirmada: o harness espera tempos fixos (350 ms) e a máquina podia estar ocupada por outra
-janela. **Da próxima vez, guardar a saída inteira** (`npm run provar-telas > arquivo 2>&1`)
-antes de rodar de novo.
 
 **Pontos pequenos do passo 1 que ficaram para depois** (nenhum aparece para quem usa hoje):
 - Membros: "Próximos aniversários" e a ordem por "Nível" não têm prova de tela própria.

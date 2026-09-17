@@ -1359,6 +1359,387 @@ async function provaMembrosMostraQuemEntrouPorUltimo(provas) {
     'sem o filtro App, as opções restantes também não cortam o texto', 'cortadas: ' + JSON.stringify(b.rotulosCortados));
 }
 
+async function provaBarraMostraSoOQueATelaOferece(provas) {
+  console.log('\n\x1b[1mBarra de filtro: mostra só o que a tela oferece\x1b[0m');
+
+  // A Agenda só ordena por data; o CRM não tem filtro. Uma seção "Ordenar por" com uma
+  // opção só, ou um botão "Filtrar" que abre só ordens, são enfeite que confunde.
+  const r = await provas.abrir('caixa.html', {
+    papel: PAPEIS.admin,
+    avaliar: `
+      const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+      const painel = () => document.querySelector('.modal-overlay.open .filtro-painel');
+      const titulos = () => [...painel().querySelectorAll('.filtro-painel-titulo')].map(e => e.textContent.trim());
+      const fechar = () => { const ov = document.querySelector('.modal-overlay.open'); if (ov) ov.remove(); };
+      const itens = [{ nome: 'Ana', t: 'a' }, { nome: 'Bia', t: 'b' }];
+      const out = {};
+      try { ['prova-uma-ordem', 'prova-sem-filtro', 'prova-nada'].forEach(k => localStorage.removeItem('filtro-lista:' + k)); } catch (e) {}
+
+      // 1) uma ordem só + um filtro
+      const a1 = document.createElement('div'); document.body.appendChild(a1);
+      const c1 = { chave: 'prova-uma-ordem', rotulo: ['item', 'itens'], ordemPadrao: 'data',
+        ordens: [{ id: 'data', nome: 'Data', valor: i => i.nome }],
+        filtros: [{ id: 't', nome: 'Tipo', opcoes: [{ id: 'a', nome: 'Tipo A', testa: i => i.t === 'a' }] }],
+        contar: e => FiltroLista.aplicar(itens, e, c1).length };
+      montarFiltroLista(a1, c1, () => {});
+      out.botao1 = a1.querySelector('.filtro-btn').textContent.trim();
+      out.linha1 = (a1.querySelector('.filtro-linha') || {}).textContent || '';
+      a1.querySelector('.filtro-btn').click(); await esperar(30);
+      out.titulos1 = titulos();
+      fechar(); a1.remove();
+      // O app fecha modal via history.back() (Voltar do navegador fecha o modal — Spec D).
+      // Isso é assíncrono: abrir o próximo modal antes desse popstate assentar atropela o
+      // histórico e navega para trás de verdade. 80ms dá folga de sobra.
+      await esperar(80);
+
+      // 2) duas ordens, nenhum filtro
+      const a2 = document.createElement('div'); document.body.appendChild(a2);
+      const c2 = { chave: 'prova-sem-filtro', rotulo: ['item', 'itens'], ordemPadrao: 'az',
+        ordens: [{ id: 'az', nome: 'Nome A–Z', valor: i => i.nome }, { id: 'za', nome: 'Nome Z–A', desc: true, valor: i => i.nome }],
+        filtros: [],
+        busca: { placeholder: 'Buscar...', campos: i => [i.nome] },
+        contar: e => FiltroLista.aplicar(itens, e, c2).length };
+      montarFiltroLista(a2, c2, () => {});
+      out.botao2 = a2.querySelector('.filtro-btn').textContent.trim();
+      out.linha2 = (a2.querySelector('.filtro-linha') || {}).textContent || '';
+      a2.querySelector('.filtro-btn').click(); await esperar(30);
+      out.titulos2 = titulos();
+      fechar(); a2.remove();
+
+      // 3) uma ordem só, nenhum filtro, com busca: não há o que escolher no painel
+      const a3 = document.createElement('div'); document.body.appendChild(a3);
+      const c3 = { chave: 'prova-nada', rotulo: ['item', 'itens'], ordemPadrao: 'data',
+        ordens: [{ id: 'data', nome: 'Data', valor: i => i.nome }],
+        filtros: [],
+        busca: { placeholder: 'Buscar...', campos: i => [i.nome] },
+        contar: e => FiltroLista.aplicar(itens, e, c3).length };
+      montarFiltroLista(a3, c3, () => {});
+      const b3 = a3.querySelector('.filtro-btn');
+      out.botao3Visivel = !!b3 && b3.style.display !== 'none';
+      out.busca3 = !!a3.querySelector('.search-input');
+      a3.remove();
+
+      try { ['prova-uma-ordem', 'prova-sem-filtro', 'prova-nada'].forEach(k => localStorage.removeItem('filtro-lista:' + k)); } catch (e) {}
+      return out;
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'as três formas da barra montam sem estourar', r.erroAvaliar);
+  exigir(/^Filtrar/.test(a.botao1 || ''), 'com filtro, o botão continua "Filtrar"', 'botão: ' + JSON.stringify(a.botao1));
+  exigir(JSON.stringify(a.titulos1) === JSON.stringify(['Tipo']), 'com UMA ordem, o painel não tem "Ordenar por"', 'seções: ' + JSON.stringify(a.titulos1));
+  exigir(!/Data/.test(a.linha1 || ''), 'com UMA ordem, o nome da ordem não aparece solto na tela', 'linha: ' + JSON.stringify(a.linha1));
+  exigir(/^Ordenar/.test(a.botao2 || ''), 'sem filtro, o botão se chama "Ordenar"', 'botão: ' + JSON.stringify(a.botao2));
+  exigir(JSON.stringify(a.titulos2) === JSON.stringify(['Ordenar por']), 'sem filtro, o painel só tem "Ordenar por"', 'seções: ' + JSON.stringify(a.titulos2));
+  exigir(/Nome A–Z/.test(a.linha2 || ''), 'com duas ordens, a ordem escolhida continua escrita', 'linha: ' + JSON.stringify(a.linha2));
+  exigir(a.botao3Visivel === false, 'sem nada a escolher, o botão some', 'visível: ' + a.botao3Visivel);
+  exigir(a.busca3 === true, 'e a busca continua lá');
+}
+
+async function provaAgendaFiltra(provas) {
+  console.log('\n\x1b[1mAgenda: a barra filtra a linha do tempo e o calendário\x1b[0m');
+
+  // Datas relativas a HOJE, calculadas agora: a linha do tempo só mostra o que está por vir,
+  // e uma data cravada envelheceria até a prova mentir.
+  const dia = (n) => { const d = new Date(); d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const celebracoes = [
+    { id: 'c1', data: dia(1), horario: '19:00', comunidade: 'matriz', tipo: 'missa_comum', observacoes: null },
+    { id: 'c2', data: dia(2), horario: '08:00', comunidade: 'santo_antonio', tipo: 'missa_comum', observacoes: null },
+  ];
+  const eventos = [
+    { id: 'e1', titulo: 'Ensaio geral', tipo: 'ensaio', data: dia(1), hora: '15:00:00', hora_fim: null, local: null },
+    { id: 'e2', titulo: 'Retiro', tipo: 'retiro', data: dia(3), hora: null, hora_fim: null, local: null },
+  ];
+  const r = await provas.abrir('agenda.html', {
+    papel: PAPEIS.admin,
+    tabelas: { acolitos_celebracoes: { data: celebracoes }, acolitos_eventos: { data: eventos }, acolitos_listas: { data: [] } },
+    avaliar: `
+      const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+      const titulos = () => [...document.querySelectorAll('#main-content .ag-tit')].map(e => e.textContent.trim());
+      const painel = () => document.querySelector('.modal-overlay.open .filtro-painel');
+      const abrir = async () => { document.querySelector('#main-content .filtro-btn').click(); await esperar(30); };
+      const tocar = (txt) => { const b = [...painel().querySelectorAll('button')].find(x => x.textContent.trim() === txt); if (!b) throw new Error('sem botão ' + txt); b.click(); };
+      const ver = async () => { painel().querySelector('.filtro-ver').click(); await esperar(120); };
+      const limpar = async () => { const l = document.querySelector('#main-content .filtro-limpar'); if (l) { l.click(); await esperar(120); } };
+      const guarda = (k) => { try { localStorage.removeItem(k); } catch (e) {} };
+      guarda('filtro-lista:agenda'); guarda('agenda-tl-filtro');
+      const out = {};
+
+      viewMode = 'linha'; await reload(); await esperar(60);
+      out.botoesVelhos = document.querySelectorAll('.tl-filtros').length;
+      out.temBusca = !!document.querySelector('#main-content .filtro-barra .search-input');
+      out.padrao = titulos();
+      await abrir();
+      out.secoes = [...painel().querySelectorAll('.filtro-painel-titulo')].map(e => e.textContent.trim());
+      out.tiposOferecidos = [...painel().querySelectorAll('.filtro-painel-secao')][1]
+        ? [...[...painel().querySelectorAll('.filtro-painel-secao')][1].querySelectorAll('.form-toggle')].map(b => b.textContent.trim()) : [];
+      tocar('Eventos'); await esperar(30);
+      out.verEventos = painel().querySelector('.filtro-ver').textContent.trim();
+      await ver();
+      out.soEventos = titulos();
+      await limpar();
+
+      await abrir(); tocar('Ensaio'); await ver();
+      out.soEnsaio = titulos();
+      await limpar();
+
+      await abrir(); tocar('Santo Antônio'); await ver();
+      out.comunidadeSA = titulos();
+      await limpar();
+
+      // o calendário usa o mesmo filtro, no painel do dia
+      await abrir(); tocar('Celebrações'); await ver();
+      viewMode = 'cal'; selDate = celebs.length ? '${dia(1)}' : selDate; render(); await esperar(60);
+      out.diaSoCelebracao = titulos();
+      // dia(3) só tem o Retiro (evento) — com "Mostrar: Celebrações" ligado, o filtro
+      // é quem esvazia o dia, e o aviso tem de dizer isso (não "nada marcado" seco).
+      selDate = '${dia(3)}'; render(); await esperar(60);
+      out.diaVazioComFiltro = (document.querySelector('#main-content .ag-empty') || {}).textContent || '';
+      await limpar();
+      viewMode = 'linha'; await reload(); await esperar(60);
+
+      // a escolha guardada nos botões antigos (Tudo/Celebrações/Eventos) não se perde
+      guarda('filtro-lista:agenda');
+      try { localStorage.setItem('agenda-tl-filtro', 'celeb'); } catch (e) {}
+      await reload(); await esperar(60);
+      out.migrado = titulos();
+      out.etiquetaMigrada = [...document.querySelectorAll('#main-content .filtro-etiqueta')].map(e => e.textContent.trim());
+      out.chaveVelhaSumiu = (() => { try { return localStorage.getItem('agenda-tl-filtro') === null; } catch (e) { return null; } })();
+
+      guarda('filtro-lista:agenda'); guarda('agenda-tl-filtro');
+      return out;
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a Agenda filtra sem estourar', r.erroAvaliar);
+  exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova da Agenda chegou ao fim (a página não saiu do lugar)', 'avaliado: ' + JSON.stringify(r.avaliado));
+  exigir((r.erros || []).length === 0, 'nenhum erro de JavaScript na Agenda', (r.erros || []).join(' | '));
+  exigir(a.botoesVelhos === 0, 'os botões Tudo/Celebrações/Eventos viraram filtro no painel');
+  exigir(a.temBusca === false, 'a Agenda não ganhou busca (não foi pedida)');
+  exigir(JSON.stringify(a.padrao) === JSON.stringify(['Ensaio geral', 'Missa', 'Missa', 'Retiro']),
+    'sem filtro, a linha do tempo segue na ordem de data e hora', 'saiu: ' + JSON.stringify(a.padrao));
+  exigir(JSON.stringify(a.secoes) === JSON.stringify(['Mostrar', 'Tipo de evento', 'Comunidade (missas)']),
+    'o painel oferece Mostrar, Tipo de evento e Comunidade — e não "Ordenar por"', 'saiu: ' + JSON.stringify(a.secoes));
+  exigir((a.tiposOferecidos || []).includes('Ensaio') && (a.tiposOferecidos || []).includes('Retiro'),
+    'os tipos de evento vêm da lista configurável', 'saiu: ' + JSON.stringify(a.tiposOferecidos));
+  exigir(a.verEventos === 'Ver 2 itens', 'o painel conta antes de aplicar', 'mostrou: ' + JSON.stringify(a.verEventos));
+  exigir(JSON.stringify(a.soEventos) === JSON.stringify(['Ensaio geral', 'Retiro']), '"Eventos" esconde as celebrações', 'saiu: ' + JSON.stringify(a.soEventos));
+  exigir(JSON.stringify(a.soEnsaio) === JSON.stringify(['Ensaio geral']), 'um tipo de evento mostra só ele', 'saiu: ' + JSON.stringify(a.soEnsaio));
+  exigir(JSON.stringify(a.comunidadeSA) === JSON.stringify(['Ensaio geral', 'Missa', 'Retiro']),
+    'comunidade filtra as missas e mantém os eventos', 'saiu: ' + JSON.stringify(a.comunidadeSA));
+  exigir(JSON.stringify(a.diaSoCelebracao) === JSON.stringify(['Missa']), 'no calendário, o dia também obedece ao filtro', 'saiu: ' + JSON.stringify(a.diaSoCelebracao));
+  exigir(/com esses filtros/.test(a.diaVazioComFiltro || ''), 'o dia vazio pelo FILTRO diz isso no painel do dia', 'saiu: ' + JSON.stringify(a.diaVazioComFiltro));
+  exigir(JSON.stringify(a.migrado) === JSON.stringify(['Missa', 'Missa']), 'a escolha antiga "Celebrações" continua valendo', 'saiu: ' + JSON.stringify(a.migrado));
+  exigir(JSON.stringify(a.etiquetaMigrada) === JSON.stringify(['Celebrações']), 'e aparece como etiqueta', 'saiu: ' + JSON.stringify(a.etiquetaMigrada));
+  exigir(a.chaveVelhaSumiu === true, 'a chave antiga é convertida uma vez só');
+}
+
+async function provaCrmOrdenaEBusca(provas) {
+  console.log('\n\x1b[1mCRM: ordenar e buscar no quadro e na lista\x1b[0m');
+
+  // O CRM já abria com quem está parado há mais tempo (a pergunta da coordenação ali é
+  // "quem está esquecido?"). A barra mantém isso como padrão e acrescenta as outras ordens.
+  const pessoa = (id, nome, criado) => ({ id, nome, apelido: null, data_nascimento: '2012-01-01',
+    comunidade: 'matriz', status: 'em_integracao', created_at: criado });
+  // Três pessoas em "integracao". A ficha chega na ordem Ana, Zeca, Bia — que não é nem o
+  // padrão (Zeca, Bia, Ana), nem Nome A–Z (Ana, Bia, Zeca), nem Mais recentes (Bia, Zeca,
+  // Ana). Só assim a prova pega qualquer uma das três ordens presa na ordem de chegada —
+  // com só duas pessoas (versão anterior), ou com a ficha já em ordem alfabética (rodada
+  // 1 do conserto), um defeito nessas ordens passaria sem ser notado.
+  const crm = [
+    { id: 'k1', membro_id: 'p1', etapa: 'integracao', etapa_iniciada_em: '2026-09-05T12:00:00+00:00', acolitos_membros: pessoa('p1', 'Ana Velha', '2026-05-10T12:00:00+00:00') },
+    { id: 'k3', membro_id: 'p3', etapa: 'integracao', etapa_iniciada_em: '2026-07-01T12:00:00+00:00', acolitos_membros: pessoa('p3', 'Zeca Antigo', '2026-06-20T12:00:00+00:00') },
+    { id: 'k2', membro_id: 'p2', etapa: 'integracao', etapa_iniciada_em: '2026-08-01T12:00:00+00:00', acolitos_membros: pessoa('p2', 'Bia Nova', '2026-09-01T01:30:00+00:00') },
+    { id: 'k4', membro_id: 'p4', etapa: 'tunica', etapa_iniciada_em: '2026-08-10T12:00:00+00:00', acolitos_membros: pessoa('p4', 'Caio Meio', '2026-08-01T12:00:00+00:00') },
+  ];
+  const r = await provas.abrir('crm.html', {
+    papel: PAPEIS.admin,
+    tabelas: { acolitos_crm: { data: crm }, acolitos_crm_comentarios: { data: [] }, acolitos_crm_historico: { data: [] } },
+    avaliar: `
+      const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+      const guarda = () => { try { localStorage.removeItem('filtro-lista:crm'); } catch (e) {} };
+      const coluna = (i) => [...document.querySelectorAll('#view-pipeline .crm-col')[i].querySelectorAll('.crm-card-name')].map(e => e.textContent.trim());
+      const painel = () => document.querySelector('.modal-overlay.open .filtro-painel');
+      const tocar = (txt) => { const b = [...painel().querySelectorAll('button')].find(x => x.textContent.trim() === txt); if (!b) throw new Error('sem botão ' + txt); b.click(); };
+      const escolher = async (txt) => { document.querySelector('#filtro-crm .filtro-btn').click(); await esperar(30); tocar(txt); await esperar(30); painel().querySelector('.filtro-ver').click(); await esperar(120); };
+      guarda();
+      currentView = 'pipeline'; montarFiltroCrm(); await loadCrm(); await esperar(60);
+      const out = {};
+      out.botao = document.querySelector('#filtro-crm .filtro-btn').textContent.trim();
+      out.temBusca = !!document.querySelector('#filtro-crm .search-input');
+      out.colIntegracaoPadrao = coluna(ETAPAS.indexOf('integracao'));
+      document.querySelector('#filtro-crm .filtro-btn').click(); await esperar(30);
+      out.secoes = [...painel().querySelectorAll('.filtro-painel-titulo')].map(e => e.textContent.trim());
+      document.querySelector('.modal-overlay.open').remove();
+      await esperar(120);
+
+      await escolher('Nome A–Z');
+      out.colIntegracaoNome = coluna(ETAPAS.indexOf('integracao'));
+
+      await escolher('Mais recentes');
+      out.colIntegracaoRecentes = coluna(ETAPAS.indexOf('integracao'));
+      const leg = document.querySelector('#view-pipeline .filtro-legenda');
+      out.legenda = leg ? leg.textContent.trim() : null;
+      out.legendaEsperada = 'cadastro ' + new Date('2026-09-01T01:30:00+00:00').toLocaleDateString('pt-BR').slice(0, 5);
+
+      const inp = document.querySelector('#filtro-crm .search-input');
+      inp.value = 'bia'; inp.dispatchEvent(new Event('input')); await esperar(60);
+      out.cartoesComBusca = [...document.querySelectorAll('#view-pipeline .crm-card-name')].map(e => e.textContent.trim());
+      out.kpiTotal = [...document.querySelectorAll('#crm-kpis .kpi-card')].map(c => c.querySelector('.kpi-value').textContent.trim())[1];
+
+      setView('lista'); await esperar(60);
+      out.linhasComBusca = [...document.querySelectorAll('#crm-tbody tr td:first-child')].map(e => e.textContent.trim());
+      inp.value = 'ninguem-assim'; inp.dispatchEvent(new Event('input')); await esperar(60);
+      out.listaVazia = (document.querySelector('#crm-tbody') || {}).textContent || '';
+      setView('pipeline');
+
+      guarda();
+      return out;
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'o CRM ordena e busca sem estourar', r.erroAvaliar);
+  exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova do CRM chegou ao fim (a página não saiu do lugar)', 'avaliado: ' + JSON.stringify(r.avaliado));
+  exigir((r.erros || []).length === 0, 'nenhum erro de JavaScript no CRM', (r.erros || []).join(' | '));
+  exigir(/^Ordenar/.test(a.botao || ''), 'sem filtro, o botão do CRM se chama "Ordenar"', 'botão: ' + JSON.stringify(a.botao));
+  exigir(a.temBusca === true, 'o CRM tem busca por nome');
+  exigir(JSON.stringify(a.secoes) === JSON.stringify(['Ordenar por']), 'o painel do CRM só oferece ordens', 'saiu: ' + JSON.stringify(a.secoes));
+  exigir(JSON.stringify(a.colIntegracaoPadrao) === JSON.stringify(['Zeca Antigo', 'Bia Nova', 'Ana Velha']),
+    'o padrão continua: quem está parado há mais tempo primeiro', 'saiu: ' + JSON.stringify(a.colIntegracaoPadrao));
+  exigir(JSON.stringify(a.colIntegracaoNome) === JSON.stringify(['Ana Velha', 'Bia Nova', 'Zeca Antigo']), 'Nome A–Z ordena dentro da coluna', 'saiu: ' + JSON.stringify(a.colIntegracaoNome));
+  exigir(JSON.stringify(a.colIntegracaoRecentes) === JSON.stringify(['Bia Nova', 'Zeca Antigo', 'Ana Velha']), 'Mais recentes põe o cadastro mais novo primeiro', 'saiu: ' + JSON.stringify(a.colIntegracaoRecentes));
+  exigir(a.legenda === a.legendaEsperada, 'a data do cadastro aparece no cartão, no horário local', 'saiu: ' + JSON.stringify(a.legenda) + ' esperado ' + JSON.stringify(a.legendaEsperada));
+  exigir(JSON.stringify(a.cartoesComBusca) === JSON.stringify(['Bia Nova']), 'a busca vale no quadro', 'saiu: ' + JSON.stringify(a.cartoesComBusca));
+  exigir(a.kpiTotal === '4', 'os números do topo não mudam com a busca (são do funil inteiro)', 'saiu: ' + JSON.stringify(a.kpiTotal));
+  exigir(JSON.stringify(a.linhasComBusca) === JSON.stringify(['Bia Nova']), 'e a busca vale na lista', 'saiu: ' + JSON.stringify(a.linhasComBusca));
+  exigir(/Ninguém com essa busca/.test(a.listaVazia || ''), 'busca sem resultado diz isso, e não "nenhum membro em onboarding"', 'saiu: ' + JSON.stringify(a.listaVazia));
+}
+
+async function provaChamadaFiltra(provas) {
+  console.log('\n\x1b[1mChamada: filtra a missa e a situação, sem mexer no que já foi marcado\x1b[0m');
+
+  // A Chamada é usada NA HORA. O filtro esconde linhas, não redesenha a tela — redesenhar
+  // apagaria o substituto escolhido. E marcar alguém não esconde a linha na frente de quem
+  // marca: o seletor de substituto do "ausente" mora embaixo dela.
+  const dia = (n) => { const d = new Date(); d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const missas = [
+    { id: 'ce1', data: dia(1), horario: '19:00', comunidade: 'matriz', tipo: 'missa_comum', acolitos_escalas: [{ id: 'x1' }, { id: 'x2' }, { id: 'x3' }] },
+    { id: 'ce2', data: dia(2), horario: '08:00', comunidade: 'santo_antonio', tipo: 'missa_comum', acolitos_escalas: [{ id: 'x4' }] },
+  ];
+  const escalas = [
+    { id: 'es1', funcao: 'altar', status: 'escalado', membro_id: 'm1', acolitos_membros: { nome: 'Ana Altar', foto_url: null, nivel: 'acolito_guardiao' } },
+    { id: 'es2', funcao: 'cruz', status: 'presente', membro_id: 'm2', acolitos_membros: { nome: 'Bruno Cruz', foto_url: null, nivel: 'acolito_guardiao' } },
+    { id: 'es3', funcao: 'vela', status: 'escalado', membro_id: 'm3', acolitos_membros: { nome: 'Caio Vela', foto_url: null, nivel: 'coroinha' } },
+  ];
+  // m4 não está escalado nesta missa (eligiveis() descarta quem já está) — só ele pode
+  // aparecer como substituto de 'altar', e só porque tem a habilitação abaixo.
+  const roster = { membros: [
+    { id: 'm1', nome: 'Ana Altar' }, { id: 'm2', nome: 'Bruno Cruz' }, { id: 'm3', nome: 'Caio Vela' },
+    { id: 'm4', nome: 'Duda Reserva' },
+  ], habs: [ { membro_id: 'm4', funcao: 'altar', proficiencia: 'apto' } ] };
+  const r = await provas.abrir('chamada.html', {
+    papel: PAPEIS.admin,
+    tabelas: { acolitos_celebracoes: { data: missas }, acolitos_escalas: { data: escalas }, acolitos_chamadas_itens: { data: [] } },
+    rpcs: { acolitos_roster_substituicao: { data: roster }, acolitos_avulsos_celebracao: { data: [] }, acolitos_chamada_responsavel: { data: null } },
+    avaliar: `
+      const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+      const guarda = () => { try { localStorage.removeItem('filtro-lista:chamada-missas'); localStorage.removeItem('filtro-lista:chamada-lista'); } catch (e) {} };
+      const painel = () => document.querySelector('.modal-overlay.open .filtro-painel');
+      const escolher = async (alvo, txt) => { document.querySelector(alvo + ' .filtro-btn').click(); await esperar(30);
+        const b = [...painel().querySelectorAll('button')].find(x => x.textContent.trim() === txt); if (!b) throw new Error('sem botão ' + txt);
+        b.click(); await esperar(30); painel().querySelector('.filtro-ver').click(); await esperar(120); };
+      const tirar = async (alvo) => { const l = document.querySelector(alvo + ' .filtro-limpar'); if (l) { l.click(); await esperar(120); } };
+      const visiveis = () => [...document.querySelectorAll('[data-escala-id]')].filter(b => b.style.display !== 'none')
+        .map(b => b.querySelector('.chamada-nome-el').textContent.trim());
+      const catsVisiveis = () => [...document.querySelectorAll('[data-cat]')].filter(h => h.style.display !== 'none').map(h => h.textContent.trim());
+      guarda();
+      const out = {};
+
+      await renderSelecao(); await esperar(60);
+      out.missas = document.querySelectorAll('.celeb-opt').length;
+      out.botaoMissas = (document.querySelector('#filtro-missas .filtro-btn') || {}).textContent;
+      await escolher('#filtro-missas', 'Santo Antônio');
+      out.missasSA = document.querySelectorAll('.celeb-opt').length;
+      await tirar('#filtro-missas');
+
+      await abrirChamada(missas_[0]); await esperar(80);
+      out.todos = visiveis();
+      await escolher('#filtro-chamada', 'Ainda sem marcar');
+      out.semMarcar = visiveis();
+      out.catsSemMarcar = catsVisiveis();
+      setRes('es1', 'ausente'); await esperar(30);
+      out.depoisDeMarcar = visiveis();
+      const subRow = document.querySelector('[data-escala-id="es1"] .sub-row');
+      out.substitutoAparece = !!subRow && subRow.style.display !== 'none';
+      await tirar('#filtro-chamada');
+
+      // Fix3: o substituto escolhido tem de sobreviver a uma troca de filtro — é a razão
+      // dada para o filtro ESCONDER linhas em vez de redesenhar a tela.
+      const subSel = document.querySelector('[data-escala-id="es1"] .sub-sel');
+      subSel.value = 'm4'; subSel.dispatchEvent(new Event('change')); await esperar(30);
+      out.substitutoEscolhido = substitutos['es1'];
+      await escolher('#filtro-chamada', 'Presentes');
+      out.presentes = visiveis();
+      out.catsPresentes = catsVisiveis();
+      out.resultadoGuardado = resultados['es1'];
+      out.botoesVisiveisComFiltro = [...document.querySelectorAll('[data-escala-id]')]
+        .filter(b => b.style.display !== 'none')
+        .reduce((n, b) => n + b.querySelectorAll('.r-btn').length, 0);
+      out.substitutoSelectDepoisDoFiltro = document.querySelector('[data-escala-id="es1"] .sub-sel').value;
+      await tirar('#filtro-chamada');
+      out.substitutoSelectDepoisDeLimpar = document.querySelector('[data-escala-id="es1"] .sub-sel').value;
+      out.substitutoObjetoDepoisDeLimpar = substitutos['es1'];
+
+      // Fix1: a "Situação" descreve UMA missa, não uma preferência. Deixamos o filtro
+      // "Presentes" LIGADO de propósito (sem tirar) e reabrimos a MESMA missa — é o que
+      // acontece de verdade quando a próxima missa abre, ou quando "Limpar chamada" chama
+      // abrirChamada de novo.
+      await escolher('#filtro-chamada', 'Presentes');
+      await abrirChamada(missas_[0]); await esperar(80);
+      out.todosDepoisDeReabrir = visiveis();
+      out.etiquetaChamadaReaberta = [...document.querySelectorAll('#filtro-chamada .filtro-etiqueta')].map(e => e.textContent.trim());
+      out.vazioEscondidoReaberta = (document.getElementById('chamada-filtro-vazio') || {}).style.display;
+
+      // Já a escolha da MISSA (comunidade) é preferência normal — continua valendo entre
+      // aberturas da tela de seleção.
+      await renderSelecao(); await esperar(60);
+      await escolher('#filtro-missas', 'Santo Antônio');
+      await renderSelecao(); await esperar(60);
+      out.missasSADepoisDeReabrirSelecao = document.querySelectorAll('.celeb-opt').length;
+      await tirar('#filtro-missas');
+
+      guarda();
+      return out;
+    `.replace(/missas_\[0\]/g, JSON.stringify(missas[0])),
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a Chamada filtra sem estourar', r.erroAvaliar);
+  exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova da Chamada chegou ao fim (a página não saiu do lugar)', 'avaliado: ' + JSON.stringify(r.avaliado));
+  exigir((r.erros || []).length === 0, 'nenhum erro de JavaScript na Chamada', (r.erros || []).join(' | '));
+  exigir(a.missas === 2, 'sem filtro, aparecem as duas missas', 'saiu: ' + a.missas);
+  exigir(/^Filtrar/.test(a.botaoMissas || ''), 'a escolha da missa tem o botão Filtrar', 'botão: ' + JSON.stringify(a.botaoMissas));
+  exigir(a.missasSA === 1, 'comunidade filtra as missas', 'saiu: ' + a.missasSA);
+  exigir(JSON.stringify(a.todos) === JSON.stringify(['Ana Altar', 'Bruno Cruz', 'Caio Vela']), 'sem filtro, a chamada mostra todo mundo na ordem de sempre', 'saiu: ' + JSON.stringify(a.todos));
+  exigir(JSON.stringify(a.semMarcar) === JSON.stringify(['Ana Altar', 'Caio Vela']), '"Ainda sem marcar" esconde quem já foi marcado', 'saiu: ' + JSON.stringify(a.semMarcar));
+  exigir(JSON.stringify(a.catsSemMarcar) === JSON.stringify(['Altares', 'Litúrgicos']), 'os títulos de grupo com gente visível continuam', 'saiu: ' + JSON.stringify(a.catsSemMarcar));
+  exigir(JSON.stringify(a.depoisDeMarcar) === JSON.stringify(['Ana Altar', 'Caio Vela']), 'marcar alguém NÃO esconde a linha na frente de quem marca', 'saiu: ' + JSON.stringify(a.depoisDeMarcar));
+  exigir(a.substitutoAparece === true, 'e o seletor de substituto do ausente fica à vista');
+  exigir(a.substitutoEscolhido === 'm4', 'dá para escolher um substituto elegível', 'saiu: ' + JSON.stringify(a.substitutoEscolhido));
+  exigir(JSON.stringify(a.presentes) === JSON.stringify(['Bruno Cruz']), '"Presentes" mostra só os presentes', 'saiu: ' + JSON.stringify(a.presentes));
+  exigir(JSON.stringify(a.catsPresentes) === JSON.stringify(['Litúrgicos']), 'grupo sem ninguém visível some junto', 'saiu: ' + JSON.stringify(a.catsPresentes));
+  exigir(a.resultadoGuardado === 'ausente', 'filtrar não apaga o que foi marcado', 'saiu: ' + JSON.stringify(a.resultadoGuardado));
+  exigir(a.botoesVisiveisComFiltro === 3, 'os botões de marcar visíveis batem com quem está à vista sob o filtro (3, só o Bruno)', 'saiu: ' + a.botoesVisiveisComFiltro);
+  exigir(a.substitutoSelectDepoisDoFiltro === 'm4', 'o substituto escolhido continua no seletor com o filtro ligado (a linha só ficou escondida, não sumiu)', 'saiu: ' + JSON.stringify(a.substitutoSelectDepoisDoFiltro));
+  exigir(a.substitutoSelectDepoisDeLimpar === 'm4', 'e continua depois de limpar o filtro', 'saiu: ' + JSON.stringify(a.substitutoSelectDepoisDeLimpar));
+  exigir(a.substitutoObjetoDepoisDeLimpar === 'm4', 'o objeto substitutos também não perdeu a escolha', 'saiu: ' + JSON.stringify(a.substitutoObjetoDepoisDeLimpar));
+  exigir(JSON.stringify(a.todosDepoisDeReabrir) === JSON.stringify(['Ana Altar', 'Bruno Cruz', 'Caio Vela']),
+    'o filtro de Situação NÃO passa de uma missa para a outra — a próxima missa abre com todo mundo à vista', 'saiu: ' + JSON.stringify(a.todosDepoisDeReabrir));
+  exigir(JSON.stringify(a.etiquetaChamadaReaberta) === JSON.stringify([]), 'e sem etiqueta de filtro na barra da chamada', 'saiu: ' + JSON.stringify(a.etiquetaChamadaReaberta));
+  exigir(a.vazioEscondidoReaberta === 'none', 'o aviso "Ninguém nesta situação" fica escondido ao reabrir', 'saiu: ' + JSON.stringify(a.vazioEscondidoReaberta));
+  exigir(a.missasSADepoisDeReabrirSelecao === 1, 'já a comunidade da escolha de missa é preferência normal e continua valendo', 'saiu: ' + a.missasSADepoisDeReabrirSelecao);
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -1440,6 +1821,10 @@ try {
     await provaAvisoDaCoordenacaoFicaNoApp(provas);
     await provaBarraDeFiltroFunciona(provas);
     await provaMembrosMostraQuemEntrouPorUltimo(provas);
+    await provaBarraMostraSoOQueATelaOferece(provas);
+    await provaAgendaFiltra(provas);
+    await provaCrmOrdenaEBusca(provas);
+    await provaChamadaFiltra(provas);
   }
 } finally {
   await provas.encerrar();
