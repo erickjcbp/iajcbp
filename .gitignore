@@ -17,3 +17,7 @@ midia/brasoes/originais/
 # Fica dentro do projeto por pedido dele, mas NUNCA sobe: o site inteiro é
 # publicado a partir daqui, e um arquivo desses viraria endereço público.
 entregas/
+
+# Espaços isolados de trabalho do Claude Code (git worktree). Cada um é uma cópia
+# inteira do projeto: sem esta linha, o commit levaria o site duplicado junto.
+/.claude/worktrees/
