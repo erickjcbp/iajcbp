@@ -84,3 +84,62 @@ do $$ begin
 exception when insufficient_privilege then raise notice 'CONTAR: recusada — CERTO';
 end $$;
 rollback;
+
+\echo ''
+\echo '=== 5) hora crua vira minutos, e a ordem do dia usa minutos, não texto (070) ==='
+select public.acolitos_minutos_do_horario('7h') as h7_DEVE_SER_420,
+       public.acolitos_minutos_do_horario('9h') as h9_DEVE_SER_540,
+       public.acolitos_minutos_do_horario('16h') as h16_DEVE_SER_960,
+       public.acolitos_minutos_do_horario('17h') as h17_DEVE_SER_1020,
+       public.acolitos_minutos_do_horario('18h30') as h1830_DEVE_SER_1110,
+       public.acolitos_minutos_do_horario('19h') as h19_DEVE_SER_1140,
+       public.acolitos_minutos_do_horario('19h30') as h1930_DEVE_SER_1170;
+select public.acolitos_minutos_do_horario('19:00') as h1900_DEVE_SER_1140,
+       public.acolitos_minutos_do_horario('08:15') as h0815_DEVE_SER_495,
+       public.acolitos_minutos_do_horario(null) as nulo_DEVE_SER_null,
+       public.acolitos_minutos_do_horario('sem hora') as invalido_DEVE_SER_null;
+
+\echo ''
+\echo '   -- a vista traz minutos batendo com a função, linha a linha --'
+select count(*) as vista_minutos_errados_DEVE_SER_0
+  from public.acolitos_ausencias_v
+ where missa_minutos is distinct from public.acolitos_minutos_do_horario(missa_horario);
+
+\echo ''
+\echo '   -- achar o dia mais recente com faltas em 2+ horários DIFERENTES --'
+select coalesce((
+  select cel.data
+    from public.acolitos_chamadas_itens ci
+    join public.acolitos_chamadas ch on ch.id = ci.chamada_id
+    join public.acolitos_escalas e on e.id = ci.escala_id
+    join public.acolitos_celebracoes cel on cel.id = ch.celebracao_id
+   where ci.resultado = 'ausente'
+   group by cel.data
+  having count(distinct cel.horario) >= 2
+   order by cel.data desc
+   limit 1
+), '1900-01-01'::date) as dia_multi_hora,
+exists (
+  select 1
+    from public.acolitos_chamadas_itens ci
+    join public.acolitos_chamadas ch on ch.id = ci.chamada_id
+    join public.acolitos_escalas e on e.id = ci.escala_id
+    join public.acolitos_celebracoes cel on cel.id = ch.celebracao_id
+   where ci.resultado = 'ausente'
+   group by cel.data
+  having count(distinct cel.horario) >= 2
+) as existe_dia_multi_hora \gset
+
+\echo '   dia escolhido:' :dia_multi_hora '  existe_dia_multi_hora:' :existe_dia_multi_hora
+\echo '   (se existe_dia_multi_hora = f, NENHUM dia com 2+ horários foi achado — a checagem abaixo diz isso, não passa em silêncio)'
+begin;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"b6f27ee7-e19f-4444-a771-8fc6ef3c35cb","role":"authenticated"}';
+select :'existe_dia_multi_hora' = 't' as existe_dia_multi_hora_DEVE_SER_t,
+       case when :'existe_dia_multi_hora' <> 't' then null else (
+         select count(*)
+           from jsonb_array_elements(public.acolitos_faltas_filtradas(null, :'dia_multi_hora', :'dia_multi_hora', null, 500)) with ordinality as t1(x, n)
+           join jsonb_array_elements(public.acolitos_faltas_filtradas(null, :'dia_multi_hora', :'dia_multi_hora', null, 500)) with ordinality as t2(x, n) on t2.n = t1.n + 1
+          where public.acolitos_minutos_do_horario(t2.x->>'horario') > public.acolitos_minutos_do_horario(t1.x->>'horario')
+       ) end as pares_fora_de_ordem_DEVE_SER_0_SE_t_ACIMA;
+rollback;
