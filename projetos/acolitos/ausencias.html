@@ -192,6 +192,82 @@ function linhaDeAviso(a) {
   row.append(info, del);
   return row;
 }
+function configFiltroFaltas(membros) {
+  return {
+    chave: 'ausencias-faltas',
+    rotulo: ['falta', 'faltas'],
+    ordemPadrao: 'missa',
+    ordens: [{ id: 'missa', nome: 'Data da missa', desc: true, valor: () => null }],
+    filtros: [
+      { id: 'pessoa', nome: 'Pessoa', busca: { placeholder: 'Buscar pessoa...', max: 8 }, opcoes: opcoesDePessoa(membros) },
+      { id: 'periodo', nome: 'Período (data da missa)', unico: true, opcoes: PERIODOS_AUSENCIA },
+      { id: 'comunidade', nome: 'Comunidade', opcoes: COMUNIDADES_AUSENCIA },
+    ],
+    contar: async (e) => {
+      const { data, error } = await sb.rpc('acolitos_faltas_contar', argsFaltas(e, false));
+      if (error) throw error;
+      return data;
+    },
+  };
+}
+function argsFaltas(estado, comLimite) {
+  const E = (f) => FiltroLista.escolhidos(estado, f);
+  const iv = E('periodo')[0] ? FiltroLista.intervaloDoPeriodo(E('periodo')[0], hojeLocal()) : { desde: null, ate: null };
+  const args = {
+    p_membros: E('pessoa').length ? E('pessoa') : null,
+    p_desde: iv.desde, p_ate: iv.ate,
+    p_comunidades: E('comunidade').length ? E('comunidade') : null,
+  };
+  if (comLimite) args.p_limite = 80;
+  return args;
+}
+async function recarregarFaltas() {
+  const lista = document.getElementById('lista-faltas');
+  if (!lista) return false;
+  const meu = ++pedidoFaltas;
+  lista.textContent = '';
+  const ld = document.createElement('span'); ld.className = 'loading'; ld.textContent = 'Carregando...'; lista.appendChild(ld);
+  const estado = filtroFaltas ? filtroFaltas.estado() : FiltroLista.estadoInicial(configFiltroFaltas([]));
+  const [{ data, error }, { data: total, error: eTotal }] = await Promise.all([
+    sb.rpc('acolitos_faltas_filtradas', argsFaltas(estado, true)),
+    sb.rpc('acolitos_faltas_contar', argsFaltas(estado, false)),
+  ]);
+  if (meu !== pedidoFaltas) return true;
+  lista.textContent = '';
+  const aviso = (txt) => { const s = document.createElement('span'); s.className = 'empty'; s.textContent = txt; lista.appendChild(s); };
+  if (error) {
+    console.error('Faltas: consulta falhou', error);
+    // Sem permissão (o cerimoniário vê a aba, mas o banco não deixa ver faltas): dizer isso.
+    // Antes a função devolvia lista vazia e a tela dizia "nenhuma falta" — mentira.
+    aviso(error.code === '42501' ? 'Você não tem acesso às faltas.' : 'Não foi possível carregar as faltas. Tente de novo.');
+    return error.code !== '42501';
+  }
+  if (!data || !data.length) {
+    aviso(FiltroLista.contar(estado) > 0 ? 'Nenhuma falta com esses filtros.' : 'Nenhuma falta registrada ainda.');
+    return true;
+  }
+  if (!eTotal && typeof total === 'number' && total > data.length) {
+    const info = document.createElement('p');
+    info.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0 0 8px;';
+    info.textContent = 'Mostrando ' + data.length + ' de ' + total + '. Use os filtros para achar o resto.';
+    lista.appendChild(info);
+  }
+  data.forEach(a => {
+    const row = document.createElement('div'); row.className = 'equipe-row';
+    const left = document.createElement('div'); left.className = 'equipe-row-info';
+    const nm = document.createElement('div'); nm.className = 'equipe-row-nome'; nm.textContent = a.membro || '—';
+    const wh = document.createElement('div'); wh.style.cssText = 'font-size:12px;color:var(--gold);';
+    wh.textContent = (a.data ? dataLabel(a.data) : '—') + (a.horario ? ' ' + a.horario : '') + ' · ' + comLabel(a.comunidade);
+    const fn = document.createElement('div'); fn.className = 'equipe-row-meta';
+    fn.textContent = (FUNCAO_LABEL[a.funcao] || a.funcao) + (a.substituto ? ' · coberto por ' + a.substituto : ' · vaga aberta');
+    left.append(nm, wh, fn);
+    const badge = document.createElement('span'); badge.className = 'badge';
+    badge.style.cssText = 'flex:none;color:var(--danger-text);font-weight:700;font-size:11px;';
+    badge.textContent = 'faltou';
+    row.append(left, badge); lista.appendChild(row);
+  });
+  return true;
+}
 let rosterMembrosAus = null, rosterMapAus = {}, rosterHabsAus = [];
 // Roster seguro (security-definer) — cobre o cerimoniário, que não lê acolitos_membros por RLS.
 async function carregarRosterAus() {
@@ -554,34 +630,16 @@ async function enviarAusencia() {
 // na verdade não se conseguiu perguntar.
 async function renderAbaFaltas(main) {
   main.textContent = '';
-  const ld = document.createElement('span'); ld.className = 'loading';
-  ld.textContent = 'Carregando...'; main.appendChild(ld);
-  const { data, error } = await sb.rpc('acolitos_faltas_recentes');
-  main.textContent = '';
-  if (error) {
-    console.error('Faltas: consulta falhou', error);
-    const e = document.createElement('span'); e.className = 'empty';
-    e.textContent = 'Não foi possível carregar as faltas. Tente de novo.';
-    main.appendChild(e); return;
-  }
-  if (!data || !data.length) {
-    const em = document.createElement('span'); em.className = 'empty';
-    em.textContent = 'Nenhuma falta registrada ainda.'; main.appendChild(em); return;
-  }
-  data.forEach(a => {
-    const row = document.createElement('div'); row.className = 'equipe-row';
-    const left = document.createElement('div'); left.className = 'equipe-row-info';
-    const nm = document.createElement('div'); nm.className = 'equipe-row-nome'; nm.textContent = a.membro || '—';
-    const wh = document.createElement('div'); wh.style.cssText = 'font-size:12px;color:var(--gold);';
-    wh.textContent = (a.data ? dataLabel(a.data) : '—') + (a.horario ? ' ' + a.horario : '') + ' · ' + comLabel(a.comunidade);
-    const fn = document.createElement('div'); fn.className = 'equipe-row-meta';
-    fn.textContent = (FUNCAO_LABEL[a.funcao] || a.funcao) + (a.substituto ? ' · coberto por ' + a.substituto : ' · vaga aberta');
-    left.append(nm, wh, fn);
-    const badge = document.createElement('span'); badge.className = 'badge';
-    badge.style.cssText = 'flex:none;color:var(--danger-text);font-weight:700;font-size:11px;';
-    badge.textContent = 'faltou';
-    row.append(left, badge); main.appendChild(row);
-  });
+  const membros = await carregarRosterAus();
+  const alvoFiltro = document.createElement('div'); alvoFiltro.id = 'filtro-faltas';
+  const lista = document.createElement('div'); lista.id = 'lista-faltas';
+  main.append(alvoFiltro, lista);
+  filtroFaltas = null;
+  const pode = await recarregarFaltas();
+  if (!pode) return;   // sem permissão: nada de barra, só o recado
+  filtroFaltas = montarFiltroLista(alvoFiltro, configFiltroFaltas(membros), () => recarregarFaltas());
+  // a primeira carga foi sem filtro; se havia escolha guardada, recarrega com ela
+  if (FiltroLista.contar(filtroFaltas.estado()) > 0) await recarregarFaltas();
 }
 
 async function renderViewEquipe() {

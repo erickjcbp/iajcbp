@@ -1942,6 +1942,70 @@ async function provaAvisosDeAusenciaFiltramNaConsulta(provas) {
     'consulta com erro mostra ERRO, nunca "nenhum"', 'saiu: ' + JSON.stringify(a.comErro));
 }
 
+async function provaFaltasFiltramNaConsulta(provas) {
+  console.log('\n\x1b[1mAusências › Faltas: o filtro vai para a função do banco, e "sem acesso" é dito\x1b[0m');
+  const roster = { membros: [{ id: 'u-ana', nome: 'Ana Souza', apelido: null }], habs: [] };
+  const faltas = Array.from({ length: 80 }, (_, i) => ({ membro_id: 'u-ana', membro: 'Ana Souza', funcao: 'vela',
+    data: '2026-08-' + String(1 + i % 28).padStart(2, '0'), horario: '19:00', comunidade: 'matriz', substituto: null }));
+  const abrirFaltas = (rpcs, avaliar) => provas.abrir('ausencias.html', { papel: PAPEIS.admin, rpcs, avaliar });
+  const cenario = `
+    const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+    try { localStorage.removeItem('filtro-lista:ausencias-faltas'); } catch (e) {}
+    const chamadas = [];
+    const origRpc = sb.rpc.bind(sb);
+    sb.rpc = async (nome, args) => { chamadas.push([nome, args || null]); return origRpc(nome, args); };
+    abaAusencias = 'faltas'; await renderViewEquipe(); await esperar(80);
+    const out = { texto: (document.getElementById('lista-faltas') || document.getElementById('main-content')).textContent,
+                  temBarra: !!document.querySelector('#filtro-faltas .filtro-btn') };
+    out.usouAntiga = chamadas.some(c => c[0] === 'acolitos_faltas_recentes');
+    out.primeira = chamadas.filter(c => c[0] === 'acolitos_faltas_filtradas')[0] || null;
+    if (out.temBarra) {
+      const painel = () => document.querySelector('.modal-overlay.open .filtro-painel');
+      document.querySelector('#filtro-faltas .filtro-btn').click(); await esperar(40);
+      out.secoes = [...painel().querySelectorAll('.filtro-painel-titulo')].map(e => e.textContent.trim());
+      const campo = painel().querySelector('.filtro-painel-busca');
+      campo.value = 'ana'; campo.dispatchEvent(new Event('input')); await esperar(20);
+      [...painel().querySelectorAll('.form-toggle')].find(b => b.textContent.trim() === 'Ana Souza').click(); await esperar(30);
+      [...painel().querySelectorAll('.form-toggle')].find(b => b.textContent.trim() === 'Mês passado').click(); await esperar(60);
+      out.contar = chamadas.filter(c => c[0] === 'acolitos_faltas_contar').pop() || null;
+      out.ver = painel().querySelector('.filtro-ver').textContent.trim();
+      painel().querySelector('.filtro-ver').click(); await esperar(150);
+      out.lista = chamadas.filter(c => c[0] === 'acolitos_faltas_filtradas').pop() || null;
+      out.iv = FiltroLista.intervaloDoPeriodo('mes_passado', hojeLocal());
+      out.mostrando = (document.getElementById('lista-faltas') || {}).textContent || '';
+    }
+    try { localStorage.removeItem('filtro-lista:ausencias-faltas'); } catch (e) {}
+    sb.rpc = origRpc;
+    return out;
+  `;
+
+  const r = await abrirFaltas({ acolitos_roster_substituicao: { data: roster }, acolitos_faltas_filtradas: { data: faltas }, acolitos_faltas_contar: { data: 357 } }, cenario);
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a aba Faltas filtra sem estourar', r.erroAvaliar);
+  exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova das Faltas chegou ao fim (a página não saiu do lugar)', 'avaliado: ' + JSON.stringify(r.avaliado));
+  exigir(a.usouAntiga === false && !!a.primeira, 'a aba usa a função NOVA, com filtros', 'antiga: ' + a.usouAntiga);
+  exigir(JSON.stringify(a.secoes) === JSON.stringify(['Pessoa', 'Período (data da missa)', 'Comunidade']),
+    'o painel das faltas oferece pessoa, período e comunidade — sem "Ordenar por"', 'saiu: ' + JSON.stringify(a.secoes));
+  exigir(!!a.contar && JSON.stringify(a.contar[1] && a.contar[1].p_membros) === JSON.stringify(['u-ana']),
+    'o "Ver N" pergunta ao banco com a pessoa escolhida', 'args: ' + JSON.stringify(a.contar));
+  exigir(a.ver === 'Ver 357 faltas', 'o "Ver N" mostra o número do banco', 'mostrou: ' + JSON.stringify(a.ver));
+  exigir(!!a.lista && JSON.stringify(a.lista[1].p_membros) === JSON.stringify(['u-ana'])
+    && a.lista[1].p_desde === a.iv.desde && a.lista[1].p_ate === a.iv.ate,
+    'escolher pessoa e período MUDA A CONSULTA', 'args: ' + JSON.stringify(a.lista) + ' esperado ' + JSON.stringify(a.iv));
+  exigir(/Mostrando 80 de 357/.test(a.mostrando || ''), 'a aba diz que mostra 80 de 357', 'saiu: ' + JSON.stringify((a.mostrando || '').slice(0, 80)));
+
+  const r2 = await abrirFaltas({ acolitos_roster_substituicao: { data: roster }, acolitos_faltas_filtradas: { error: { message: 'sem_permissao', code: '42501' } }, acolitos_faltas_contar: { error: { message: 'sem_permissao', code: '42501' } } }, cenario);
+  const b = r2.avaliado || {};
+  exigir(/Você não tem acesso às faltas/.test(b.texto || '') && !/Nenhuma/.test(b.texto || ''),
+    'sem permissão, a aba diz isso — e não "nenhuma falta"', 'saiu: ' + JSON.stringify(b.texto));
+  exigir(b.temBarra === false, 'sem permissão, a barra de filtro não aparece');
+
+  const r3 = await abrirFaltas({ acolitos_roster_substituicao: { data: roster }, acolitos_faltas_filtradas: { error: { message: 'fora do ar' } }, acolitos_faltas_contar: { data: 0 } }, cenario);
+  const c = r3.avaliado || {};
+  exigir(/Não foi possível carregar as faltas/.test(c.texto || '') && !/Nenhuma/.test(c.texto || ''),
+    'erro de consulta mostra erro, não "nenhuma"', 'saiu: ' + JSON.stringify(c.texto));
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -2029,6 +2093,7 @@ try {
     await provaChamadaFiltra(provas);
     await provaBarraBuscaNoPainelEEscolhaUnica(provas);
     await provaAvisosDeAusenciaFiltramNaConsulta(provas);
+    await provaFaltasFiltramNaConsulta(provas);
   }
 } finally {
   await provas.encerrar();
