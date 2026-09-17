@@ -823,3 +823,8 @@ body { touch-action: pan-x pan-y; }
 .filtro-painel-secao { margin-bottom: 14px; }
 .filtro-painel-titulo { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
 .filtro-legenda { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+/* .form-toggle padrão divide a linha em partes IGUAIS (flex:1) — com 4 opções por linha
+   isso corta nomes compridos ("Cerimoniários", "Próximos aniversários"). Aqui dentro cada
+   botão nasce do tamanho do próprio texto, e quem não cabe desce de linha (o wrap já
+   existe em .form-toggle-group). Só neste painel — .form-toggle é usado no app inteiro. */
+.filtro-painel .form-toggle { flex: 1 1 auto; min-width: 0; white-space: nowrap; }

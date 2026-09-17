@@ -1245,6 +1245,13 @@ async function provaMembrosMostraQuemEntrouPorUltimo(provas) {
     r.temBarra = !!document.querySelector('#filtro-membros .filtro-barra .search-input');
     r.botoesVelhos = document.querySelectorAll('#filtros .form-toggle').length;
     document.querySelector('#filtro-membros .filtro-btn').click();
+    // Largura de celular: o painel não pode dividir a linha em partes iguais e cortar o
+    // nome da opção mais comprida ("Cerimoniários", "Próximos aniversários"...).
+    painel().style.width = '358px'; painel().style.maxWidth = '358px';
+    await new Promise(res => requestAnimationFrame(res));
+    r.rotulosCortados = [...painel().querySelectorAll('.form-toggle')]
+      .filter(b => b.scrollWidth > b.clientWidth + 1)
+      .map(b => b.textContent.trim());
     r.filtrosNoPainel = [...painel().querySelectorAll('.filtro-painel-titulo')].map(e => e.textContent.trim());
     tocar('Mais recentes');
     ${rpc ? `tocar('Já entrou no app'); await esperar(30); r.ver = painel().querySelector('.filtro-ver').textContent.trim(); tocar('Já entrou no app'); await esperar(30);` : ''}
@@ -1275,6 +1282,8 @@ async function provaMembrosMostraQuemEntrouPorUltimo(provas) {
     'abre em ordem alfabética, como antes', 'saiu: ' + JSON.stringify(a.padrao));
   exigir(JSON.stringify(a.filtrosNoPainel) === JSON.stringify(['Ordenar por', 'Nível', 'Comunidade', 'App', 'Foto']),
     'o painel oferece nível, comunidade, app e foto', 'saiu: ' + JSON.stringify(a.filtrosNoPainel));
+  exigir((a.rotulosCortados || []).length === 0,
+    'nenhuma opção do painel corta o texto em largura de celular', 'cortadas: ' + JSON.stringify(a.rotulosCortados));
   exigir(a.ver === 'Ver 1 membro', '"já entrou no app" conta pelo banco', 'mostrou: ' + JSON.stringify(a.ver));
   exigir(JSON.stringify(a.recentes) === JSON.stringify(['Carla Nova', 'Davi Recente', 'Ana Lote', 'Bruno Lote']),
     'MAIS RECENTES: quem entrou por último no topo, o lote em ordem alfabética', 'saiu: ' + JSON.stringify(a.recentes));
@@ -1296,6 +1305,8 @@ async function provaMembrosMostraQuemEntrouPorUltimo(provas) {
   exigir(!r2.erroAvaliar, 'com a função recusando, Membros abre mesmo assim', r2.erroAvaliar);
   exigir(JSON.stringify(b.filtrosNoPainel) === JSON.stringify(['Ordenar por', 'Nível', 'Comunidade', 'Foto']),
     'sem resposta do banco, o filtro App não aparece (em vez de mentir)', 'saiu: ' + JSON.stringify(b.filtrosNoPainel));
+  exigir((b.rotulosCortados || []).length === 0,
+    'sem o filtro App, as opções restantes também não cortam o texto', 'cortadas: ' + JSON.stringify(b.rotulosCortados));
 }
 
 async function provaRecadoDaFotoAparece(provas) {
