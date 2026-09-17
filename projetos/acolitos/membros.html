@@ -78,7 +78,6 @@
 
 <div class="main">
   <div class="toolbar">
-    <input class="search-input" id="busca" placeholder="🔍 Buscar nome..." oninput="filtrar()">
     <div class="view-switch">
       <button class="view-sw active" id="vt-cards" onclick="setVista('cards')" title="Cards">▦</button>
       <button class="view-sw" id="vt-lista" onclick="setVista('lista')" title="Lista">☰</button>
@@ -88,13 +87,7 @@
     <button class="btn-sm gray" onclick="abrirRelatorioMembros()" title="Relatório / backup">📄 Relatório</button>
   </div>
 
-  <div class="filtros-wrap" id="filtros">
-    <button class="form-toggle active" data-role="" onclick="setFiltro(this,'')">Todos</button>
-    <button class="form-toggle" data-role="cerimonario" onclick="setFiltro(this,'cerimonario')">Cerimoniários</button>
-    <button class="form-toggle" data-role="acolito" onclick="setFiltro(this,'acolito')">Acólitos</button>
-    <button class="form-toggle" data-role="coroinha" onclick="setFiltro(this,'coroinha')">Coroinhas</button>
-    <button class="form-toggle" data-role="aspirante" onclick="setFiltro(this,'aspirante')">Aspirantes</button>
-  </div>
+  <div id="filtro-membros"></div>
 
   <div class="cards-grid" id="grid">
     <span class="loading">Carregando...</span>
@@ -172,7 +165,8 @@ const JORNADA = [
 
 let ctx = null;
 let todos = [];
-let filtroAtivo = '';
+let filtroMembros = null;  // controle da barra de ordenar e filtrar (montarFiltroLista)
+let jaEntraram = null;     // Set de membro_id que já entraram no app; null = o banco não respondeu
 let verArquivados = false;
 let membroAtual = null;
 let habAtual = {};
@@ -183,28 +177,93 @@ let fichaDisp = null;   // estado da disponibilidade (Set 'dia_horario') enquant
 let listasCustom = { habilidade: [], competencia: [], funcao: [] }; // listas criadas pela equipe (p/ botão remover)
 let vista = localStorage.getItem('membros-vista') || 'cards'; // 'cards' | 'lista'
 
-// ── Lembrar filtro/busca/rolagem ao reabrir (estado-membros; 'membros-vista' continua separado) ──
+// ── Lembrar a rolagem ao reabrir. Busca, ordem e filtros agora moram na barra
+// (localStorage 'filtro-lista:membros'); 'membros-vista' continua separado. ──
 function salvarEstadoMembros() {
   try {
-    localStorage.setItem('estado-membros', JSON.stringify({
-      filtro: filtroAtivo || '',
-      busca: (document.getElementById('busca') || {}).value || '',
-      y: window.scrollY
-    }));
+    const antigo = JSON.parse(localStorage.getItem('estado-membros') || 'null') || {};
+    localStorage.setItem('estado-membros', JSON.stringify({ ...antigo, y: window.scrollY }));
   } catch (e) {}
 }
 function restaurarEstadoMembros() {
   let s; try { s = JSON.parse(localStorage.getItem('estado-membros') || 'null'); } catch (e) { s = null; }
   if (!s) return;
-  filtroAtivo = s.filtro || '';
-  document.querySelectorAll('#filtros .form-toggle').forEach(b => {
-    b.classList.toggle('active', (b.dataset.role || '') === filtroAtivo);
-  });
-  if (s.busca) {
-    const b = document.getElementById('busca');
-    if (b) b.value = s.busca;
-  }
   window.__memRestoreY = (s.y != null) ? s.y : null;
+}
+
+// Antes da barra, o nível e a busca ficavam em 'estado-membros'. Converte UMA vez, para
+// ninguém abrir a tela depois da atualização e perder o filtro que tinha.
+function migrarEstadoAntigoDosMembros(cfg) {
+  try {
+    if (localStorage.getItem('filtro-lista:membros') != null) return;
+    const s = JSON.parse(localStorage.getItem('estado-membros') || 'null');
+    if (!s || (!s.filtro && !s.busca)) return;
+    let e = FiltroLista.estadoInicial(cfg);
+    if (s.filtro) e = FiltroLista.alternar(e, cfg, 'nivel', s.filtro);
+    if (s.busca) e = FiltroLista.definirBusca(e, s.busca);
+    localStorage.setItem('filtro-lista:membros', FiltroLista.guardar(e));
+    localStorage.setItem('estado-membros', JSON.stringify({ y: s.y != null ? s.y : null }));
+  } catch (e) {}
+}
+
+// ── As opções da barra nesta tela ──
+const NIVEL_ORDEM = { cerimonario: 0, acolito: 1, coroinha: 2, aspirante: 3 };
+function nivelBaseDe(m) { return nivelInfo(m.nivel || nivelFromRole(m.role)).base; }
+function diaMes(iso) { return iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : ''; }
+function proximoAniversario(m) {
+  if (!m.data_nascimento) return null;
+  const [a, mes, dia] = m.data_nascimento.split('-').map(Number);
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  let prox = new Date(hoje.getFullYear(), mes - 1, dia);
+  if (prox < hoje) prox = new Date(hoje.getFullYear() + 1, mes - 1, dia);
+  return { dias: Math.round((prox - hoje) / 86400000), idade: prox.getFullYear() - a };
+}
+function configFiltroMembros() {
+  const filtros = [
+    { id: 'nivel', nome: 'Nível', opcoes: [
+      { id: 'cerimonario', nome: 'Cerimoniários', testa: m => nivelBaseDe(m) === 'cerimonario' },
+      { id: 'acolito', nome: 'Acólitos', testa: m => nivelBaseDe(m) === 'acolito' },
+      { id: 'coroinha', nome: 'Coroinhas', testa: m => nivelBaseDe(m) === 'coroinha' },
+      { id: 'aspirante', nome: 'Aspirantes', testa: m => nivelBaseDe(m) === 'aspirante' },
+    ] },
+    { id: 'comunidade', nome: 'Comunidade', opcoes: [
+      { id: 'matriz', nome: 'Matriz', testa: m => m.comunidade === 'matriz' },
+      { id: 'santo_antonio', nome: 'Santo Antônio', testa: m => m.comunidade === 'santo_antonio' },
+      { id: 'outra', nome: 'Outra', testa: m => m.comunidade !== 'matriz' && m.comunidade !== 'santo_antonio' },
+    ] },
+  ];
+  // Só oferece o filtro App se o banco respondeu. Sem resposta, esconder é honesto;
+  // mostrar todo mundo como "nunca entrou" seria falha virando número.
+  if (jaEntraram) filtros.push({ id: 'app', nome: 'App', opcoes: [
+    { id: 'entrou', nome: 'Já entrou no app', testa: m => jaEntraram.has(m.id) },
+    { id: 'nunca', nome: 'Nunca entrou no app', testa: m => !jaEntraram.has(m.id) },
+  ] });
+  filtros.push({ id: 'foto', nome: 'Foto', opcoes: [
+    { id: 'com', nome: 'Com foto', testa: m => temFotoDePerfil(m) },
+    { id: 'sem', nome: 'Sem foto', testa: m => !temFotoDePerfil(m) },
+  ] });
+  const cfg = {
+    chave: 'membros',
+    rotulo: ['membro', 'membros'],
+    ordemPadrao: 'nome',
+    ordens: [
+      { id: 'nome', nome: 'Nome A–Z', valor: m => m.nome },
+      { id: 'recentes', nome: 'Mais recentes', desc: true, valor: m => m.created_at || null,
+        legenda: m => m.created_at ? 'cadastro ' + diaMes(m.created_at.slice(0, 10)) : '' },
+      { id: 'aniversario', nome: 'Próximos aniversários', valor: m => { const p = proximoAniversario(m); return p ? p.dias : null; },
+        legenda: m => { const p = proximoAniversario(m); return p ? 'faz ' + p.idade + ' anos em ' + diaMes(m.data_nascimento) : ''; } },
+      { id: 'nivel', nome: 'Nível', valor: m => { const r = NIVEL_ORDEM[nivelBaseDe(m)]; return r == null ? 9 : r; } },
+    ],
+    filtros,
+    busca: { placeholder: 'Buscar nome...', campos: m => [m.nome, m.apelido] },
+  };
+  cfg.contar = (e) => FiltroLista.aplicar(todos, e, cfg).length;
+  return cfg;
+}
+function montarFiltroMembros() {
+  const cfg = configFiltroMembros();
+  migrarEstadoAntigoDosMembros(cfg);
+  filtroMembros = montarFiltroLista(document.getElementById('filtro-membros'), cfg, () => renderGrid());
 }
 function restaurarScrollMembrosSeNecessario() {
   if (window.__memRestoreY != null) {
@@ -253,6 +312,10 @@ async function loadMembros() {
   const { data: listas } = await sbAdmin.from('acolitos_listas').select('*').in('tipo', ['habilidade', 'competencia', 'funcao']);
   listasCustom = { habilidade: [], competencia: [], funcao: [] };
   (listas || []).forEach(r => { if (listasCustom[r.tipo]) listasCustom[r.tipo].push({ valor: r.valor, label: r.label }); });
+  const { data: entraram, error: erroEntraram } = await sbAdmin.rpc('acolitos_membros_ja_entraram');
+  if (erroEntraram) console.warn('Membros: não deu para saber quem já entrou no app', erroEntraram);
+  jaEntraram = erroEntraram ? null : new Set((entraram || []).map(r => r.membro_id));
+  montarFiltroMembros();
   renderGrid();
 }
 
@@ -353,7 +416,6 @@ async function relatorioMembrosCSV(){
   baixarCSV('membros-backup', linhas);
 }
 
-function filtrar() { renderGrid(); salvarEstadoMembros(); }
 function scrollTabs(dir) { const el = document.getElementById('ficha-tabs'); if (el) el.scrollBy({ left: dir * 160, behavior: 'smooth' }); }
 function setVista(v) {
   vista = v; localStorage.setItem('membros-vista', v);
@@ -361,13 +423,6 @@ function setVista(v) {
   if (c) c.classList.toggle('active', v === 'cards');
   if (l) l.classList.toggle('active', v === 'lista');
   renderGrid();
-}
-function setFiltro(btn, role) {
-  filtroAtivo = role;
-  document.querySelectorAll('#filtros .form-toggle').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderGrid();
-  salvarEstadoMembros();
 }
 
 function toggleArquivados() {
@@ -378,7 +433,6 @@ function toggleArquivados() {
 }
 
 function renderGrid() {
-  const busca = document.getElementById('busca').value.toLowerCase();
   const grid = document.getElementById('grid');
   grid.className = vista === 'lista' ? 'list-view' : 'cards-grid';
   grid.textContent = '';
@@ -386,10 +440,8 @@ function renderGrid() {
     const banner = document.createElement('div'); banner.style.cssText = 'grid-column:1/-1;font-size:12px;font-weight:700;color:var(--gold);background:rgba(232,185,74,.1);border:1px solid var(--gold-dim);border-radius:8px;padding:8px 12px;margin-bottom:4px;';
     banner.textContent = '🗄 Vendo membros arquivados — abra um e use "Restaurar" para reativar.'; grid.appendChild(banner);
   }
-  const lista = todos.filter(m =>
-    semAcento(m.nome).includes(semAcento(busca)) &&
-    (!filtroAtivo || nivelInfo(m.nivel || nivelFromRole(m.role)).base === filtroAtivo)
-  );
+  const lista = filtroMembros ? filtroMembros.aplicar(todos) : todos;
+  const legendaDe = (m) => (filtroMembros ? filtroMembros.legenda(m) : '');
   if (!lista.length) {
     const em = document.createElement('span'); em.className = 'empty';
     em.textContent = 'Nenhum membro encontrado.'; grid.appendChild(em);
@@ -408,6 +460,8 @@ function renderGrid() {
       const av = buildAvatarEl(m.foto_url, m.role, 42, { nivelSlug: slug, casaSlug: casaSlugDe(m) }); av.style.flexShrink = '0';
       const info = document.createElement('div'); info.className = 'list-info';
       info.appendChild(nameBlock(m.nome, m.apelido, 'list-name', 'list-subname', estrelaTagAsync(m.id)));
+      const legL = legendaDe(m);
+      if (legL) { const lg = document.createElement('div'); lg.className = 'filtro-legenda'; lg.textContent = legL; info.appendChild(lg); }
       const sub = document.createElement('div'); sub.className = 'list-meta';
       const badge = document.createElement('span'); badge.className = 'badge ' + ninfo.base; badge.textContent = ninfo.label;
       const com = document.createElement('span'); com.className = 'list-com'; com.textContent = comLabel(m.comunidade);
@@ -434,7 +488,9 @@ function renderGrid() {
     }
     const com = document.createElement('div'); com.className = 'member-card-meta';
     com.style.marginTop = '4px'; com.textContent = comLabel(m.comunidade);
-    card.append(avatarWrap, nome, meta, com);
+    const legC = legendaDe(m);
+    if (legC) { const lg = document.createElement('div'); lg.className = 'filtro-legenda'; lg.textContent = legC; card.append(avatarWrap, nome, lg, meta, com); }
+    else card.append(avatarWrap, nome, meta, com);
     grid.appendChild(card);
   });
   restaurarScrollMembrosSeNecessario();

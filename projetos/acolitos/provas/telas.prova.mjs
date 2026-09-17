@@ -1217,6 +1217,87 @@ async function provaBarraDeFiltroFunciona(provas) {
   exigir(a.mudancas >= 1, 'a tela é avisada quando a escolha muda');
 }
 
+async function provaMembrosMostraQuemEntrouPorUltimo(provas) {
+  console.log('\n\x1b[1mMembros: "mais recentes" mostra quem entrou por último\x1b[0m');
+
+  // Os níveis são os slugs REAIS (acolito_guardiao, não "acolito" — "acolito" é só a
+  // base, e um slug inexistente cai no primeiro nível da lista sem avisar).
+  //
+  // O pedido do dono, com a forma real do banco: a maioria cadastrada no MESMO dia (a
+  // importação de 01/06), e poucos depois. O empate é o caso comum e tem de sair em ordem
+  // alfabética, não embaralhado.
+  const membros = [
+    { id: 'm-bruno', nome: 'Bruno Lote', created_at: '2026-06-01T10:00:00+00:00', comunidade: 'matriz', foto_url: null, nivel: 'acolito_guardiao', status: 'ativo', data_nascimento: '2012-03-05' },
+    { id: 'm-ana', nome: 'Ana Lote', created_at: '2026-06-01T10:00:00+00:00', comunidade: 'matriz', foto_url: 'https://x/a.jpg', nivel: 'acolito_aspirante', status: 'ativo', data_nascimento: null },
+    { id: 'm-carla', nome: 'Carla Nova', created_at: '2026-08-27T12:00:00+00:00', comunidade: 'santo_antonio', foto_url: null, nivel: 'cerimoniario_aspirante', status: 'ativo', data_nascimento: null },
+    { id: 'm-davi', nome: 'Davi Recente', created_at: '2026-08-10T12:00:00+00:00', comunidade: 'matriz', foto_url: null, nivel: 'coroinha', status: 'ativo', data_nascimento: null },
+  ];
+  const cenario = (rpc) => `
+    const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+    // Só o primeiro span: o bloco do nome carrega a estrela junto, que chega depois.
+    const nomes = () => [...document.querySelectorAll('#grid .member-card-name')].map(e => ((e.querySelector('span') || e).textContent || '').trim());
+    const painel = () => document.querySelector('.modal-overlay.open .filtro-painel');
+    const tocar = (txt) => { const b = [...painel().querySelectorAll('button')].find(x => x.textContent.trim() === txt); if (!b) throw new Error('sem botão ' + txt); b.click(); };
+    try { localStorage.removeItem('filtro-lista:membros'); localStorage.removeItem('estado-membros'); localStorage.setItem('membros-vista', 'cards'); } catch (e) {}
+    vista = 'cards';
+    await loadMembros(); await esperar(50);
+    const r = { padrao: nomes() };
+    r.temBarra = !!document.querySelector('#filtro-membros .filtro-barra .search-input');
+    r.botoesVelhos = document.querySelectorAll('#filtros .form-toggle').length;
+    document.querySelector('#filtro-membros .filtro-btn').click();
+    r.filtrosNoPainel = [...painel().querySelectorAll('.filtro-painel-titulo')].map(e => e.textContent.trim());
+    tocar('Mais recentes');
+    ${rpc ? `tocar('Já entrou no app'); await esperar(30); r.ver = painel().querySelector('.filtro-ver').textContent.trim(); tocar('Já entrou no app'); await esperar(30);` : ''}
+    painel().querySelector('.filtro-ver').click(); await esperar(50);
+    r.recentes = nomes();
+    r.legendas = [...document.querySelectorAll('#grid .filtro-legenda')].map(e => e.textContent.trim());
+    // estado antigo (antes da barra): nível "acolito" e busca "lote" têm de sobreviver
+    try { localStorage.removeItem('filtro-lista:membros'); localStorage.setItem('estado-membros', JSON.stringify({ filtro: 'acolito', busca: 'lote', y: 0 })); } catch (e) {}
+    await loadMembros(); await esperar(50);
+    r.migrado = nomes();
+    r.buscaMigrada = (document.querySelector('#filtro-membros .search-input') || {}).value;
+    try { localStorage.removeItem('filtro-lista:membros'); localStorage.removeItem('estado-membros'); } catch (e) {}
+    return r;
+  `;
+
+  const r = await provas.abrir('membros.html', {
+    papel: PAPEIS.admin,
+    tabelas: { acolitos_membros: { data: membros } },
+    rpcs: { acolitos_membros_ja_entraram: { data: [{ membro_id: 'm-carla' }] } },
+    avaliar: cenario(true),
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'Membros abre com a barra sem estourar', r.erroAvaliar);
+  exigir((r.erros || []).length === 0, 'nenhum erro de JavaScript na tela', (r.erros || []).join(' | '));
+  exigir(a.temBarra === true, 'a busca mora na barra nova');
+  exigir(a.botoesVelhos === 0, 'os botões de nível antigos saíram (viraram filtro no painel)');
+  exigir(JSON.stringify(a.padrao) === JSON.stringify(['Ana Lote', 'Bruno Lote', 'Carla Nova', 'Davi Recente']),
+    'abre em ordem alfabética, como antes', 'saiu: ' + JSON.stringify(a.padrao));
+  exigir(JSON.stringify(a.filtrosNoPainel) === JSON.stringify(['Ordenar por', 'Nível', 'Comunidade', 'App', 'Foto']),
+    'o painel oferece nível, comunidade, app e foto', 'saiu: ' + JSON.stringify(a.filtrosNoPainel));
+  exigir(a.ver === 'Ver 1 membro', '"já entrou no app" conta pelo banco', 'mostrou: ' + JSON.stringify(a.ver));
+  exigir(JSON.stringify(a.recentes) === JSON.stringify(['Carla Nova', 'Davi Recente', 'Ana Lote', 'Bruno Lote']),
+    'MAIS RECENTES: quem entrou por último no topo, o lote em ordem alfabética', 'saiu: ' + JSON.stringify(a.recentes));
+  exigir((a.legendas || [])[0] === 'cadastro 27/08',
+    'a data do cadastro aparece embaixo do nome', 'saiu: ' + JSON.stringify(a.legendas));
+  exigir(JSON.stringify(a.migrado) === JSON.stringify(['Ana Lote', 'Bruno Lote']),
+    'o filtro guardado antes da barra (nível + busca) não se perde', 'saiu: ' + JSON.stringify(a.migrado));
+  exigir(a.buscaMigrada === 'lote', 'e a busca guardada volta para o campo', 'campo: ' + JSON.stringify(a.buscaMigrada));
+
+  // Banco fora do ar para "quem já entrou": o filtro App SOME. Mostrar todo mundo como
+  // "nunca entrou" seria falha virando número.
+  const r2 = await provas.abrir('membros.html', {
+    papel: PAPEIS.admin,
+    tabelas: { acolitos_membros: { data: membros } },
+    rpcs: { acolitos_membros_ja_entraram: { error: { message: 'sem_permissao', code: '42501' } } },
+    avaliar: cenario(false),
+  });
+  const b = r2.avaliado || {};
+  exigir(!r2.erroAvaliar, 'com a função recusando, Membros abre mesmo assim', r2.erroAvaliar);
+  exigir(JSON.stringify(b.filtrosNoPainel) === JSON.stringify(['Ordenar por', 'Nível', 'Comunidade', 'Foto']),
+    'sem resposta do banco, o filtro App não aparece (em vez de mentir)', 'saiu: ' + JSON.stringify(b.filtrosNoPainel));
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -1297,6 +1378,7 @@ try {
     await provaRecadoDaFotoAparece(provas);
     await provaAvisoDaCoordenacaoFicaNoApp(provas);
     await provaBarraDeFiltroFunciona(provas);
+    await provaMembrosMostraQuemEntrouPorUltimo(provas);
   }
 } finally {
   await provas.encerrar();
