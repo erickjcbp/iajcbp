@@ -12,6 +12,40 @@ chance de já ter acontecido antes é grande, e a resposta costuma estar aqui.
 
 ---
 
+## Fechados em 17/09/2026
+
+**Agenda, CRM e Chamada ganham a barra de ordenar e filtrar**
+- **O que entrou:**
+  - **A barra** passou a mostrar só o que a tela oferece: sem "Ordenar por" quando há uma
+    ordem só; botão "Ordenar" quando não há filtro; sem botão quando não há o que escolher.
+  - **Agenda:** "Mostrar" (Celebrações / Eventos — os botões Tudo/Celebrações/Eventos de antes
+    viraram isto, e a escolha guardada neles foi convertida), "Tipo de evento" (a lista
+    configurável) e "Comunidade (missas)" (vale só para as celebrações). Vale no calendário e
+    na linha do tempo.
+  - **CRM:** busca por nome e três ordens — "Há mais tempo na etapa" (o de sempre), "Mais
+    recentes" (com a data do cadastro no cartão) e "Nome". Os números do topo continuam
+    contando o funil inteiro.
+  - **Chamada:** comunidade na escolha da missa; na chamada, "Ainda sem marcar", "Presentes",
+    "Atrasados" e "Ausentes". O filtro ESCONDE linhas, não redesenha — o substituto escolhido
+    não se perde — e marcar alguém não esconde a linha na frente de quem marca.
+- **Três defeitos pegos antes de sair:**
+  - a prova do CRM não distinguia "Nome" de "Mais recentes" (com duas pessoas davam a mesma
+    ordem) — a primeira correção errou de novo, porque a ordem de entrada sugerida era a
+    alfabética;
+  - **o filtro da Chamada era lembrado de uma missa para a outra** — a missa seguinte abriria
+    com a lista toda escondida, na hora da missa;
+  - no calendário, um dia esvaziado pelo filtro dizia só "Nada marcado neste dia."
+- **Achado de caminho:** o "Voltar fecha o modal" faz a página sair do lugar se duas janelas
+  abrem e fecham muito rápido — ver A LISTA.
+- **Provado:** `provaBarraMostraSoOQueATelaOferece`, `provaAgendaFiltra`,
+  `provaCrmOrdenaEBusca`, `provaChamadaFiltra`. 254 regras e 258 provas de tela, todas verdes,
+  duas vezes seguidas.
+- **Não repetir:** filtro de um FORMULÁRIO usado na hora (a chamada) não é preferência — não se
+  guarda de uma vez para a outra. E prova de ordem precisa de dados em que cada ordem dê uma
+  sequência diferente, e que cheguem fora de todas elas.
+
+---
+
 ## Fechados em 16/09/2026
 
 **Membros mostra quem entrou por último — e a barra de ordenar e filtrar existe**
