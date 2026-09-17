@@ -1491,6 +1491,10 @@ async function provaAgendaFiltra(provas) {
       await abrir(); tocar('Celebrações'); await ver();
       viewMode = 'cal'; selDate = celebs.length ? '${dia(1)}' : selDate; render(); await esperar(60);
       out.diaSoCelebracao = titulos();
+      // dia(3) só tem o Retiro (evento) — com "Mostrar: Celebrações" ligado, o filtro
+      // é quem esvazia o dia, e o aviso tem de dizer isso (não "nada marcado" seco).
+      selDate = '${dia(3)}'; render(); await esperar(60);
+      out.diaVazioComFiltro = (document.querySelector('#main-content .ag-empty') || {}).textContent || '';
       await limpar();
       viewMode = 'linha'; await reload(); await esperar(60);
 
@@ -1524,6 +1528,7 @@ async function provaAgendaFiltra(provas) {
   exigir(JSON.stringify(a.comunidadeSA) === JSON.stringify(['Ensaio geral', 'Missa', 'Retiro']),
     'comunidade filtra as missas e mantém os eventos', 'saiu: ' + JSON.stringify(a.comunidadeSA));
   exigir(JSON.stringify(a.diaSoCelebracao) === JSON.stringify(['Missa']), 'no calendário, o dia também obedece ao filtro', 'saiu: ' + JSON.stringify(a.diaSoCelebracao));
+  exigir(/com esses filtros/.test(a.diaVazioComFiltro || ''), 'o dia vazio pelo FILTRO diz isso no painel do dia', 'saiu: ' + JSON.stringify(a.diaVazioComFiltro));
   exigir(JSON.stringify(a.migrado) === JSON.stringify(['Missa', 'Missa']), 'a escolha antiga "Celebrações" continua valendo', 'saiu: ' + JSON.stringify(a.migrado));
   exigir(JSON.stringify(a.etiquetaMigrada) === JSON.stringify(['Celebrações']), 'e aparece como etiqueta', 'saiu: ' + JSON.stringify(a.etiquetaMigrada));
   exigir(a.chaveVelhaSumiu === true, 'a chave antiga é convertida uma vez só');

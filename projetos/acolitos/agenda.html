@@ -354,7 +354,14 @@ function renderCalBody(main) {
   dh.appendChild(dlab); main.appendChild(dh);
 
   const itens = itensDoDia(selDate);
-  if (!itens.length) { const e = document.createElement('div'); e.className = 'ag-empty'; e.textContent = 'Nada marcado neste dia.'; main.appendChild(e); }
+  if (!itens.length) {
+    const e = document.createElement('div'); e.className = 'ag-empty';
+    // Mesma regra da linha do tempo: se o dia só ficou vazio por causa do filtro, diz isso
+    // (senão a pessoa acha que não há nada marcado, quando na verdade é o filtro escondendo).
+    const comFiltro = filtroAgenda && FiltroLista.contar(filtroAgenda.estado()) > 0;
+    e.textContent = comFiltro ? 'Nada marcado neste dia com esses filtros.' : 'Nada marcado neste dia.';
+    main.appendChild(e);
+  }
   itens.forEach(it => main.appendChild(it.kind === 'celeb' ? celebCard(it.data) : eventoCard(it.data)));
 }
 
