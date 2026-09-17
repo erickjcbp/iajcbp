@@ -14,6 +14,27 @@ chance de já ter acontecido antes é grande, e a resposta costuma estar aqui.
 
 ## Fechados em 16/09/2026
 
+**Membros mostra quem entrou por último — e a barra de ordenar e filtrar existe**
+- **O que era:** "na aba Membros não consigo ver quem entrou por último". Nenhuma lista do app
+  deixava escolher a ordem; Membros era sempre alfabética.
+- **O que entrou:** `filtro-lista-core.js` (a regra) e `montarFiltroLista` no `shared.js` (a
+  barra: busca + "Filtrar (n)", etiquetas com X, painel). Membros ganhou Mais recentes (com a
+  data do cadastro embaixo do nome), Próximos aniversários e Nível; filtros de Nível,
+  Comunidade, App e Foto. A migration 068 diz quem já entrou no app sem expor e-mail nem data;
+  se ela falhar, o filtro App some em vez de mostrar todo mundo como "nunca entrou".
+- **Dois defeitos pegos antes de sair:** os nomes das opções saíam cortados no painel em
+  largura de celular ("Cerimoniár…") — só a foto da tela mostrou; e a data do cadastro saía em
+  UTC, um dia adiantada para 158 dos 177 membros. **A importação em lote foi em 31/05 às 22:29
+  (Brasília)**, não em 01/06 como a spec dizia — a spec tinha medido em UTC.
+- **Provado:** `filtro-lista-core.test.js` (16), `provar-068-quem-ja-entrou.sql`,
+  `provaBarraDeFiltroFunciona` e `provaMembrosMostraQuemEntrouPorUltimo`. 254 regras e 195
+  provas de tela, todas verdes.
+- **Não repetir:** o filtro guardado antes da barra (`estado-membros`) é convertido uma vez;
+  apagar essa conversão faz quem já tinha filtro abrir a tela sem ele. E data com hora
+  (`created_at`) passa pelo `formatDate` — cortar o texto pega o dia em UTC.
+
+---
+
 **O aviso da coordenação passa a ficar no app — antes só ia para o celular**
 - **O que era:** o dono mandava aviso pela Caixa e ele não aparecia em Notificações. O botão
   "Enviar aviso" (`avisarTodos()`, usado pela Caixa e pelas Ausências) chamava SÓ

@@ -7,7 +7,28 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ## 1. Pendente
 
-**Nada.** Em 31/08/2026 a lista foi zerada por decisão do dono: consertar o que fosse
+**Ordenar e filtrar — passos 2 a 5 da spec**
+(`docs/superpowers/specs/2026-09-16-acolitos-ordenar-e-filtrar-design.md`). O passo 1 (a barra
++ Membros) está feito em 16/09/2026. Faltam: Agenda e CRM; Chamada; migration 069 +
+Ausências (Avisos e Faltas — a parte que filtra NA CONSULTA, porque as listas vêm em pedaços);
+Tarefas.
+
+**O aviso "Instale o app" cobre o fim de TODA janela do app no celular.** Achado em 16/09 ao
+fotografar o painel de filtros: o botão "Ver N membros" fica meio escondido atrás dele. Não é
+do filtro — o aviso (`#pwa-banner`) fica numa camada acima (400) de toda janela (200). Só
+aparece no navegador, até a pessoa tocar no X. Conserto provável: esconder o aviso enquanto
+houver janela aberta — e provar em várias telas.
+
+**Pontos pequenos do passo 1 que ficaram para depois** (nenhum aparece para quem usa hoje):
+- Membros: "Próximos aniversários" e a ordem por "Nível" não têm prova de tela própria.
+- A barra escreve a ordem escolhida sozinha embaixo da busca ("Nome A–Z"). Se parecer texto
+  solto, trocar por "Ordem: Nome A–Z" — é decisão de texto do dono.
+- Aniversário em 29/02 conta a partir de 01/03 em ano que não é bissexto (hoje ninguém nasceu
+  nesse dia).
+- A prova da data do cadastro assume o computador no fuso de Brasília; em outro fuso ela
+  falha com mensagem clara.
+
+Em 31/08/2026 a lista tinha sido zerada por decisão do dono: consertar o que fosse
 possível e **tirar daqui o que não depende de código**.
 
 O que foi consertado está em "Fechados em 31/08" logo abaixo. O que foi **tirado** não

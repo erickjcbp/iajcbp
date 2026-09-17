@@ -24,7 +24,8 @@ Decisões do dono, tomadas no brainstorming de 16/09:
 Números de produção:
 
 - **Membros ativos: 177.** Datas que existem: `created_at` (177 preenchidas), `data_nascimento`,
-  `nivel_desde`. **156 dos 177 têm `created_at` = 01/06/2026** — a importação em lote. "Mais
+  `nivel_desde`. **156 dos 177 têm o mesmo `created_at`** — a importação em lote, em **31/05/2026 às 22:29
+  (Brasília)**. *(Corrigido em 16/09: a primeira versão dizia 01/06, que é a data em UTC.)* "Mais
   recentes" mostra bem os ~21 que vieram depois; os 156 empatam.
 - **Só 39 dos 177 já entraram no app** (`auth.users.last_sign_in_at` preenchido).
 - **Comunidade:** Matriz 166, Santo Antônio 10, outra 1.
@@ -130,7 +131,7 @@ migration.
 ### Membros, o exemplo do dono
 
 - **"Mais recentes"** ordena por `created_at` decrescente e **mostra a data embaixo do nome**
-  ("cadastro 27/08"). Os 156 de 01/06 desempatam por nome.
+  ("cadastro 27/08"). Os 156 do lote desempatam por nome.
 - Quando a ordem é por aniversário, mostra o dia ("faz 14 anos em 22/09").
 - O filtro **App** usa `last_sign_in_at`, que mora em `auth.users` e **não chega pela tabela**.
   Ele vem por uma função do banco que devolve só `membro_id` + "já entrou" (sem e-mail, sem data
@@ -186,7 +187,7 @@ A tabela aprovada tinha dois erros meus, achados ao conferir cada tela no códig
   gravadores, ligar "Pessoa" tem de **mudar a consulta** (não filtrar o que já veio), e erro na
   contagem tem de mostrar erro, não "Ver 0".
 - **Prova do Membros com o dado real**: "Mais recentes" põe no topo os cadastrados depois de
-  01/06, e os 156 do lote em ordem alfabética.
+  31/05 (a importação), e os 156 do lote em ordem alfabética.
 - **`provar-068`** — a função "já entrou no app" devolve 39 hoje e **não expõe e-mail nem
   data**; quem não é coordenação é recusado; `anon` não executa.
 - **`provar-069`** — a Faltas filtrada por pessoa devolve todas as dela, não só as que caberiam
