@@ -1610,6 +1610,90 @@ async function provaCrmOrdenaEBusca(provas) {
   exigir(/Ninguém com essa busca/.test(a.listaVazia || ''), 'busca sem resultado diz isso, e não "nenhum membro em onboarding"', 'saiu: ' + JSON.stringify(a.listaVazia));
 }
 
+async function provaChamadaFiltra(provas) {
+  console.log('\n\x1b[1mChamada: filtra a missa e a situação, sem mexer no que já foi marcado\x1b[0m');
+
+  // A Chamada é usada NA HORA. O filtro esconde linhas, não redesenha a tela — redesenhar
+  // apagaria o substituto escolhido. E marcar alguém não esconde a linha na frente de quem
+  // marca: o seletor de substituto do "ausente" mora embaixo dela.
+  const dia = (n) => { const d = new Date(); d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const missas = [
+    { id: 'ce1', data: dia(1), horario: '19:00', comunidade: 'matriz', tipo: 'missa_comum', acolitos_escalas: [{ id: 'x1' }, { id: 'x2' }, { id: 'x3' }] },
+    { id: 'ce2', data: dia(2), horario: '08:00', comunidade: 'santo_antonio', tipo: 'missa_comum', acolitos_escalas: [{ id: 'x4' }] },
+  ];
+  const escalas = [
+    { id: 'es1', funcao: 'altar', status: 'escalado', membro_id: 'm1', acolitos_membros: { nome: 'Ana Altar', foto_url: null, nivel: 'acolito_guardiao' } },
+    { id: 'es2', funcao: 'cruz', status: 'presente', membro_id: 'm2', acolitos_membros: { nome: 'Bruno Cruz', foto_url: null, nivel: 'acolito_guardiao' } },
+    { id: 'es3', funcao: 'vela', status: 'escalado', membro_id: 'm3', acolitos_membros: { nome: 'Caio Vela', foto_url: null, nivel: 'coroinha' } },
+  ];
+  const roster = { membros: [
+    { id: 'm1', nome: 'Ana Altar' }, { id: 'm2', nome: 'Bruno Cruz' }, { id: 'm3', nome: 'Caio Vela' },
+  ], habs: [] };
+  const r = await provas.abrir('chamada.html', {
+    papel: PAPEIS.admin,
+    tabelas: { acolitos_celebracoes: { data: missas }, acolitos_escalas: { data: escalas }, acolitos_chamadas_itens: { data: [] } },
+    rpcs: { acolitos_roster_substituicao: { data: roster }, acolitos_avulsos_celebracao: { data: [] }, acolitos_chamada_responsavel: { data: null } },
+    avaliar: `
+      const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+      const guarda = () => { try { localStorage.removeItem('filtro-lista:chamada-missas'); localStorage.removeItem('filtro-lista:chamada-lista'); } catch (e) {} };
+      const painel = () => document.querySelector('.modal-overlay.open .filtro-painel');
+      const escolher = async (alvo, txt) => { document.querySelector(alvo + ' .filtro-btn').click(); await esperar(30);
+        const b = [...painel().querySelectorAll('button')].find(x => x.textContent.trim() === txt); if (!b) throw new Error('sem botão ' + txt);
+        b.click(); await esperar(30); painel().querySelector('.filtro-ver').click(); await esperar(120); };
+      const tirar = async (alvo) => { const l = document.querySelector(alvo + ' .filtro-limpar'); if (l) { l.click(); await esperar(120); } };
+      const visiveis = () => [...document.querySelectorAll('[data-escala-id]')].filter(b => b.style.display !== 'none')
+        .map(b => b.querySelector('.chamada-nome-el').textContent.trim());
+      const catsVisiveis = () => [...document.querySelectorAll('[data-cat]')].filter(h => h.style.display !== 'none').map(h => h.textContent.trim());
+      guarda();
+      const out = {};
+
+      await renderSelecao(); await esperar(60);
+      out.missas = document.querySelectorAll('.celeb-opt').length;
+      out.botaoMissas = (document.querySelector('#filtro-missas .filtro-btn') || {}).textContent;
+      await escolher('#filtro-missas', 'Santo Antônio');
+      out.missasSA = document.querySelectorAll('.celeb-opt').length;
+      await tirar('#filtro-missas');
+
+      await abrirChamada(missas_[0]); await esperar(80);
+      out.todos = visiveis();
+      await escolher('#filtro-chamada', 'Ainda sem marcar');
+      out.semMarcar = visiveis();
+      out.catsSemMarcar = catsVisiveis();
+      setRes('es1', 'ausente'); await esperar(30);
+      out.depoisDeMarcar = visiveis();
+      const subRow = document.querySelector('[data-escala-id="es1"] .sub-row');
+      out.substitutoAparece = !!subRow && subRow.style.display !== 'none';
+      await tirar('#filtro-chamada');
+      await escolher('#filtro-chamada', 'Presentes');
+      out.presentes = visiveis();
+      out.catsPresentes = catsVisiveis();
+      out.resultadoGuardado = resultados['es1'];
+      await tirar('#filtro-chamada');
+      out.botoesDeMarcar = document.querySelectorAll('.r-btn').length;
+
+      guarda();
+      return out;
+    `.replace('missas_[0]', JSON.stringify(missas[0])),
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a Chamada filtra sem estourar', r.erroAvaliar);
+  exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova da Chamada chegou ao fim (a página não saiu do lugar)', 'avaliado: ' + JSON.stringify(r.avaliado));
+  exigir((r.erros || []).length === 0, 'nenhum erro de JavaScript na Chamada', (r.erros || []).join(' | '));
+  exigir(a.missas === 2, 'sem filtro, aparecem as duas missas', 'saiu: ' + a.missas);
+  exigir(/^Filtrar/.test(a.botaoMissas || ''), 'a escolha da missa tem o botão Filtrar', 'botão: ' + JSON.stringify(a.botaoMissas));
+  exigir(a.missasSA === 1, 'comunidade filtra as missas', 'saiu: ' + a.missasSA);
+  exigir(JSON.stringify(a.todos) === JSON.stringify(['Ana Altar', 'Bruno Cruz', 'Caio Vela']), 'sem filtro, a chamada mostra todo mundo na ordem de sempre', 'saiu: ' + JSON.stringify(a.todos));
+  exigir(JSON.stringify(a.semMarcar) === JSON.stringify(['Ana Altar', 'Caio Vela']), '"Ainda sem marcar" esconde quem já foi marcado', 'saiu: ' + JSON.stringify(a.semMarcar));
+  exigir(JSON.stringify(a.catsSemMarcar) === JSON.stringify(['Altares', 'Litúrgicos']), 'os títulos de grupo com gente visível continuam', 'saiu: ' + JSON.stringify(a.catsSemMarcar));
+  exigir(JSON.stringify(a.depoisDeMarcar) === JSON.stringify(['Ana Altar', 'Caio Vela']), 'marcar alguém NÃO esconde a linha na frente de quem marca', 'saiu: ' + JSON.stringify(a.depoisDeMarcar));
+  exigir(a.substitutoAparece === true, 'e o seletor de substituto do ausente fica à vista');
+  exigir(JSON.stringify(a.presentes) === JSON.stringify(['Bruno Cruz']), '"Presentes" mostra só os presentes', 'saiu: ' + JSON.stringify(a.presentes));
+  exigir(JSON.stringify(a.catsPresentes) === JSON.stringify(['Litúrgicos']), 'grupo sem ninguém visível some junto', 'saiu: ' + JSON.stringify(a.catsPresentes));
+  exigir(a.resultadoGuardado === 'ausente', 'filtrar não apaga o que foi marcado', 'saiu: ' + JSON.stringify(a.resultadoGuardado));
+  exigir(a.botoesDeMarcar === 9, 'os botões de marcar continuam todos lá (3 por pessoa)', 'saiu: ' + a.botoesDeMarcar);
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -1694,6 +1778,7 @@ try {
     await provaBarraMostraSoOQueATelaOferece(provas);
     await provaAgendaFiltra(provas);
     await provaCrmOrdenaEBusca(provas);
+    await provaChamadaFiltra(provas);
   }
 } finally {
   await provas.encerrar();
