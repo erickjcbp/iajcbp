@@ -56,10 +56,16 @@
   }
 
   function alternar(estado, config, filtroId, opcaoId) {
-    if (!acharOpcao(acharFiltro(config, filtroId), opcaoId)) return estado;
-    var ligados = estaLigado(estado, filtroId, opcaoId)
-      ? estado.ligados.filter(function (l) { return !(l.f === filtroId && l.o === opcaoId); })
-      : estado.ligados.concat([{ f: filtroId, o: opcaoId }]);
+    var f = acharFiltro(config, filtroId);
+    if (!acharOpcao(f, opcaoId)) return estado;
+    var jaLigado = estaLigado(estado, filtroId, opcaoId);
+    // Filtro de escolha ÚNICA (ex.: período): ligar uma opção desliga as outras dele.
+    var base = (f.unico && !jaLigado)
+      ? estado.ligados.filter(function (l) { return l.f !== filtroId; })
+      : estado.ligados;
+    var ligados = jaLigado
+      ? base.filter(function (l) { return !(l.f === filtroId && l.o === opcaoId); })
+      : base.concat([{ f: filtroId, o: opcaoId }]);
     return copia(estado, { ligados: ligados });
   }
 
@@ -148,12 +154,41 @@
     var ordem = acharOrdem(config, dado.ordem) ? dado.ordem : base.ordem;
     var ligados = [];
     (Array.isArray(dado.ligados) ? dado.ligados : []).forEach(function (l) {
-      if (!l || !acharOpcao(acharFiltro(config, l.f), l.o)) return;
-      var repetido = ligados.some(function (x) { return x.f === l.f && x.o === l.o; });
+      if (!l) return;
+      var f = acharFiltro(config, l.f);
+      if (!acharOpcao(f, l.o)) return;
+      var repetido = ligados.some(function (x) {
+        return x.f === l.f && (f.unico || x.o === l.o);
+      });
       if (!repetido) ligados.push({ f: l.f, o: l.o });
     });
     var busca = typeof dado.busca === 'string' ? dado.busca : '';
     return { ordem: ordem, ligados: ligados, busca: busca };
+  }
+
+  function escolhidos(estado, filtroId) {
+    return estado.ligados.filter(function (l) { return l.f === filtroId; }).map(function (l) { return l.o; });
+  }
+
+  // Períodos das listas que filtram por data da missa. `hoje` vem de fora ('YYYY-MM-DD',
+  // no fuso local) para a conta poder ser provada com uma data fixa.
+  function intervaloDoPeriodo(periodoId, hoje) {
+    var p = String(hoje || '').split('-').map(Number);
+    var y = p[0], m = p[1], d = p[2];
+    function ymd(Y, M, D) { return Y + '-' + String(M).padStart(2, '0') + '-' + String(D).padStart(2, '0'); }
+    function ultimoDia(Y, M) { return new Date(Y, M, 0).getDate(); }
+    if (!y || !m || !d) return { desde: null, ate: null };
+    if (periodoId === 'proximas') return { desde: ymd(y, m, d), ate: null };
+    if (periodoId === 'este_mes') return { desde: ymd(y, m, 1), ate: ymd(y, m, ultimoDia(y, m)) };
+    if (periodoId === 'mes_passado') {
+      var Y = m === 1 ? y - 1 : y, M = m === 1 ? 12 : m - 1;
+      return { desde: ymd(Y, M, 1), ate: ymd(Y, M, ultimoDia(Y, M)) };
+    }
+    if (periodoId === 'ultimos_90') {
+      var ini = new Date(y, m - 1, d - 90);
+      return { desde: ymd(ini.getFullYear(), ini.getMonth() + 1, ini.getDate()), ate: ymd(y, m, d) };
+    }
+    return { desde: null, ate: null };
   }
 
   var api = {
@@ -170,6 +205,9 @@
     legenda: legenda,
     guardar: guardar,
     restaurar: restaurar,
+    escolhidos: escolhidos,
+    intervaloDoPeriodo: intervaloDoPeriodo,
+    normalizar: normalizar,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else global.FiltroLista = api;

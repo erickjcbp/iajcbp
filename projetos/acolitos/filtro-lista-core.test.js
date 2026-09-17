@@ -137,3 +137,64 @@ test('restaurar com lixo, vazio ou nulo abre no padrão', () => {
     assert.deepStrictEqual(F.restaurar(t, config), F.estadoInicial(config), 'entrada: ' + t);
   }
 });
+
+// ── Passo 4: escolha única, períodos e leitura das escolhas ──
+const configUnico = {
+  chave: 'prova-unico', rotulo: ['item', 'itens'], ordemPadrao: 'nome',
+  ordens: [{ id: 'nome', nome: 'Nome', valor: (p) => p.nome }],
+  filtros: [
+    { id: 'periodo', nome: 'Período', unico: true, opcoes: [
+      { id: 'este_mes', nome: 'Este mês', testa: () => true },
+      { id: 'mes_passado', nome: 'Mês passado', testa: () => true },
+    ] },
+    { id: 'com', nome: 'Comunidade', opcoes: [
+      { id: 'matriz', nome: 'Matriz', testa: () => true },
+      { id: 'sa', nome: 'Santo Antônio', testa: () => true },
+    ] },
+  ],
+};
+
+test('filtro ÚNICO: ligar outra opção desliga a anterior', () => {
+  let e = F.alternar(F.estadoInicial(configUnico), configUnico, 'periodo', 'este_mes');
+  e = F.alternar(e, configUnico, 'periodo', 'mes_passado');
+  assert.deepStrictEqual(F.escolhidos(e, 'periodo'), ['mes_passado']);
+  assert.strictEqual(F.contar(e), 1);
+});
+
+test('filtro ÚNICO: tocar na ligada desliga, e não mexe nos outros filtros', () => {
+  let e = F.alternar(F.estadoInicial(configUnico), configUnico, 'com', 'matriz');
+  e = F.alternar(e, configUnico, 'periodo', 'este_mes');
+  e = F.alternar(e, configUnico, 'periodo', 'este_mes');
+  assert.deepStrictEqual(F.escolhidos(e, 'periodo'), []);
+  assert.deepStrictEqual(F.escolhidos(e, 'com'), ['matriz']);
+});
+
+test('restaurar guarda só UMA opção de um filtro único', () => {
+  const velho = JSON.stringify({ v: 1, ordem: 'nome', busca: '',
+    ligados: [{ f: 'periodo', o: 'este_mes' }, { f: 'com', o: 'sa' }, { f: 'periodo', o: 'mes_passado' }] });
+  assert.deepStrictEqual(F.restaurar(velho, configUnico).ligados,
+    [{ f: 'periodo', o: 'este_mes' }, { f: 'com', o: 'sa' }]);
+});
+
+test('escolhidos devolve só o filtro pedido, na ordem em que foi ligado', () => {
+  let e = F.alternar(F.estadoInicial(configUnico), configUnico, 'com', 'sa');
+  e = F.alternar(e, configUnico, 'periodo', 'este_mes');
+  e = F.alternar(e, configUnico, 'com', 'matriz');
+  assert.deepStrictEqual(F.escolhidos(e, 'com'), ['sa', 'matriz']);
+  assert.deepStrictEqual(F.escolhidos(e, 'nada'), []);
+});
+
+test('intervaloDoPeriodo calcula cada período a partir do dia dado', () => {
+  assert.deepStrictEqual(F.intervaloDoPeriodo('proximas', '2026-09-17'), { desde: '2026-09-17', ate: null });
+  assert.deepStrictEqual(F.intervaloDoPeriodo('este_mes', '2026-09-17'), { desde: '2026-09-01', ate: '2026-09-30' });
+  assert.deepStrictEqual(F.intervaloDoPeriodo('este_mes', '2028-02-10'), { desde: '2028-02-01', ate: '2028-02-29' });
+  assert.deepStrictEqual(F.intervaloDoPeriodo('mes_passado', '2026-01-10'), { desde: '2025-12-01', ate: '2025-12-31' });
+  assert.deepStrictEqual(F.intervaloDoPeriodo('mes_passado', '2026-03-31'), { desde: '2026-02-01', ate: '2026-02-28' });
+  assert.deepStrictEqual(F.intervaloDoPeriodo('ultimos_90', '2026-03-01'), { desde: '2025-12-01', ate: '2026-03-01' });
+  assert.deepStrictEqual(F.intervaloDoPeriodo('inventado', '2026-09-17'), { desde: null, ate: null });
+});
+
+test('normalizar tira acento, caixa e espaço das pontas', () => {
+  assert.strictEqual(F.normalizar('  Érico LÚCIO '), 'erico lucio');
+  assert.strictEqual(F.normalizar(null), '');
+});
