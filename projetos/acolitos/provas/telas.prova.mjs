@@ -1529,6 +1529,81 @@ async function provaAgendaFiltra(provas) {
   exigir(a.chaveVelhaSumiu === true, 'a chave antiga é convertida uma vez só');
 }
 
+async function provaCrmOrdenaEBusca(provas) {
+  console.log('\n\x1b[1mCRM: ordenar e buscar no quadro e na lista\x1b[0m');
+
+  // O CRM já abria com quem está parado há mais tempo (a pergunta da coordenação ali é
+  // "quem está esquecido?"). A barra mantém isso como padrão e acrescenta as outras ordens.
+  const pessoa = (id, nome, criado) => ({ id, nome, apelido: null, data_nascimento: '2012-01-01',
+    comunidade: 'matriz', status: 'em_integracao', created_at: criado });
+  const crm = [
+    { id: 'k1', membro_id: 'p1', etapa: 'integracao', etapa_iniciada_em: '2026-07-01T12:00:00+00:00', acolitos_membros: pessoa('p1', 'Zeca Antigo', '2026-06-20T12:00:00+00:00') },
+    { id: 'k2', membro_id: 'p2', etapa: 'integracao', etapa_iniciada_em: '2026-09-01T12:00:00+00:00', acolitos_membros: pessoa('p2', 'Bia Nova', '2026-09-01T01:30:00+00:00') },
+    { id: 'k3', membro_id: 'p3', etapa: 'tunica', etapa_iniciada_em: '2026-08-10T12:00:00+00:00', acolitos_membros: pessoa('p3', 'Caio Meio', '2026-08-01T12:00:00+00:00') },
+  ];
+  const r = await provas.abrir('crm.html', {
+    papel: PAPEIS.admin,
+    tabelas: { acolitos_crm: { data: crm }, acolitos_crm_comentarios: { data: [] }, acolitos_crm_historico: { data: [] } },
+    avaliar: `
+      const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+      const guarda = () => { try { localStorage.removeItem('filtro-lista:crm'); } catch (e) {} };
+      const coluna = (i) => [...document.querySelectorAll('#view-pipeline .crm-col')[i].querySelectorAll('.crm-card-name')].map(e => e.textContent.trim());
+      const painel = () => document.querySelector('.modal-overlay.open .filtro-painel');
+      const tocar = (txt) => { const b = [...painel().querySelectorAll('button')].find(x => x.textContent.trim() === txt); if (!b) throw new Error('sem botão ' + txt); b.click(); };
+      const escolher = async (txt) => { document.querySelector('#filtro-crm .filtro-btn').click(); await esperar(30); tocar(txt); await esperar(30); painel().querySelector('.filtro-ver').click(); await esperar(120); };
+      guarda();
+      currentView = 'pipeline'; montarFiltroCrm(); await loadCrm(); await esperar(60);
+      const out = {};
+      out.botao = document.querySelector('#filtro-crm .filtro-btn').textContent.trim();
+      out.temBusca = !!document.querySelector('#filtro-crm .search-input');
+      out.colIntegracaoPadrao = coluna(ETAPAS.indexOf('integracao'));
+      document.querySelector('#filtro-crm .filtro-btn').click(); await esperar(30);
+      out.secoes = [...painel().querySelectorAll('.filtro-painel-titulo')].map(e => e.textContent.trim());
+      document.querySelector('.modal-overlay.open').remove();
+      await esperar(120);
+
+      await escolher('Nome A–Z');
+      out.colIntegracaoNome = coluna(ETAPAS.indexOf('integracao'));
+
+      await escolher('Mais recentes');
+      out.colIntegracaoRecentes = coluna(ETAPAS.indexOf('integracao'));
+      const leg = document.querySelector('#view-pipeline .filtro-legenda');
+      out.legenda = leg ? leg.textContent.trim() : null;
+      out.legendaEsperada = 'cadastro ' + new Date('2026-09-01T01:30:00+00:00').toLocaleDateString('pt-BR').slice(0, 5);
+
+      const inp = document.querySelector('#filtro-crm .search-input');
+      inp.value = 'bia'; inp.dispatchEvent(new Event('input')); await esperar(60);
+      out.cartoesComBusca = [...document.querySelectorAll('#view-pipeline .crm-card-name')].map(e => e.textContent.trim());
+      out.kpiTotal = [...document.querySelectorAll('#crm-kpis .kpi-card')].map(c => c.querySelector('.kpi-value').textContent.trim())[1];
+
+      setView('lista'); await esperar(60);
+      out.linhasComBusca = [...document.querySelectorAll('#crm-tbody tr td:first-child')].map(e => e.textContent.trim());
+      inp.value = 'ninguem-assim'; inp.dispatchEvent(new Event('input')); await esperar(60);
+      out.listaVazia = (document.querySelector('#crm-tbody') || {}).textContent || '';
+      setView('pipeline');
+
+      guarda();
+      return out;
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'o CRM ordena e busca sem estourar', r.erroAvaliar);
+  exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova do CRM chegou ao fim (a página não saiu do lugar)', 'avaliado: ' + JSON.stringify(r.avaliado));
+  exigir((r.erros || []).length === 0, 'nenhum erro de JavaScript no CRM', (r.erros || []).join(' | '));
+  exigir(/^Ordenar/.test(a.botao || ''), 'sem filtro, o botão do CRM se chama "Ordenar"', 'botão: ' + JSON.stringify(a.botao));
+  exigir(a.temBusca === true, 'o CRM tem busca por nome');
+  exigir(JSON.stringify(a.secoes) === JSON.stringify(['Ordenar por']), 'o painel do CRM só oferece ordens', 'saiu: ' + JSON.stringify(a.secoes));
+  exigir(JSON.stringify(a.colIntegracaoPadrao) === JSON.stringify(['Zeca Antigo', 'Bia Nova']),
+    'o padrão continua: quem está parado há mais tempo primeiro', 'saiu: ' + JSON.stringify(a.colIntegracaoPadrao));
+  exigir(JSON.stringify(a.colIntegracaoNome) === JSON.stringify(['Bia Nova', 'Zeca Antigo']), 'Nome A–Z ordena dentro da coluna', 'saiu: ' + JSON.stringify(a.colIntegracaoNome));
+  exigir(JSON.stringify(a.colIntegracaoRecentes) === JSON.stringify(['Bia Nova', 'Zeca Antigo']), 'Mais recentes põe o cadastro mais novo primeiro', 'saiu: ' + JSON.stringify(a.colIntegracaoRecentes));
+  exigir(a.legenda === a.legendaEsperada, 'a data do cadastro aparece no cartão, no horário local', 'saiu: ' + JSON.stringify(a.legenda) + ' esperado ' + JSON.stringify(a.legendaEsperada));
+  exigir(JSON.stringify(a.cartoesComBusca) === JSON.stringify(['Bia Nova']), 'a busca vale no quadro', 'saiu: ' + JSON.stringify(a.cartoesComBusca));
+  exigir(a.kpiTotal === '3', 'os números do topo não mudam com a busca (são do funil inteiro)', 'saiu: ' + JSON.stringify(a.kpiTotal));
+  exigir(JSON.stringify(a.linhasComBusca) === JSON.stringify(['Bia Nova']), 'e a busca vale na lista', 'saiu: ' + JSON.stringify(a.linhasComBusca));
+  exigir(/Ninguém com essa busca/.test(a.listaVazia || ''), 'busca sem resultado diz isso, e não "nenhum membro em onboarding"', 'saiu: ' + JSON.stringify(a.listaVazia));
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -1612,6 +1687,7 @@ try {
     await provaMembrosMostraQuemEntrouPorUltimo(provas);
     await provaBarraMostraSoOQueATelaOferece(provas);
     await provaAgendaFiltra(provas);
+    await provaCrmOrdenaEBusca(provas);
   }
 } finally {
   await provas.encerrar();

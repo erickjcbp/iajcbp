@@ -57,6 +57,7 @@
     <button class="view-btn active" id="btn-v-pipeline" onclick="setView('pipeline')">Pipeline</button>
     <button class="view-btn" id="btn-v-lista" onclick="setView('lista')">Lista</button>
   </div>
+  <div id="filtro-crm"></div>
 
   <div id="view-pipeline" class="crm-pipeline"></div>
 
@@ -188,6 +189,37 @@ let crmData = [];
 let pendingEntry = null;
 let currentView = 'pipeline';
 
+let filtroCrm = null;   // controle da barra de ordenar e buscar (montarFiltroLista)
+
+// ── A barra do CRM ──
+// Sem filtros (a coluna já é a etapa). O padrão é o de sempre: quem está parado há mais
+// tempo primeiro. Os números do topo continuam contando o funil inteiro, com ou sem busca.
+function configFiltroCrm() {
+  const membroDe = (c) => c.acolitos_membros || {};
+  const cfg = {
+    chave: 'crm',
+    rotulo: ['pessoa', 'pessoas'],
+    ordemPadrao: 'parado',
+    ordens: [
+      { id: 'parado', nome: 'Há mais tempo na etapa', valor: c => c.etapa_iniciada_em || null },
+      { id: 'recentes', nome: 'Mais recentes', desc: true, valor: c => membroDe(c).created_at || null,
+        legenda: c => membroDe(c).created_at ? 'cadastro ' + formatDate(membroDe(c).created_at).slice(0, 5) : '' },
+      { id: 'nome', nome: 'Nome A–Z', valor: c => membroDe(c).nome || null },
+    ],
+    desempate: c => membroDe(c).nome || '',
+    filtros: [],
+    busca: { placeholder: 'Buscar nome...', campos: c => [membroDe(c).nome, membroDe(c).apelido] },
+  };
+  cfg.contar = (e) => FiltroLista.aplicar(crmData, e, cfg).length;
+  return cfg;
+}
+function montarFiltroCrm() {
+  filtroCrm = montarFiltroLista(document.getElementById('filtro-crm'), configFiltroCrm(), () => {
+    currentView === 'pipeline' ? renderPipeline() : renderLista();
+  });
+}
+function crmVisivel() { return filtroCrm ? filtroCrm.aplicar(crmData) : crmData; }
+
 async function init() {
   ctx = await initModulo(['coord_admin','subadmin','membro_equipe'], { perm: 'crm' });
   if (!ctx) return;
@@ -200,6 +232,7 @@ async function init() {
   }
   renderHeader(ctx, 'crm');
   renderBottomNav(ctx, 'crm');
+  montarFiltroCrm();
   await loadCrm();
   document.getElementById('cartao-fechar').onclick = fecharCartao;
   document.getElementById('cartao-fundo').onclick = fecharCartao;
@@ -245,7 +278,7 @@ function renderPipeline() {
   const el = document.getElementById('view-pipeline');
   el.textContent = '';
   ETAPAS.slice(0,-1).forEach(etapa => {
-    const membros = crmData.filter(c => c.etapa === etapa);
+    const membros = crmVisivel().filter(c => c.etapa === etapa);
 
     const col = document.createElement('div'); col.className = 'crm-col';
 
@@ -273,6 +306,7 @@ function renderPipeline() {
 
       const name = document.createElement('div'); name.className = 'crm-card-name';
       name.textContent = m?.nome || '—';
+      const leg = filtroCrm ? filtroCrm.legenda(c) : '';
 
       const meta = document.createElement('div'); meta.className = 'crm-card-meta';
       meta.textContent = m?.data_nascimento ? calcIdade(m.data_nascimento) + ' anos' : '—';
@@ -281,7 +315,8 @@ function renderPipeline() {
       daysEl.className = 'crm-card-days' + (dias > 30 ? ' alert' : '');
       daysEl.textContent = dias + ' dias nesta etapa';
 
-      card.append(name, meta, daysEl);
+      if (leg) { const lg = document.createElement('div'); lg.className = 'filtro-legenda'; lg.textContent = leg; card.append(name, lg, meta, daysEl); }
+      else card.append(name, meta, daysEl);
       const wlink = waMembro(m);
       if (wlink) {
         const wa = document.createElement('a'); wa.className = 'crm-wa'; wa.href = wlink; wa.target = '_blank'; wa.rel = 'noopener';
@@ -299,13 +334,14 @@ function renderPipeline() {
 function renderLista() {
   const tbody = document.getElementById('crm-tbody');
   tbody.textContent = '';
-  if (!crmData.length) {
+  const lista = crmVisivel();
+  if (!lista.length) {
     const tr = document.createElement('tr');
     const td = document.createElement('td'); td.colSpan = 6; td.className = 'empty';
-    td.textContent = 'Nenhum membro em onboarding.';
+    td.textContent = crmData.length ? 'Ninguém com essa busca.' : 'Nenhum membro em onboarding.';
     tr.appendChild(td); tbody.appendChild(tr); return;
   }
-  crmData.forEach(c => {
+  lista.forEach(c => {
     const m = c.acolitos_membros;
     const dias = diasNaEtapa(c.etapa_iniciada_em);
     const tr = document.createElement('tr');
