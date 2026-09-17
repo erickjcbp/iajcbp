@@ -1627,9 +1627,12 @@ async function provaChamadaFiltra(provas) {
     { id: 'es2', funcao: 'cruz', status: 'presente', membro_id: 'm2', acolitos_membros: { nome: 'Bruno Cruz', foto_url: null, nivel: 'acolito_guardiao' } },
     { id: 'es3', funcao: 'vela', status: 'escalado', membro_id: 'm3', acolitos_membros: { nome: 'Caio Vela', foto_url: null, nivel: 'coroinha' } },
   ];
+  // m4 não está escalado nesta missa (eligiveis() descarta quem já está) — só ele pode
+  // aparecer como substituto de 'altar', e só porque tem a habilitação abaixo.
   const roster = { membros: [
     { id: 'm1', nome: 'Ana Altar' }, { id: 'm2', nome: 'Bruno Cruz' }, { id: 'm3', nome: 'Caio Vela' },
-  ], habs: [] };
+    { id: 'm4', nome: 'Duda Reserva' },
+  ], habs: [ { membro_id: 'm4', funcao: 'altar', proficiencia: 'apto' } ] };
   const r = await provas.abrir('chamada.html', {
     papel: PAPEIS.admin,
     tabelas: { acolitos_celebracoes: { data: missas }, acolitos_escalas: { data: escalas }, acolitos_chamadas_itens: { data: [] } },
@@ -1665,12 +1668,23 @@ async function provaChamadaFiltra(provas) {
       const subRow = document.querySelector('[data-escala-id="es1"] .sub-row');
       out.substitutoAparece = !!subRow && subRow.style.display !== 'none';
       await tirar('#filtro-chamada');
+
+      // Fix3: o substituto escolhido tem de sobreviver a uma troca de filtro — é a razão
+      // dada para o filtro ESCONDER linhas em vez de redesenhar a tela.
+      const subSel = document.querySelector('[data-escala-id="es1"] .sub-sel');
+      subSel.value = 'm4'; subSel.dispatchEvent(new Event('change')); await esperar(30);
+      out.substitutoEscolhido = substitutos['es1'];
       await escolher('#filtro-chamada', 'Presentes');
       out.presentes = visiveis();
       out.catsPresentes = catsVisiveis();
       out.resultadoGuardado = resultados['es1'];
+      out.botoesVisiveisComFiltro = [...document.querySelectorAll('[data-escala-id]')]
+        .filter(b => b.style.display !== 'none')
+        .reduce((n, b) => n + b.querySelectorAll('.r-btn').length, 0);
+      out.substitutoSelectDepoisDoFiltro = document.querySelector('[data-escala-id="es1"] .sub-sel').value;
       await tirar('#filtro-chamada');
-      out.botoesDeMarcar = document.querySelectorAll('.r-btn').length;
+      out.substitutoSelectDepoisDeLimpar = document.querySelector('[data-escala-id="es1"] .sub-sel').value;
+      out.substitutoObjetoDepoisDeLimpar = substitutos['es1'];
 
       // Fix1: a "Situação" descreve UMA missa, não uma preferência. Deixamos o filtro
       // "Presentes" LIGADO de propósito (sem tirar) e reabrimos a MESMA missa — é o que
@@ -1706,10 +1720,14 @@ async function provaChamadaFiltra(provas) {
   exigir(JSON.stringify(a.catsSemMarcar) === JSON.stringify(['Altares', 'Litúrgicos']), 'os títulos de grupo com gente visível continuam', 'saiu: ' + JSON.stringify(a.catsSemMarcar));
   exigir(JSON.stringify(a.depoisDeMarcar) === JSON.stringify(['Ana Altar', 'Caio Vela']), 'marcar alguém NÃO esconde a linha na frente de quem marca', 'saiu: ' + JSON.stringify(a.depoisDeMarcar));
   exigir(a.substitutoAparece === true, 'e o seletor de substituto do ausente fica à vista');
+  exigir(a.substitutoEscolhido === 'm4', 'dá para escolher um substituto elegível', 'saiu: ' + JSON.stringify(a.substitutoEscolhido));
   exigir(JSON.stringify(a.presentes) === JSON.stringify(['Bruno Cruz']), '"Presentes" mostra só os presentes', 'saiu: ' + JSON.stringify(a.presentes));
   exigir(JSON.stringify(a.catsPresentes) === JSON.stringify(['Litúrgicos']), 'grupo sem ninguém visível some junto', 'saiu: ' + JSON.stringify(a.catsPresentes));
   exigir(a.resultadoGuardado === 'ausente', 'filtrar não apaga o que foi marcado', 'saiu: ' + JSON.stringify(a.resultadoGuardado));
-  exigir(a.botoesDeMarcar === 9, 'os botões de marcar continuam todos lá (3 por pessoa)', 'saiu: ' + a.botoesDeMarcar);
+  exigir(a.botoesVisiveisComFiltro === 3, 'os botões de marcar visíveis batem com quem está à vista sob o filtro (3, só o Bruno)', 'saiu: ' + a.botoesVisiveisComFiltro);
+  exigir(a.substitutoSelectDepoisDoFiltro === 'm4', 'o substituto escolhido continua no seletor com o filtro ligado (a linha só ficou escondida, não sumiu)', 'saiu: ' + JSON.stringify(a.substitutoSelectDepoisDoFiltro));
+  exigir(a.substitutoSelectDepoisDeLimpar === 'm4', 'e continua depois de limpar o filtro', 'saiu: ' + JSON.stringify(a.substitutoSelectDepoisDeLimpar));
+  exigir(a.substitutoObjetoDepoisDeLimpar === 'm4', 'o objeto substitutos também não perdeu a escolha', 'saiu: ' + JSON.stringify(a.substitutoObjetoDepoisDeLimpar));
   exigir(JSON.stringify(a.todosDepoisDeReabrir) === JSON.stringify(['Ana Altar', 'Bruno Cruz', 'Caio Vela']),
     'o filtro de Situação NÃO passa de uma missa para a outra — a próxima missa abre com todo mundo à vista', 'saiu: ' + JSON.stringify(a.todosDepoisDeReabrir));
   exigir(JSON.stringify(a.etiquetaChamadaReaberta) === JSON.stringify([]), 'e sem etiqueta de filtro na barra da chamada', 'saiu: ' + JSON.stringify(a.etiquetaChamadaReaberta));
