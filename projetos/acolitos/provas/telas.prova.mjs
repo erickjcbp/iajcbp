@@ -1167,7 +1167,10 @@ async function provaBarraDeFiltroFunciona(provas) {
       botaoNoPainel('Matriz').click(); await esperar(30);
       const verComMatriz = painel().querySelector('.filtro-ver').textContent.trim();
       botaoNoPainel('Nome Z–A').click(); await esperar(30);
-      painel().querySelector('.filtro-ver').click(); await esperar(30);
+      // 120 ms depois de FECHAR, não 30: fechar a janela chama history.back(), que o navegador
+      // roda depois. Abrir outra janela antes disso tira a página do lugar e o resultado da
+      // prova volta vazio sem erro nenhum — foi isso que deu 21 falhas de uma vez em 17/09/2026.
+      painel().querySelector('.filtro-ver').click(); await esperar(120);
       const fechou = !painel();
       const depois = ctl.aplicar(itens).map(i => i.nome);
       const contagemDepois = alvo.querySelector('.filtro-contagem').textContent;
@@ -1187,7 +1190,7 @@ async function provaBarraDeFiltroFunciona(provas) {
       // vez, sem mexer na ordem escolhida (Z–A continua valendo desde lá em cima).
       alvo.querySelector('.filtro-btn').click(); await esperar(30);
       botaoNoPainel('Matriz').click(); await esperar(30);
-      painel().querySelector('.filtro-ver').click(); await esperar(30);
+      painel().querySelector('.filtro-ver').click(); await esperar(120);
       const etiquetasAntesDeLimpar = [...alvo.querySelectorAll('.filtro-etiqueta')].map(b => b.textContent.trim());
       const temLimparAntes = !!alvo.querySelector('.filtro-limpar');
       alvo.querySelector('.filtro-limpar').click(); await esperar(30);
@@ -1201,7 +1204,7 @@ async function provaBarraDeFiltroFunciona(provas) {
       erroNaContagem = true;
       alvo.querySelector('.filtro-btn').click(); await esperar(50);
       const verComErro = painel().querySelector('.filtro-ver').textContent.trim();
-      document.querySelector('.modal-overlay.open').click(); await esperar(30);
+      document.querySelector('.modal-overlay.open').click(); await esperar(120);
       const fechouSemAplicar = !painel();
 
       try { localStorage.removeItem('filtro-lista:prova-barra'); } catch (e) {}
@@ -1216,6 +1219,8 @@ async function provaBarraDeFiltroFunciona(provas) {
 
   const a = r.avaliado || {};
   exigir(!r.erroAvaliar, 'a barra monta e o painel roda sem estourar', r.erroAvaliar);
+  exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova da barra chegou ao fim (a página não saiu do lugar)',
+    'avaliado: ' + JSON.stringify(r.avaliado));
   exigir(a.temBusca === true, 'com busca declarada, o campo aparece na barra');
   exigir(a.contagemAntes === '', 'sem filtro, o botão não mostra número', 'mostrou: ' + JSON.stringify(a.contagemAntes));
   exigir(a.abriu === true, 'o botão Filtrar abre o painel');
@@ -1252,8 +1257,8 @@ async function provaMembrosMostraQuemEntrouPorUltimo(provas) {
   // Os níveis são os slugs REAIS (acolito_guardiao, não "acolito" — "acolito" é só a
   // base, e um slug inexistente cai no primeiro nível da lista sem avisar).
   //
-  // O pedido do dono, com a forma real do banco: a maioria cadastrada no MESMO dia (a
-  // importação de 01/06), e poucos depois. O empate é o caso comum e tem de sair em ordem
+  // O pedido do dono, com a forma real do banco: a maioria cadastrada no MESMO instante (a
+  // importação de 31/05 às 22:29 em Brasília — 01/06 em UTC), e poucos depois. O empate é o caso comum e tem de sair em ordem
   // alfabética, não embaralhado.
   const membros = [
     { id: 'm-bruno', nome: 'Bruno Lote', created_at: '2026-06-01T10:00:00+00:00', comunidade: 'matriz', foto_url: null, nivel: 'acolito_guardiao', status: 'ativo', data_nascimento: '2012-03-05' },

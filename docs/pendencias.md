@@ -12,19 +12,17 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 Agenda, CRM e Chamada (17/09) estão feitos. Faltam: migration 069 + Ausências (Avisos e
 Faltas — a parte que filtra NA CONSULTA, porque as listas vêm em pedaços); Tarefas.
 
-**A prova antiga da barra (`provaBarraDeFiltroFunciona`) ainda falha às vezes — e agora se sabe
-por quê.** O app tem um mecanismo que faz "Voltar" ao fechar qualquer janela (`shared.js`,
-perto da linha 3416): fechar chama `history.back()`, que o navegador executa DEPOIS. Se outra
-janela abre antes disso, a página pode sair do lugar no meio da prova, e o harness devolve o
-resultado vazio SEM acusar erro. Evidência, 17/09: uma rodada com 31 falhas foi 9 esperadas +
-**21 dessa prova só, todas com resultado vazio** (`/tmp/claude-501/fix3_teeth2.txt`). É a
-explicação mais forte para as **22 falhas misteriosas** logo depois de juntar o passo 1
-(mesmo tamanho). As provas novas (Agenda, CRM, Chamada e a da barra do passo 2) já esperam
-120 ms depois de fechar uma janela e conferem que o resultado não veio vazio; **a antiga
-ainda não**. Conserto: aplicar o mesmo à prova antiga. Depois, dois consertos maiores:
-(1) o harness acusar quando a página sai do lugar; (2) no app, só registrar a janela nova no
-histórico quando não houver um "voltar" pendente — o risco para gente de verdade é baixo
-(o toque é mais lento que essa janela), mas existe.
+**O "Voltar fecha o modal" pode tirar a página do lugar — sobram dois consertos maiores.** O
+app faz "Voltar" ao fechar qualquer janela (`shared.js`, perto da linha 3416): fechar chama
+`history.back()`, que o navegador executa DEPOIS. Se outra janela abre antes disso, a página
+pode sair do lugar, e o harness devolve o resultado da prova vazio SEM acusar erro. É a
+explicação mais forte (não provada) para as **22 falhas misteriosas** de 17/09 — evidência:
+uma rodada com 21 falhas de uma prova só, todas com resultado vazio. **Todas as provas de barra já se protegem** (esperam
+120 ms depois de fechar uma janela e conferem que o resultado não veio vazio; a antiga ganhou
+isso em 17/09 e passou 3 rodadas seguidas). Faltam: (1) o harness acusar sozinho quando a
+página sai do lugar; (2) no app, só registrar a janela nova no histórico quando não houver um
+"voltar" pendente — o risco para gente de verdade é baixo (o toque é mais lento que essa
+janela), mas existe.
 
 **Agenda — textos para o dono decidir.** No painel, "Mostrar: Eventos" fica ao lado de "Tipo
 de evento: Evento", e escolher um tipo de evento esconde as celebrações (a contagem mostra).
