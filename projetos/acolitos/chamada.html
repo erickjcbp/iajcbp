@@ -273,6 +273,10 @@ async function abrirChamada(celeb) {
   const summaryBar = document.createElement('div'); summaryBar.className = 'summary-bar'; summaryBar.id = 'summary-bar';
   main.appendChild(summaryBar); updateSummary();
 
+  // O filtro de Situação descreve ESTA missa (quem já foi marcado), não uma preferência —
+  // um filtro esquecido em "Presentes" abriria a próxima missa (ou o "Limpar chamada", que
+  // chama abrirChamada de novo) com ninguém ainda marcado e a lista inteira escondida.
+  try { localStorage.removeItem('filtro-lista:chamada-lista'); } catch (e) {}
   const alvoFiltroCh = document.createElement('div'); alvoFiltroCh.id = 'filtro-chamada'; main.appendChild(alvoFiltroCh);
   filtroChamada = montarFiltroLista(alvoFiltroCh, configFiltroChamada(), aplicarFiltroChamada);
   const avisoVazio = document.createElement('span'); avisoVazio.className = 'empty'; avisoVazio.id = 'chamada-filtro-vazio';

@@ -1672,9 +1672,27 @@ async function provaChamadaFiltra(provas) {
       await tirar('#filtro-chamada');
       out.botoesDeMarcar = document.querySelectorAll('.r-btn').length;
 
+      // Fix1: a "Situação" descreve UMA missa, não uma preferência. Deixamos o filtro
+      // "Presentes" LIGADO de propósito (sem tirar) e reabrimos a MESMA missa — é o que
+      // acontece de verdade quando a próxima missa abre, ou quando "Limpar chamada" chama
+      // abrirChamada de novo.
+      await escolher('#filtro-chamada', 'Presentes');
+      await abrirChamada(missas_[0]); await esperar(80);
+      out.todosDepoisDeReabrir = visiveis();
+      out.etiquetaChamadaReaberta = [...document.querySelectorAll('#filtro-chamada .filtro-etiqueta')].map(e => e.textContent.trim());
+      out.vazioEscondidoReaberta = (document.getElementById('chamada-filtro-vazio') || {}).style.display;
+
+      // Já a escolha da MISSA (comunidade) é preferência normal — continua valendo entre
+      // aberturas da tela de seleção.
+      await renderSelecao(); await esperar(60);
+      await escolher('#filtro-missas', 'Santo Antônio');
+      await renderSelecao(); await esperar(60);
+      out.missasSADepoisDeReabrirSelecao = document.querySelectorAll('.celeb-opt').length;
+      await tirar('#filtro-missas');
+
       guarda();
       return out;
-    `.replace('missas_[0]', JSON.stringify(missas[0])),
+    `.replace(/missas_\[0\]/g, JSON.stringify(missas[0])),
   });
   const a = r.avaliado || {};
   exigir(!r.erroAvaliar, 'a Chamada filtra sem estourar', r.erroAvaliar);
@@ -1692,6 +1710,11 @@ async function provaChamadaFiltra(provas) {
   exigir(JSON.stringify(a.catsPresentes) === JSON.stringify(['Litúrgicos']), 'grupo sem ninguém visível some junto', 'saiu: ' + JSON.stringify(a.catsPresentes));
   exigir(a.resultadoGuardado === 'ausente', 'filtrar não apaga o que foi marcado', 'saiu: ' + JSON.stringify(a.resultadoGuardado));
   exigir(a.botoesDeMarcar === 9, 'os botões de marcar continuam todos lá (3 por pessoa)', 'saiu: ' + a.botoesDeMarcar);
+  exigir(JSON.stringify(a.todosDepoisDeReabrir) === JSON.stringify(['Ana Altar', 'Bruno Cruz', 'Caio Vela']),
+    'o filtro de Situação NÃO passa de uma missa para a outra — a próxima missa abre com todo mundo à vista', 'saiu: ' + JSON.stringify(a.todosDepoisDeReabrir));
+  exigir(JSON.stringify(a.etiquetaChamadaReaberta) === JSON.stringify([]), 'e sem etiqueta de filtro na barra da chamada', 'saiu: ' + JSON.stringify(a.etiquetaChamadaReaberta));
+  exigir(a.vazioEscondidoReaberta === 'none', 'o aviso "Ninguém nesta situação" fica escondido ao reabrir', 'saiu: ' + JSON.stringify(a.vazioEscondidoReaberta));
+  exigir(a.missasSADepoisDeReabrirSelecao === 1, 'já a comunidade da escolha de missa é preferência normal e continua valendo', 'saiu: ' + a.missasSADepoisDeReabrirSelecao);
 }
 
 async function provaRecadoDaFotoAparece(provas) {
