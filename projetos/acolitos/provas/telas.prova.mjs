@@ -1536,10 +1536,14 @@ async function provaCrmOrdenaEBusca(provas) {
   // "quem está esquecido?"). A barra mantém isso como padrão e acrescenta as outras ordens.
   const pessoa = (id, nome, criado) => ({ id, nome, apelido: null, data_nascimento: '2012-01-01',
     comunidade: 'matriz', status: 'em_integracao', created_at: criado });
+  // Três pessoas em "integracao", chegando na ficha numa ordem que não bate com NENHUMA
+  // das três ordens — só assim a prova pega uma "Mais recentes" que não mexeu em nada
+  // (ficaria presa em "Nome A–Z", já que com só duas pessoas as duas ordens coincidiam).
   const crm = [
-    { id: 'k1', membro_id: 'p1', etapa: 'integracao', etapa_iniciada_em: '2026-07-01T12:00:00+00:00', acolitos_membros: pessoa('p1', 'Zeca Antigo', '2026-06-20T12:00:00+00:00') },
-    { id: 'k2', membro_id: 'p2', etapa: 'integracao', etapa_iniciada_em: '2026-09-01T12:00:00+00:00', acolitos_membros: pessoa('p2', 'Bia Nova', '2026-09-01T01:30:00+00:00') },
-    { id: 'k3', membro_id: 'p3', etapa: 'tunica', etapa_iniciada_em: '2026-08-10T12:00:00+00:00', acolitos_membros: pessoa('p3', 'Caio Meio', '2026-08-01T12:00:00+00:00') },
+    { id: 'k1', membro_id: 'p1', etapa: 'integracao', etapa_iniciada_em: '2026-09-05T12:00:00+00:00', acolitos_membros: pessoa('p1', 'Ana Velha', '2026-05-10T12:00:00+00:00') },
+    { id: 'k2', membro_id: 'p2', etapa: 'integracao', etapa_iniciada_em: '2026-08-01T12:00:00+00:00', acolitos_membros: pessoa('p2', 'Bia Nova', '2026-09-01T01:30:00+00:00') },
+    { id: 'k3', membro_id: 'p3', etapa: 'integracao', etapa_iniciada_em: '2026-07-01T12:00:00+00:00', acolitos_membros: pessoa('p3', 'Zeca Antigo', '2026-06-20T12:00:00+00:00') },
+    { id: 'k4', membro_id: 'p4', etapa: 'tunica', etapa_iniciada_em: '2026-08-10T12:00:00+00:00', acolitos_membros: pessoa('p4', 'Caio Meio', '2026-08-01T12:00:00+00:00') },
   ];
   const r = await provas.abrir('crm.html', {
     papel: PAPEIS.admin,
@@ -1593,13 +1597,13 @@ async function provaCrmOrdenaEBusca(provas) {
   exigir(/^Ordenar/.test(a.botao || ''), 'sem filtro, o botão do CRM se chama "Ordenar"', 'botão: ' + JSON.stringify(a.botao));
   exigir(a.temBusca === true, 'o CRM tem busca por nome');
   exigir(JSON.stringify(a.secoes) === JSON.stringify(['Ordenar por']), 'o painel do CRM só oferece ordens', 'saiu: ' + JSON.stringify(a.secoes));
-  exigir(JSON.stringify(a.colIntegracaoPadrao) === JSON.stringify(['Zeca Antigo', 'Bia Nova']),
+  exigir(JSON.stringify(a.colIntegracaoPadrao) === JSON.stringify(['Zeca Antigo', 'Bia Nova', 'Ana Velha']),
     'o padrão continua: quem está parado há mais tempo primeiro', 'saiu: ' + JSON.stringify(a.colIntegracaoPadrao));
-  exigir(JSON.stringify(a.colIntegracaoNome) === JSON.stringify(['Bia Nova', 'Zeca Antigo']), 'Nome A–Z ordena dentro da coluna', 'saiu: ' + JSON.stringify(a.colIntegracaoNome));
-  exigir(JSON.stringify(a.colIntegracaoRecentes) === JSON.stringify(['Bia Nova', 'Zeca Antigo']), 'Mais recentes põe o cadastro mais novo primeiro', 'saiu: ' + JSON.stringify(a.colIntegracaoRecentes));
+  exigir(JSON.stringify(a.colIntegracaoNome) === JSON.stringify(['Ana Velha', 'Bia Nova', 'Zeca Antigo']), 'Nome A–Z ordena dentro da coluna', 'saiu: ' + JSON.stringify(a.colIntegracaoNome));
+  exigir(JSON.stringify(a.colIntegracaoRecentes) === JSON.stringify(['Bia Nova', 'Zeca Antigo', 'Ana Velha']), 'Mais recentes põe o cadastro mais novo primeiro', 'saiu: ' + JSON.stringify(a.colIntegracaoRecentes));
   exigir(a.legenda === a.legendaEsperada, 'a data do cadastro aparece no cartão, no horário local', 'saiu: ' + JSON.stringify(a.legenda) + ' esperado ' + JSON.stringify(a.legendaEsperada));
   exigir(JSON.stringify(a.cartoesComBusca) === JSON.stringify(['Bia Nova']), 'a busca vale no quadro', 'saiu: ' + JSON.stringify(a.cartoesComBusca));
-  exigir(a.kpiTotal === '3', 'os números do topo não mudam com a busca (são do funil inteiro)', 'saiu: ' + JSON.stringify(a.kpiTotal));
+  exigir(a.kpiTotal === '4', 'os números do topo não mudam com a busca (são do funil inteiro)', 'saiu: ' + JSON.stringify(a.kpiTotal));
   exigir(JSON.stringify(a.linhasComBusca) === JSON.stringify(['Bia Nova']), 'e a busca vale na lista', 'saiu: ' + JSON.stringify(a.linhasComBusca));
   exigir(/Ninguém com essa busca/.test(a.listaVazia || ''), 'busca sem resultado diz isso, e não "nenhum membro em onboarding"', 'saiu: ' + JSON.stringify(a.listaVazia));
 }
