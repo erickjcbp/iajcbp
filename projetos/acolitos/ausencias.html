@@ -154,7 +154,7 @@ async function recarregarAvisos() {
   if (meu !== pedidoAvisos) return;   // chegou resposta velha depois da nova
   lista.textContent = '';
   const aviso = (txt) => { const s = document.createElement('span'); s.className = 'empty'; s.textContent = txt; lista.appendChild(s); };
-  if (error) { console.warn('Avisos: consulta falhou', error); aviso('Não foi possível carregar os avisos. Tente de novo.'); return; }
+  if (error) { console.error('Avisos: consulta falhou', error); aviso('Não foi possível carregar os avisos. Tente de novo.'); return; }
   if (!data || !data.length) {
     aviso(FiltroLista.contar(estado) > 0 ? 'Nenhum aviso com esses filtros.' : 'Nenhuma ausência informada.');
     return;

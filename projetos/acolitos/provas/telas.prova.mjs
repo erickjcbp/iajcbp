@@ -1917,7 +1917,12 @@ async function provaAvisosDeAusenciaFiltramNaConsulta(provas) {
   const a = r.avaliado || {};
   exigir(!r.erroAvaliar, 'a aba Avisos filtra sem estourar', r.erroAvaliar);
   exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova dos Avisos chegou ao fim (a página não saiu do lugar)', 'avaliado: ' + JSON.stringify(r.avaliado));
-  exigir((r.erros || []).length === 0, 'nenhum erro de JavaScript em Ausências', (r.erros || []).join(' | '));
+  // No fim, a prova FORÇA uma consulta que falha (modo = 'erro') para provar que a tela
+  // mostra erro — e a tela registra isso com console.error, como o resto do app (mesmo
+  // padrão de 'Faltas: consulta falhou', 5 linhas abaixo, e de caixa.html). Esse ÚNICO
+  // console.error é esperado; qualquer OUTRO continua reprovando a prova.
+  const errosInesperados = (r.erros || []).filter(e => !/Avisos: consulta falhou/.test(e));
+  exigir(errosInesperados.length === 0, 'nenhum erro de JavaScript inesperado em Ausências', errosInesperados.join(' | '));
   exigir(a.semFiltroSemIn === true, 'sem filtro, a consulta não filtra nada');
   exigir(a.ordemPadrao === true, 'a ordem padrão é pela data da missa');
   exigir(a.limite === true, 'a lista continua vindo em pedaços de 60');
