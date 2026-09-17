@@ -1435,6 +1435,100 @@ async function provaBarraMostraSoOQueATelaOferece(provas) {
   exigir(a.busca3 === true, 'e a busca continua lá');
 }
 
+async function provaAgendaFiltra(provas) {
+  console.log('\n\x1b[1mAgenda: a barra filtra a linha do tempo e o calendário\x1b[0m');
+
+  // Datas relativas a HOJE, calculadas agora: a linha do tempo só mostra o que está por vir,
+  // e uma data cravada envelheceria até a prova mentir.
+  const dia = (n) => { const d = new Date(); d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const celebracoes = [
+    { id: 'c1', data: dia(1), horario: '19:00', comunidade: 'matriz', tipo: 'missa_comum', observacoes: null },
+    { id: 'c2', data: dia(2), horario: '08:00', comunidade: 'santo_antonio', tipo: 'missa_comum', observacoes: null },
+  ];
+  const eventos = [
+    { id: 'e1', titulo: 'Ensaio geral', tipo: 'ensaio', data: dia(1), hora: '15:00:00', hora_fim: null, local: null },
+    { id: 'e2', titulo: 'Retiro', tipo: 'retiro', data: dia(3), hora: null, hora_fim: null, local: null },
+  ];
+  const r = await provas.abrir('agenda.html', {
+    papel: PAPEIS.admin,
+    tabelas: { acolitos_celebracoes: { data: celebracoes }, acolitos_eventos: { data: eventos }, acolitos_listas: { data: [] } },
+    avaliar: `
+      const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+      const titulos = () => [...document.querySelectorAll('#main-content .ag-tit')].map(e => e.textContent.trim());
+      const painel = () => document.querySelector('.modal-overlay.open .filtro-painel');
+      const abrir = async () => { document.querySelector('#main-content .filtro-btn').click(); await esperar(30); };
+      const tocar = (txt) => { const b = [...painel().querySelectorAll('button')].find(x => x.textContent.trim() === txt); if (!b) throw new Error('sem botão ' + txt); b.click(); };
+      const ver = async () => { painel().querySelector('.filtro-ver').click(); await esperar(120); };
+      const limpar = async () => { const l = document.querySelector('#main-content .filtro-limpar'); if (l) { l.click(); await esperar(120); } };
+      const guarda = (k) => { try { localStorage.removeItem(k); } catch (e) {} };
+      guarda('filtro-lista:agenda'); guarda('agenda-tl-filtro');
+      const out = {};
+
+      viewMode = 'linha'; await reload(); await esperar(60);
+      out.botoesVelhos = document.querySelectorAll('.tl-filtros').length;
+      out.temBusca = !!document.querySelector('#main-content .filtro-barra .search-input');
+      out.padrao = titulos();
+      await abrir();
+      out.secoes = [...painel().querySelectorAll('.filtro-painel-titulo')].map(e => e.textContent.trim());
+      out.tiposOferecidos = [...painel().querySelectorAll('.filtro-painel-secao')][1]
+        ? [...[...painel().querySelectorAll('.filtro-painel-secao')][1].querySelectorAll('.form-toggle')].map(b => b.textContent.trim()) : [];
+      tocar('Eventos'); await esperar(30);
+      out.verEventos = painel().querySelector('.filtro-ver').textContent.trim();
+      await ver();
+      out.soEventos = titulos();
+      await limpar();
+
+      await abrir(); tocar('Ensaio'); await ver();
+      out.soEnsaio = titulos();
+      await limpar();
+
+      await abrir(); tocar('Santo Antônio'); await ver();
+      out.comunidadeSA = titulos();
+      await limpar();
+
+      // o calendário usa o mesmo filtro, no painel do dia
+      await abrir(); tocar('Celebrações'); await ver();
+      viewMode = 'cal'; selDate = celebs.length ? '${dia(1)}' : selDate; render(); await esperar(60);
+      out.diaSoCelebracao = titulos();
+      await limpar();
+      viewMode = 'linha'; await reload(); await esperar(60);
+
+      // a escolha guardada nos botões antigos (Tudo/Celebrações/Eventos) não se perde
+      guarda('filtro-lista:agenda');
+      try { localStorage.setItem('agenda-tl-filtro', 'celeb'); } catch (e) {}
+      await reload(); await esperar(60);
+      out.migrado = titulos();
+      out.etiquetaMigrada = [...document.querySelectorAll('#main-content .filtro-etiqueta')].map(e => e.textContent.trim());
+      out.chaveVelhaSumiu = (() => { try { return localStorage.getItem('agenda-tl-filtro') === null; } catch (e) { return null; } })();
+
+      guarda('filtro-lista:agenda'); guarda('agenda-tl-filtro');
+      return out;
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a Agenda filtra sem estourar', r.erroAvaliar);
+  exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova da Agenda chegou ao fim (a página não saiu do lugar)', 'avaliado: ' + JSON.stringify(r.avaliado));
+  exigir((r.erros || []).length === 0, 'nenhum erro de JavaScript na Agenda', (r.erros || []).join(' | '));
+  exigir(a.botoesVelhos === 0, 'os botões Tudo/Celebrações/Eventos viraram filtro no painel');
+  exigir(a.temBusca === false, 'a Agenda não ganhou busca (não foi pedida)');
+  exigir(JSON.stringify(a.padrao) === JSON.stringify(['Ensaio geral', 'Missa', 'Missa', 'Retiro']),
+    'sem filtro, a linha do tempo segue na ordem de data e hora', 'saiu: ' + JSON.stringify(a.padrao));
+  exigir(JSON.stringify(a.secoes) === JSON.stringify(['Mostrar', 'Tipo de evento', 'Comunidade (missas)']),
+    'o painel oferece Mostrar, Tipo de evento e Comunidade — e não "Ordenar por"', 'saiu: ' + JSON.stringify(a.secoes));
+  exigir((a.tiposOferecidos || []).includes('Ensaio') && (a.tiposOferecidos || []).includes('Retiro'),
+    'os tipos de evento vêm da lista configurável', 'saiu: ' + JSON.stringify(a.tiposOferecidos));
+  exigir(a.verEventos === 'Ver 2 itens', 'o painel conta antes de aplicar', 'mostrou: ' + JSON.stringify(a.verEventos));
+  exigir(JSON.stringify(a.soEventos) === JSON.stringify(['Ensaio geral', 'Retiro']), '"Eventos" esconde as celebrações', 'saiu: ' + JSON.stringify(a.soEventos));
+  exigir(JSON.stringify(a.soEnsaio) === JSON.stringify(['Ensaio geral']), 'um tipo de evento mostra só ele', 'saiu: ' + JSON.stringify(a.soEnsaio));
+  exigir(JSON.stringify(a.comunidadeSA) === JSON.stringify(['Ensaio geral', 'Missa', 'Retiro']),
+    'comunidade filtra as missas e mantém os eventos', 'saiu: ' + JSON.stringify(a.comunidadeSA));
+  exigir(JSON.stringify(a.diaSoCelebracao) === JSON.stringify(['Missa']), 'no calendário, o dia também obedece ao filtro', 'saiu: ' + JSON.stringify(a.diaSoCelebracao));
+  exigir(JSON.stringify(a.migrado) === JSON.stringify(['Missa', 'Missa']), 'a escolha antiga "Celebrações" continua valendo', 'saiu: ' + JSON.stringify(a.migrado));
+  exigir(JSON.stringify(a.etiquetaMigrada) === JSON.stringify(['Celebrações']), 'e aparece como etiqueta', 'saiu: ' + JSON.stringify(a.etiquetaMigrada));
+  exigir(a.chaveVelhaSumiu === true, 'a chave antiga é convertida uma vez só');
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -1517,6 +1611,7 @@ try {
     await provaBarraDeFiltroFunciona(provas);
     await provaMembrosMostraQuemEntrouPorUltimo(provas);
     await provaBarraMostraSoOQueATelaOferece(provas);
+    await provaAgendaFiltra(provas);
   }
 } finally {
   await provas.encerrar();
