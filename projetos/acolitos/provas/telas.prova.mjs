@@ -1359,6 +1359,82 @@ async function provaMembrosMostraQuemEntrouPorUltimo(provas) {
     'sem o filtro App, as opções restantes também não cortam o texto', 'cortadas: ' + JSON.stringify(b.rotulosCortados));
 }
 
+async function provaBarraMostraSoOQueATelaOferece(provas) {
+  console.log('\n\x1b[1mBarra de filtro: mostra só o que a tela oferece\x1b[0m');
+
+  // A Agenda só ordena por data; o CRM não tem filtro. Uma seção "Ordenar por" com uma
+  // opção só, ou um botão "Filtrar" que abre só ordens, são enfeite que confunde.
+  const r = await provas.abrir('caixa.html', {
+    papel: PAPEIS.admin,
+    avaliar: `
+      const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+      const painel = () => document.querySelector('.modal-overlay.open .filtro-painel');
+      const titulos = () => [...painel().querySelectorAll('.filtro-painel-titulo')].map(e => e.textContent.trim());
+      const fechar = () => { const ov = document.querySelector('.modal-overlay.open'); if (ov) ov.remove(); };
+      const itens = [{ nome: 'Ana', t: 'a' }, { nome: 'Bia', t: 'b' }];
+      const out = {};
+      try { ['prova-uma-ordem', 'prova-sem-filtro', 'prova-nada'].forEach(k => localStorage.removeItem('filtro-lista:' + k)); } catch (e) {}
+
+      // 1) uma ordem só + um filtro
+      const a1 = document.createElement('div'); document.body.appendChild(a1);
+      const c1 = { chave: 'prova-uma-ordem', rotulo: ['item', 'itens'], ordemPadrao: 'data',
+        ordens: [{ id: 'data', nome: 'Data', valor: i => i.nome }],
+        filtros: [{ id: 't', nome: 'Tipo', opcoes: [{ id: 'a', nome: 'Tipo A', testa: i => i.t === 'a' }] }],
+        contar: e => FiltroLista.aplicar(itens, e, c1).length };
+      montarFiltroLista(a1, c1, () => {});
+      out.botao1 = a1.querySelector('.filtro-btn').textContent.trim();
+      out.linha1 = (a1.querySelector('.filtro-linha') || {}).textContent || '';
+      a1.querySelector('.filtro-btn').click(); await esperar(30);
+      out.titulos1 = titulos();
+      fechar(); a1.remove();
+      // O app fecha modal via history.back() (Voltar do navegador fecha o modal — Spec D).
+      // Isso é assíncrono: abrir o próximo modal antes desse popstate assentar atropela o
+      // histórico e navega para trás de verdade. 80ms dá folga de sobra.
+      await esperar(80);
+
+      // 2) duas ordens, nenhum filtro
+      const a2 = document.createElement('div'); document.body.appendChild(a2);
+      const c2 = { chave: 'prova-sem-filtro', rotulo: ['item', 'itens'], ordemPadrao: 'az',
+        ordens: [{ id: 'az', nome: 'Nome A–Z', valor: i => i.nome }, { id: 'za', nome: 'Nome Z–A', desc: true, valor: i => i.nome }],
+        filtros: [],
+        busca: { placeholder: 'Buscar...', campos: i => [i.nome] },
+        contar: e => FiltroLista.aplicar(itens, e, c2).length };
+      montarFiltroLista(a2, c2, () => {});
+      out.botao2 = a2.querySelector('.filtro-btn').textContent.trim();
+      out.linha2 = (a2.querySelector('.filtro-linha') || {}).textContent || '';
+      a2.querySelector('.filtro-btn').click(); await esperar(30);
+      out.titulos2 = titulos();
+      fechar(); a2.remove();
+
+      // 3) uma ordem só, nenhum filtro, com busca: não há o que escolher no painel
+      const a3 = document.createElement('div'); document.body.appendChild(a3);
+      const c3 = { chave: 'prova-nada', rotulo: ['item', 'itens'], ordemPadrao: 'data',
+        ordens: [{ id: 'data', nome: 'Data', valor: i => i.nome }],
+        filtros: [],
+        busca: { placeholder: 'Buscar...', campos: i => [i.nome] },
+        contar: e => FiltroLista.aplicar(itens, e, c3).length };
+      montarFiltroLista(a3, c3, () => {});
+      const b3 = a3.querySelector('.filtro-btn');
+      out.botao3Visivel = !!b3 && b3.style.display !== 'none';
+      out.busca3 = !!a3.querySelector('.search-input');
+      a3.remove();
+
+      try { ['prova-uma-ordem', 'prova-sem-filtro', 'prova-nada'].forEach(k => localStorage.removeItem('filtro-lista:' + k)); } catch (e) {}
+      return out;
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'as três formas da barra montam sem estourar', r.erroAvaliar);
+  exigir(/^Filtrar/.test(a.botao1 || ''), 'com filtro, o botão continua "Filtrar"', 'botão: ' + JSON.stringify(a.botao1));
+  exigir(JSON.stringify(a.titulos1) === JSON.stringify(['Tipo']), 'com UMA ordem, o painel não tem "Ordenar por"', 'seções: ' + JSON.stringify(a.titulos1));
+  exigir(!/Data/.test(a.linha1 || ''), 'com UMA ordem, o nome da ordem não aparece solto na tela', 'linha: ' + JSON.stringify(a.linha1));
+  exigir(/^Ordenar/.test(a.botao2 || ''), 'sem filtro, o botão se chama "Ordenar"', 'botão: ' + JSON.stringify(a.botao2));
+  exigir(JSON.stringify(a.titulos2) === JSON.stringify(['Ordenar por']), 'sem filtro, o painel só tem "Ordenar por"', 'seções: ' + JSON.stringify(a.titulos2));
+  exigir(/Nome A–Z/.test(a.linha2 || ''), 'com duas ordens, a ordem escolhida continua escrita', 'linha: ' + JSON.stringify(a.linha2));
+  exigir(a.botao3Visivel === false, 'sem nada a escolher, o botão some', 'visível: ' + a.botao3Visivel);
+  exigir(a.busca3 === true, 'e a busca continua lá');
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -1440,6 +1516,7 @@ try {
     await provaAvisoDaCoordenacaoFicaNoApp(provas);
     await provaBarraDeFiltroFunciona(provas);
     await provaMembrosMostraQuemEntrouPorUltimo(provas);
+    await provaBarraMostraSoOQueATelaOferece(provas);
   }
 } finally {
   await provas.encerrar();
