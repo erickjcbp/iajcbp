@@ -1183,6 +1183,20 @@ async function provaBarraDeFiltroFunciona(provas) {
       alvo.querySelector('.filtro-etiqueta').click(); await esperar(30);
       const semEtiqueta = ctl2.aplicar(itens).length;
 
+      // Limpar: liga o filtro de novo (para ter pelo menos um aceso) e tira todos de uma
+      // vez, sem mexer na ordem escolhida (Z–A continua valendo desde lá em cima).
+      alvo.querySelector('.filtro-btn').click(); await esperar(30);
+      botaoNoPainel('Matriz').click(); await esperar(30);
+      painel().querySelector('.filtro-ver').click(); await esperar(30);
+      const etiquetasAntesDeLimpar = [...alvo.querySelectorAll('.filtro-etiqueta')].map(b => b.textContent.trim());
+      const temLimparAntes = !!alvo.querySelector('.filtro-limpar');
+      alvo.querySelector('.filtro-limpar').click(); await esperar(30);
+      const etiquetasAposLimpar = [...alvo.querySelectorAll('.filtro-etiqueta')].map(b => b.textContent.trim());
+      const contagemAposLimpar = alvo.querySelector('.filtro-contagem').textContent;
+      const temLimparApos = !!alvo.querySelector('.filtro-limpar');
+      const ordemAposLimpar = (alvo.querySelector('.filtro-linha') || {}).textContent || '';
+      const semFiltroAposLimpar = ctl2.aplicar(itens).map(i => i.nome);
+
       // Contagem com erro: "Ver resultado", nunca "Ver 0".
       erroNaContagem = true;
       alvo.querySelector('.filtro-btn').click(); await esperar(50);
@@ -1194,7 +1208,9 @@ async function provaBarraDeFiltroFunciona(provas) {
       alvo.remove();
       return { temBusca, contagemAntes, abriu, verComMatriz, fechou, depois, contagemDepois,
                etiquetas, ordemEscrita, guardado: !!guardado, lembrou, semEtiqueta, verComErro,
-               fechouSemAplicar, mudancas };
+               fechouSemAplicar, mudancas, etiquetasAntesDeLimpar, temLimparAntes,
+               etiquetasAposLimpar, contagemAposLimpar, temLimparApos, ordemAposLimpar,
+               semFiltroAposLimpar };
     `,
   });
 
@@ -1212,6 +1228,19 @@ async function provaBarraDeFiltroFunciona(provas) {
   exigir(a.guardado === true, 'a escolha é guardada no aparelho');
   exigir(JSON.stringify(a.lembrou) === JSON.stringify(['Caio', 'Ana']), 'reabrir traz a escolha de volta', 'saiu: ' + JSON.stringify(a.lembrou));
   exigir(a.semEtiqueta === 3, 'o X da etiqueta tira o filtro', 'sobraram: ' + a.semEtiqueta);
+  exigir(JSON.stringify(a.etiquetasAntesDeLimpar) === JSON.stringify(['Matriz']),
+    'antes de tocar Limpar, a etiqueta do filtro está na tela (senão a prova não testa nada)',
+    'saiu: ' + JSON.stringify(a.etiquetasAntesDeLimpar));
+  exigir(a.temLimparAntes === true, 'com um filtro ligado, o botão Limpar aparece');
+  exigir(JSON.stringify(a.etiquetasAposLimpar) === JSON.stringify([]),
+    'Limpar tira TODAS as etiquetas de filtro de uma vez', 'saiu: ' + JSON.stringify(a.etiquetasAposLimpar));
+  exigir(a.contagemAposLimpar === '', 'Limpar zera o número do botão Filtrar', 'mostrou: ' + JSON.stringify(a.contagemAposLimpar));
+  exigir(a.temLimparApos === false, 'sem filtro ligado, o próprio botão Limpar some');
+  exigir(/Nome Z–A/.test(a.ordemAposLimpar || ''),
+    'Limpar não mexe na ordem escolhida — só tira os filtros', 'linha: ' + JSON.stringify(a.ordemAposLimpar));
+  exigir(JSON.stringify(a.semFiltroAposLimpar) === JSON.stringify(['Caio', 'Bia', 'Ana']),
+    'depois do Limpar, aplicar devolve a lista INTEIRA (sem os filtros), na ordem que ficou escolhida',
+    'saiu: ' + JSON.stringify(a.semFiltroAposLimpar));
   exigir(a.verComErro === 'Ver resultado', 'contagem com erro NÃO vira "Ver 0"', 'mostrou: ' + JSON.stringify(a.verComErro));
   exigir(a.fechouSemAplicar === true, 'tocar fora fecha o painel');
   exigir(a.mudancas >= 1, 'a tela é avisada quando a escolha muda');
