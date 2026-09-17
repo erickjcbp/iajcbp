@@ -492,7 +492,7 @@ async function loadDados() {
   let q = sb.from('acolitos_celebracoes').select('*')
     .gte('data', ini.toISOString().slice(0,10))
     .lte('data', fim.toISOString().slice(0,10))
-    .order('data').order('horario');
+    .order('data').order('minutos');
   if (com) q = q.eq('comunidade', com);
   const { data: celebs } = await q;
   celebracoes = celebs || [];
@@ -1127,7 +1127,7 @@ async function gerarEscalaSemana(celebs, btnEl) {
   if (!await uiConfirm('Gerar a escala de ' + celebs.length + ' missa(s) deste fim de semana?\n(Preenche as vagas ainda vazias, mantendo o que já estiver montado.)')) return;
   const txt0 = btnEl ? btnEl.textContent : '';
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Gerando...'; }
-  const ordc = celebs.slice().sort((a,b) => (a.data+a.horario).localeCompare(b.data+b.horario));
+  const ordc = celebs.slice().sort((a,b) => a.data.localeCompare(b.data) || compararHorario(a.horario, b.horario));
   const carga = await carregarCargaHistorica(ordc[0] ? ordc[0].data : ''); // rodízio: histórico real (banco) — ref = data mais antiga
   const ausFresh = await carregarAusenciasFresh(ordc);
   const usadoFds = new Set();                // ninguém repete no fim de semana
@@ -1205,8 +1205,6 @@ async function gerarEscalaSemana(celebs, btnEl) {
 // ── Escala em PDF (período carregado, por semana → missa, alfabético) ──
 function escalaPDF(){
   if(!celebracoes || !celebracoes.length){ toast('Nenhuma celebração no período.','error'); return; }
-  const HOR_ORDEM=['17h','18h30','7h','9h','19h'];
-  const horRank=h=>{ const i=HOR_ORDEM.indexOf(String(h||'').replace(/^0/,'')); return i<0?99:i; };
   const nomeDe=e=>(e.acolitos_membros && e.acolitos_membros.nome) || '—';
   const comLbl=c=>c==='matriz'?'Matriz':'Sto. Antônio';
   const semanas={};
@@ -1220,7 +1218,7 @@ function escalaPDF(){
   Object.keys(semanas).sort().forEach(key=>{
     const sem=semanas[key];
     corpo+='<h2>'+relEsc(sem.label)+'</h2>';
-    sem.items.slice().sort((a,b)=>a.data.localeCompare(b.data)||horRank(a.horario)-horRank(b.horario)).forEach(c=>{
+    sem.items.slice().sort((a,b)=>a.data.localeCompare(b.data)||compararHorario(a.horario, b.horario)).forEach(c=>{
       const d=new Date(c.data+'T00:00:00');
       const tit=DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' · '+c.horario+' · '+comLbl(c.comunidade)+' · '+(TIPO_LABEL[c.tipo]||c.tipo);
       corpo+='<h3>'+relEsc(tit)+'</h3>';
@@ -1339,11 +1337,10 @@ async function regenerarArte(md, domISO){
   finally{ if(btn){ btn.disabled=false; btn.textContent=old||'♻️ Gerar/Atualizar'; } }
 }
 function exportarSemana(celebs, label) {
-  // ordem fixa das missas: 17h, 18h30, 7h, 9h, 19h (por dia); lista de cada missa em ordem ALFABÉTICA por nome
-  const HOR_ORDEM = ['17h','18h30','7h','9h','19h'];
-  const horRank = h => { const i = HOR_ORDEM.indexOf(String(h||'').replace(/^0/,'')); return i<0?99:i; };
+  // ordem das missas do dia pela HORA (a lista fixa que havia aqui jogava 16h e 19h30 para o
+  // fim); lista de cada missa em ordem ALFABÉTICA por nome
   const nomeDe = e => (e.acolitos_membros && e.acolitos_membros.nome) || '';
-  const ordc = celebs.slice().sort((a,b) => a.data.localeCompare(b.data) || horRank(a.horario)-horRank(b.horario));
+  const ordc = celebs.slice().sort((a,b) => a.data.localeCompare(b.data) || compararHorario(a.horario, b.horario));
   let txt = (label ? label.toUpperCase() : 'ESCALA DA SEMANA') + '\n\n';
   ordc.forEach(c => {
     const d = new Date(c.data+'T00:00:00');

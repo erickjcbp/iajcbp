@@ -190,7 +190,7 @@ async function carregarMinhasMissas(body, ctx){
   body.textContent='';
   if(error){ const e=document.createElement('span'); e.className='empty'; e.textContent='Não foi possível carregar.'; body.appendChild(e); return; }
   const linhas = (data||[]).filter(e=>e.acolitos_celebracoes)
-    .sort((a,b)=> (a.acolitos_celebracoes.data+a.acolitos_celebracoes.horario).localeCompare(b.acolitos_celebracoes.data+b.acolitos_celebracoes.horario));
+    .sort((a,b)=> a.acolitos_celebracoes.data.localeCompare(b.acolitos_celebracoes.data) || compararHorario(a.acolitos_celebracoes.horario, b.acolitos_celebracoes.horario));
   if(!linhas.length){ const e=document.createElement('span'); e.className='empty'; e.textContent='Você não está escalado em nenhuma missa futura.'; body.appendChild(e); return; }
   linhas.forEach(e=>{
     const c=e.acolitos_celebracoes;
@@ -507,7 +507,7 @@ async function abrirInformarAusencia() {
 
   const hoje = hojeLocal();
   const { data: cels, error: errCels } = await sb.from('acolitos_celebracoes')
-    .select('id,data,horario,comunidade').gte('data', hoje).order('data').order('horario');
+    .select('id,data,horario,minutos,comunidade').gte('data', hoje).order('data').order('minutos');
   if (errCels) {
     // Falha de consulta NÃO é 'não há missas': o membro avisaria a data errada por isso.
     console.error('Informar ausência: consulta de missas falhou', errCels);

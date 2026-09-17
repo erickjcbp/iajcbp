@@ -571,7 +571,7 @@ async function renderViewMembro() {
 
   const hoje = hojeLocal();
   const { data: cels } = await sb.from('acolitos_celebracoes')
-    .select('id,data,horario,comunidade').gte('data', hoje).order('data').order('horario');
+    .select('id,data,horario,minutos,comunidade').gte('data', hoje).order('data').order('minutos');
   let futuras = cels || [];
   if (ctx.membro.comunidade && !ctx.membro.pode_outras_comunidades) {
     futuras = futuras.filter(c => c.comunidade === ctx.membro.comunidade);
@@ -852,7 +852,7 @@ async function abrirRegistroAusencia() {
   const hoje = hojeLocal();
   const membros = await carregarRosterAus(); // roster seguro (cobre cerimoniário; embed RLS volta vazio p/ ele)
   const { data: cels } = await sb.from('acolitos_celebracoes')
-    .select('id,data,horario,comunidade').gte('data', hoje).order('data').order('horario');
+    .select('id,data,horario,minutos,comunidade').gte('data', hoje).order('data').order('minutos');
   const futuras = cels || [];
 
   const ov = document.createElement('div'); ov.className = 'modal-overlay open';

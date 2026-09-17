@@ -106,7 +106,7 @@ function configFiltroMissas(lista) {
     chave: 'chamada-missas',
     rotulo: ['missa', 'missas'],
     ordemPadrao: 'data',
-    ordens: [{ id: 'data', nome: 'Data', valor: c => c.data + ' ' + (c.horario || '') }],
+    ordens: [{ id: 'data', nome: 'Data', valor: c => { const m = minutosDoHorario(c.horario); return c.data + ' ' + String(m == null ? 9999 : m).padStart(4, '0'); } }],
     desempate: () => '',
     filtros: [{ id: 'comunidade', nome: 'Comunidade', opcoes: [
       { id: 'matriz', nome: 'Matriz', testa: c => c.comunidade === 'matriz' },
@@ -185,7 +185,7 @@ async function renderSelecao() {
     .select('*, acolitos_escalas(id)')
     .gte('data', new Date(Date.now()-2*86400000).toISOString().slice(0,10))
     .lte('data', limit.toISOString().slice(0,10))
-    .order('data').order('horario');
+    .order('data').order('minutos');
 
   const comEscala = (celebs||[]).filter(c=>c.acolitos_escalas?.length>0);
 

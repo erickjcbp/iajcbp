@@ -2237,6 +2237,47 @@ async function provaRosterFalhoNaoApagaFiltroDePessoa(provas) {
   exigir(a.guardadoDepois === a.salvoAntes, 'o filtro salvo NÃO é sobrescrito só de renderizar a tela', 'antes: ' + a.salvoAntes + ' depois: ' + a.guardadoDepois);
 }
 
+async function provaAgendaOrdenaPelaHora(provas) {
+  console.log('\n\x1b[1mAgenda: as missas do mesmo dia saem na ordem da HORA\x1b[0m');
+
+  // O caso real é o domingo: missas às 7h, 9h e 19h. Em ordem de texto sai 19h, 7h, 9h —
+  // era assim em 20 dos 39 dias com mais de uma missa (medido em 17/09/2026).
+  const dia = (n) => { const d = new Date(); d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const diaDeTresMissas = dia(2);   // um dia à frente; nem sempre cai num domingo, por isso o nome
+  const celebracoes = [
+    { id: 'm19', data: diaDeTresMissas, horario: '19h', minutos: 1140, comunidade: 'matriz', tipo: 'missa_comum', observacoes: null },
+    { id: 'm7', data: diaDeTresMissas, horario: '7h', minutos: 420, comunidade: 'matriz', tipo: 'missa_comum', observacoes: null },
+    { id: 'm9', data: diaDeTresMissas, horario: '9h', minutos: 540, comunidade: 'santo_antonio', tipo: 'missa_comum', observacoes: null },
+  ];
+  const eventos = [{ id: 'ev', titulo: 'Ensaio geral', tipo: 'ensaio', data: diaDeTresMissas, hora: '08:00:00', hora_fim: null, local: null }];
+  const r = await provas.abrir('agenda.html', {
+    papel: PAPEIS.admin,
+    tabelas: { acolitos_celebracoes: { data: celebracoes }, acolitos_eventos: { data: eventos }, acolitos_listas: { data: [] } },
+    avaliar: `
+      const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+      try { localStorage.removeItem('filtro-lista:agenda'); localStorage.removeItem('agenda-tl-filtro'); } catch (e) {}
+      const horas = () => [...document.querySelectorAll('#main-content .ag-meta b')].map(e => e.textContent.trim());
+      viewMode = 'linha'; await reload(); await esperar(80);
+      const linha = horas();
+      viewMode = 'cal'; selDate = '${diaDeTresMissas}'; render(); await esperar(80);
+      const dia = horas();
+      try { localStorage.removeItem('filtro-lista:agenda'); } catch (e) {}
+      return { linha, dia, ajudante: typeof compararHorario };
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a Agenda desenha sem estourar', r.erroAvaliar);
+  exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova da Agenda chegou ao fim (a página não saiu do lugar)', 'avaliado: ' + JSON.stringify(r.avaliado));
+  exigir(a.ajudante === 'function', 'a tela carrega a regra do horário');
+  // 7h (420) < ensaio 08:00 (480) < 9h (540) < 19h (1140). A Agenda escreve a hora do evento
+  // com horaFmt ('08:00:00' vira '08h00') e a da missa como está ('7h').
+  exigir(JSON.stringify(a.linha) === JSON.stringify(['7h', '08h00', '9h', '19h']),
+    'na linha do tempo, o dia sai em ordem de hora (o ensaio das 8h ENTRE 7h e 9h)', 'saiu: ' + JSON.stringify(a.linha));
+  exigir(JSON.stringify(a.dia).indexOf('"7h","9h","19h"') >= 0 || /7h.*9h.*19h/.test(JSON.stringify(a.dia)),
+    'no calendário, o painel do dia também sai em ordem de hora', 'saiu: ' + JSON.stringify(a.dia));
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -2325,6 +2366,7 @@ try {
     await provaBarraBuscaNoPainelEEscolhaUnica(provas);
     await provaAvisosDeAusenciaFiltramNaConsulta(provas);
     await provaFaltasFiltramNaConsulta(provas);
+    await provaAgendaOrdenaPelaHora(provas);
     await provaAvisosAbreComAsProximasMissas(provas);
     await provaAvisosMostraNomeDeQuemEstaAfastado(provas);
     await provaRosterFalhoNaoApagaFiltroDePessoa(provas);
