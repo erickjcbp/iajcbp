@@ -97,6 +97,23 @@ function semEmoji(txt) { return String(txt || '').replace(/^[^\p{L}\p{N}]+/u, ''
 function opcoesDePessoa(membros) {
   return (membros || []).map(m => ({ id: m.id, nome: m.apelido ? m.apelido + ' · ' + m.nome : (m.nome || '—'), testa: () => true }));
 }
+// Revisão de 17/09/2026, achado 3: quando o roster (security-definer) falha, `membros` vem
+// null. Sem opções, FiltroLista.restaurar DESCARTA a pessoa que já estava salva, e a
+// PRÓXIMA troca de filtro grava o estado sem ela. Para não perder a escolha, a única opção
+// do filtro Pessoa passa a ser a(s) pessoa(s) já salva(s) — sem busca, já que não há como
+// achar mais ninguém enquanto o roster não voltar.
+function opcoesDePessoaOuSalvo(membros, chave) {
+  if (membros !== null) return opcoesDePessoa(membros);
+  let ids = [];
+  try {
+    const dado = JSON.parse(localStorage.getItem('filtro-lista:' + chave) || 'null');
+    if (dado && Array.isArray(dado.ligados)) ids = dado.ligados.filter(l => l.f === 'pessoa').map(l => l.o);
+  } catch (e) {}
+  return ids.map(id => {
+    const rm = rosterMapAus[id];
+    return { id, nome: rm ? (rm.apelido ? rm.apelido + ' · ' + rm.nome : rm.nome) : id, testa: () => true };
+  });
+}
 const COMUNIDADES_AUSENCIA = [
   { id: 'matriz', nome: 'Matriz', testa: () => true },
   { id: 'santo_antonio', nome: 'Santo Antônio', testa: () => true },
@@ -111,7 +128,7 @@ function configFiltroAvisos(membros) {
       { id: 'aviso', nome: 'Quando avisou', desc: true, valor: () => null },
     ],
     filtros: [
-      { id: 'pessoa', nome: 'Pessoa', busca: { placeholder: 'Buscar pessoa...', max: 8 }, opcoes: opcoesDePessoa(membros) },
+      { id: 'pessoa', nome: 'Pessoa', busca: membros !== null ? { placeholder: 'Buscar pessoa...', max: 8 } : undefined, opcoes: opcoesDePessoaOuSalvo(membros, 'ausencias-avisos') },
       { id: 'periodo', nome: 'Período (data da missa)', unico: true, opcoes: PERIODOS_AUSENCIA },
       { id: 'comunidade', nome: 'Comunidade', opcoes: COMUNIDADES_AUSENCIA },
       { id: 'motivo', nome: 'Motivo', opcoes: Object.keys(MOTIVOS).map(k => ({ id: k, nome: semEmoji(MOTIVOS[k]), testa: () => true })) },
@@ -271,7 +288,7 @@ function configFiltroFaltas(membros) {
     ordemPadrao: 'missa',
     ordens: [{ id: 'missa', nome: 'Data da missa', desc: true, valor: () => null }],
     filtros: [
-      { id: 'pessoa', nome: 'Pessoa', busca: { placeholder: 'Buscar pessoa...', max: 8 }, opcoes: opcoesDePessoa(membros) },
+      { id: 'pessoa', nome: 'Pessoa', busca: membros !== null ? { placeholder: 'Buscar pessoa...', max: 8 } : undefined, opcoes: opcoesDePessoaOuSalvo(membros, 'ausencias-faltas') },
       { id: 'periodo', nome: 'Período (data da missa)', unico: true, opcoes: PERIODOS_AUSENCIA },
       { id: 'comunidade', nome: 'Comunidade', opcoes: COMUNIDADES_AUSENCIA },
     ],
@@ -352,9 +369,14 @@ async function recarregarFaltas(estadoInicial) {
 }
 let rosterMembrosAus = null, rosterMapAus = {}, rosterHabsAus = [];
 // Roster seguro (security-definer) — cobre o cerimoniário, que não lê acolitos_membros por RLS.
+// Revisão de 17/09/2026, achado 3: o erro era ENGOLIDO e o resultado virava [] — que é
+// verdadeiro, então NUNCA MAIS tentava de novo. Agora, em erro, não cacheia nada (a próxima
+// chamada tenta de novo) e devolve null (não []) para quem chama saber que foi FALHA, e não
+// "zero membros".
 async function carregarRosterAus() {
   if (rosterMembrosAus) return rosterMembrosAus;
-  const { data } = await sb.rpc('acolitos_roster_substituicao');
+  const { data, error } = await sb.rpc('acolitos_roster_substituicao');
+  if (error) { console.error('Roster de substituição (ausências) falhou', error); return null; }
   rosterMembrosAus = (data && data.membros) || [];
   rosterHabsAus = (data && data.habs) || [];
   rosterMapAus = {}; rosterMembrosAus.forEach(m => { rosterMapAus[m.id] = m; });
@@ -710,12 +732,22 @@ async function enviarAusencia() {
 // que vivia no menu da Escala. Diferente do original, esta LÊ o error: sem isso uma falha
 // de consulta viraria "nenhuma falta registrada", que é dizer que está tudo certo quando
 // na verdade não se conseguiu perguntar.
+// Aviso mostrado nas duas abas quando o roster (security-definer) falha — sem ele, o
+// filtro por pessoa fica sem opções novas (ver opcoesDePessoaOuSalvo).
+function avisoRosterFalhou() {
+  const av = document.createElement('p');
+  av.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0 0 10px;';
+  av.textContent = 'Não foi possível carregar a lista de pessoas — o filtro por pessoa está indisponível.';
+  return av;
+}
 async function renderAbaFaltas(main) {
   main.textContent = '';
   const membros = await carregarRosterAus();
   const alvoFiltro = document.createElement('div'); alvoFiltro.id = 'filtro-faltas';
+  main.appendChild(alvoFiltro);
+  if (membros === null) main.appendChild(avisoRosterFalhou());
   const lista = document.createElement('div'); lista.id = 'lista-faltas';
-  main.append(alvoFiltro, lista);
+  main.appendChild(lista);
   filtroFaltas = null;
   // A primeira carga já usa o filtro GUARDADO (mesma leitura que montarFiltroLista faz por
   // dentro) — sem isto, quem tinha uma pessoa escolhida via "Mostrando 80 de 357" sem filtro
@@ -803,6 +835,7 @@ async function renderViewEquipe() {
   // cerimoniário não lê acolitos_membros por RLS → o nome vem do roster (security definer)
   const membros = await carregarRosterAus();
   const alvoFiltro = document.createElement('div'); alvoFiltro.id = 'filtro-avisos'; main.appendChild(alvoFiltro);
+  if (membros === null) main.appendChild(avisoRosterFalhou());
   const lista = document.createElement('div'); lista.id = 'lista-avisos'; main.appendChild(lista);
   filtroAvisos = montarFiltroLista(alvoFiltro, configFiltroAvisos(membros), () => recarregarAvisos());
   await recarregarAvisos();
@@ -830,7 +863,8 @@ async function abrirRegistroAusencia() {
 
   if (!membros || !membros.length || !futuras.length) {
     const em = document.createElement('div'); em.style.cssText = 'color:var(--text-muted);font-size:13px;line-height:1.5;';
-    em.textContent = !futuras.length ? 'Nenhuma missa futura cadastrada. Cadastre as celebrações primeiro.' : 'Nenhum membro ativo cadastrado.';
+    em.textContent = !futuras.length ? 'Nenhuma missa futura cadastrada. Cadastre as celebrações primeiro.'
+      : (membros === null ? 'Não foi possível carregar a lista de membros. Tente de novo.' : 'Nenhum membro ativo cadastrado.');
     const close = document.createElement('button'); close.className = 'btn-sm gray'; close.style.marginTop = '16px';
     close.textContent = 'Fechar'; close.onclick = () => ov.remove();
     modal.append(em, close); return;

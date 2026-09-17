@@ -2193,6 +2193,50 @@ async function provaAvisosMostraNomeDeQuemEstaAfastado(provas) {
   exigir(a.semTraco === true, 'a linha não vira "—" quando o nome vem da tabela de membros', 'saiu: ' + JSON.stringify(a));
 }
 
+// "Fix wave final" da revisão de 17/09/2026, achado 3 (Importante): carregarRosterAus()
+// engolia o erro e cacheava [], que é verdadeiro — nunca mais tentava de novo. Com a lista
+// de pessoas vazia, FiltroLista.restaurar descarta a pessoa que estava salva, e a PRÓXIMA
+// troca de filtro grava o estado sem ela.
+async function provaRosterFalhoNaoApagaFiltroDePessoa(provas) {
+  console.log('\n\x1b[1mAusências › Avisos: roster fora do ar não apaga a pessoa filtrada\x1b[0m');
+
+  const r = await provas.abrir('ausencias.html', {
+    papel: PAPEIS.admin,
+    rpcs: { acolitos_roster_substituicao: { error: { message: 'fora do ar' } } },
+    avaliar: `
+      const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+      const chave = 'filtro-lista:ausencias-avisos';
+      const salvoAntes = JSON.stringify({ v: 1, ordem: 'missa', ligados: [{ f: 'pessoa', o: 'u-ana' }], busca: '' });
+      try { localStorage.setItem(chave, salvoAntes); } catch (e) {}
+      const linha = { id: 'a1', membro_id: 'u-ana', celebracao_id: 'c1', motivo: 'viagem',
+        observacao: null, created_at: '2026-09-01T12:00:00+00:00', missa_data: '2026-09-19',
+        missa_horario: '19:00', missa_comunidade: 'matriz' };
+      const orig = sb.from.bind(sb);
+      sb.from = (t) => {
+        if (t !== 'acolitos_ausencias_v') return orig(t);
+        const p = new Proxy({}, { get: (_, k) => k === 'then'
+          ? (ok, ko) => Promise.resolve({ data: [linha], count: 1, error: null }).then(ok, ko)
+          : (...args) => p });
+        return p;
+      };
+      abaAusencias = 'avisos'; await renderViewEquipe(); await esperar(120);
+      const out = {
+        listou: /Viagem/.test((document.getElementById('lista-avisos') || {}).textContent || ''),
+        avisou: /Não foi possível carregar a lista de pessoas/.test(document.getElementById('main-content').textContent),
+        guardadoDepois: localStorage.getItem(chave),
+        salvoAntes,
+      };
+      sb.from = orig;
+      return out;
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a prova do roster fora do ar roda sem estourar', r.erroAvaliar);
+  exigir(a.listou === true, 'mesmo sem o roster, a aba Avisos continua listando');
+  exigir(a.avisou === true, 'a tela avisa que o filtro por pessoa está indisponível', 'saiu: ' + JSON.stringify(a));
+  exigir(a.guardadoDepois === a.salvoAntes, 'o filtro salvo NÃO é sobrescrito só de renderizar a tela', 'antes: ' + a.salvoAntes + ' depois: ' + a.guardadoDepois);
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -2283,6 +2327,7 @@ try {
     await provaFaltasFiltramNaConsulta(provas);
     await provaAvisosAbreComAsProximasMissas(provas);
     await provaAvisosMostraNomeDeQuemEstaAfastado(provas);
+    await provaRosterFalhoNaoApagaFiltroDePessoa(provas);
   }
 } finally {
   await provas.encerrar();
