@@ -14,6 +14,39 @@ chance de já ter acontecido antes é grande, e a resposta costuma estar aqui.
 
 ## Fechados em 17/09/2026
 
+**Ausências: as duas abas filtram DENTRO da consulta ao banco**
+- **O que era:** a aba Avisos carregava as 60 ausências mais recentes de 1.202 e a aba Faltas
+  as 80 mais recentes, sem filtro nenhum. Filtrar essas 60 na tela mostraria a pessoa com 30
+  ausências como se tivesse 2 — por isso o filtro precisava ir para a consulta.
+- **O que entrou:** filtro por **pessoa** (com busca dentro do painel, porque são 177),
+  **período** (próximas missas, este mês, mês passado, últimos 90 dias — escolha única),
+  **comunidade** e, nos Avisos, **motivo**. Cada escolha refaz a consulta; o "Ver N" e o
+  "Mostrando X de N" vêm do banco. No banco: a vista `acolitos_ausencias_v` (obedece às mesmas
+  regras de quem pode ver) e as funções `acolitos_faltas_filtradas` / `acolitos_faltas_contar`.
+- **Decisão do dono (17/09):** a aba Avisos abre pelas **próximas missas**, da mais perto para
+  a mais distante, e as passadas vêm depois.
+- **Quatro defeitos pegos antes de sair:**
+  - a ordem por data da missa, do jeito que o plano tinha escrito, **escondia as 59 ausências
+    deste fim de semana** em qualquer período — era uma piora frente ao que estava no ar;
+  - os horários estão guardados como texto ("7h", "19h30"), então as missas do mesmo dia saíam
+    fora de ordem (migration 070 conserta com uma conta de minutos);
+  - quem está **afastado** aparecia como "—" (a lista segura de nomes só traz gente ativa), e o
+    pedido de remoção dizia "esta pessoa";
+  - quando a lista de pessoas falhava, a tela guardava uma lista vazia e **apagava o filtro de
+    pessoa** que estava salvo.
+- **Duas mentiras antigas corrigidas:** consulta que falhava virava "Nenhuma ausência
+  informada", e o cerimoniário — que não tem acesso às faltas — lia "Nenhuma falta registrada
+  ainda". Agora cada uma diz o que é: erro ou falta de acesso.
+- **Provado:** `provar-069-filtros-de-ausencias.sql` (com a seção dos minutos),
+  `provaAvisosDeAusenciaFiltramNaConsulta`, `provaFaltasFiltramNaConsulta`,
+  `provaBarraBuscaNoPainelEEscolhaUnica` e as provas da ordem de abertura. 260 regras e 326
+  provas de tela, verdes duas vezes.
+- **Não repetir:** lista que vem em pedaços NUNCA se filtra na tela; ordem por data em lista
+  cortada precisa começar pelo que interessa (aqui, a próxima missa), senão o corte esconde
+  justamente o que a pessoa procura; e nome de gente afastada não sai da lista de ativos.
+
+---
+
 **Agenda, CRM e Chamada ganham a barra de ordenar e filtrar**
 - **O que entrou:**
   - **A barra** passou a mostrar só o que a tela oferece: sem "Ordenar por" quando há uma

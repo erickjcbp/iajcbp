@@ -7,10 +7,37 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ## 1. Pendente
 
-**Ordenar e filtrar — passos 4 e 5 da spec**
+**Ordenar e filtrar — passo 5 da spec**
 (`docs/superpowers/specs/2026-09-16-acolitos-ordenar-e-filtrar-design.md`). Membros (16/09),
-Agenda, CRM e Chamada (17/09) estão feitos. Faltam: migration 069 + Ausências (Avisos e
-Faltas — a parte que filtra NA CONSULTA, porque as listas vêm em pedaços); Tarefas.
+Agenda, CRM, Chamada e Ausências (17/09) estão feitos. Falta **Tarefas** — e ela hoje tem
+ZERO tarefas cadastradas, então o filtro lá não terá o que mostrar até alguém criar a primeira.
+
+**O app inteiro ordena HORÁRIO como texto.** Os horários estão guardados como "7h", "9h",
+"18h30" — sem zero na frente. Em ordem de texto, "9h" vem depois de "19h". Nas Ausências isso
+foi consertado (migration 070, `acolitos_minutos_do_horario`), mas **Agenda, Chamada e Escala
+continuam ordenando por texto** e podem mostrar as missas do mesmo dia fora de ordem. Conserto:
+usar a mesma função de minutos nessas telas. Hoje o efeito é pequeno porque as missas de um
+dia costumam ter horas de dois dígitos, mas em domingo (7h, 9h, 19h) ele aparece.
+
+**A função antiga de faltas (`acolitos_faltas_recentes`) ficou sem uso.** A tela nova usa a
+`acolitos_faltas_filtradas`. Apagar a antiga numa migration futura, só depois de confirmar que
+nenhum celular ficou com a versão velha do app aberta.
+
+**Limpeza no banco:** a vista `acolitos_ausencias_v` nasceu com permissão ampla para quem está
+logado (padrão do Supabase ao criar; o `revoke` só tirou anônimo e público). É inofensivo hoje
+— a vista junta duas tabelas e não aceita escrita — mas o certo é uma migration que deixe só
+leitura.
+
+**Detalhes pequenos das Ausências** (nenhum aparece no uso normal):
+- Quando a lista de pessoas não carrega, o recado diz "o filtro por pessoa está indisponível",
+  mas a pessoa que já estava filtrada continua valendo; só não dá para buscar outra.
+- Na abertura padrão dos Avisos, o app pede a contagem duas vezes ao banco (uma delas é
+  descartada). Sem efeito visível.
+- Apagar uma ausência não atualiza o "Mostrando X de N" nem os números do topo até recarregar.
+- Trocar de aba no meio do carregamento pode misturar conteúdo por um instante (defeito
+  antigo da tela, não do filtro).
+- A prova SQL das faltas compara 80 com 80 em um dos pontos, o que passa fácil demais; e dois
+  trechos dependem de leitura humana em vez de falhar sozinhos.
 
 **O "Voltar fecha o modal" pode tirar a página do lugar — sobram dois consertos maiores.** O
 app faz "Voltar" ao fechar qualquer janela (`shared.js`, perto da linha 3416): fechar chama
