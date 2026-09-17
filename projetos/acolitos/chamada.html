@@ -196,16 +196,8 @@ async function renderSelecao() {
 
   const alvoFiltro = document.createElement('div'); alvoFiltro.id = 'filtro-missas'; main.appendChild(alvoFiltro);
   const listaEl = document.createElement('div'); main.appendChild(listaEl);
-  const desenharMissas = () => {
-    listaEl.textContent = '';
-    const lista = filtroMissas ? filtroMissas.aplicar(comEscala) : comEscala;
-    if (!lista.length) {
-      const em = document.createElement('span'); em.className = 'empty';
-      em.textContent = 'Nenhuma missa com esses filtros.'; listaEl.appendChild(em); return;
-    }
-    lista.forEach(c => desenharMissa(c));
-  };
-  filtroMissas = montarFiltroLista(alvoFiltro, configFiltroMissas(comEscala), desenharMissas);
+  // Declarada ANTES de ser usada por desenharMissas/montarFiltroLista — hoje só funciona
+  // porque a barra nunca chama aoMudar durante a montagem, não porque a ordem esteja certa.
   const desenharMissa = (c) => {
     const d = new Date(c.data+'T00:00:00');
     const opt = document.createElement('div'); opt.className = 'celeb-opt';
@@ -216,6 +208,16 @@ async function renderSelecao() {
     sb2.textContent = (c.comunidade==='matriz'?'Matriz':'Sto. Antônio')+' · '+c.acolitos_escalas.length+' escalados';
     opt.append(dt,sb2); listaEl.appendChild(opt);
   };
+  const desenharMissas = () => {
+    listaEl.textContent = '';
+    const lista = filtroMissas ? filtroMissas.aplicar(comEscala) : comEscala;
+    if (!lista.length) {
+      const em = document.createElement('span'); em.className = 'empty';
+      em.textContent = 'Nenhuma missa com esses filtros.'; listaEl.appendChild(em); return;
+    }
+    lista.forEach(c => desenharMissa(c));
+  };
+  filtroMissas = montarFiltroLista(alvoFiltro, configFiltroMissas(comEscala), desenharMissas);
   desenharMissas();
 }
 
