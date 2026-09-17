@@ -32,4 +32,9 @@ test('toda tela com os *-core carrega também a senha-nova-core.js', () => {
   // Tela que esquecer o <script> fica sem a barra — e a lista some junto com ela.
   const semFiltro = telas.filter(f => !fs.readFileSync(path.join(dir, f), 'utf8').includes('filtro-lista-core.js'));
   assert.deepStrictEqual(semFiltro, [], 'estas telas não carregam a regra de ordenar e filtrar: ' + semFiltro.join(', '));
+
+  // E para a regra do HORÁRIO: tela que esquecer o <script> volta a ordenar as missas pelo
+  // texto ('9h' depois de '19h') — e isso não estoura, só mostra errado, que é pior.
+  const semHorario = telas.filter(f => !fs.readFileSync(path.join(dir, f), 'utf8').includes('horario-core.js'));
+  assert.deepStrictEqual(semHorario, [], 'estas telas não carregam a regra do horário: ' + semHorario.join(', '));
 });
