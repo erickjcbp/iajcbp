@@ -1536,13 +1536,15 @@ async function provaCrmOrdenaEBusca(provas) {
   // "quem está esquecido?"). A barra mantém isso como padrão e acrescenta as outras ordens.
   const pessoa = (id, nome, criado) => ({ id, nome, apelido: null, data_nascimento: '2012-01-01',
     comunidade: 'matriz', status: 'em_integracao', created_at: criado });
-  // Três pessoas em "integracao", chegando na ficha numa ordem que não bate com NENHUMA
-  // das três ordens — só assim a prova pega uma "Mais recentes" que não mexeu em nada
-  // (ficaria presa em "Nome A–Z", já que com só duas pessoas as duas ordens coincidiam).
+  // Três pessoas em "integracao". A ficha chega na ordem Ana, Zeca, Bia — que não é nem o
+  // padrão (Zeca, Bia, Ana), nem Nome A–Z (Ana, Bia, Zeca), nem Mais recentes (Bia, Zeca,
+  // Ana). Só assim a prova pega qualquer uma das três ordens presa na ordem de chegada —
+  // com só duas pessoas (versão anterior), ou com a ficha já em ordem alfabética (rodada
+  // 1 do conserto), um defeito nessas ordens passaria sem ser notado.
   const crm = [
     { id: 'k1', membro_id: 'p1', etapa: 'integracao', etapa_iniciada_em: '2026-09-05T12:00:00+00:00', acolitos_membros: pessoa('p1', 'Ana Velha', '2026-05-10T12:00:00+00:00') },
-    { id: 'k2', membro_id: 'p2', etapa: 'integracao', etapa_iniciada_em: '2026-08-01T12:00:00+00:00', acolitos_membros: pessoa('p2', 'Bia Nova', '2026-09-01T01:30:00+00:00') },
     { id: 'k3', membro_id: 'p3', etapa: 'integracao', etapa_iniciada_em: '2026-07-01T12:00:00+00:00', acolitos_membros: pessoa('p3', 'Zeca Antigo', '2026-06-20T12:00:00+00:00') },
+    { id: 'k2', membro_id: 'p2', etapa: 'integracao', etapa_iniciada_em: '2026-08-01T12:00:00+00:00', acolitos_membros: pessoa('p2', 'Bia Nova', '2026-09-01T01:30:00+00:00') },
     { id: 'k4', membro_id: 'p4', etapa: 'tunica', etapa_iniciada_em: '2026-08-10T12:00:00+00:00', acolitos_membros: pessoa('p4', 'Caio Meio', '2026-08-01T12:00:00+00:00') },
   ];
   const r = await provas.abrir('crm.html', {
