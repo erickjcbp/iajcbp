@@ -2146,6 +2146,53 @@ async function provaAvisosAbreComAsProximasMissas(provas) {
   exigir(a.avisoOrdenaCreated === true, '"Quando avisou" continua ordenando por created_at');
 }
 
+// "Fix wave final" da revisão de 17/09/2026, achado 2 (Importante): o roster
+// (security-definer) só traz membros com status='ativo'. Produção tem 23 avisos de gente
+// afastada — hoje eles viram "—" e o "Remover" pergunta "esta pessoa?" em vez do nome. A
+// tela busca esses nomes que faltam direto em acolitos_membros; se essa consulta também for
+// negada (RLS), mantém "—" em vez de travar.
+async function provaAvisosMostraNomeDeQuemEstaAfastado(provas) {
+  console.log('\n\x1b[1mAusências › Avisos: quem está afastado continua com nome (não "—")\x1b[0m');
+
+  const roster = { membros: [{ id: 'u-ana', nome: 'Ana Souza', apelido: null }], habs: [] };
+  const r = await provas.abrir('ausencias.html', {
+    papel: PAPEIS.admin,
+    rpcs: { acolitos_roster_substituicao: { data: roster } },
+    avaliar: `
+      const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+      try { localStorage.removeItem('filtro-lista:ausencias-avisos'); } catch (e) {}
+      const linhaAfastada = { id: 'a1', membro_id: 'u-afastado', celebracao_id: 'c1', motivo: 'viagem',
+        observacao: null, created_at: '2026-09-01T12:00:00+00:00', missa_data: '2026-09-19',
+        missa_horario: '19:00', missa_comunidade: 'matriz' };
+      const chamadasMembros = [];
+      const orig = sb.from.bind(sb);
+      sb.from = (t) => {
+        if (t === 'acolitos_membros') {
+          chamadasMembros.push(true);
+          const p = new Proxy({}, { get: (_, k) => k === 'then'
+            ? (ok, ko) => Promise.resolve({ data: [{ id: 'u-afastado', nome: 'Beatriz Afastada', apelido: null }], error: null }).then(ok, ko)
+            : (...args) => p });
+          return p;
+        }
+        if (t !== 'acolitos_ausencias_v') return orig(t);
+        const p = new Proxy({}, { get: (_, k) => k === 'then'
+          ? (ok, ko) => Promise.resolve({ data: [linhaAfastada], count: 1, error: null }).then(ok, ko)
+          : (...args) => p });
+        return p;
+      };
+      abaAusencias = 'avisos'; await renderViewEquipe(); await esperar(120);
+      const texto = document.getElementById('lista-avisos').textContent;
+      sb.from = orig;
+      return { temNome: /Beatriz Afastada/.test(texto), semTraco: !/—/.test(texto), buscouMembros: chamadasMembros.length > 0 };
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a prova do nome de quem está afastado roda sem estourar', r.erroAvaliar);
+  exigir(a.buscouMembros === true, 'quando falta gente no roster, a tela busca em acolitos_membros');
+  exigir(a.temNome === true, 'quem não está no roster (afastado) ainda aparece pelo nome', 'saiu: ' + JSON.stringify(a));
+  exigir(a.semTraco === true, 'a linha não vira "—" quando o nome vem da tabela de membros', 'saiu: ' + JSON.stringify(a));
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -2235,6 +2282,7 @@ try {
     await provaAvisosDeAusenciaFiltramNaConsulta(provas);
     await provaFaltasFiltramNaConsulta(provas);
     await provaAvisosAbreComAsProximasMissas(provas);
+    await provaAvisosMostraNomeDeQuemEstaAfastado(provas);
   }
 } finally {
   await provas.encerrar();

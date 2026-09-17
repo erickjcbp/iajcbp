@@ -203,6 +203,7 @@ function consultaAvisos(estado, soContar) {
     return { data: proximas.concat(passadas), count, error: null };
   })();
 }
+let extrasNomeAus = {};   // nomes de quem sumiu do roster (afastado/inativo) — Fix 2 da revisão de 17/09
 async function recarregarAvisos() {
   const lista = document.getElementById('lista-avisos');
   if (!lista || !filtroAvisos) return;
@@ -225,10 +226,21 @@ async function recarregarAvisos() {
     info.textContent = 'Mostrando ' + data.length + ' de ' + count + '. Use os filtros para achar o resto.';
     lista.appendChild(info);
   }
+  // O roster (security-definer) só traz status='ativo'. Produção tem 23 avisos de gente
+  // afastada — sem isto a linha vira "—" e o Remover pergunta "esta pessoa?" em vez do nome.
+  // Busca só quem falta; se a RLS também negar essa tabela (cerimoniário), mantém "—" em
+  // vez de travar a lista inteira.
+  const faltando = [...new Set(data.map(a => a.membro_id).filter(id => !rosterMapAus[id] && !extrasNomeAus[id]))];
+  if (faltando.length) {
+    const { data: extras, error: eExtras } = await sb.from('acolitos_membros').select('id,nome,apelido').in('id', faltando);
+    if (eExtras) console.warn('Avisos: nomes extras não vieram', eExtras);
+    else (extras || []).forEach(m => { extrasNomeAus[m.id] = m; });
+  }
+  if (meu !== pedidoAvisos) return;   // uma nova troca de filtro chegou enquanto buscava os nomes
   data.forEach(a => lista.appendChild(linhaDeAviso(a)));
 }
 function linhaDeAviso(a) {
-  const rm = rosterMapAus[a.membro_id] || {};
+  const rm = rosterMapAus[a.membro_id] || extrasNomeAus[a.membro_id] || {};
   const d = a.missa_data ? new Date(a.missa_data + 'T00:00:00') : null;
   const row = document.createElement('div'); row.className = 'equipe-row';
   const info = document.createElement('div'); info.className = 'equipe-row-info';
