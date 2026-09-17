@@ -19,6 +19,14 @@ do filtro — o aviso (`#pwa-banner`) fica numa camada acima (400) de toda janel
 aparece no navegador, até a pessoa tocar no X. Conserto provável: esconder o aviso enquanto
 houver janela aberta — e provar em várias telas.
 
+**As provas de tela falharam uma vez sem motivo conhecido (17/09/2026).** Logo depois de
+juntar o passo 1 na `main`, uma rodada de `npm test` deu **22 falhas em 195**. O código era o
+mesmo que tinha passado 195/195 minutos antes, e as três rodadas seguintes passaram inteiras.
+Só o total foi guardado, não quais provas falharam — então a causa é desconhecida. Suspeita não
+confirmada: o harness espera tempos fixos (350 ms) e a máquina podia estar ocupada por outra
+janela. **Da próxima vez, guardar a saída inteira** (`npm run provar-telas > arquivo 2>&1`)
+antes de rodar de novo.
+
 **Pontos pequenos do passo 1 que ficaram para depois** (nenhum aparece para quem usa hoje):
 - Membros: "Próximos aniversários" e a ordem por "Nível" não têm prova de tela própria.
 - A barra escreve a ordem escolhida sozinha embaixo da busca ("Nome A–Z"). Se parecer texto
