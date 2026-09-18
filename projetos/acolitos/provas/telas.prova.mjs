@@ -2306,15 +2306,24 @@ async function provaAcompanhamentoDaFormacao(provas) {
     papel: PAPEIS.admin,
     rpcs: { acolitos_formacao_acompanhamento: { data: pessoas } },
     avaliar: `
+      // Desde 18/09 a Jornada tem duas abas: o acompanhamento virou um SINAL dentro de
+      // Evolução, com a lista de nomes fechada por padrão.
+      abaJornada = 'evolucao';
+      await renderAll();
       await new Promise(function (s) { setTimeout(s, 250); });
+      var verQuem = [].slice.call(document.querySelectorAll('button')).filter(function (b) {
+        return b.textContent === 'Ver quem'; })[0];
+      if (verQuem) verQuem.click();
+      await new Promise(function (s) { setTimeout(s, 120); });
       // A Jornada desenha em #main (não em #main-content, como as outras telas). E aqui vale
       // textContent, não innerText: o innerText devolve o texto DEPOIS do CSS, e o cabeçalho
       // do cartão é maiúsculo por folha de estilo — a busca pelo título nunca casaria.
       var txt = (document.getElementById('main') || document.body).textContent || '';
-      var so = txt.slice(txt.indexOf('Acompanhamento da Formação'));
+      var so = txt.slice(txt.indexOf('Quem não está andando'));
       var zaps = [].slice.call(document.querySelectorAll('a[href*="wa.me"]'));
       return {
-        temCartao: txt.indexOf('Acompanhamento da Formação') >= 0,
+        temCartao: txt.indexOf('Quem não está andando') >= 0,
+        abriuComListaFechada: !!verQuem,
         contagens: /Nunca entrou no app: 2/.test(so) && /Entrou e não começou: 1/.test(so)
                    && /Parou: 1/.test(so) && /Andando: 1/.test(so),
         ordem: so.indexOf('Ana Nunca Entrou') < so.indexOf('Caio Travado')
@@ -2331,7 +2340,9 @@ async function provaAcompanhamentoDaFormacao(provas) {
   exigir(!r.erroAvaliar, 'a Jornada desenha o acompanhamento sem estourar', r.erroAvaliar);
   exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova chegou ao fim (a página não saiu do lugar)',
     'avaliado: ' + JSON.stringify(r.avaliado));
-  exigir(a.temCartao === true, 'o cartão do acompanhamento aparece na tela');
+  exigir(a.temCartao === true, 'o sinal da formação aparece na aba Evolução');
+  exigir(a.abriuComListaFechada === true, 'a lista de nomes nasce FECHADA — o número é o que se bate o olho',
+    '148 nomes abertos empurravam o mapa de cobertura para 2.000 pixels abaixo');
   exigir(a.contagens === true, 'a faixa de números mostra as quatro situações, inclusive as zeradas');
   exigir(a.ordem === true, 'a lista vem na ordem da urgência: nunca entrou, depois travado, depois parou');
   exigir(a.andandoForaDaLista === true, 'quem está andando NÃO entra na lista de quem precisa de conversa');
@@ -2347,6 +2358,8 @@ async function provaAcompanhamentoDaFormacao(provas) {
     papel: PAPEIS.admin,
     rpcs: { acolitos_formacao_acompanhamento: { error: { code: '42501', message: 'Sem acesso' } } },
     avaliar: `
+      abaJornada = 'evolucao';
+      await renderAll();
       await new Promise(function (s) { setTimeout(s, 250); });
       var txt = (document.getElementById('main') || document.body).textContent || '';
       return { avisaFalta: /não tem acesso/i.test(txt), naoDizNinguem: !/Ninguém nesta situação/.test(txt) };

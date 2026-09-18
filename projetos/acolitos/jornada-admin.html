@@ -12,6 +12,11 @@
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
   <style>
+    /* Abas de visão — mesmo desenho da Agenda e da Tarefas. */
+    .view-tabs { display:flex; gap:4px; background:var(--surface2); border:1px solid var(--border-wine); border-radius:11px; padding:3px; margin:-2px 0 14px; }
+    .view-tabs button { flex:1; padding:8px; border:none; background:transparent; color:var(--text-muted); font-family:'Sora',sans-serif; font-weight:700; font-size:12px; letter-spacing:.5px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
+    .view-tabs button.on { background:linear-gradient(165deg, rgba(232,185,74,.18), var(--surface)); color:var(--gold-light); box-shadow:0 0 0 1px var(--gold-dim) inset; }
+
     .mx-card { background:var(--surface); border:1px solid var(--border-wine); border-radius:6px; padding:14px; margin-bottom:14px;
       clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
     .mx-hd { font-family:'Sora',sans-serif; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border); }
@@ -71,9 +76,31 @@ async function renderAll() {
   const box = document.createElement('div');
   const title = document.createElement('h1'); title.className = 'page-title'; title.textContent = 'Administrar Jornada'; box.appendChild(title);
   const sub = document.createElement('p'); sub.style.cssText = 'color:var(--text-muted);font-size:13px;margin:-6px 0 16px;font-style:italic;';
-  sub.textContent = 'Aprove reivindicações e confirme promoções de nível.'; box.appendChild(sub);
+  sub.textContent = abaJornada === 'evolucao'
+    ? 'Onde a pastoral está coberta, onde está no fio, e quem precisa crescer.'
+    : 'Aprove reivindicações e confirme promoções de nível.';
+  box.appendChild(sub);
 
-  await renderAcompanhamento(box);
+
+  // DUAS ABAS (18/09/2026, pedido do dono): esta tela tinha 6.000 pixels de altura e nove
+  // blocos empilhados — bater o olho nela não respondia nada. Agora são duas perguntas
+  // diferentes: "o que preciso aprovar hoje" e "para onde a pastoral precisa crescer".
+  renderAbasDaJornada(box);
+
+  if (abaJornada === 'evolucao') {
+    await renderSinalDaFormacao(box);
+    await renderDesenvolvimento(box);
+  } else {
+    await renderFilas(box);
+    await renderTemporadaAdmin(box);
+    await renderSemanaAdmin(box);
+    await renderCriarQuest(box);
+  }
+  main.textContent = ''; main.appendChild(box);   // troca atômica: só zera o main quando tudo está pronto
+}
+
+// As filas do dia: o que está esperando uma decisão da coordenação.
+async function renderFilas(box) {
 
   // Fila de aprovação
   const { data: fila } = await sb.rpc('acolitos_missoes_fila');
@@ -151,12 +178,29 @@ async function renderAll() {
     box.appendChild(qc);
   }
 
-  await renderTemporadaAdmin(box);
-  await renderSemanaAdmin(box);
-  await renderCriarQuest(box);
-  await renderDesenvolvimento(box);
-  main.textContent = ''; main.appendChild(box);   // troca atômica: só zera o main quando tudo está pronto
 }
+
+// A troca de abas. A escolha fica guardada no aparelho: quem vive na Evolução não quer
+// cair nas filas toda vez que abre.
+let abaJornada = 'quests';
+try { abaJornada = localStorage.getItem('jornada-aba') || 'quests'; } catch (e) {}
+function renderAbasDaJornada(box) {
+  const tabs = document.createElement('div'); tabs.className = 'view-tabs';
+  [['quests', 'Quests'], ['evolucao', 'Evolução']].forEach(([id, label]) => {
+    const b = document.createElement('button'); b.type = 'button';
+    b.className = abaJornada === id ? 'on' : '';
+    b.textContent = label;
+    b.onclick = () => {
+      if (abaJornada === id) return;
+      abaJornada = id;
+      try { localStorage.setItem('jornada-aba', id); } catch (e) {}
+      renderAll();
+    };
+    tabs.appendChild(b);
+  });
+  box.appendChild(tabs);
+}
+
 
 async function renderCriarQuest(main) {
   const head = document.createElement('h2'); head.style.cssText = 'font-family:Sora,sans-serif;font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 4px;'; head.textContent = '✨ Criar Quest Exclusiva'; main.appendChild(head);
@@ -896,9 +940,9 @@ init();
 const ACOMP_FAIXAS_NA_LISTA = ['nunca_entrou', 'travado', 'parou'];
 const ACOMP_MOSTRA = 8;   // quantos nomes por faixa antes do "ver todos"
 
-async function renderAcompanhamento(box) {
+async function renderSinalDaFormacao(box) {
   const card = document.createElement('div'); card.className = 'mx-card';
-  const hd = document.createElement('div'); hd.className = 'mx-hd'; hd.textContent = 'Acompanhamento da Formação';
+  const hd = document.createElement('div'); hd.className = 'mx-hd'; hd.textContent = 'Quem não está andando';
   card.appendChild(hd);
   box.appendChild(card);
 
@@ -919,7 +963,7 @@ async function renderAcompanhamento(box) {
   const r = resumoDaFormacao(pessoas);
 
   const explica = document.createElement('div'); explica.className = 'mx-q-sub';
-  explica.textContent = 'Quem não está andando na trilha, do mais urgente para o menos. Toque no nome para ver a ficha.';
+  explica.textContent = 'O retrato em uma linha. A lista com nomes abre quando você pedir.';
   card.appendChild(explica);
 
   // A faixa de números: o todo em uma olhada.
@@ -935,28 +979,42 @@ async function renderAcompanhamento(box) {
   });
   card.appendChild(chips);
 
+  // A lista inteira (148 nomes) empurrava o mapa de cobertura para 2.000 pixels abaixo. Aqui
+  // ela nasce fechada: o número é o que se bate o olho; o nome é quando se vai agir.
+  const dobra = document.createElement('div'); dobra.hidden = true;
+  const verQuem = document.createElement('button'); verQuem.className = 'mx-mini';
+  verQuem.style.marginTop = '8px';
+  verQuem.textContent = 'Ver quem';
+  verQuem.onclick = () => {
+    dobra.hidden = !dobra.hidden;
+    verQuem.textContent = dobra.hidden ? 'Ver quem' : 'Esconder';
+  };
+  card.append(verQuem, dobra);
+  // as faixas desenham DENTRO da dobra, não soltas no cartão
+  const dentroDaDobra = { appendChild: (el) => dobra.appendChild(el) };
+
   ACOMP_FAIXAS_NA_LISTA.forEach((faixa) => {
     const daFaixa = pessoas.filter((p) => p.faixa === faixa);
 
     const tit = document.createElement('div');
     tit.style.cssText = 'font-family:Sora,sans-serif;font-size:12px;letter-spacing:.5px;color:var(--text);margin:14px 0 2px;';
     tit.textContent = rotuloDaFaixa(faixa) + ' (' + daFaixa.length + ')';
-    card.appendChild(tit);
+    dentroDaDobra.appendChild(tit);
 
     const pq = document.createElement('div'); pq.className = 'mx-q-sub';
     pq.textContent = explicacaoDaFaixa(faixa);
-    card.appendChild(pq);
+    dentroDaDobra.appendChild(pq);
 
     if (!daFaixa.length) {
       const nada = document.createElement('div'); nada.className = 'mx-q-sub';
       nada.style.color = 'var(--gold-light)';
       nada.textContent = 'Ninguém nesta situação.';
-      card.appendChild(nada);
+      dentroDaDobra.appendChild(nada);
       return;
     }
 
     const lista = document.createElement('div');
-    card.appendChild(lista);
+    dentroDaDobra.appendChild(lista);
     let mostrandoTodos = false;
 
     const desenhar = () => {
