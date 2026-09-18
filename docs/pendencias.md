@@ -7,6 +7,13 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ## 1. Pendente
 
+**⚠️ DUAS PESSOAS DOS SETORES NÃO VEEM A ABA TAREFAS (18/09).** O cardápio inicial entrou com
+12 rotinas, mas **Gustavo Santana** (Vice-Coordenação, Formação, Ordem e Disciplina) e
+**Maria Eduarda Carli** (Secretaria) não têm a permissão `tarefas` na ficha — para eles a aba
+não existe, e 4 das 12 rotinas nascem sem ninguém para ver. Conserto de 1 minuto, sem código:
+Config → Pessoas & Times → marcar **Tarefas** na ficha dos dois. Enquanto isso não acontecer,
+essas rotinas só aparecem para a coordenação.
+
 **Rotinas — o que ficou para depois (18/09).** O cardápio está no ar. Falta: as rotinas que
 nascem da **agenda das missas** (véspera de celebração gera "separar as vestes"), a **IA
 sugerindo rotinas** para cada setor (o dono aprova antes de virar rotina), e — se o dono quiser

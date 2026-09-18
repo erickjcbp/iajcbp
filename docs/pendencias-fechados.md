@@ -14,6 +14,30 @@ chance de já ter acontecido antes é grande, e a resposta costuma estar aqui.
 
 ## Fechados em 18/09/2026
 
+**O cardápio inicial dos 13 setores, e o rodízio do Orientador**
+- **O que era:** o motor de rotinas subiu e o cardápio ficou vazio — zero rotinas, 13 setores.
+  E o campo onde o app guarda *o que cada time é* estava vazio para os 13: conferido, esse
+  texto não existia escrito em lugar nenhum do projeto.
+- **O que entrou:** as **13 responsabilidades** escritas (aparecem no topo do grupo em Tarefas
+  → Por time) e **12 rotinas**. Dias pela regra do dono: o que exige estar na igreja cai no
+  fim de semana, o que se faz pelo celular fica na semana. **Setor sem ninguém ficou só com a
+  responsabilidade** — cobrança no vazio ensina a ignorar tarefa.
+- **A rotina mais importante da lista é "Gerar a arte da escala", toda sexta.** Os dois robôs
+  que geravam e vigiavam a arte saíram no mesmo dia para dar lugar ao aviso da CRM; essa
+  rotina é o que impede de esquecer.
+- **CORREÇÃO DE UMA LEITURA MINHA:** a migration 076 registrou que "quem orienta são os mais
+  graduados e quem é acompanhado são os mais novos". O dono corrigiu: o Orientador conversa
+  com **todos do acólito sentinela para cima**, parados ou não. Isso exigiu um tipo novo de
+  rotina — **rodízio** (migration 080) —, porque a de acompanhamento só pesca quem parou.
+- **Como o rodízio se comporta (provado):** uma conversa por dia; começa por quem está sem
+  conversa há mais tempo; **não inclui quem é do próprio setor** (senão o app manda o
+  orientador falar com ele mesmo — são 44 e não 45); fecha a volta sem repetir ninguém; e a
+  tarefa vem com contexto (degrau, última missa, última missão, se está parado).
+- **Duas coisas que as provas pegaram antes de ir ao ar:** sem descanso, a pessoa com quem se
+  acabou de falar voltava no dia seguinte (nada no dado dela muda por ter sido ouvida — agora
+  sai da fila por 30 dias); e uma prova minha comparava tarefas por `criada_em`, que é **igual
+  para todas as linhas da mesma transação** — ela acusava erro onde não havia.
+
 **O cardápio de rotinas: a tarefa do setor passa a nascer sozinha**
 - **O que era:** a recorrência por tarefa já existia e já se comportava bem (a próxima nasce ao
   concluir a anterior, sem duplicar), mas **a corrente só começa se alguém criar a primeira à
