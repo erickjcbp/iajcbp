@@ -75,8 +75,18 @@
     return 'Oi! Falando da Pastoral dos Acólitos e Coroinhas sobre o ' + nome + '.';
   }
 
+  // O link que abre a conversa já com o texto escrito. Devolve NULO quando não há número —
+  // link torto abriria o WhatsApp num número inventado, e quem manda acha que avisou.
+  function linkWhatsapp(telefone, texto) {
+    var so = String(telefone == null ? '' : telefone).replace(/\D/g, '');
+    if (so.length < 10) return null;               // 10 = fixo com DDD; abaixo disso não é telefone
+    if (so.length <= 11) so = '55' + so;           // celular brasileiro sem o país
+    return 'https://wa.me/' + so + '?text=' + encodeURIComponent(String(texto == null ? '' : texto));
+  }
+
   var api = {
     FAIXAS: FAIXAS,
+    linkWhatsapp: linkWhatsapp,
     rotuloDaFaixa: rotuloDaFaixa,
     explicacaoDaFaixa: explicacaoDaFaixa,
     urgenciaDaFaixa: urgenciaDaFaixa,
@@ -86,6 +96,7 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else {
     global.FormacaoAcompanhamento = api;
+    global.linkWhatsapp = linkWhatsapp;
     global.rotuloDaFaixa = rotuloDaFaixa;
     global.explicacaoDaFaixa = explicacaoDaFaixa;
     global.urgenciaDaFaixa = urgenciaDaFaixa;

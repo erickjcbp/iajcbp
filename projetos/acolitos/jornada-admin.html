@@ -52,6 +52,7 @@
 <script src="filtro-lista-core.js"></script>
 <script src="senha-nova-core.js"></script>
 <script src="telefones-core.js"></script>
+<script src="formacao-core.js"></script>
 <script src="shared.js"></script>
 <script>
 const NIVEIS_SLUGS = () => NIVEIS.map(n => n.slug);
@@ -71,6 +72,8 @@ async function renderAll() {
   const title = document.createElement('h1'); title.className = 'page-title'; title.textContent = 'Administrar Jornada'; box.appendChild(title);
   const sub = document.createElement('p'); sub.style.cssText = 'color:var(--text-muted);font-size:13px;margin:-6px 0 16px;font-style:italic;';
   sub.textContent = 'Aprove reivindicações e confirme promoções de nível.'; box.appendChild(sub);
+
+  await renderAcompanhamento(box);
 
   // Fila de aprovação
   const { data: fila } = await sb.rpc('acolitos_missoes_fila');
@@ -880,6 +883,182 @@ async function promover(membro, nivel, nome) {
 }
 
 init();
+
+// ── Acompanhamento da Formação: com quem falar esta semana ───────────────────
+// O resto desta tela responde "quem está chegando lá" — em 18/09/2026 isso era 1 pessoa
+// pronta para subir. Esta parte responde o contrário, que é o que o setor Formação precisa
+// toda semana: QUEM NÃO SAIU DO LUGAR. Na mesma medição eram 148 pessoas que nunca abriram
+// o app, 9 que entraram e não começaram e 2 que pararam — e nenhuma tela mostrava isso,
+// porque todas listam quem age.
+//
+// Quem classifica é o banco (`acolitos_formacao_acompanhamento`, migration 075): só ele
+// enxerga quem nunca entrou. Aqui se desenha e se abre a conversa.
+const ACOMP_FAIXAS_NA_LISTA = ['nunca_entrou', 'travado', 'parou'];
+const ACOMP_MOSTRA = 8;   // quantos nomes por faixa antes do "ver todos"
+
+async function renderAcompanhamento(box) {
+  const card = document.createElement('div'); card.className = 'mx-card';
+  const hd = document.createElement('div'); hd.className = 'mx-hd'; hd.textContent = 'Acompanhamento da Formação';
+  card.appendChild(hd);
+  box.appendChild(card);
+
+  const { data, error } = await sb.rpc('acolitos_formacao_acompanhamento');
+  if (error) {
+    // Recado honesto. Dizer "ninguém parado" quando a consulta falhou faria a coordenação
+    // acreditar que está tudo em dia — este projeto já levou esse golpe.
+    const e = document.createElement('div'); e.className = 'mx-q-sub';
+    e.textContent = (error.code === '42501' || /permiss|acesso/i.test(error.message || ''))
+      ? 'Você não tem acesso ao acompanhamento da Formação.'
+      : 'Não consegui carregar o acompanhamento agora. Tente de novo daqui a pouco.';
+    card.appendChild(e);
+    console.error('Acompanhamento: consulta falhou', error);
+    return;
+  }
+
+  const pessoas = data || [];
+  const r = resumoDaFormacao(pessoas);
+
+  const explica = document.createElement('div'); explica.className = 'mx-q-sub';
+  explica.textContent = 'Quem não está andando na trilha, do mais urgente para o menos. Toque no nome para ver a ficha.';
+  card.appendChild(explica);
+
+  // A faixa de números: o todo em uma olhada.
+  const chips = document.createElement('div');
+  chips.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px;';
+  FormacaoAcompanhamento.FAIXAS.forEach((f) => {
+    const c = document.createElement('span');
+    c.style.cssText = 'font-size:11px;padding:3px 8px;border-radius:999px;white-space:nowrap;' +
+      'border:1px solid var(--border);color:var(--text-muted);';
+    if (f === 'andando') c.style.color = 'var(--gold-light)';
+    c.textContent = rotuloDaFaixa(f) + ': ' + r[f];
+    chips.appendChild(c);
+  });
+  card.appendChild(chips);
+
+  ACOMP_FAIXAS_NA_LISTA.forEach((faixa) => {
+    const daFaixa = pessoas.filter((p) => p.faixa === faixa);
+
+    const tit = document.createElement('div');
+    tit.style.cssText = 'font-family:Sora,sans-serif;font-size:12px;letter-spacing:.5px;color:var(--text);margin:14px 0 2px;';
+    tit.textContent = rotuloDaFaixa(faixa) + ' (' + daFaixa.length + ')';
+    card.appendChild(tit);
+
+    const pq = document.createElement('div'); pq.className = 'mx-q-sub';
+    pq.textContent = explicacaoDaFaixa(faixa);
+    card.appendChild(pq);
+
+    if (!daFaixa.length) {
+      const nada = document.createElement('div'); nada.className = 'mx-q-sub';
+      nada.style.color = 'var(--gold-light)';
+      nada.textContent = 'Ninguém nesta situação.';
+      card.appendChild(nada);
+      return;
+    }
+
+    const lista = document.createElement('div');
+    card.appendChild(lista);
+    let mostrandoTodos = false;
+
+    const desenhar = () => {
+      lista.textContent = '';
+      const visiveis = mostrandoTodos ? daFaixa : daFaixa.slice(0, ACOMP_MOSTRA);
+      visiveis.forEach((p) => lista.appendChild(linhaDoAcompanhamento(p)));
+      if (daFaixa.length > ACOMP_MOSTRA) {
+        const b = document.createElement('button'); b.className = 'mx-mini';
+        b.style.marginTop = '6px';
+        b.textContent = mostrandoTodos ? 'Mostrar menos' : 'Ver todos (' + daFaixa.length + ')';
+        b.onclick = () => { mostrandoTodos = !mostrandoTodos; desenhar(); };
+        lista.appendChild(b);
+      }
+    };
+    desenhar();
+  });
+}
+
+function detalheDoAcompanhamento(p) {
+  const degrau = p.nivel ? (typeof nivelInfo === 'function' ? nivelInfo(p.nivel).label : p.nivel) : 'ainda no CRM';
+  if (p.faixa === 'parou' && p.dias_parado != null) return degrau + ' · parado há ' + p.dias_parado + ' dias';
+  if (p.faixa === 'travado' && p.capitulo_atual != null) {
+    return degrau + ' · capítulo ' + p.capitulo_atual + ', ' + p.obrigatorias_feitas + ' de ' + p.obrigatorias_do_capitulo;
+  }
+  return degrau;
+}
+
+function linhaDoAcompanhamento(p) {
+  const it = document.createElement('div'); it.className = 'mx-fila-item';
+  const top = document.createElement('div'); top.className = 'mx-fila-top';
+
+  const nome = document.createElement('button');
+  nome.style.cssText = 'background:none;border:none;padding:0;text-align:left;flex:1;min-width:0;' +
+    'font-size:13px;font-weight:600;color:var(--text);cursor:pointer;';
+  nome.textContent = p.nome;
+  nome.onclick = () => abrirFichaDoAcompanhamento(p);
+  top.appendChild(nome);
+
+  const link = linkWhatsapp(p.telefone, mensagemWhatsapp(p));
+  if (link) {
+    const a = document.createElement('a');
+    a.className = 'mx-mini'; a.href = link; a.target = '_blank'; a.rel = 'noopener';
+    a.textContent = 'WhatsApp';
+    top.appendChild(a);
+  } else {
+    // Sem número, dizer POR QUE não dá para falar — senão parece defeito da tela.
+    const s = document.createElement('span'); s.className = 'mx-q-sub'; s.style.margin = '0';
+    s.textContent = 'sem telefone';
+    top.appendChild(s);
+  }
+
+  it.appendChild(top);
+  const sub = document.createElement('div'); sub.className = 'mx-q-sub';
+  sub.textContent = detalheDoAcompanhamento(p);
+  it.appendChild(sub);
+  return it;
+}
+
+function abrirFichaDoAcompanhamento(p) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '420px';
+
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = p.nome;
+  md.appendChild(tt);
+
+  const sit = document.createElement('p');
+  sit.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;';
+  sit.textContent = rotuloDaFaixa(p.faixa) + ' — ' + explicacaoDaFaixa(p.faixa);
+  md.appendChild(sit);
+
+  const linhas = [
+    ['Degrau', p.nivel ? (typeof nivelInfo === 'function' ? nivelInfo(p.nivel).label : p.nivel) : 'ainda no CRM'],
+    ['Capítulo', p.capitulo_atual == null
+      ? (p.nivel ? 'trilha deste degrau concluída' : '—')
+      : (p.capitulo_atual + ' · ' + p.obrigatorias_feitas + ' de ' + p.obrigatorias_do_capitulo + ' obrigatórias')],
+    ['Última missa', p.ultima_missa ? formatDate(p.ultima_missa) : 'nunca serviu'],
+    ['Última missão', p.ultimo_progresso ? formatDate(p.ultimo_progresso) : 'nenhuma ainda'],
+    ['Telefone', p.telefone || 'não temos'],
+  ];
+  linhas.forEach(([rot, val]) => {
+    const l = document.createElement('div');
+    l.style.cssText = 'display:flex;gap:8px;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);';
+    const a = document.createElement('span'); a.style.cssText = 'color:var(--text-muted);min-width:110px;'; a.textContent = rot;
+    const b = document.createElement('span'); b.style.cssText = 'color:var(--text);flex:1;'; b.textContent = val;
+    l.append(a, b); md.appendChild(l);
+  });
+
+  const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:14px;';
+  const fechar = document.createElement('button'); fechar.className = 'btn'; fechar.style.flex = '1';
+  fechar.textContent = 'Fechar'; fechar.onclick = () => ov.remove();
+  acts.appendChild(fechar);
+  const link = linkWhatsapp(p.telefone, mensagemWhatsapp(p));
+  if (link) {
+    const a = document.createElement('a'); a.className = 'btn gold'; a.style.cssText = 'flex:1;text-align:center;';
+    a.href = link; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Falar no WhatsApp';
+    acts.appendChild(a);
+  }
+  md.appendChild(acts);
+  ov.appendChild(md); document.body.appendChild(ov);
+}
+
 </script>
 </body>
 </html>

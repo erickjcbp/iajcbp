@@ -5,6 +5,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const {
   FAIXAS, rotuloDaFaixa, explicacaoDaFaixa, urgenciaDaFaixa, resumo, mensagemWhatsapp,
+  linkWhatsapp,
 } = require('./formacao-core.js');
 
 test('a ordem das faixas é a da urgência, e quem nunca entrou vem primeiro', () => {
@@ -67,4 +68,27 @@ test('mensagem sem nome e sem faixa não estoura nem sai quebrada', () => {
   const m = mensagemWhatsapp({});
   assert.ok(m.length > 10);
   assert.ok(!m.includes('undefined') && !m.includes('null'));
+});
+
+test('o link do WhatsApp aceita o número do jeito que a ficha guarda', () => {
+  // A ficha tem número com máscara, com espaço, com traço — e alguns já com o 55 na frente.
+  const esperado = 'https://wa.me/5519999070000';
+  assert.ok(linkWhatsapp('(19) 99907-0000', 'oi').startsWith(esperado));
+  assert.ok(linkWhatsapp('19999070000', 'oi').startsWith(esperado));
+  assert.ok(linkWhatsapp('5519999070000', 'oi').startsWith(esperado), 'não duplica o 55');
+  assert.ok(linkWhatsapp('+55 19 99907-0000', 'oi').startsWith(esperado));
+});
+
+test('o texto vai codificado, e acento não quebra o link', () => {
+  const l = linkWhatsapp('19999070000', 'Olá! Tudo bem?');
+  assert.ok(l.includes('?text='));
+  assert.ok(!/ /.test(l), 'espaço cru quebraria o link');
+  assert.ok(l.includes(encodeURIComponent('Olá! Tudo bem?')));
+});
+
+test('sem número não existe link — e isso não pode virar um link quebrado', () => {
+  // Devolver um link torto faria a tela abrir o WhatsApp num número inventado.
+  assert.strictEqual(linkWhatsapp(null, 'oi'), null);
+  assert.strictEqual(linkWhatsapp('', 'oi'), null);
+  assert.strictEqual(linkWhatsapp('123', 'oi'), null, 'número curto demais não é telefone');
 });

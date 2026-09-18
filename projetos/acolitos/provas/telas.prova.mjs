@@ -2278,6 +2278,87 @@ async function provaAgendaOrdenaPelaHora(provas) {
     'no calendário, o painel do dia também sai em ordem de hora', 'saiu: ' + JSON.stringify(a.dia));
 }
 
+async function provaAcompanhamentoDaFormacao(provas) {
+  console.log('\n\x1b[1mJornada › Acompanhamento da Formação: diz com quem falar\x1b[0m');
+
+  // O resto da tela lista quem AGE. Em 18/09/2026 isso era 1 pessoa — e as 155 que nunca
+  // saíram do lugar não apareciam em tela nenhuma. Esta prova guarda as duas coisas que
+  // importam: a ordem da urgência, e falha NUNCA virar "ninguém parado".
+  const pessoas = [
+    { membro_id: 'p1', nome: 'Zeca Parado', status: 'ativo', nivel: 'coroinha', faixa: 'parou',
+      dias_parado: 44, capitulo_atual: 2, obrigatorias_feitas: 1, obrigatorias_do_capitulo: 4,
+      ultima_missa: '2026-08-01', ultimo_progresso: '2026-08-01', telefone: '(19) 99907-0000' },
+    { membro_id: 'p2', nome: 'Ana Nunca Entrou', status: 'ativo', nivel: 'aspirante', faixa: 'nunca_entrou',
+      dias_parado: null, capitulo_atual: 1, obrigatorias_feitas: 0, obrigatorias_do_capitulo: 4,
+      ultima_missa: null, ultimo_progresso: null, telefone: '19999070001' },
+    { membro_id: 'p3', nome: 'Bia Sem Telefone', status: 'ativo', nivel: 'aspirante', faixa: 'nunca_entrou',
+      dias_parado: null, capitulo_atual: 1, obrigatorias_feitas: 0, obrigatorias_do_capitulo: 4,
+      ultima_missa: null, ultimo_progresso: null, telefone: null },
+    { membro_id: 'p4', nome: 'Caio Travado', status: 'ativo', nivel: 'coroinha', faixa: 'travado',
+      dias_parado: null, capitulo_atual: 1, obrigatorias_feitas: 0, obrigatorias_do_capitulo: 4,
+      ultima_missa: '2026-09-14', ultimo_progresso: null, telefone: '19999070002' },
+    { membro_id: 'p5', nome: 'Duda Andando', status: 'ativo', nivel: 'coroinha', faixa: 'andando',
+      dias_parado: 3, capitulo_atual: 2, obrigatorias_feitas: 3, obrigatorias_do_capitulo: 4,
+      ultima_missa: '2026-09-15', ultimo_progresso: '2026-09-15', telefone: '19999070003' },
+  ];
+
+  const r = await provas.abrir('jornada-admin.html', {
+    papel: PAPEIS.admin,
+    rpcs: { acolitos_formacao_acompanhamento: { data: pessoas } },
+    avaliar: `
+      await new Promise(function (s) { setTimeout(s, 250); });
+      // A Jornada desenha em #main (não em #main-content, como as outras telas). E aqui vale
+      // textContent, não innerText: o innerText devolve o texto DEPOIS do CSS, e o cabeçalho
+      // do cartão é maiúsculo por folha de estilo — a busca pelo título nunca casaria.
+      var txt = (document.getElementById('main') || document.body).textContent || '';
+      var so = txt.slice(txt.indexOf('Acompanhamento da Formação'));
+      var zaps = [].slice.call(document.querySelectorAll('a[href*="wa.me"]'));
+      return {
+        temCartao: txt.indexOf('Acompanhamento da Formação') >= 0,
+        contagens: /Nunca entrou no app: 2/.test(so) && /Entrou e não começou: 1/.test(so)
+                   && /Parou: 1/.test(so) && /Andando: 1/.test(so),
+        ordem: so.indexOf('Ana Nunca Entrou') < so.indexOf('Caio Travado')
+               && so.indexOf('Caio Travado') < so.indexOf('Zeca Parado'),
+        andandoForaDaLista: so.indexOf('Duda Andando') < 0,
+        diasDoParado: /parado há 44 dias/.test(so),
+        semTelefone: /sem telefone/.test(so),
+        zapsComTexto: zaps.length === 3 && zaps.every(function (a) { return a.href.indexOf('?text=') > 0; }),
+        zapDoPrimeiro: (zaps[0] || {}).href || ''
+      };
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a Jornada desenha o acompanhamento sem estourar', r.erroAvaliar);
+  exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova chegou ao fim (a página não saiu do lugar)',
+    'avaliado: ' + JSON.stringify(r.avaliado));
+  exigir(a.temCartao === true, 'o cartão do acompanhamento aparece na tela');
+  exigir(a.contagens === true, 'a faixa de números mostra as quatro situações, inclusive as zeradas');
+  exigir(a.ordem === true, 'a lista vem na ordem da urgência: nunca entrou, depois travado, depois parou');
+  exigir(a.andandoForaDaLista === true, 'quem está andando NÃO entra na lista de quem precisa de conversa');
+  exigir(a.diasDoParado === true, 'quem parou mostra há quantos dias');
+  exigir(a.semTelefone === true, 'quem não tem telefone diz "sem telefone" em vez de sumir');
+  exigir(a.zapsComTexto === true, 'cada pessoa com número ganha o link do WhatsApp com a mensagem pronta',
+    'links: ' + JSON.stringify(a.zapDoPrimeiro));
+  exigir(String(a.zapDoPrimeiro).indexOf('wa.me/5519999070001') >= 0,
+    'o link leva o número com o código do país', 'saiu: ' + a.zapDoPrimeiro);
+
+  // E a parte que mais importa: falha não pode virar "ninguém parado".
+  const r2 = await provas.abrir('jornada-admin.html', {
+    papel: PAPEIS.admin,
+    rpcs: { acolitos_formacao_acompanhamento: { error: { code: '42501', message: 'Sem acesso' } } },
+    avaliar: `
+      await new Promise(function (s) { setTimeout(s, 250); });
+      var txt = (document.getElementById('main') || document.body).textContent || '';
+      return { avisaFalta: /não tem acesso/i.test(txt), naoDizNinguem: !/Ninguém nesta situação/.test(txt) };
+    `,
+  });
+  const b = r2.avaliado || {};
+  exigir(!r2.erroAvaliar, 'a tela aguenta o banco recusar o acompanhamento', r2.erroAvaliar);
+  exigir(b.avisaFalta === true, 'sem permissão, a tela DIZ isso — não mostra lista vazia');
+  exigir(b.naoDizNinguem === true, 'e não afirma "ninguém nesta situação" quando não conseguiu perguntar',
+    'é assim que uma falha vira número e alguém decide por ele');
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -2367,6 +2448,7 @@ try {
     await provaAvisosDeAusenciaFiltramNaConsulta(provas);
     await provaFaltasFiltramNaConsulta(provas);
     await provaAgendaOrdenaPelaHora(provas);
+    await provaAcompanhamentoDaFormacao(provas);
     await provaAvisosAbreComAsProximasMissas(provas);
     await provaAvisosMostraNomeDeQuemEstaAfastado(provas);
     await provaRosterFalhoNaoApagaFiltroDePessoa(provas);
