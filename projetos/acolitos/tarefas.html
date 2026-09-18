@@ -197,7 +197,9 @@ async function carregarResponsaveisPermitidos() {
 }
 
 async function carregarTudo() {
-  const [rT, rS, rR] = await Promise.all([carregarTarefas(), carregarSetores(), carregarResponsabilidades()]);
+  const [rT, rS, rR, rRot] = await Promise.all([
+    carregarTarefas(), carregarSetores(), carregarResponsabilidades(), carregarRotinas()]);
+  guardarRotinas(rRot);
   TAREFAS = rT.data; ERR_TAREFAS = !!rT.error;
   // Recorta os times AQUI, num lugar só. As três visões, o filtro e o formulário bebem de
   // TIMES — recortar em cada um deles seria três chances de esquecer, e o esquecido vira o
@@ -645,6 +647,7 @@ function renderPorTime(main) {
       resp.textContent = RESPONSABILIDADES[g.time.valor];
       main.appendChild(resp);
     }
+    renderRotinasDoTime(main, g.time.valor);
     if (!g.tarefas.length) {
       const vazio = document.createElement('div'); vazio.className = 'tf-obs'; vazio.style.marginBottom = '10px';
       vazio.textContent = 'Nenhuma tarefa deste time.';
@@ -877,6 +880,9 @@ async function init() {
   renderHeader(ctx, 'tarefas');
   renderBottomNav(ctx, 'tarefas');
   try {
+    // As rotinas vencidas viram tarefa ANTES de carregar a lista — senão a tarefa que acabou
+    // de nascer só apareceria na próxima vez que alguém abrisse a tela.
+    await materializarRotinas();
     await carregarTudo();
     render();
   } catch (e) {
@@ -890,6 +896,169 @@ async function init() {
     err.textContent = 'Não foi possível carregar as tarefas. Tente de novo.';
     main.appendChild(err);
   }
+}
+
+
+// ── ROTINAS DO TIME (o cardápio que faz a tarefa nascer sozinha) ──────────────
+// A tarefa recorrente já existia, mas a corrente só começa se alguém criar a primeira à mão
+// — e em 18/09/2026 a tabela estava vazia com 13 setores cadastrados. A ROTINA é o cardápio:
+// escreve-se uma vez e a tarefa nasce quando vence.
+//
+// Quem cria a tarefa é o BANCO (`acolitos_rotinas_materializar`, migration 077), chamado aqui
+// ao abrir a tela: duas pessoas abrindo ao mesmo tempo não podem criar a mesma tarefa duas
+// vezes, e a conta da próxima data tem de ser uma só.
+//
+// Quem ESCREVE rotina é o time; quem ALTERA e DESLIGA é a coordenação (decisão do dono em
+// 18/09). Esconder o botão aqui não é a segurança — quem tranca é a trava do banco.
+let ROTINAS = {}, ERR_ROTINAS = false;
+
+const REPETE_LABEL = {
+  semanal: 'toda semana', mensal: 'todo mês', anual: 'todo ano', celebracao: 'a cada missa',
+};
+
+async function carregarRotinas() {
+  const { data, error } = await sb.from('acolitos_rotinas')
+    .select('id,time_slug,titulo,observacao,recorrencia,proxima,ativa')
+    .eq('ativa', true).order('titulo');
+  if (error) console.error('Tarefas: carregar rotinas falhou', error);
+  return { data: data || [], error };
+}
+
+// Chamado ao abrir a tela, ANTES de carregar as tarefas — senão a tarefa que acabou de nascer
+// só apareceria na próxima vez que alguém abrisse.
+async function materializarRotinas() {
+  const { data, error } = await sb.rpc('acolitos_rotinas_materializar');
+  if (error) {
+    // Falhar aqui não pode derrubar a tela: as tarefas que já existem continuam valendo.
+    console.error('Tarefas: materializar rotinas falhou', error);
+    return 0;
+  }
+  const criadas = Number(data) || 0;
+  if (criadas > 0) toast(criadas === 1 ? 'Nasceu 1 tarefa da rotina.' : 'Nasceram ' + criadas + ' tarefas das rotinas.');
+  return criadas;
+}
+
+function renderRotinasDoTime(main, timeSlug) {
+  const minhas = (ROTINAS[timeSlug] || []);
+  const caixa = document.createElement('div');
+  caixa.style.cssText = 'margin:2px 0 10px;padding:8px 10px;border:1px dashed var(--border);border-radius:10px;';
+
+  const topo = document.createElement('div');
+  topo.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:4px;';
+  const tit = document.createElement('span');
+  tit.style.cssText = 'flex:1;min-width:0;font-size:11px;letter-spacing:.5px;color:var(--text-muted);';
+  tit.textContent = 'ROTINAS DESTE TIME (' + minhas.length + ')';
+  topo.appendChild(tit);
+  const novo = document.createElement('button'); novo.className = 'mini';
+  novo.textContent = '+ Rotina';
+  novo.onclick = () => abrirFormRotina(timeSlug);
+  topo.appendChild(novo);
+  caixa.appendChild(topo);
+
+  if (ERR_ROTINAS) {
+    const e = document.createElement('div'); e.className = 'tf-obs';
+    e.textContent = 'Não foi possível carregar as rotinas deste time.';
+    caixa.appendChild(e);
+  } else if (!minhas.length) {
+    const v = document.createElement('div'); v.className = 'tf-obs';
+    v.textContent = 'Nenhuma rotina. Escreva uma e a tarefa passa a nascer sozinha.';
+    caixa.appendChild(v);
+  } else {
+    minhas.forEach((r) => {
+      const l = document.createElement('div');
+      l.style.cssText = 'display:flex;align-items:center;gap:8px;padding:3px 0;';
+      const txt = document.createElement('div');
+      txt.style.cssText = 'flex:1;min-width:0;font-size:12px;color:var(--text);';
+      txt.textContent = r.titulo + ' — ' + (REPETE_LABEL[r.recorrencia] || r.recorrencia) +
+        ' · próxima ' + (r.proxima ? formatDate(r.proxima) : '—');
+      l.appendChild(txt);
+      if (navCaps(ctx).isAdmin) {
+        const off = document.createElement('button'); off.className = 'mini';
+        off.textContent = 'Desligar';
+        off.onclick = () => desligarRotina(r);
+        l.appendChild(off);
+      }
+      caixa.appendChild(l);
+    });
+  }
+  main.appendChild(caixa);
+}
+
+async function desligarRotina(r) {
+  if (!(await uiConfirm('Desligar a rotina "' + r.titulo + '"? As tarefas que já nasceram continuam.'))) return;
+  // `.select('id')` diz se alguma linha mudou de verdade: a trava do banco recusa em silêncio
+  // quem não é da coordenação, e sem isto a tela diria "desligada" sem nada ter acontecido.
+  const { data, error } = await sb.from('acolitos_rotinas')
+    .update({ ativa: false }).eq('id', r.id).select('id');
+  if (error) { console.error('Tarefas: desligar rotina falhou', error); toast('Não foi possível desligar.', 'error'); return; }
+  if (!data || !data.length) { toast('Só a coordenação pode alterar rotinas.', 'error'); return; }
+  toast('Rotina desligada.');
+  const rr = await carregarRotinas(); guardarRotinas(rr);
+  render();
+}
+
+function guardarRotinas(r) {
+  ERR_ROTINAS = !!r.error;
+  ROTINAS = {};
+  (r.data || []).forEach((x) => { (ROTINAS[x.time_slug] = ROTINAS[x.time_slug] || []).push(x); });
+}
+
+function abrirFormRotina(timeSlug) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '420px';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Nova rotina';
+  md.appendChild(tt);
+  const dica = document.createElement('p'); dica.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;';
+  dica.textContent = 'Escreva uma vez e a tarefa nasce sozinha quando vencer. Enquanto a anterior estiver aberta, não nasce outra.';
+  md.appendChild(dica);
+
+  const iTit = document.createElement('input'); iTit.className = 'form-input';
+  iTit.placeholder = 'Ex.: Conferir as velas'; md.appendChild(iTit);
+
+  const sRec = document.createElement('select'); sRec.className = 'form-input'; sRec.style.marginTop = '8px';
+  [['semanal', 'Toda semana'], ['mensal', 'Todo mês'], ['anual', 'Todo ano'], ['celebracao', 'A cada missa']]
+    .forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; sRec.appendChild(o); });
+  md.appendChild(sRec);
+
+  const rotPrimeira = document.createElement('div');
+  rotPrimeira.style.cssText = 'font-size:11px;color:var(--text-muted);margin:10px 0 2px;';
+  rotPrimeira.textContent = 'A primeira nasce em:';
+  md.appendChild(rotPrimeira);
+  const iData = document.createElement('input'); iData.className = 'form-input'; iData.type = 'date';
+  iData.value = hojeLocal(); md.appendChild(iData);
+
+  const iObs = document.createElement('textarea'); iObs.className = 'form-input'; iObs.rows = 2;
+  iObs.style.marginTop = '8px'; iObs.placeholder = 'Observação (opcional)'; md.appendChild(iObs);
+
+  const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:14px;';
+  const c = document.createElement('button'); c.className = 'btn'; c.style.flex = '1';
+  c.textContent = 'Cancelar'; c.onclick = () => ov.remove();
+  const s = document.createElement('button'); s.className = 'btn gold'; s.style.flex = '1';
+  s.textContent = 'Criar rotina';
+  s.onclick = async () => {
+    const titulo = iTit.value.trim();
+    if (!titulo) { toast('Escreva o que precisa ser feito.', 'error'); iTit.focus(); return; }
+    s.disabled = true;
+    const { error } = await sb.from('acolitos_rotinas').insert({
+      time_slug: timeSlug, titulo, observacao: iObs.value.trim() || null,
+      recorrencia: sRec.value, proxima: iData.value || hojeLocal(),
+      criada_por: ctx.membro ? ctx.membro.id : null,
+    });
+    if (error) {
+      console.error('Tarefas: criar rotina falhou', error);
+      toast('Não foi possível criar a rotina. Tente de novo.', 'error');
+      s.disabled = false; return;
+    }
+    ov.remove();
+    toast('Rotina criada.');
+    await materializarRotinas();          // se já vence hoje, a tarefa nasce na hora
+    const rr = await carregarRotinas(); guardarRotinas(rr);
+    await recarregarTarefas();
+    render();
+  };
+  acts.append(c, s); md.appendChild(acts);
+  ov.appendChild(md); document.body.appendChild(ov);
 }
 
 init();

@@ -2359,6 +2359,91 @@ async function provaAcompanhamentoDaFormacao(provas) {
     'é assim que uma falha vira número e alguém decide por ele');
 }
 
+async function provaRotinasDoTime(provas) {
+  console.log('\n\x1b[1mTarefas › Rotinas do time: a tarefa nasce sozinha\x1b[0m');
+
+  // A recorrência por tarefa já existia, mas a corrente só começa se alguém criar a primeira
+  // à mão — e em 18/09/2026 a tabela de tarefas estava VAZIA com 13 setores cadastrados.
+  const rotinas = [
+    { id: 'r1', time_slug: 'formacao', titulo: 'Conferir quem está parado', observacao: null,
+      recorrencia: 'semanal', proxima: '2026-09-25', ativa: true },
+  ];
+  const tarefas = [
+    { id: 't1', titulo: 'Conferir quem está parado', time_slug: 'formacao', responsavel_id: null,
+      prazo: '2026-09-18', observacao: null, recorrencia: 'nenhuma', concluida_em: null,
+      andamento_em: null, rotina_id: 'r1', criada_em: '2026-09-18T10:00:00Z' },
+  ];
+
+  const abrir = (extra) => provas.abrir('tarefas.html', Object.assign({
+    papel: PAPEIS.admin,
+    tabelas: {
+      acolitos_tarefas: { data: tarefas },
+      acolitos_rotinas: { data: rotinas },
+      acolitos_listas: { data: [{ tipo: 'setor', valor: 'formacao', label: 'Formação' }] },
+    },
+    rpcs: { acolitos_rotinas_materializar: { data: 0 } },
+  }, extra || {}));
+
+  const r = await abrir({
+    avaliar: `
+      modoVisao = 'time'; render();
+      await new Promise(function (s) { setTimeout(s, 120); });
+      var txt = (document.getElementById('main-content') || document.body).textContent || '';
+      var botoes = [].slice.call(document.querySelectorAll('button')).map(function (b) { return b.textContent; });
+      return {
+        mostraRotina: /Conferir quem está parado — toda semana/.test(txt),
+        mostraProxima: /próxima/.test(txt),
+        temBotaoNova: botoes.indexOf('+ Rotina') >= 0,
+        coordVeDesligar: botoes.indexOf('Desligar') >= 0
+      };
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a tela de Tarefas desenha as rotinas sem estourar', r.erroAvaliar);
+  exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova das rotinas chegou ao fim',
+    'avaliado: ' + JSON.stringify(r.avaliado));
+  exigir(a.mostraRotina === true, 'a rotina aparece no time dela, dizendo de quanto em quanto tempo se repete');
+  exigir(a.mostraProxima === true, 'e quando nasce a próxima');
+  exigir(a.temBotaoNova === true, 'o time tem por onde escrever uma rotina nova');
+  exigir(a.coordVeDesligar === true, 'a coordenação vê o botão de desligar');
+
+  // Quem NÃO é coordenação não pode nem ver o botão de alterar (decisão do dono).
+  // ⚠️ O nome é `cerimonario`, sem o "i" do meio. Papel escrito errado vira `undefined` e o
+  // motor cai em ADMIN sem avisar — foi assim que esta prova passou verde pelo motivo errado.
+  const r2 = await abrir({
+    papel: PAPEIS.cerimonario,
+    avaliar: `
+      modoVisao = 'time'; render();
+      await new Promise(function (s) { setTimeout(s, 120); });
+      var botoes = [].slice.call(document.querySelectorAll('button')).map(function (b) { return b.textContent; });
+      return { veDesligar: botoes.indexOf('Desligar') >= 0 };
+    `,
+  });
+  const b = r2.avaliado || {};
+  exigir(!r2.erroAvaliar, 'a tela aguenta abrir para quem não é coordenação', r2.erroAvaliar);
+  exigir(b.veDesligar === false, 'quem não é coordenação NÃO vê o botão de desligar rotina');
+
+  // E falha ao carregar rotina não pode virar "nenhuma rotina".
+  const r3 = await abrir({
+    tabelas: {
+      acolitos_tarefas: { data: tarefas },
+      acolitos_rotinas: { error: { message: 'boom' } },
+      acolitos_listas: { data: [{ tipo: 'setor', valor: 'formacao', label: 'Formação' }] },
+    },
+    avaliar: `
+      modoVisao = 'time'; render();
+      await new Promise(function (s) { setTimeout(s, 120); });
+      var txt = (document.getElementById('main-content') || document.body).textContent || '';
+      return { avisa: /Não foi possível carregar as rotinas/.test(txt),
+               naoMente: !/Nenhuma rotina\./.test(txt) };
+    `,
+  });
+  const c = r3.avaliado || {};
+  exigir(c.avisa === true, 'falha ao carregar rotina DIZ que falhou');
+  exigir(c.naoMente === true, 'e não afirma "nenhuma rotina" quando não conseguiu perguntar',
+    'é assim que uma falha vira número e alguém decide por ele');
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -2449,6 +2534,7 @@ try {
     await provaFaltasFiltramNaConsulta(provas);
     await provaAgendaOrdenaPelaHora(provas);
     await provaAcompanhamentoDaFormacao(provas);
+    await provaRotinasDoTime(provas);
     await provaAvisosAbreComAsProximasMissas(provas);
     await provaAvisosMostraNomeDeQuemEstaAfastado(provas);
     await provaRosterFalhoNaoApagaFiltroDePessoa(provas);
