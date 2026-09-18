@@ -504,17 +504,30 @@ function renderCobertura(container, onClickFuncao){
   const ordenadas = _devFuncoes.slice().sort((a,b)=> bucketsFuncao(a[0]).prontos - bucketsFuncao(b[0]).prontos);
   ordenadas.forEach(([val,label])=>{
     const b=bucketsFuncao(val);
-    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid var(--border);cursor:pointer;';
+    // DUAS LINHAS, de propósito. Em uma linha só, no celular, o nome da função ficava
+    // cortado ("Cerimoniár…") e os números viravam "5 · 0 · 12", que não diz o que são.
+    const row=document.createElement('div'); row.style.cssText='padding:9px 4px;border-bottom:1px solid var(--border);cursor:pointer;';
     row.onclick=()=>onClickFuncao(val,label);
-    const nm=document.createElement('div'); nm.style.cssText='flex:1.4;min-width:0;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-    nm.textContent=(b.prontos<3?'⚠ ':'')+label;
-    if(b.prontos<3) nm.style.color='var(--danger-text)';
-    const bar=document.createElement('div'); bar.style.cssText='flex:2;display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--surface2);';
+    const topo=document.createElement('div'); topo.style.cssText='display:flex;align-items:center;gap:8px;';
+    const nm=document.createElement('div'); nm.style.cssText='flex:1;min-width:0;font-size:13px;color:var(--text);';
+    nm.textContent=label;
+    if(b.prontos<3){
+      nm.style.color='var(--danger-text)';
+      const tag=document.createElement('span');
+      tag.style.cssText='font-size:10px;font-weight:700;letter-spacing:.5px;padding:2px 6px;border-radius:999px;border:1px solid var(--danger);color:var(--danger-text);white-space:nowrap;';
+      tag.textContent='NO FIO';
+      topo.append(nm, tag);
+    } else { topo.appendChild(nm); }
+    const bar=document.createElement('div'); bar.style.cssText='display:flex;height:8px;border-radius:5px;overflow:hidden;background:var(--surface2);margin:6px 0 4px;';
     const seg=(n,cor)=>{ if(!n) return; const s=document.createElement('div'); s.style.cssText='height:100%;background:'+cor+';flex:'+n+' 0 0;'; bar.appendChild(s); };
     seg(b.prontos, PROF_COR.apto); seg(b.form, PROF_COR.em_formacao); seg(b.zero, 'var(--border)');
-    const cnt=document.createElement('div'); cnt.style.cssText='flex:1;text-align:right;font-size:11px;color:var(--text-muted);white-space:nowrap;';
-    cnt.innerHTML='<b style="color:var(--success-text)">'+b.prontos+'</b> · '+b.form+' · '+b.zero;
-    row.append(nm,bar,cnt); container.appendChild(row);
+    // Número com NOME: "5 aptos" diz o que "5 · 0 · 12" escondia.
+    const cnt=document.createElement('div'); cnt.style.cssText='font-size:11px;color:var(--text-muted);';
+    const pedacos=[b.prontos+(b.prontos===1?' apto':' aptos')];
+    if(b.form) pedacos.push(b.form+' em formação');
+    if(b.zero) pedacos.push(b.zero+' sem treinar');
+    cnt.textContent=pedacos.join(' · ');
+    row.append(topo,bar,cnt); container.appendChild(row);
   });
 }
 function abrirCoberturaFuncao(funcao, label){
@@ -572,6 +585,12 @@ function renderMatriz(container){
     });
   });
   tbl.appendChild(tbody); wrap.appendChild(tbl); container.appendChild(wrap);
+  // A coluna cabe em 4 letras; o nome da função, não. Sem esta legenda, "Cred" e "Cerim"
+  // ficam adivinhação — e quem lê a matriz é justamente quem vai decidir quem formar.
+  const legenda=document.createElement('div');
+  legenda.style.cssText='font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.5;';
+  legenda.textContent='Colunas: '+_devFuncoes.map(f=>f[1]).join(' · ');
+  container.appendChild(legenda);
 }
 function editarCelula(td, cell, m, funcao){
   if(td.querySelector('select')) return;
@@ -640,8 +659,19 @@ async function renderDesenvolvimento(main) {
     const av = buildAvatarEl(m.foto_url, null, 38, { nivelSlug: m.nivel || 'aspirante', casaSlug: casaSlugDe(m) }); av.style.flex = 'none';
     const info = document.createElement('div'); info.style.cssText = 'flex:1;min-width:0;';
     const nm = document.createElement('div'); nm.style.cssText = 'font-weight:700;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; nm.textContent = m.apelido || m.nome;
-    const meta = document.createElement('div'); meta.style.cssText = 'font-size:11px;color:var(--text-muted);'; meta.textContent = nivelInfo(m.nivel || 'aspirante').label + ' · ' + ((m.competencias_desenvolvidas || []).length) + ' comp.';
+    // Quantas funções a pessoa já domina é O número desta aba — antes só aparecia
+    // "0 comp.", que é o plano, não o que ela sabe fazer hoje.
+    const aptas = Object.values(habAll[m.id] || {}).filter(pf => pf === 'apto' || pf === 'experiente' || pf === 'referencia').length;
+    const meta = document.createElement('div'); meta.style.cssText = 'font-size:11px;color:var(--text-muted);';
+    meta.textContent = nivelInfo(m.nivel || 'aspirante').label + ' · ' + aptas + (aptas === 1 ? ' função' : ' funções')
+      + ' · ' + ((m.competencias_desenvolvidas || []).length) + ' comp.';
     info.append(nm, meta); top.append(av, info);
+    // As quatro ações nascem escondidas: doze membros × quatro botões ocupavam metade da
+    // página e empurravam o mapa de cobertura para fora da vista.
+    const mais = document.createElement('button'); mais.type = 'button'; mais.className = 'mx-mini';
+    mais.textContent = '⋯'; mais.title = 'Ações'; mais.setAttribute('aria-label', 'Ações de ' + (m.apelido || m.nome));
+    mais.style.cssText = 'flex:none;padding:4px 10px;font-size:16px;line-height:1;';
+    top.appendChild(mais);
     // 4 botões: quebram em 2 linhas no celular (min-width) em vez de espremer tudo numa só
     const btns = document.createElement('div'); btns.style.cssText = 'display:flex;gap:7px;flex-wrap:wrap;';
     // renderAll (e não só desenha): mudar o nível mexe em "Promoções pendentes" e
@@ -652,6 +682,8 @@ async function renderDesenvolvimento(main) {
     } }));
     btns.append(mk('📊 Panorama', true, () => abrirPanorama(m)), mk('⚙ Funções', false, () => abrirFuncoesEditor(m)), mk('🎯 Competências', false, () => abrirCompetenciasEditor(m, desenha)), bNivel);
     Array.prototype.forEach.call(btns.children, b => { b.style.minWidth = '108px'; });
+    btns.style.display = 'none';
+    mais.onclick = () => { btns.style.display = btns.style.display === 'none' ? 'flex' : 'none'; };
     row.append(top, btns); return row;
   }
   function desenha() {
