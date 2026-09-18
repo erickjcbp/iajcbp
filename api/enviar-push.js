@@ -13,6 +13,7 @@ const COORD = ['coord_admin', 'subadmin'];
 const EQUIPE = ['coord_admin', 'subadmin', 'membro_equipe', 'cerimonario'];
 const URLBASE_MEMBRO = '/projetos/acolitos/escalas-membro.html';
 const URLBASE_ESCALA = '/projetos/acolitos/escala.html';
+const URLBASE_CRM = '/projetos/acolitos/crm.html';
 
 // Compara segredos sem vazar tempo. Falso se qualquer um estiver vazio.
 function segredoConfere(recebido, esperado) {
@@ -37,11 +38,14 @@ export default async function handler(req, res) {
   if (!URL || !ANON || !SRK) return res.status(500).json({ error: 'Server misconfigured' });
   if (!VPUB || !VPRIV || !VSUB) return res.status(500).json({ error: 'VAPID não configurado' });
 
-  const { tipo, texto, titulo, membros, alvo_membro_id, domingo, vazias, total } = req.body || {};
-  if (!['aviso', 'teste', 'escalado', 'ausencia', 'troca', 'boas_vindas', 'arte', 'escala_pendente'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
+  const { tipo, texto, titulo, membros, alvo_membro_id, domingo, vazias, total, novos, parados } = req.body || {};
+  // ⚠️ 'arte_faltando' FALTAVA nesta lista (achado em 18/09/2026): o vigia da arte mandava esse
+  // tipo e levava 400 "Tipo inválido" — o alarme que existe para a falha não passar calada
+  // estava, ele mesmo, calado. Quem mexer aqui: esta lista e TIPOS_CRON têm de andar juntas.
+  if (!['aviso', 'teste', 'escalado', 'ausencia', 'troca', 'boas_vindas', 'arte', 'escala_pendente', 'arte_faltando', 'crm'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
 
   // O robô do cron não tem login: entra pelo segredo compartilhado, e SÓ para os tipos dele.
-  const TIPOS_CRON = ['arte', 'escala_pendente', 'arte_faltando'];
+  const TIPOS_CRON = ['arte', 'escala_pendente', 'arte_faltando', 'crm'];
   const viaCron = segredoConfere(req.headers['x-cron-secret'], process.env.CRON_SECRET);
   if (viaCron && !TIPOS_CRON.includes(tipo)) return res.status(403).json({ error: 'Segredo do cron só vale para os avisos do robô' });
   if (TIPOS_CRON.includes(tipo) && !viaCron) return res.status(403).json({ error: 'Acesso negado' });
@@ -108,6 +112,21 @@ export default async function handler(req, res) {
   } else if (TIPOS_CRON.includes(tipo)) {
     // Só o cron chega aqui (checado lá em cima). Nada de texto livre: a mensagem é montada
     // no servidor a partir da data, então o segredo não vira um megafone.
+    // A CRM é o único tipo do robô que não fala de fim de semana: ela fala do funil de
+    // integração, e vai para quem tem a permissão 'crm' — não para toda a coordenação.
+    if (tipo === 'crm') {
+      const n = Number.isInteger(novos) ? novos : 0;
+      const p = Number.isInteger(parados) ? parados : 0;
+      const pedacos = [];
+      if (n > 0) pedacos.push(n === 1 ? '1 cadastro novo' : `${n} cadastros novos`);
+      if (p > 0) pedacos.push(p === 1 ? '1 pessoa parada há mais de 7 dias' : `${p} pessoas paradas há mais de 7 dias`);
+      if (!pedacos.length) return res.status(200).json({ ok: true, enviados: 0, nadaAFazer: true });
+      title = 'Integração de novos';
+      body = `${pedacos.join(' e ')}. Abra a CRM para dar o próximo passo.`.slice(0, 180);
+      const comCrm = await jget('acolitos_membros?permissoes=cs.%7Bcrm%7D&select=user_id') || [];
+      alvoUserIds = [...new Set(comCrm.map((r) => r.user_id).filter(Boolean))];
+      if (!alvoUserIds.length) return res.status(200).json({ ok: true, enviados: 0, semInscritos: true });
+    } else {
     const quando = dataPorExtenso(domingo);
     const doFimDeSemana = quando ? `do fim de semana de ${quando}` : 'do próximo fim de semana';
     if (tipo === 'arte') {
@@ -129,6 +148,7 @@ export default async function handler(req, res) {
     const coords = await jget(`pastoral_members?module_id=eq.${mod.id}&role=in.(${COORD.join(',')})&select=user_id`) || [];
     alvoUserIds = [...new Set(coords.map((r) => r.user_id).filter(Boolean))];
     if (!alvoUserIds.length) return res.status(200).json({ ok: true, enviados: 0, removidos: 0, semInscritos: true });
+    }
   }
 
   // ── Resolve membros → user_ids → inscrições ──
@@ -147,7 +167,8 @@ export default async function handler(req, res) {
 
   webpush.setVapidDetails(VSUB, VPUB, VPRIV);
   tag = tipo + '-' + Date.now() + '-' + Math.round(Math.random() * 1e6); // única → não colapsa, re-alerta
-  const url = TIPOS_CRON.includes(tipo) ? URLBASE_ESCALA   // arte e escala pendente: os dois resolvem na Escala
+  const url = tipo === 'crm' ? URLBASE_CRM
+    : TIPOS_CRON.includes(tipo) ? URLBASE_ESCALA   // arte e escala pendente: os dois resolvem na Escala
     // boas-vindas cai na HOME: é lá que a festa do time acontece. Sem esta linha ela iria
     // parar nas escalas do membro, que não têm nada a ver com o assunto.
     : (tipo === 'aviso' || tipo === 'teste' || tipo === 'boas_vindas') ? '/projetos/acolitos/index.html'
