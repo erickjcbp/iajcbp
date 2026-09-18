@@ -14,6 +14,38 @@ chance de já ter acontecido antes é grande, e a resposta costuma estar aqui.
 
 ## Fechados em 18/09/2026
 
+**A Jornada passou a mostrar com quem a Formação precisa falar**
+- **O que era:** todas as telas listavam quem AGE — "pronto para subir", "quase lá", filas de
+  aprovação. Em 18/09 isso somava **1 pessoa**. As 155 que nunca saíram do lugar não apareciam
+  em lugar nenhum.
+- **O que entrou:** um cartão no topo da Jornada com quatro faixas — **nunca entrou no app
+  (148)**, entrou e não começou (9), parou há mais de 30 dias (2) e andando (34) — na ordem da
+  urgência, com o botão do WhatsApp e a mensagem já escrita (texto diferente para cada
+  situação), e a ficha da pessoa ao tocar no nome. Quem não tem telefone **diz** "sem telefone"
+  em vez de sumir da lista.
+- **Quem classifica é o banco** (função `acolitos_formacao_acompanhamento`, migration 075):
+  só ele enxerga quem nunca entrou no app. Se a classificação morasse na tela, a faixa mais
+  importante seria impossível de calcular.
+- **A prova pegou um portão ESCANCARADO** minutos depois de a função subir: `acolitos_get_role`
+  devolve NULO para quem não conhece, e em SQL `NULO not in (...)` **não é FALSO, é NULO** — o
+  `if` nunca disparava e qualquer pessoa logada leria telefone e progresso de todos. Consertado
+  com `coalesce`; a seção 7 da prova existe para isso não voltar.
+- **Também nasceu o setor Orientador** (só com o coordenador, por ora). A ideia é ter tarefas
+  de acompanhamento dos mais novos, feitas pelos mais graduados (sentinela para cima: 45
+  pessoas hoje).
+
+**O lembrete diário da CRM, e o preço dele**
+- **O que entrou:** um robô diário (8h) que avisa quem tem acesso à CRM sobre cadastros novos
+  nas últimas 24h e gente parada há mais de 7 dias na mesma etapa. Ele **se cala quando não há
+  nada** — aviso vazio todo dia ensina a ignorar aviso.
+- **O que saiu para caber:** os dois robôs da arte da escala. O plano gratuito da Vercel dá 2,
+  e o dono escolheu, com o custo na mesa, trocá-los. **A arte passou a ser manual** — está na
+  LISTA.
+- **⚠️ Achado no caminho:** o vigia da arte **nunca conseguiu avisar**. Ele mandava um push do
+  tipo `arte_faltando` e o envio recusava com "Tipo inválido": o nome faltava na lista de tipos
+  aceitos. O alarme criado em agosto para a falha não passar calada estava, ele mesmo, calado.
+  Consertado — a lista de tipos e a lista do robô agora andam juntas, e isso está escrito lá.
+
 **A trilha de formação ganhou entrada, e o ensaio parou de trancar a porta**
 - **O que era:** as 374 missões pareciam um sistema pronto, mas medindo: o degrau
   **Aspirante**, onde toda pessoa chega, tinha **ZERO missões** com 24 pessoas nele; o

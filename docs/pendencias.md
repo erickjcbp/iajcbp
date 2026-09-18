@@ -7,6 +7,13 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ## 1. Pendente
 
+**⚠️ A ARTE DA ESCALA NÃO SAI MAIS SOZINHA (18/09).** O plano gratuito da Vercel dá 2 robôs
+agendados, e os dois eram da arte (um gerava, outro vigiava). O dono decidiu trocar os dois
+pelo lembrete diário da CRM. Então, **toda semana alguém precisa abrir a tela de Escala e usar
+"Arte da semana → Gerar/Atualizar"** — e, se ela não sair, ninguém é avisado. Para voltar ao
+automático: plano pago da Vercel (libera robôs à vontade) ou um robô diário que acumule as duas
+funções (gerar/vigiar a arte às segundas + CRM todo dia).
+
 **Formação — o que vem depois da trilha ter entrada (18/09).** A trilha foi preenchida embaixo
 (Aspirante e Coroinha) e o ensaio parou de travar capítulo. Falta, em ordem:
 - **a tela de acompanhamento do setor Formação** — quem está parado, quem evoluiu, quem sumiu.
