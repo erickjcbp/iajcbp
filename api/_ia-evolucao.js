@@ -1,4 +1,13 @@
-// api/ia-evolucao.js — o farol da Evolução: a IA lê o RETRATO da pastoral e sugere o plano.
+// api/_ia-evolucao.js — o farol da Evolução: a IA lê o RETRATO da pastoral e sugere o plano.
+//
+// ⚠️ ESTE ARQUIVO ESTÁ DESLIGADO, E O UNDERSCORE É O QUE O DESLIGA. O plano gratuito da Vercel
+// aceita **12 funções de servidor**, e este era o 13º: enquanto ele se chamou `ia-evolucao.js`,
+// TODA publicação falhou — a construção terminava bem e o deploy morria em "Deploying
+// outputs", sem mensagem no registro. Ficaram 3h30 de mudanças no GitHub e fora do ar.
+// Arquivo em `api/` começando com `_` não vira endpoint (é assim que `_github.js` já vivia).
+//
+// PARA LIGAR: escolher o provedor, pôr a chave, renomear de volta para `ia-evolucao.js` —
+// e, no mesmo passo, tirar outra função de lá ou subir de plano, senão o deploy quebra de novo.
 //
 // PEDIDO DO DONO (18/09/2026): "quando eu bater o olho nessa ferramenta, o pessoal da formação
 // consiga enxergar os gargalos e traçar um plano de evolução com ajuda da IA, tipo 'precisamos
