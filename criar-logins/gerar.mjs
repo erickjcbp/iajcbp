@@ -134,11 +134,19 @@ const semUsuario = linhas.filter(l => !l.usuario);
 const numerados = linhas.filter(l => /\d$/.test(l.usuario));
 const semReconhecer = linhas.filter(l => l.reconhecer === '—');
 const semResponsavel = comUsuario.filter(p => !(p.responsavel || p.nome_mae || p.nome_pai || '').trim());
+// A folha impressa tem só NOME, USUÁRIO e SENHA. Se dois nomes iguais caírem nela, a família
+// não tem como saber qual linha é a dela — e escolheria a errada em silêncio. Por isso o aviso:
+// quem imprime precisa desempatar à mão antes de mandar.
+const vezesPorNome = linhas.reduce((a, l) => (a[l.nome] = (a[l.nome] || 0) + 1, a), {});
+const nomesRepetidos = Object.keys(vezesPorNome).filter(n => vezesPorNome[n] > 1);
 const porPapel = linhas.reduce((a, l) => (a[l.papel] = (a[l.papel] || 0) + 1, a), {});
 console.log('\n\x1b[1mO que conferir antes de valer:\x1b[0m');
 console.log('  papéis que serão dados:      ', Object.entries(porPapel).map(([k, v]) => `${k}=${v}`).join(' · '));
 console.log('  usuários que ganharam número:', numerados.length ? numerados.map(l => l.usuario).join(', ') : 'nenhum');
 console.log('  SEM usuário gerado:          ', semUsuario.length ? semUsuario.map(l => l.nome).join(', ') : 'nenhum');
+console.log('  NOMES REPETIDOS na folha:    ', nomesRepetidos.length
+  ? '\x1b[31m' + nomesRepetidos.join(', ') + ' — desempate à mão antes de imprimir\x1b[0m'
+  : 'nenhum');
 console.log('  SEM nada para reconhecer:    ', semReconhecer.length);
 console.log('  sem RESPONSÁVEL guardado:    ', semResponsavel.length + ' (na folha entram pelo nível; é a mesma gente que a conferência de duplicata não consegue provar)');
 console.log('  usuários repetidos entre si: ', new Set(linhas.map(l => l.usuario)).size === linhas.length ? 'nenhum ✔' : '⚠ TEM REPETIDO');
@@ -160,10 +168,9 @@ if (FOLHA) {
   const corpo = linhas.map((l) => {
     const ini = inicial(l.nome);
     let sep = '';
-    if (ini !== letra) { letra = ini; sep = `<tr class="letra"><td colspan="4">${esc(ini)}</td></tr>`; }
+    if (ini !== letra) { letra = ini; sep = `<tr class="letra"><td colspan="3">${esc(ini)}</td></tr>`; }
     return sep + '<tr>' +
       `<td class="nome">${esc(l.nome)}</td>` +
-      `<td class="resp">${esc(l.reconhecer)}</td>` +
       `<td class="user">${esc(l.usuario)}</td>` +
       `<td class="senha">${esc(l.senha)}</td></tr>`;
   }).join('\n');
@@ -210,7 +217,6 @@ if (FOLHA) {
     color:var(--gold-deep); font-weight:800; font-size:12px; letter-spacing:.1em;
     padding:9px 8px 3px; }
   .nome { font-weight:700; width:31%; }
-  .resp { color:var(--suave); width:30%; font-size:10.2px; }
   .user { font-family:ui-monospace,Menlo,Consolas,monospace; font-weight:700;
           color:var(--gold-deep); width:21%; font-size:11px; }
   .senha { font-family:ui-monospace,Menlo,Consolas,monospace; color:var(--suave); width:18%; }
@@ -229,13 +235,12 @@ if (FOLHA) {
   <b>3.</b> Digite o <b>usuário</b> da linha dele e a senha <span class="destaque">${SENHA}</span> &nbsp;
   <b>4.</b> O aplicativo vai pedir para <b>criar uma senha nova</b> — e a senha desta folha
   para de funcionar nesse momento.<br>
-  <span style="color:var(--suave);">A coluna do meio diz quem responde pela criança: ela existe
-  porque há nomes que se repetem. Perdeu a senha ou não conseguiu entrar? Fale com a
+  <span style="color:var(--suave);">Perdeu a senha ou não conseguiu entrar? Fale com a
   coordenação no WhatsApp <b>(19) 99907-1702</b>.</span>
 </div>
 
 <table>
-  <thead><tr><th>Nome</th><th>Quem responde por ela</th><th>Usuário</th><th>Senha</th></tr></thead>
+  <thead><tr><th>Nome</th><th>Usuário</th><th>Senha</th></tr></thead>
   <tbody>
 ${corpo}
   </tbody>
