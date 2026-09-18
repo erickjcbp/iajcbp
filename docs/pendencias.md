@@ -7,6 +7,13 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ## 1. Pendente
 
+**Rotinas — o que ficou para depois (18/09).** O cardápio está no ar. Falta: as rotinas que
+nascem da **agenda das missas** (véspera de celebração gera "separar as vestes"), a **IA
+sugerindo rotinas** para cada setor (o dono aprova antes de virar rotina), e — se o dono quiser
+— uma **fila de pedidos de alteração**, para o setor pedir mudança numa rotina em vez de
+depender de falar com a coordenação. Hoje o setor cria e usa; alterar e desligar é da
+coordenação.
+
 **⚠️ A ARTE DA ESCALA NÃO SAI MAIS SOZINHA (18/09).** O plano gratuito da Vercel dá 2 robôs
 agendados, e os dois eram da arte (um gerava, outro vigiava). O dono decidiu trocar os dois
 pelo lembrete diário da CRM. Então, **toda semana alguém precisa abrir a tela de Escala e usar

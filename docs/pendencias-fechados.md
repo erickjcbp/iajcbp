@@ -14,6 +14,30 @@ chance de já ter acontecido antes é grande, e a resposta costuma estar aqui.
 
 ## Fechados em 18/09/2026
 
+**O cardápio de rotinas: a tarefa do setor passa a nascer sozinha**
+- **O que era:** a recorrência por tarefa já existia e já se comportava bem (a próxima nasce ao
+  concluir a anterior, sem duplicar), mas **a corrente só começa se alguém criar a primeira à
+  mão** — e a tabela de tarefas estava VAZIA com 13 setores cadastrados. Se ninguém conclui, a
+  corrente morre em silêncio.
+- **O que entrou (migration 077):** a tabela `acolitos_rotinas` — o cardápio de cada setor —,
+  o elo `rotina_id` na tarefa, e a função `acolitos_rotinas_materializar()`, chamada pela tela
+  de Tarefas ao abrir. Escreve-se a rotina uma vez ("conferir as velas, toda semana") e a
+  tarefa nasce quando vence.
+- **Só uma viva por vez (escolha do dono):** com a anterior ainda aberta, a nova NÃO nasce. Uma
+  rotina esquecida há 24 dias volta ao mesmo dia da semana **sem criar fila de atrasadas** —
+  senão o setor encontraria quatro cópias e pararia de olhar.
+- **Quem cria a tarefa é o BANCO, não a tela:** duas pessoas abrindo ao mesmo tempo não podem
+  criar a mesma tarefa duas vezes, e a conta da próxima data tem de ser uma só.
+- **Quem mexe:** o time escreve rotina do próprio time; **alterar e desligar é da coordenação**
+  (decisão do dono). A tela lê o retorno da gravação — sem isso ela diria "desligada" quando o
+  banco recusou em silêncio.
+- **Duas recorrências separadas de propósito:** a tarefa que nasce de rotina vem com
+  `recorrencia = 'nenhuma'`. Ter as duas na mesma tarefa criaria duas correntes para a mesma
+  coisa, e ninguém entenderia de onde veio a terceira cópia.
+- **A prova pegou um erro meu:** `PAPEIS.cerimoniario` não existe (é `cerimonario`), e papel
+  indefinido **cai silenciosamente em ADMIN** — a prova de "quem não é coordenação não vê o
+  botão" estava passando pelo motivo errado. Está escrito no arquivo para não repetir.
+
 **A Jornada passou a mostrar com quem a Formação precisa falar**
 - **O que era:** todas as telas listavam quem AGE — "pronto para subir", "quase lá", filas de
   aprovação. Em 18/09 isso somava **1 pessoa**. As 155 que nunca saíram do lugar não apareciam
