@@ -1,11 +1,28 @@
 # Acólitos — o que está pendente
 
-Atualizado em 17/09/2026. Esta é A LISTA: abrir aqui antes de decidir o que fazer.
+Atualizado em 18/09/2026. Esta é A LISTA: abrir aqui antes de decidir o que fazer.
 Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi commitado.
 
 ---
 
 ## 1. Pendente
+
+**Formação — o que vem depois da trilha ter entrada (18/09).** A trilha foi preenchida embaixo
+(Aspirante e Coroinha) e o ensaio parou de travar capítulo. Falta, em ordem:
+- **a tela de acompanhamento do setor Formação** — quem está parado, quem evoluiu, quem sumiu.
+  Ela lê o que a trilha produz, então só faz sentido com a trilha rodando;
+- **o gerador de tarefas por setor** — a rotina semanal da Formação nascendo sozinha em cima
+  dessa tela. O motor de recorrência já existe (`tarefas-core.js`), mas só cria a próxima
+  quando alguém conclui a anterior, e a partida teria de ser ao abrir a tela: o plano da
+  Vercel é o gratuito e os 2 robôs agendados já estão em uso;
+- **os 4 que ainda estão no CRM** (Cecília e Mayara na túnica, Gabriela na aprovação do
+  cadastro, Maria Clara na integração) viram Aspirante sozinhos quando chegarem em "integrado".
+
+**Acesso: 148 pessoas nunca abriram o app** (medido em 18/09), de 193. Todas têm conta ligada
+à ficha — o que falta é entrar. A folha foi reimpressa para os 129 ativos que ainda estão com
+a senha provisória, e cabe à coordenação mandar no grupo. **9 pessoas ativas nunca entraram e
+NÃO estão com a senha da folha** (conta criada por outro caminho): para elas é Config → Logins
+→ Redefinir senha, uma a uma.
 
 **Ordenar e filtrar — passo 5 da spec**
 (`docs/superpowers/specs/2026-09-16-acolitos-ordenar-e-filtrar-design.md`). Membros (16/09),

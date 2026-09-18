@@ -12,6 +12,33 @@ chance de já ter acontecido antes é grande, e a resposta costuma estar aqui.
 
 ---
 
+## Fechados em 18/09/2026
+
+**A trilha de formação ganhou entrada, e o ensaio parou de trancar a porta**
+- **O que era:** as 374 missões pareciam um sistema pronto, mas medindo: o degrau
+  **Aspirante**, onde toda pessoa chega, tinha **ZERO missões** com 24 pessoas nele; o
+  **Coroinha** (45 pessoas, o maior grupo) tinha 10, contra 22 a 34 dos degraus do topo. A
+  trilha estava de cabeça para baixo. E **45 missões dependiam de ensaio, todas travando o
+  capítulo** — com 4 ensaios desde junho, o último em 22/08, quem não pôde ir parou mesmo
+  servindo toda semana.
+- **O que entrou (migration 073):** 10 missões do Aspirante (2 capítulos) e 5 do Coroinha
+  (capítulo 3), escritas no tom das que já existiam; e as de ensaio deixaram de travar —
+  continuam valendo XP, então quem vai ao ensaio sobe mais rápido e quem não pode sobe do
+  mesmo jeito. Cada capítulo ficou com 4 a 9 obrigatórias. Nada foi apagado.
+- **A causa de raiz, achada no caminho (migration 074):** o CRM levava a pessoa até
+  "integrado" e parava ali — **ninguém punha o degrau na ficha nem habilitava função**. Das
+  17 já integradas, **15 estavam sem nível e sem função nenhuma**: invisíveis para a escala e
+  fora da trilha, que começa no degrau. Agora um **gatilho no banco** (não na tela: a etapa
+  muda por vários caminhos) dá Aspirante + função Apoio ao ficar integrado, sem nunca
+  rebaixar quem já tem mais. As 15 foram corrigidas junto.
+- **Consequência não prevista, registrada:** habilitar as 15 no Apoio disparou o gatilho
+  `trg_acolitos_medalha_apto`, que já existia, e concedeu a elas a medalha da missão "Apto na
+  função Apoio" — que é do degrau Acólito Aspirante. É verdade (elas estão aptas) e não faz
+  mal, mas ninguém tinha previsto. Fica o aviso: **mexer em habilitação mexe em missão.**
+- **O que a medição mostrou e não foi consertado aqui:** de 193 pessoas, **148 nunca abriram
+  o app** — a trilha mais bonita do mundo alcança 1 em cada 4. A folha de acesso foi
+  reimpressa no mesmo dia para os 129 ativos que ainda estão com a senha provisória.
+
 ## Fechados em 17/09/2026
 
 **As missas do mesmo dia saem na ordem da hora, e não na ordem do texto**
