@@ -125,6 +125,7 @@
 <script src="filtro-lista-core.js"></script>
 <script src="senha-nova-core.js"></script>
 <script src="telefones-core.js"></script>
+<script src="projeto-core.js"></script>
 <script src="tarefas-core.js"></script>
 <script src="tarefas-visao-core.js"></script>
 <script src="shared.js"></script>
@@ -269,9 +270,10 @@ async function carregarResponsaveisPermitidos() {
 }
 
 async function carregarTudo() {
-  const [rT, rS, rR, rRot] = await Promise.all([
-    carregarTarefas(), carregarSetores(), carregarResponsabilidades(), carregarRotinas()]);
+  const [rT, rS, rR, rRot, rPas] = await Promise.all([
+    carregarTarefas(), carregarSetores(), carregarResponsabilidades(), carregarRotinas(), carregarPassos()]);
   guardarRotinas(rRot);
+  pendurarPassos(rT.data, rPas.data);
   TAREFAS = rT.data; ERR_TAREFAS = !!rT.error;
   // Recorta os times AQUI, num lugar só. As três visões, o filtro e o formulário bebem de
   // TIMES — recortar em cada um deles seria três chances de esquecer, e o esquecido vira o
@@ -297,7 +299,8 @@ async function carregarTudo() {
 }
 
 async function recarregarTarefas() {
-  const r = await carregarTarefas();
+  const [r, rPas] = await Promise.all([carregarTarefas(), carregarPassos()]);
+  pendurarPassos(r.data, rPas.data);
   TAREFAS = r.data; ERR_TAREFAS = !!r.error;
 }
 
@@ -567,6 +570,7 @@ function linhaTarefaCompleta(t) {
 
   // UMA ação à vista. O resto (voltar, editar, apagar) mora atrás do "…": antes eram quatro
   // botões por tarefa, e com cinco tarefas a tela virava um paredão de botão.
+  if (ehProjeto(t)) body.appendChild(blocoDoProjeto(t));
   const acoes = document.createElement('div'); acoes.className = 'tf-acoes';
   const lista = acoesDaTarefa(t);
   const principal = lista[lista.length - 1] || null;   // a que faz a tarefa ANDAR
@@ -833,7 +837,10 @@ function renderPorTime(main) {
     const bTarefa = document.createElement('button'); bTarefa.className = 'mini';
     bTarefa.textContent = '+ Tarefa';
     bTarefa.onclick = () => abrirFormTarefa(null, slug);
-    acoesArea.appendChild(bTarefa);
+    const bProjeto = document.createElement('button'); bProjeto.className = 'mini';
+    bProjeto.textContent = '+ Projeto';
+    bProjeto.onclick = () => abrirFormTarefa(null, slug, 'projeto');
+    acoesArea.append(bTarefa, bProjeto);
     corpo.appendChild(acoesArea);
     if (!g.tarefas.length) {
       const vazio = document.createElement('div'); vazio.className = 'tf-obs'; vazio.style.marginBottom = '10px';
@@ -863,7 +870,7 @@ function renderPorTime(main) {
 // ── Criar tarefa ──
 // Sem argumento: criar. Com uma tarefa: editar a mesma tarefa, no mesmo formulário — dois
 // formulários parecidos viram dois lugares para consertar cada regra.
-async function abrirFormTarefa(tarefa, timePadrao) {
+async function abrirFormTarefa(tarefa, timePadrao, tipoPadrao) {
   const editando = !!tarefa;
   const [setoresR, membrosR] = await Promise.all([carregarSetores(), carregarResponsaveisPermitidos()]);
   // Recorta pelos times DA PESSOA, igual ao carregarTudo. Este formulário relê o catálogo do
@@ -969,9 +976,32 @@ async function abrirFormTarefa(tarefa, timePadrao) {
   sResp.parentNode.appendChild(dicaResp);
   sTime.onchange = () => { preencherResponsaveis(); atualizarDicaResp(); };
 
+  // Tarefa é atômica: faz e acaba. PROJETO tem começo, meio e fim — e por isso pede início,
+  // sem o qual não dá para dizer quanto do tempo já correu.
+  const sTipo = document.createElement('select'); sTipo.className = 'form-input';
+  [['tarefa', 'Tarefa (faz e acaba)'], ['projeto', 'Projeto (começo, meio e fim)']]
+    .forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; sTipo.appendChild(o); });
+  if (editando && tarefa.tipo) sTipo.value = tarefa.tipo;
+  else if (tipoPadrao) sTipo.value = tipoPadrao;
+  mk('Tipo', sTipo);
+
+  const iInicio = document.createElement('input'); iInicio.className = 'form-input'; iInicio.type = 'date';
+  if (editando && tarefa.inicio) iInicio.value = tarefa.inicio;
+  mk('Início do projeto', iInicio);
+  // `mk` devolve o CAMPO, não o rótulo — esconder só o campo deixaria "Início do projeto"
+  // flutuando sozinho em cima de uma tarefa comum.
+  const rotuloInicio = iInicio.previousElementSibling;
+
   const iPrazo = document.createElement('input'); iPrazo.className = 'form-input'; iPrazo.type = 'date';
   if (editando && tarefa.prazo) iPrazo.value = tarefa.prazo;
   mk('Prazo (opcional)', iPrazo);
+
+  const mostrarInicio = () => {
+    const ehProj = sTipo.value === 'projeto';
+    iInicio.style.display = ehProj ? '' : 'none';
+    if (rotuloInicio) rotuloInicio.style.display = ehProj ? '' : 'none';
+  };
+  sTipo.onchange = mostrarInicio; mostrarInicio();
   // A hora é opcional e depende do prazo: hora sem dia não marca nada.
   const iHora = document.createElement('input'); iHora.className = 'form-input'; iHora.type = 'time';
   if (editando && tarefa.hora) iHora.value = String(tarefa.hora).slice(0, 5);
@@ -1003,6 +1033,7 @@ async function abrirFormTarefa(tarefa, timePadrao) {
     const payload = {
       titulo, time_slug: sTime.value, responsavel_id: sResp.value || null,
       prazo: iPrazo.value || null, hora: (iPrazo.value && iHora.value) ? iHora.value : null,
+      tipo: sTipo.value, inicio: sTipo.value === 'projeto' ? (iInicio.value || null) : null,
       observacao: iObs.value.trim() || null,
       recorrencia: sRec.value, criada_por: ctx.membro ? ctx.membro.id : null,
     };
@@ -1014,6 +1045,7 @@ async function abrirFormTarefa(tarefa, timePadrao) {
       ({ data: linhas, error } = await sb.from('acolitos_tarefas').update({
         titulo, time_slug: sTime.value, responsavel_id: sResp.value || null,
         prazo: iPrazo.value || null, hora: (iPrazo.value && iHora.value) ? iHora.value : null,
+        tipo: sTipo.value, inicio: sTipo.value === 'projeto' ? (iInicio.value || null) : null,
         observacao: iObs.value.trim() || null,
         recorrencia: sRec.value,
       }).eq('id', tarefa.id).select('id'));
@@ -1314,6 +1346,194 @@ function abrirFormRotina(timeSlug) {
     render();
   };
   acts.append(c, s); md.appendChild(acts);
+  ov.appendChild(md); document.body.appendChild(ov);
+}
+
+
+// ── PROJETO NA TELA ──────────────────────────────────────────────────────────
+// Projeto é a tarefa com começo, meio e fim (migration 084). O que ele mostra e a tarefa não:
+// **vai fechar?** — e a resposta não está na barra de progresso, está na comparação entre
+// quanto andou e quanto do TEMPO já correu. As duas barras existem para serem lidas juntas.
+async function carregarPassos() {
+  const { data, error } = await sb.from('acolitos_tarefa_passos')
+    .select('id,tarefa_id,titulo,prazo,responsavel_id,concluido_em,ordem')
+    .order('ordem').order('criado_em');
+  if (error) console.error('Tarefas: carregar passos falhou', error);
+  return { data: data || [], error };
+}
+
+// Pendura os passos na tarefa dona. A regra pura (projeto-core.js) recebe `t.passos` e não
+// sabe nada de banco — é assim que ela roda no node, sem navegador.
+function pendurarPassos(tarefas, passos) {
+  const porTarefa = {};
+  (passos || []).forEach((p) => { (porTarefa[p.tarefa_id] = porTarefa[p.tarefa_id] || []).push(p); });
+  (tarefas || []).forEach((t) => { t.passos = porTarefa[t.id] || []; });
+}
+
+function barraDoProjeto(rotulo, pct, cor) {
+  const linha = document.createElement('div');
+  linha.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:4px;';
+  const rot = document.createElement('span');
+  rot.style.cssText = 'font-size:10px;color:var(--text-muted);width:44px;flex:none;';
+  rot.textContent = rotulo;
+  const fora = document.createElement('div');
+  fora.style.cssText = 'flex:1;height:6px;border-radius:3px;background:var(--surface2);overflow:hidden;';
+  const dentro = document.createElement('span');
+  // "não sei" é uma resposta: sem início não há caminho a medir, e inventar zero aqui seria
+  // dizer que o projeto não andou no tempo — que é diferente de não saber.
+  dentro.style.cssText = 'display:block;height:100%;background:' + cor + ';width:' + (pct == null ? 0 : pct) + '%;';
+  fora.appendChild(dentro);
+  const num = document.createElement('span');
+  num.style.cssText = 'font-size:10px;color:var(--text-muted);width:38px;text-align:right;flex:none;';
+  num.textContent = pct == null ? '—' : pct + '%';
+  linha.append(rot, fora, num);
+  return linha;
+}
+
+function blocoDoProjeto(t) {
+  const hoje = hojeLocal();
+  const r = resumoDoProjeto(t, hoje);
+  const s = situacaoDoProjeto(t, hoje);
+  const caixa = document.createElement('div');
+  caixa.style.cssText = 'margin-top:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;';
+
+  const topo = document.createElement('div');
+  topo.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--text-muted);';
+  const janela = document.createElement('span');
+  janela.textContent = r.janela || 'sem janela definida';
+  topo.appendChild(janela);
+  if (r.marcosTotal) {
+    const m = document.createElement('span');
+    m.textContent = r.marcosFeitos + ' de ' + r.marcosTotal + (r.marcosTotal === 1 ? ' marco' : ' marcos');
+    topo.appendChild(m);
+  }
+  if (s.diasRestantes != null) {
+    const d = document.createElement('span');
+    d.textContent = s.diasRestantes < 0 ? 'passou há ' + (-s.diasRestantes) + ' dias'
+      : s.diasRestantes === 0 ? 'vence hoje' : 'faltam ' + s.diasRestantes + ' dias';
+    if (s.diasRestantes < 0) d.style.color = 'var(--danger-text)';
+    topo.appendChild(d);
+  }
+  caixa.appendChild(topo);
+
+  caixa.appendChild(barraDoProjeto('andou', r.pctFeito, 'var(--gold)'));
+  caixa.appendChild(barraDoProjeto('tempo', r.pctTempo, 'var(--text-muted)'));
+
+  // O aviso que a barra sozinha não dá: andar menos do que o tempo correu é o projeto que
+  // não vai fechar, e é AGORA que dá para fazer alguma coisa.
+  if (r.marcosVencidos) {
+    const av = document.createElement('div');
+    av.style.cssText = 'font-size:11px;color:var(--danger-text);margin-top:6px;font-weight:700;';
+    // A frase inteira muda no singular — "1 marco já venceu sem serem concluídos" é o tipo de
+    // erro que faz a pessoa desconfiar do resto do que a tela diz.
+    av.textContent = r.marcosVencidos === 1
+      ? '1 marco já venceu e não foi concluído.'
+      : r.marcosVencidos + ' marcos já venceram e não foram concluídos.';
+    caixa.appendChild(av);
+  } else if (r.pctTempo != null && r.pctTempo - r.pctFeito >= 25) {
+    const av = document.createElement('div');
+    av.style.cssText = 'font-size:11px;color:var(--danger-text);margin-top:6px;';
+    av.textContent = 'Correu ' + r.pctTempo + '% do tempo e andou ' + r.pctFeito + '%. Neste ritmo não fecha.';
+    caixa.appendChild(av);
+  } else if (r.proximoMarco) {
+    const px = document.createElement('div');
+    px.style.cssText = 'font-size:11px;color:var(--text-muted);margin-top:6px;';
+    px.textContent = 'Próximo marco: ' + r.proximoMarco.titulo + ' (' + formatDate(r.proximoMarco.prazo) + ')';
+    caixa.appendChild(px);
+  }
+
+  // Os passos, com um toque para concluir. Marco é o passo COM prazo — a tela diz isso.
+  const lista = document.createElement('div'); lista.style.marginTop = '6px';
+  (t.passos || []).forEach((p) => {
+    const l = document.createElement('div');
+    l.style.cssText = 'display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;';
+    const marca = document.createElement('button');
+    marca.className = 'mini'; marca.style.cssText = 'padding:1px 7px;line-height:1.4;';
+    marca.textContent = p.concluido_em ? '✓' : '○';
+    marca.title = p.concluido_em ? 'Desmarcar' : 'Concluir este passo';
+    marca.onclick = () => virarPasso(p);
+    const txt = document.createElement('span');
+    txt.style.cssText = 'flex:1;min-width:0;color:var(--text);';
+    if (p.concluido_em) { txt.style.textDecoration = 'line-through'; txt.style.opacity = '.6'; }
+    txt.textContent = p.titulo + (p.prazo ? ' · ' + formatDate(p.prazo) : '');
+    if (p.prazo && !p.concluido_em && String(p.prazo) < hoje) txt.style.color = 'var(--danger-text)';
+    const del = document.createElement('button'); del.className = 'mini';
+    del.style.cssText = 'padding:1px 7px;line-height:1.4;'; del.textContent = '×';
+    del.title = 'Apagar este passo';
+    del.onclick = () => apagarPasso(p);
+    l.append(marca, txt, del);
+    lista.appendChild(l);
+  });
+  if (!(t.passos || []).length) {
+    const v = document.createElement('div'); v.className = 'tf-obs';
+    v.textContent = 'Sem passos ainda. Passo com prazo vira marco — é o marco que diz se vai fechar.';
+    lista.appendChild(v);
+  }
+  caixa.appendChild(lista);
+
+  const add = document.createElement('button'); add.className = 'mini'; add.style.marginTop = '4px';
+  add.textContent = '+ Passo';
+  add.onclick = () => abrirFormPasso(t);
+  caixa.appendChild(add);
+  return caixa;
+}
+
+async function virarPasso(p) {
+  const { data, error } = await sb.from('acolitos_tarefa_passos')
+    .update({ concluido_em: p.concluido_em ? null : new Date().toISOString() })
+    .eq('id', p.id).select('id');
+  if (error) { console.error('Tarefas: mudar passo falhou', error); toast('Não foi possível mudar o passo.', 'error'); return; }
+  // Zero linhas = a trava do banco recusou (ou alguém apagou). Dizer isso é melhor do que
+  // redesenhar como se tivesse dado certo.
+  if (!data || !data.length) { toast('Este passo já não existe ou não é do seu time.', 'error'); }
+  await recarregarTarefas(); render();
+}
+
+async function apagarPasso(p) {
+  if (!(await uiConfirm('Apagar o passo "' + p.titulo + '"?'))) return;
+  const { error } = await sb.from('acolitos_tarefa_passos').delete().eq('id', p.id);
+  if (error) { console.error('Tarefas: apagar passo falhou', error); toast('Não foi possível apagar.', 'error'); return; }
+  await recarregarTarefas(); render();
+}
+
+function abrirFormPasso(t) {
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open';
+  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '420px';
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Novo passo';
+  md.appendChild(tt);
+  const dica = document.createElement('p'); dica.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;';
+  dica.textContent = 'Com prazo, o passo vira MARCO: é por ele que se sabe se o projeto vai fechar.';
+  md.appendChild(dica);
+  const iTit = document.createElement('input'); iTit.className = 'form-input';
+  iTit.placeholder = 'Ex.: Reservar o salão'; md.appendChild(iTit);
+  const rot = document.createElement('div');
+  rot.style.cssText = 'font-size:11px;color:var(--text-muted);margin:10px 0 2px;';
+  rot.textContent = 'Prazo (opcional — com prazo vira marco):';
+  md.appendChild(rot);
+  const iData = document.createElement('input'); iData.className = 'form-input'; iData.type = 'date';
+  md.appendChild(iData);
+  const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:14px;';
+  const c = document.createElement('button'); c.className = 'btn'; c.style.flex = '1';
+  c.textContent = 'Cancelar'; c.onclick = () => ov.remove();
+  const ok = document.createElement('button'); ok.className = 'btn gold'; ok.style.flex = '1';
+  ok.textContent = 'Criar passo';
+  ok.onclick = async () => {
+    const titulo = iTit.value.trim();
+    if (!titulo) { toast('Escreva o passo.', 'error'); iTit.focus(); return; }
+    ok.disabled = true;
+    const { error } = await sb.from('acolitos_tarefa_passos').insert({
+      tarefa_id: t.id, titulo, prazo: iData.value || null,
+      ordem: (t.passos || []).length,
+    });
+    if (error) {
+      console.error('Tarefas: criar passo falhou', error);
+      toast('Não foi possível criar o passo.', 'error'); ok.disabled = false; return;
+    }
+    ov.remove();
+    await recarregarTarefas(); render();
+  };
+  acts.append(c, ok); md.appendChild(acts);
   ov.appendChild(md); document.body.appendChild(ov);
 }
 

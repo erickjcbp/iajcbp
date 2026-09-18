@@ -2595,6 +2595,78 @@ async function provaTarefasEtiquetaHoraEArvore(provas) {
 
 function r_obj(r) { return !!(r && r.avaliado && typeof r.avaliado === 'object'); }
 
+async function provaProjetoNaArea(provas) {
+  console.log('\n\x1b[1mTarefas › Projeto: as duas barras, o marco vencido e o aviso de que não fecha\x1b[0m');
+
+  // O dono pediu o Projeto "o mais próximo possível das Áreas do erickIA". O que ele mostra e
+  // a tarefa não é "vai fechar?" — e a resposta não está no progresso, está na COMPARAÇÃO
+  // entre quanto andou e quanto do tempo correu.
+  const tarefas = [
+    { id: 'p1', titulo: 'Preparar a festa de São Tarcísio', time_slug: 'formacao', tipo: 'projeto',
+      inicio: '2026-09-01', prazo: '2026-10-01', hora: null, responsavel_id: null, observacao: null,
+      recorrencia: 'nenhuma', concluida_em: null, andamento_em: null, rotina_id: null,
+      criada_em: '2026-09-01T10:00:00Z' },
+    { id: 't1', titulo: 'Conferir as velas', time_slug: 'formacao', tipo: 'tarefa',
+      inicio: null, prazo: '2026-09-30', hora: null, responsavel_id: null, observacao: null,
+      recorrencia: 'nenhuma', concluida_em: null, andamento_em: null, rotina_id: null,
+      criada_em: '2026-09-10T10:00:00Z' },
+  ];
+  const passos = [
+    { id: 'm1', tarefa_id: 'p1', titulo: 'Convidar o pároco', prazo: '2026-09-10',
+      responsavel_id: null, concluido_em: '2026-09-09T10:00:00Z', ordem: 0 },
+    { id: 'm2', tarefa_id: 'p1', titulo: 'Reservar o salão', prazo: '2026-09-12',
+      responsavel_id: null, concluido_em: null, ordem: 1 },
+    { id: 'm3', tarefa_id: 'p1', titulo: 'Comprar as velas', prazo: null,
+      responsavel_id: null, concluido_em: null, ordem: 2 },
+  ];
+
+  const r = await provas.abrir('tarefas.html', {
+    papel: PAPEIS.admin,
+    tabelas: {
+      acolitos_tarefas: { data: tarefas },
+      acolitos_tarefa_passos: { data: passos },
+      acolitos_rotinas: { data: [] },
+      acolitos_listas: { data: [{ tipo: 'setor', valor: 'formacao', label: 'Formação', meta: { cor: '#b98cff' } }] },
+    },
+    rpcs: { acolitos_rotinas_materializar: { data: 0 } },
+    avaliar: `
+      modoVisao = 'lista'; render();
+      await new Promise(function (s) { setTimeout(s, 150); });
+      var main = document.getElementById('main-content') || document.body;
+      var txt = main.textContent || '';
+      // a regra pura respondendo, com uma data cravada (a tela usa hoje de verdade)
+      var proj = TAREFAS.filter(function (t) { return t.id === 'p1'; })[0];
+      var s2 = situacaoDoProjeto(proj, '2026-09-25');
+      var r2 = resumoDoProjeto(proj, '2026-09-25');
+      return {
+        temJanela: txt.indexOf('01/set → 01/out') >= 0,
+        contaMarcos: txt.indexOf('1 de 2 marcos') >= 0,
+        listaPassos: txt.indexOf('Reservar o salão') >= 0 && txt.indexOf('Comprar as velas') >= 0,
+        temBotaoPasso: txt.indexOf('+ Passo') >= 0,
+        tarefaComumSemBloco: txt.indexOf('Conferir as velas') >= 0,
+        pctFeito: s2.pctFeito, pctTempo: s2.pctTempo, marcosVencidos: s2.marcosVencidos,
+        atrasado: s2.atrasado, janela: r2.janela,
+        semProjetoNaTarefa: resumoDoProjeto(TAREFAS.filter(function (t) { return t.id === 't1'; })[0], '2026-09-25')
+      };
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a tela desenha o projeto sem estourar', r.erroAvaliar);
+  exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova do projeto chegou ao fim',
+    'avaliado: ' + JSON.stringify(r.avaliado));
+  exigir(a.temJanela === true, 'o projeto mostra a JANELA (começo → fim), não só o prazo',
+    'um projeto que começa amanhã é outra coisa de um que já corre há um mês');
+  exigir(a.contaMarcos === true, 'e quantos marcos já fecharam', 'esperava "1 de 2 marcos"');
+  exigir(a.listaPassos === true, 'os passos aparecem, com e sem prazo');
+  exigir(a.temBotaoPasso === true, 'dá para acrescentar passo dali mesmo');
+  exigir(a.pctFeito === 33 && a.pctTempo === 80,
+    'as duas contas que revelam o risco: andou 33% com 80% do tempo corrido',
+    'andou ' + a.pctFeito + '% / tempo ' + a.pctTempo + '%');
+  exigir(a.marcosVencidos === 1 && a.atrasado === true,
+    'marco vencido e não concluído deixa o projeto atrasado, mesmo antes do prazo final');
+  exigir(a.semProjetoNaTarefa === null, 'tarefa comum NÃO ganha bloco de projeto');
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -2688,6 +2760,7 @@ try {
     await provaRotinasDoTime(provas);
     await provaPlanoDaIA(provas);
     await provaTarefasEtiquetaHoraEArvore(provas);
+    await provaProjetoNaArea(provas);
     await provaAvisosAbreComAsProximasMissas(provas);
     await provaAvisosMostraNomeDeQuemEstaAfastado(provas);
     await provaRosterFalhoNaoApagaFiltroDePessoa(provas);
