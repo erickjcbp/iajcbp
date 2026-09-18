@@ -913,12 +913,13 @@ async function init() {
 let ROTINAS = {}, ERR_ROTINAS = false;
 
 const REPETE_LABEL = {
-  semanal: 'toda semana', mensal: 'todo mês', anual: 'todo ano', celebracao: 'a cada missa',
+  diaria: 'todo dia', semanal: 'toda semana', mensal: 'todo mês', anual: 'todo ano',
+  celebracao: 'a cada missa',
 };
 
 async function carregarRotinas() {
   const { data, error } = await sb.from('acolitos_rotinas')
-    .select('id,time_slug,titulo,observacao,recorrencia,proxima,ativa')
+    .select('id,time_slug,titulo,observacao,recorrencia,proxima,ativa,fonte,lote')
     .eq('ativa', true).order('titulo');
   if (error) console.error('Tarefas: carregar rotinas falhou', error);
   return { data: data || [], error };
@@ -970,6 +971,7 @@ function renderRotinasDoTime(main, timeSlug) {
       const txt = document.createElement('div');
       txt.style.cssText = 'flex:1;min-width:0;font-size:12px;color:var(--text);';
       txt.textContent = r.titulo + ' — ' + (REPETE_LABEL[r.recorrencia] || r.recorrencia) +
+        (r.fonte === 'acompanhamento' ? ' · ' + (r.lote === 1 ? 'uma pessoa por vez' : 'até ' + r.lote + ' por vez') : '') +
         ' · próxima ' + (r.proxima ? formatDate(r.proxima) : '—');
       l.appendChild(txt);
       if (navCaps(ctx).isAdmin) {
@@ -1013,11 +1015,35 @@ function abrirFormRotina(timeSlug) {
   dica.textContent = 'Escreva uma vez e a tarefa nasce sozinha quando vencer. Enquanto a anterior estiver aberta, não nasce outra.';
   md.appendChild(dica);
 
+  // Dois tipos de rotina, e a diferença importa: a FIXA repete o mesmo texto; a de
+  // ACOMPANHAMENTO nomeia a pessoa ("Falar com Ana Clara") a partir de quem está parado.
+  const sTipo = document.createElement('select'); sTipo.className = 'form-input';
+  [['fixa', 'Tarefa que se repete (você escreve)'],
+   ['acompanhamento', 'Falar com quem está parado (o app escolhe a pessoa)']]
+    .forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; sTipo.appendChild(o); });
+  md.appendChild(sTipo);
+
   const iTit = document.createElement('input'); iTit.className = 'form-input';
+  iTit.style.marginTop = '8px';
   iTit.placeholder = 'Ex.: Conferir as velas'; md.appendChild(iTit);
 
+  const caixaLote = document.createElement('div'); caixaLote.hidden = true;
+  const rotLote = document.createElement('div');
+  rotLote.style.cssText = 'font-size:11px;color:var(--text-muted);margin:10px 0 2px;';
+  rotLote.textContent = 'Quantas conversas em aberto ao mesmo tempo:';
+  const iLote = document.createElement('input'); iLote.className = 'form-input';
+  iLote.type = 'number'; iLote.min = '1'; iLote.max = '20'; iLote.value = '1';
+  caixaLote.append(rotLote, iLote); md.appendChild(caixaLote);
+
+  sTipo.onchange = () => {
+    const acomp = sTipo.value === 'acompanhamento';
+    iTit.hidden = acomp; caixaLote.hidden = !acomp;
+    // o título do acompanhamento é montado pelo app, tarefa a tarefa
+    if (acomp && !iTit.value.trim()) iTit.value = 'Falar com quem está parado';
+  };
+
   const sRec = document.createElement('select'); sRec.className = 'form-input'; sRec.style.marginTop = '8px';
-  [['semanal', 'Toda semana'], ['mensal', 'Todo mês'], ['anual', 'Todo ano'], ['celebracao', 'A cada missa']]
+  [['diaria', 'Todo dia'], ['semanal', 'Toda semana'], ['mensal', 'Todo mês'], ['anual', 'Todo ano'], ['celebracao', 'A cada missa']]
     .forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; sRec.appendChild(o); });
   md.appendChild(sRec);
 
@@ -1037,12 +1063,13 @@ function abrirFormRotina(timeSlug) {
   const s = document.createElement('button'); s.className = 'btn gold'; s.style.flex = '1';
   s.textContent = 'Criar rotina';
   s.onclick = async () => {
-    const titulo = iTit.value.trim();
+    const titulo = iTit.value.trim() || (sTipo.value === 'acompanhamento' ? 'Falar com quem está parado' : '');
     if (!titulo) { toast('Escreva o que precisa ser feito.', 'error'); iTit.focus(); return; }
     s.disabled = true;
     const { error } = await sb.from('acolitos_rotinas').insert({
       time_slug: timeSlug, titulo, observacao: iObs.value.trim() || null,
       recorrencia: sRec.value, proxima: iData.value || hojeLocal(),
+      fonte: sTipo.value, lote: Math.max(1, Number(iLote.value) || 1),
       criada_por: ctx.membro ? ctx.membro.id : null,
     });
     if (error) {
