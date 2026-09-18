@@ -14,6 +14,51 @@ chance de já ter acontecido antes é grande, e a resposta costuma estar aqui.
 
 ## Fechados em 17/09/2026
 
+**As missas do mesmo dia saem na ordem da hora, e não na ordem do texto**
+- **O que era:** o horário da missa é guardado como texto, sem zero na frente ("7h", "9h",
+  "19h30"). Em ordem de texto o "9h" vem depois do "19h" — então o domingo aparecia como
+  **19h, 7h, 9h**. Medido em 17/09: das 101 celebrações, **39 dias têm mais de uma missa e 20
+  saíam fora de ordem** — todos os domingos de 31/05 a 11/10, inclusive o de 20/09.
+- **Onde doía:** Agenda (lista, linha do tempo e painel do dia), Chamada, Escala, Escalas do
+  membro e a Home ("Próximas Celebrações"). Nas Ausências já tinha sido consertado em 17/09
+  pela manhã; o resto do app continuava errado.
+- **O que entrou:** a missa passou a guardar também a hora **em minutos** (7h vira 420), numa
+  coluna que o próprio banco calcula e ninguém consegue escrever — assim a hora e os minutos
+  nunca discordam. As telas pedem a ordem por essa coluna. Onde a lista já está na tela (a
+  Agenda mistura missas com eventos, por exemplo), a mesma conta é feita por uma regra nova em
+  `projetos/acolitos/horario-core.js`, que é o espelho da função do banco.
+- **A Escala perdeu uma lista escrita à mão** (17h, 18h30, 7h, 9h, 19h) que jogava para o fim
+  qualquer horário fora dela — e existem 16h e 19h30 cadastrados.
+- **Quatro lugares que o plano não tinha visto**, achados durante a execução:
+  - a Home tinha uma nona consulta ordenando por texto (a que alimenta "Próximas Celebrações");
+  - a **barra de ordenar** (criada no dia anterior) reordenava a lista **depois**, comparando
+    "data + horário" como texto. Ou seja: a lista saía certa por dentro e embaralhada na tela;
+  - **cinco funções dentro do banco** continuavam ordenando por texto (migration 072). Três
+    delas alimentam "Minhas Escalas" e o "ESCALA EU!": o mesmo domingo sairia 7h, 9h, 19h num
+    cartão e 19h, 7h, 9h na aba ao lado, na MESMA tela. Uma delas alimenta a **página pública**,
+    sem login, que é onde a família escolhe a missa para avisar a ausência;
+  - a **arte da escala** (a imagem que vai para o grupo) tinha a mesma lista escrita à mão da
+    Escala. Ali a ordem não é só a hora: a imagem junta sábado e domingo, então é o dia primeiro
+    e a hora depois — ordenar só pela hora poria a missa de domingo 7h antes da de sábado 17h.
+- **Como escapou, e a lição:** o plano mapeou os lugares com uma busca por `order('horario')`
+  nas telas. Ordem que mora DENTRO de função do banco não aparece nessa busca, e a pasta da arte
+  ficou fora do caminho procurado. Quem varre por sintoma acha os lugares parecidos; quem varre
+  pelo DADO acha todos. Foi a revisão da branch inteira que pegou isso — as três revisões
+  separadas, cada uma olhando a sua parte, passaram todas.
+- **Como foi provado:** 5 provas novas da regra de horário (265 no total), 1 prova de tela nova
+  exigindo 7h → 8h (ensaio) → 9h → 19h na Agenda (331 no total, cinco rodadas verdes), duas
+  provas SQL contra os dados reais (a coluna nova e as funções), e foto da tela a 390px
+  conferindo a ordem na imagem. A Escala não roda na bateria de telas (carrega dados demais):
+  foi conferida pela prova de fumaça, pela checagem de sintaxe e por leitura.
+- **Três coisas que a prova automática NÃO cobre, ditas com todas as letras:**
+  - o banco de mentira das provas ignora a ordenação, então a parte que o BANCO ordena se prova
+    pela leitura do código e pela conferência no ar;
+  - `acolitos_membro_card` teve o código corrigido, mas não deu para provar com dado real: hoje
+    nenhum acólito serve duas missas no mesmo dia, que é quando aquela ordem importa;
+  - a bateria da pasta `arte-escala/` usa uma ferramenta que não está instalada na máquina, e o
+    robô do GitHub não roda teste nenhum (só gera a imagem). A ordem nova foi provada por fora,
+    exercitando a função de verdade.
+
 **Ausências: as duas abas filtram DENTRO da consulta ao banco**
 - **O que era:** a aba Avisos carregava as 60 ausências mais recentes de 1.202 e a aba Faltas
   as 80 mais recentes, sem filtro nenhum. Filtrar essas 60 na tela mostraria a pessoa com 30

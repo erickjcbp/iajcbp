@@ -1,6 +1,6 @@
 # Acólitos — o que está pendente
 
-Atualizado em 16/09/2026. Esta é A LISTA: abrir aqui antes de decidir o que fazer.
+Atualizado em 17/09/2026. Esta é A LISTA: abrir aqui antes de decidir o que fazer.
 Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi commitado.
 
 ---
@@ -11,13 +11,6 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 (`docs/superpowers/specs/2026-09-16-acolitos-ordenar-e-filtrar-design.md`). Membros (16/09),
 Agenda, CRM, Chamada e Ausências (17/09) estão feitos. Falta **Tarefas** — e ela hoje tem
 ZERO tarefas cadastradas, então o filtro lá não terá o que mostrar até alguém criar a primeira.
-
-**O app inteiro ordena HORÁRIO como texto.** Os horários estão guardados como "7h", "9h",
-"18h30" — sem zero na frente. Em ordem de texto, "9h" vem depois de "19h". Nas Ausências isso
-foi consertado (migration 070, `acolitos_minutos_do_horario`), mas **Agenda, Chamada e Escala
-continuam ordenando por texto** e podem mostrar as missas do mesmo dia fora de ordem. Conserto:
-usar a mesma função de minutos nessas telas. Hoje o efeito é pequeno porque as missas de um
-dia costumam ter horas de dois dígitos, mas em domingo (7h, 9h, 19h) ele aparece.
 
 **A função antiga de faltas (`acolitos_faltas_recentes`) ficou sem uso.** A tela nova usa a
 `acolitos_faltas_filtradas`. Apagar a antiga numa migration futura, só depois de confirmar que

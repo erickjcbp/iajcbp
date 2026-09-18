@@ -146,7 +146,7 @@ with dias_ruins as (
 )
 select case when exists (select 1 from candidato)
             then 'existe candidato de dado real — ver seção com o cartão dele'
-            else 'SEM EXEMPLO REAL hoje: nenhum acólito tem 2+ presenças no mesmo dia de mais de uma missa (cada um serve uma vez por dia). O código ainda ordena por `cel.horario` (texto) — visível lendo a função com pg_get_functiondef — mas não há um caso de produção que mostre a troca de ordem NESTA função. Ver nota no início do arquivo e no relatório da tarefa.'
+            else 'SEM EXEMPLO REAL hoje: nenhum acólito tem 2+ presenças no mesmo dia de mais de uma missa (cada um serve uma vez por dia), que é a ÚNICA situação em que a ordem desta função aparece. O conserto está no código (conferir com pg_get_functiondef: tem de dizer `cel.minutos desc`), mas nenhum dado de produção o demonstra. Esta consulta não tem data cravada: no dia em que existir um caso, ela volta a mostrar sozinha.'
        end as observacao_da_secao_4;
 
 -- Se algum dia existir um candidato, esta consulta mostra o cartão dele e a ordem das "últimas":
