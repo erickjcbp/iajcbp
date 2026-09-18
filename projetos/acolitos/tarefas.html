@@ -49,9 +49,18 @@
     .tf-acoes-extra[hidden] { display:none; }
     .tf-time-tag { font-size:10px; font-weight:700; letter-spacing:.4px; padding:2px 7px;
                    border-radius:999px; border:1px solid; white-space:nowrap; }
-    .tf-area { width:100%; display:block; text-align:left; cursor:pointer; margin:12px 0 0;
-               padding:12px; background:var(--surface2); border:1px solid var(--border-wine);
-               border-left:3px solid var(--cor-area); border-radius:12px; }
+    .tf-area { margin:12px 0 0; background:var(--surface2); border:1px solid var(--border-wine);
+               border-left:3px solid var(--cor-area); border-radius:12px; overflow:hidden; }
+    .tf-area-cab { width:100%; display:block; text-align:left; cursor:pointer; padding:12px;
+                   background:transparent; border:none; }
+    /* O conteúdo mora DENTRO da área, separado por uma linha — não solto na página. */
+    .tf-area-corpo { padding:0 12px 12px; border-top:1px solid var(--border); margin-top:2px; }
+    .tf-area-corpo .tf-item, .tf-area-corpo .tf-card { background:var(--surface); }
+    .tf-area-acoes { display:flex; gap:6px; flex-wrap:wrap; margin:10px 0; }
+    .tf-area-resp { font-size:12px; color:var(--text-muted); font-style:italic; margin-top:10px; }
+    .tf-rotinas { margin-top:12px; padding-top:10px; border-top:1px dashed var(--border); }
+    .tf-rotinas-tit { font-size:10px; letter-spacing:.6px; text-transform:uppercase;
+                      color:var(--text-muted); margin-bottom:4px; }
     .tf-area-topo { display:flex; align-items:center; gap:8px; }
     .tf-area-ponto { width:9px; height:9px; border-radius:50%; background:var(--cor-area); flex:none; }
     .tf-area-stats { display:flex; gap:10px; flex-wrap:wrap; font-size:11px; color:var(--text-muted); margin-top:6px; }
@@ -790,9 +799,14 @@ function renderPorTime(main) {
     const progresso = g.tarefas.length ? Math.round((feitas / g.tarefas.length) * 100) : 0;
     const cor = corDoTime(slug);
 
+    // UMA caixa só. Antes o conteúdo caía SOLTO embaixo do cartão — responsabilidade
+    // flutuando, caixa tracejada das rotinas, botões soltos e as tarefas colando no cartão
+    // seguinte. Abrir uma área tem de parecer a área crescendo, não um monte de caixa empilhada.
+    const areaEl = document.createElement('div'); areaEl.className = 'tf-area';
+    areaEl.style.setProperty('--cor-area', cor);
+
     const cab = document.createElement('button');
-    cab.type = 'button'; cab.className = 'tf-area';
-    cab.style.setProperty('--cor-area', cor);
+    cab.type = 'button'; cab.className = 'tf-area-cab';
 
     const topo = document.createElement('div'); topo.className = 'tf-area-topo';
     const ponto = document.createElement('span'); ponto.className = 'tf-area-ponto';
@@ -819,37 +833,43 @@ function renderPorTime(main) {
     rodape.textContent = g.tarefas.length ? progresso + '% concluído' : 'sem tarefas ainda';
 
     cab.append(topo, stats, barra, rodape);
-    main.appendChild(cab);
+    areaEl.appendChild(cab);
 
-    const corpo = document.createElement('div');
+    const corpo = document.createElement('div'); corpo.className = 'tf-area-corpo';
     if (ERR_RESP) {
       const av = document.createElement('div'); av.className = 'tf-resp tf-resp-erro';
       av.textContent = 'Não foi possível carregar a responsabilidade deste time.';
       corpo.appendChild(av);
     } else if (RESPONSABILIDADES[slug]) {
-      const resp = document.createElement('div'); resp.className = 'tf-resp';
+      const resp = document.createElement('div'); resp.className = 'tf-area-resp';
       resp.textContent = RESPONSABILIDADES[slug];
       corpo.appendChild(resp);
     }
-    renderRotinasDoTime(corpo, slug);
-    const acoesArea = document.createElement('div');
-    acoesArea.style.cssText = 'display:flex;gap:8px;margin:2px 0 10px;';
+    // A ordem dentro da área: o que se FAZ primeiro (criar e ver tarefa), a máquina que cria
+    // sozinho por último. Antes as rotinas vinham na frente e empurravam as tarefas para baixo.
+    const acoesArea = document.createElement('div'); acoesArea.className = 'tf-area-acoes';
     const bTarefa = document.createElement('button'); bTarefa.className = 'mini';
     bTarefa.textContent = '+ Tarefa';
     bTarefa.onclick = () => abrirFormTarefa(null, slug);
     const bProjeto = document.createElement('button'); bProjeto.className = 'mini';
     bProjeto.textContent = '+ Projeto';
     bProjeto.onclick = () => abrirFormTarefa(null, slug, 'projeto');
-    acoesArea.append(bTarefa, bProjeto);
+    const bRotina = document.createElement('button'); bRotina.className = 'mini';
+    bRotina.textContent = '+ Rotina';
+    bRotina.onclick = () => abrirFormRotina(slug);
+    acoesArea.append(bTarefa, bProjeto, bRotina);
     corpo.appendChild(acoesArea);
+
     if (!g.tarefas.length) {
-      const vazio = document.createElement('div'); vazio.className = 'tf-obs'; vazio.style.marginBottom = '10px';
+      const vazio = document.createElement('div'); vazio.className = 'tf-obs';
       vazio.textContent = 'Nenhuma tarefa deste time.';
       corpo.appendChild(vazio);
     } else {
       ordenar(g.tarefas, 'prazo', false).forEach(t => corpo.appendChild(linhaTarefaCompleta(t)));
     }
-    main.appendChild(corpo);
+    renderRotinasDoTime(corpo, slug);
+    areaEl.appendChild(corpo);
+    main.appendChild(areaEl);
 
     const pintar = () => {
       seta.textContent = aberto ? '▾' : '▸';
@@ -1185,20 +1205,15 @@ async function materializarRotinas() {
 
 function renderRotinasDoTime(main, timeSlug) {
   const minhas = (ROTINAS[timeSlug] || []);
-  const caixa = document.createElement('div');
-  caixa.style.cssText = 'margin:2px 0 10px;padding:8px 10px;border:1px dashed var(--border);border-radius:10px;';
+  // Sem caixa tracejada: a rotina é a máquina que faz a tarefa nascer, não um cartão
+  // concorrendo com as tarefas. Uma linha de título e as rotinas embaixo, discretas.
+  const caixa = document.createElement('div'); caixa.className = 'tf-rotinas';
 
-  const topo = document.createElement('div');
-  topo.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:4px;';
-  const tit = document.createElement('span');
-  tit.style.cssText = 'flex:1;min-width:0;font-size:11px;letter-spacing:.5px;color:var(--text-muted);';
-  tit.textContent = 'ROTINAS DESTE TIME (' + minhas.length + ')';
-  topo.appendChild(tit);
-  const novo = document.createElement('button'); novo.className = 'mini';
-  novo.textContent = '+ Rotina';
-  novo.onclick = () => abrirFormRotina(timeSlug);
-  topo.appendChild(novo);
-  caixa.appendChild(topo);
+  const tit = document.createElement('div'); tit.className = 'tf-rotinas-tit';
+  tit.textContent = minhas.length
+    ? (minhas.length === 1 ? 'Rotina que cria tarefa sozinha' : minhas.length + ' rotinas criam tarefa sozinhas')
+    : 'Rotinas';
+  caixa.appendChild(tit);
 
   if (ERR_ROTINAS) {
     const e = document.createElement('div'); e.className = 'tf-obs';

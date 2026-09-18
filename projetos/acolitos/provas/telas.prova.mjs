@@ -2548,8 +2548,9 @@ async function provaTarefasEtiquetaHoraEArvore(provas) {
       var main = document.getElementById('main-content') || document.body;
       var txt = main.textContent || '';
       var etiquetas = [].slice.call(main.querySelectorAll('.tf-time-tag')).map(function (e) { return e.textContent; });
-      // a seção por time virou CARD DE ÁREA (18/09): a classe mudou junto
-      var cabecas = [].slice.call(main.querySelectorAll('.tf-area'));
+      // a seção por time virou CARD DE ÁREA e depois UMA CAIXA SÓ (18/09): quem guarda o
+      // aberto/fechado é o cabeçalho, dentro da área
+      var cabecas = [].slice.call(main.querySelectorAll('.tf-area-cab'));
       var fechados = cabecas.filter(function (c) { return c.getAttribute('aria-expanded') === 'false'; })
                             .map(function (c) { return c.querySelector('.tf-grupo-nome').textContent; });
       var abertos = cabecas.filter(function (c) { return c.getAttribute('aria-expanded') === 'true'; })
