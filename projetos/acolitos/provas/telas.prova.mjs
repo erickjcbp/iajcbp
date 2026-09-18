@@ -2457,6 +2457,51 @@ async function provaRotinasDoTime(provas) {
     'é assim que uma falha vira número e alguém decide por ele');
 }
 
+async function provaPlanoDaIA(provas) {
+  console.log('\n\x1b[1mJornada › Plano de evolução: a IA só fala quando se pede, e falha não vira "tudo bem"\x1b[0m');
+
+  // Cada consulta custa dinheiro: farol que pisca sozinho vira conta no fim do mês. E se a
+  // consulta falhar, a tela NÃO pode dizer "nenhum gargalo" — a coordenação acreditaria.
+  const r = await provas.abrir('jornada-admin.html', {
+    papel: PAPEIS.admin,
+    rpcs: { acolitos_formacao_acompanhamento: { data: [] } },
+    avaliar: `
+      abaJornada = 'evolucao';
+      await renderAll();
+      await new Promise(function (s) { setTimeout(s, 250); });
+      var txt = (document.getElementById('main') || document.body).textContent || '';
+      var botao = [].slice.call(document.querySelectorAll('button')).filter(function (b) {
+        return b.textContent === 'Pedir sugestão'; })[0];
+      // Procurar "NO FIO" aqui daria falso positivo: essa etiqueta também é a do mapa de
+      // cobertura, e ela aparece legitimamente antes de qualquer clique. O que não pode
+      // existir antes do clique é RESPOSTA da IA — sugestão ou erro dela.
+      var antes = /Não consegui falar com a IA|ainda não foi ligada|A IA não apontou/.test(txt);
+      if (botao) botao.click();
+      await new Promise(function (s) { setTimeout(s, 700); });
+      var depois = (document.getElementById('main') || document.body).textContent || '';
+      return {
+        temPainel: txt.indexOf('Plano de evolução') >= 0,
+        dizQueNaoMandaNome: /nunca os nomes/.test(txt),
+        temBotao: !!botao,
+        nadaAntesDoClique: !antes,
+        avisaFalha: /Não consegui falar com a IA|ainda não foi ligada|recusou/.test(depois),
+        naoInventaTudoCerto: !/A IA não apontou gargalo nenhum/.test(depois)
+      };
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a aba Evolução desenha o painel da IA sem estourar', r.erroAvaliar);
+  exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova do painel chegou ao fim',
+    'avaliado: ' + JSON.stringify(r.avaliado));
+  exigir(a.temPainel === true, 'o painel do plano de evolução aparece na aba Evolução');
+  exigir(a.dizQueNaoMandaNome === true, 'a tela DIZ que manda só números, nunca os nomes das crianças');
+  exigir(a.temBotao === true, 'a sugestão só sai por um botão — nada dispara sozinho');
+  exigir(a.nadaAntesDoClique === true, 'antes do clique não há nem sugestão nem erro na tela',
+    'consulta que roda sozinha vira dinheiro gasto sem ninguém pedir');
+  exigir(a.avisaFalha === true, 'quando a consulta falha, a tela DIZ que falhou');
+  exigir(a.naoInventaTudoCerto === true, 'e NÃO diz "nenhum gargalo" quando nem chegou a perguntar');
+}
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -2548,6 +2593,7 @@ try {
     await provaAgendaOrdenaPelaHora(provas);
     await provaAcompanhamentoDaFormacao(provas);
     await provaRotinasDoTime(provas);
+    await provaPlanoDaIA(provas);
     await provaAvisosAbreComAsProximasMissas(provas);
     await provaAvisosMostraNomeDeQuemEstaAfastado(provas);
     await provaRosterFalhoNaoApagaFiltroDePessoa(provas);

@@ -89,6 +89,7 @@ async function renderAll() {
 
   if (abaJornada === 'evolucao') {
     await renderSinalDaFormacao(box);
+    await renderPlanoDaIA(box);
     await renderDesenvolvimento(box);
   } else {
     await renderFilas(box);
@@ -956,6 +957,107 @@ async function promover(membro, nivel, nome) {
   const { data, error } = await sb.rpc('acolitos_promover', { p_membro: membro, p_novo_nivel: nivel });
   if (error || data?.erro) { toast('Erro: ' + (data?.erro || error?.message), 'error'); return; }
   toast('🎉 Promovido para ' + nivelInfo(nivel).label); await renderAll();
+}
+
+
+// ── O FAROL: a IA lê o retrato e sugere o plano de formação ───────────────────
+// Pedido do dono (18/09/2026): bater o olho na Evolução e enxergar os gargalos, com a IA
+// ajudando a traçar o plano ("precisamos de formação para x, y") e virando tarefa.
+//
+// ⚠️ SÓ NÚMEROS VÃO PARA O MODELO. O servidor (api/ia-evolucao.js) monta o retrato a partir
+// de CONTAGENS — "báculo: 5 aptos, 171 sem treinar" — e nenhum nome de criança sai daqui.
+// Quem cruza a sugestão com as pessoas é o app, aqui dentro.
+//
+// E só roda quando alguém CLICA: cada consulta custa dinheiro, e farol que pisca sozinho
+// vira conta no fim do mês.
+async function renderPlanoDaIA(box) {
+  const card = document.createElement('div'); card.className = 'mx-card';
+  const hd = document.createElement('div'); hd.className = 'mx-hd'; hd.textContent = 'Plano de evolução';
+  const sub = document.createElement('div'); sub.className = 'mx-q-sub';
+  sub.textContent = 'A IA lê os números desta aba — nunca os nomes — e diz onde o grupo está no fio.';
+  card.append(hd, sub);
+
+  const saida = document.createElement('div');
+  const btn = document.createElement('button'); btn.className = 'btn gold'; btn.style.marginTop = '10px';
+  btn.textContent = 'Pedir sugestão';
+  btn.onclick = async () => {
+    btn.disabled = true; btn.textContent = 'Lendo o retrato…';
+    saida.textContent = '';
+    const r = await apiPost('/api/ia-evolucao', {});
+    btn.disabled = false; btn.textContent = 'Pedir de novo';
+    if (!r.ok) {
+      const e = document.createElement('div'); e.className = 'mx-q-sub';
+      e.style.color = 'var(--danger-text)';
+      // Recado honesto: dizer "nenhum gargalo" quando a pergunta nem foi feita seria mentira.
+      e.textContent = (r.data && r.data.error) || 'Não consegui falar com a IA agora.';
+      saida.appendChild(e);
+      console.error('Plano de evolução: a consulta falhou', r.status, r.data);
+      return;
+    }
+    desenharSugestao(saida, r.data);
+  };
+  card.append(btn, saida);
+  box.appendChild(card);
+}
+
+function desenharSugestao(saida, data) {
+  saida.textContent = '';
+  const sug = (data && data.sugestao) || {};
+  const retrato = (data && data.retrato) || {};
+  const acharNumero = (nomeFuncao) => {
+    const f = (retrato.cobertura || []).find((c) => c.funcao === nomeFuncao);
+    return f ? (f.prontos + (f.prontos === 1 ? ' apto' : ' aptos')) : null;
+  };
+
+  (sug.gargalos || []).slice(0, 3).forEach((g) => {
+    const l = document.createElement('div');
+    l.style.cssText = 'display:flex;gap:8px;align-items:baseline;margin-top:10px;';
+    const tag = document.createElement('span');
+    tag.style.cssText = 'font-size:10px;font-weight:700;letter-spacing:.5px;padding:2px 6px;border-radius:999px;border:1px solid var(--danger);color:var(--danger-text);white-space:nowrap;';
+    tag.textContent = 'NO FIO';
+    const txt = document.createElement('div'); txt.style.cssText = 'flex:1;font-size:13px;color:var(--text);';
+    // O número do BANCO ao lado do que a IA disse: assim a coordenação confere em vez de acreditar.
+    const numero = acharNumero(g.funcao);
+    txt.textContent = g.funcao + (numero ? ' (' + numero + ')' : '') + ' — ' + (g.porque || '');
+    l.append(tag, txt); saida.appendChild(l);
+  });
+
+  (sug.plano || []).slice(0, 3).forEach((item) => {
+    const bloco = document.createElement('div');
+    bloco.style.cssText = 'margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:10px;';
+    const t = document.createElement('div');
+    t.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold-light);';
+    t.textContent = item.titulo || 'Sugestão';
+    const pq = document.createElement('div'); pq.className = 'mx-q-sub'; pq.textContent = item.porque || '';
+    const co = document.createElement('div'); co.className = 'mx-q-sub'; co.textContent = item.como || '';
+    const vira = document.createElement('button'); vira.className = 'mx-mini'; vira.style.marginTop = '6px';
+    vira.textContent = 'Virar tarefa da Formação';
+    vira.onclick = async () => {
+      vira.disabled = true;
+      const { error } = await sb.from('acolitos_tarefas').insert({
+        titulo: item.titulo || 'Plano de formação',
+        time_slug: 'formacao',
+        observacao: [item.porque, item.como].filter(Boolean).join(' — ') || null,
+        recorrencia: 'nenhuma',
+        criada_por: ctx.membro ? ctx.membro.id : null,
+      });
+      if (error) {
+        console.error('Plano de evolução: criar tarefa falhou', error);
+        toast('Não foi possível criar a tarefa.', 'error');
+        vira.disabled = false; return;
+      }
+      toast('Tarefa criada para a Formação.');
+      vira.textContent = 'Tarefa criada';
+    };
+    bloco.append(t, pq, co, vira);
+    saida.appendChild(bloco);
+  });
+
+  if (!(sug.gargalos || []).length && !(sug.plano || []).length) {
+    const v = document.createElement('div'); v.className = 'mx-q-sub';
+    v.textContent = 'A IA não apontou gargalo nenhum desta vez.';
+    saida.appendChild(v);
+  }
 }
 
 init();
