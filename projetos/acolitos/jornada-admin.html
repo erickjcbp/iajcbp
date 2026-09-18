@@ -89,7 +89,13 @@ async function renderAll() {
 
   if (abaJornada === 'evolucao') {
     await renderSinalDaFormacao(box);
-    await renderPlanoDaIA(box);
+    // O painel da IA está PRONTO e DESLIGADO (18/09/2026, decisão do dono: "vamos deixar a
+    // parte do uso da API de lado por enquanto"). Ele não aparece porque botão que não
+    // funciona é pior do que botão nenhum — quem abre esta aba é o pessoal da Formação, e
+    // um "não foi ligada" toda vez só ensina a ignorar a tela.
+    // PARA LIGAR: escolher o provedor, pôr a chave nas variáveis do site, e devolver a linha
+    // `await renderPlanoDaIA(box);` aqui. O resto — servidor, painel, "virar tarefa" e as
+    // provas — já existe.
     await renderDesenvolvimento(box);
   } else {
     await renderFilas(box);

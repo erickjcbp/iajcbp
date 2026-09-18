@@ -2458,7 +2458,7 @@ async function provaRotinasDoTime(provas) {
 }
 
 async function provaPlanoDaIA(provas) {
-  console.log('\n\x1b[1mJornada › Plano de evolução: a IA só fala quando se pede, e falha não vira "tudo bem"\x1b[0m');
+  console.log('\n\x1b[1mJornada › Plano de evolução (pronto e desligado): só fala quando se pede\x1b[0m');
 
   // Cada consulta custa dinheiro: farol que pisca sozinho vira conta no fim do mês. E se a
   // consulta falhar, a tela NÃO pode dizer "nenhum gargalo" — a coordenação acreditaria.
@@ -2468,6 +2468,12 @@ async function provaPlanoDaIA(provas) {
     avaliar: `
       abaJornada = 'evolucao';
       await renderAll();
+      // O painel está DESLIGADO da tela por decisão do dono (18/09) — o código continua vivo
+      // e provado, para voltar com uma linha quando o provedor for escolhido. Por isso a
+      // prova o desenha por fora, em vez de esperá-lo no fluxo normal.
+      var fora = document.getElementById('main');
+      var jaEstava = (fora.textContent || '').indexOf('Plano de evolução') >= 0;
+      await renderPlanoDaIA(fora);
       await new Promise(function (s) { setTimeout(s, 250); });
       var txt = (document.getElementById('main') || document.body).textContent || '';
       var botao = [].slice.call(document.querySelectorAll('button')).filter(function (b) {
@@ -2481,6 +2487,7 @@ async function provaPlanoDaIA(provas) {
       var depois = (document.getElementById('main') || document.body).textContent || '';
       return {
         temPainel: txt.indexOf('Plano de evolução') >= 0,
+        desligadoDaTela: !jaEstava,
         dizQueNaoMandaNome: /nunca os nomes/.test(txt),
         temBotao: !!botao,
         nadaAntesDoClique: !antes,
@@ -2493,7 +2500,9 @@ async function provaPlanoDaIA(provas) {
   exigir(!r.erroAvaliar, 'a aba Evolução desenha o painel da IA sem estourar', r.erroAvaliar);
   exigir(r.avaliado && typeof r.avaliado === 'object', 'a prova do painel chegou ao fim',
     'avaliado: ' + JSON.stringify(r.avaliado));
-  exigir(a.temPainel === true, 'o painel do plano de evolução aparece na aba Evolução');
+  exigir(a.temPainel === true, 'o painel do plano de evolução continua funcionando quando chamado');
+  exigir(a.desligadoDaTela === true, 'e NÃO aparece sozinho na aba enquanto a IA não tiver provedor',
+    'botão que não funciona é pior do que botão nenhum');
   exigir(a.dizQueNaoMandaNome === true, 'a tela DIZ que manda só números, nunca os nomes das crianças');
   exigir(a.temBotao === true, 'a sugestão só sai por um botão — nada dispara sozinho');
   exigir(a.nadaAntesDoClique === true, 'antes do clique não há nem sugestão nem erro na tela',
