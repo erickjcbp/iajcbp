@@ -14,6 +14,23 @@ chance de já ter acontecido antes é grande, e a resposta costuma estar aqui.
 
 ## Fechados em 18/09/2026
 
+**⚠️ A 13ª função quebrou TODA publicação por 3h30 — e eu não percebi**
+- **O que era:** o plano gratuito da Vercel aceita **12 funções de servidor**. Ao criar
+  `api/ia-evolucao.js` (o farol da IA), virou 13. A partir dali **toda** publicação falhou: a
+  construção terminava bem e o deploy morria em "Deploying outputs", **sem mensagem nenhuma no
+  registro**. Cinco tentativas seguidas em erro.
+- **O que ficou fora do ar nesse tempo:** hora na tarefa, etiquetas coloridas de setor, a
+  árvore por time, as Áreas e o Projeto. Tudo estava no GitHub — e nada estava no site.
+- **Quem achou:** o dono, dizendo "não vejo as mudanças". Eu tinha conferido o ENVIO depois de
+  cada mudança e nunca a PUBLICAÇÃO.
+- **Conserto:** arquivo em `api/` começando com `_` não vira endpoint (é assim que `_github.js`
+  já vivia). O farol virou `api/_ia-evolucao.js` — inteiro, ao lado dos irmãos, desligado pelo
+  próprio nome. Para ligar: escolher provedor, pôr a chave, renomear de volta **e tirar outra
+  função de lá ou subir de plano**, senão quebra de novo.
+- **A lição, que vale mais que o conserto: PUSH NÃO É PUBLICAÇÃO.** Toda vez que o trabalho
+  precisa chegar ao ar, conferir o que o SITE responde — o carimbo do `sw.js` e um arquivo
+  novo — e não parar no "enviado para o GitHub".
+
 **As quatro pessoas dos setores passaram a enxergar a aba Tarefas**
 - **O que era:** o cardápio entrou com 12 rotinas, mas Gustavo Santana (Vice-Coordenação,
   Formação, Ordem e Disciplina) e Maria Eduarda Carli (Secretaria) não tinham a permissão
