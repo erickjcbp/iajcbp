@@ -36,6 +36,17 @@
     .tf-meta { font-size:12px; color:var(--text-muted); margin-top:3px; }
     .tf-meta.tf-atrasada-txt { color:var(--danger-text); font-weight:700; }
     .tf-obs { font-size:12px; color:var(--text-muted); margin-top:4px; font-style:italic; }
+    /* A observação da rotina do Orientador tem 4 linhas. Inteira, ela empurra a tarefa
+       seguinte para fora da tela — por isso o corte em 2 linhas, com o resto a um toque. */
+    .tf-obs-curta { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+                    overflow:hidden; }
+    .tf-mais { background:none; border:none; color:var(--text-muted); font-size:18px;
+               line-height:1; padding:4px 8px; cursor:pointer; }
+    .tf-acoes-extra { display:flex; flex-wrap:wrap; gap:6px; width:100%; margin-top:6px; }
+    /* ⚠️ Sem esta linha o `hidden` NÃO esconde: a regra de cima manda `display:flex`, e
+       display vence hidden. Este projeto já levou esse golpe antes — as ações "extras"
+       apareciam todas, e o cartão ficava com o mesmo paredão de botão de sempre. */
+    .tf-acoes-extra[hidden] { display:none; }
     .tf-acoes { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
     .tf-badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:9.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; border:1px solid; }
     .tf-badge.tf-afazer    { background:var(--surface3); color:var(--text-muted); border-color:var(--border); }
@@ -63,7 +74,8 @@
     .tf-card-tit { font-family:'Sora',sans-serif; font-weight:700; font-size:13px; color:var(--text); }
     .tf-card-meta { font-size:11px; color:var(--text-muted); margin-top:3px; }
     .tf-card-meta.tf-atrasada-txt { color:var(--danger-text); font-weight:700; }
-    .tf-card-obs { font-size:11px; color:var(--text-muted); margin-top:4px; font-style:italic; }
+    .tf-card-obs { font-size:11px; color:var(--text-muted); margin-top:4px; font-style:italic;
+                   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
     .tf-card-acoes { display:flex; gap:6px; margin-top:8px; }
     .tf-mover { flex:1; }
     .tf-mover svg { width:13px; height:13px; stroke:currentColor; fill:none; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
@@ -475,17 +487,39 @@ function linhaTarefaCompleta(t) {
   meta.textContent = [prazoLabel(t.prazo), (LABEL_TIME[t.time_slug] || t.time_slug), nomeResponsavel(t)].join(' · ');
   body.append(titRow, meta);
   if (t.observacao) {
-    const obs = document.createElement('div'); obs.className = 'tf-obs'; obs.textContent = t.observacao;
+    // Cortada em duas linhas; toca e abre. Observação inteira empurrava a tarefa seguinte
+    // para fora da tela — a do Orientador tem quatro linhas.
+    const obs = document.createElement('div'); obs.className = 'tf-obs tf-obs-curta';
+    obs.textContent = t.observacao;
+    obs.title = 'Tocar para ver inteira';
+    obs.onclick = () => obs.classList.toggle('tf-obs-curta');
     body.appendChild(obs);
   }
+
+  // UMA ação à vista. O resto (voltar, editar, apagar) mora atrás do "…": antes eram quatro
+  // botões por tarefa, e com cinco tarefas a tela virava um paredão de botão.
   const acoes = document.createElement('div'); acoes.className = 'tf-acoes';
-  acoesDaTarefa(t).forEach(a => {
-    const b = document.createElement('button'); b.className = 'btn-sm gold'; b.textContent = a.label;
-    b.onclick = () => a.fn(b);
+  const lista = acoesDaTarefa(t);
+  const principal = lista[lista.length - 1] || null;   // a que faz a tarefa ANDAR
+  if (principal) {
+    const b = document.createElement('button'); b.className = 'btn-sm gold'; b.textContent = principal.label;
+    b.onclick = () => principal.fn(b);
     acoes.appendChild(b);
+  }
+  const extra = document.createElement('div'); extra.className = 'tf-acoes-extra'; extra.hidden = true;
+  lista.slice(0, Math.max(lista.length - 1, 0)).forEach(a => {
+    const b = document.createElement('button'); b.className = 'btn-sm gray'; b.textContent = a.label;
+    b.onclick = () => a.fn(b);
+    extra.appendChild(b);
   });
-  botoesEditarApagar(t).forEach(b => acoes.appendChild(b));
-  row.append(bar, body, acoes);
+  botoesEditarApagar(t).forEach(b => extra.appendChild(b));
+  if (extra.children.length) {
+    const mais = document.createElement('button'); mais.className = 'tf-mais';
+    mais.textContent = '⋯'; mais.title = 'Mais ações'; mais.setAttribute('aria-label', 'Mais ações');
+    mais.onclick = () => { extra.hidden = !extra.hidden; };
+    acoes.appendChild(mais);
+  }
+  row.append(bar, body, acoes, extra);
   return row;
 }
 
@@ -521,8 +555,18 @@ function cartaoTarefa(t, estadoAtual) {
   } else {
     acoes.appendChild(botaoMover('Reabrir', 'seta-esq', (b) => aplicarTransicao(t, 'andamento', b)));
   }
-  botoesEditarApagar(t).forEach(b => acoes.appendChild(b));
-  card.appendChild(acoes);
+  // Editar e apagar vão para trás do "…", como na lista. Com os três lado a lado, o APAGAR
+  // vazava para fora da coluna do quadro — e mover a tarefa, que é o que se faz ali, ficava
+  // do mesmo tamanho de apagar, que é o que quase nunca se faz.
+  const extra = document.createElement('div'); extra.className = 'tf-acoes-extra'; extra.hidden = true;
+  botoesEditarApagar(t).forEach(b => extra.appendChild(b));
+  if (extra.children.length) {
+    const mais = document.createElement('button'); mais.className = 'tf-mais';
+    mais.textContent = '⋯'; mais.title = 'Mais ações'; mais.setAttribute('aria-label', 'Mais ações');
+    mais.onclick = () => { extra.hidden = !extra.hidden; };
+    acoes.appendChild(mais);
+  }
+  card.append(acoes, extra);
   return card;
 }
 
@@ -577,47 +621,16 @@ function responsaveisUnicos(tarefas) {
 function renderListaView(main) {
   if (!TAREFAS.length) { renderNadaAqui(main); return; }
 
-  const filtros = document.createElement('div'); filtros.className = 'tf-filtros';
-  const sTime = document.createElement('select'); sTime.className = 'form-input';
-  sTime.appendChild(opt('', 'Todos os times'));
-  TIMES.forEach(s => sTime.appendChild(opt(s.valor, s.label || s.valor)));
-  sTime.value = filtro.time; sTime.onchange = () => { filtro.time = sTime.value; render(); };
+  // A barra de filtro da CASA (a mesma de Membros, Agenda, CRM, Chamada e Ausências): um
+  // botão e um painel. Antes eram cinco caixas empilhadas que ocupavam a tela inteira antes
+  // de aparecer a primeira tarefa — e a tela nunca tinha recebido a barra.
+  const caixaFiltro = document.createElement('div');
+  main.appendChild(caixaFiltro);
+  const cfg = configFiltroTarefas();
+  filtroTarefas = montarFiltroLista(caixaFiltro, cfg, () => render());
 
-  const sEstado = document.createElement('select'); sEstado.className = 'form-input';
-  [['', 'Todos os estados'], ['afazer', 'A fazer'], ['andamento', 'Em andamento'], ['feita', 'Feita']]
-    .forEach(([v, l]) => sEstado.appendChild(opt(v, l)));
-  sEstado.value = filtro.estado; sEstado.onchange = () => { filtro.estado = sEstado.value; render(); };
-
-  const sResp = document.createElement('select'); sResp.className = 'form-input';
-  sResp.appendChild(opt('', 'Todos os responsáveis'));
-  sResp.appendChild(opt('__sem__', 'Sem responsável'));
-  responsaveisUnicos(TAREFAS).forEach(r => sResp.appendChild(opt(r.id, r.label)));
-  sResp.value = filtro.responsavel; sResp.onchange = () => { filtro.responsavel = sResp.value; render(); };
-
-  const iBusca = document.createElement('input'); iBusca.className = 'form-input'; iBusca.type = 'text';
-  iBusca.placeholder = 'Título ou observação...'; iBusca.value = filtro.texto;
-  iBusca.oninput = () => { filtro.texto = iBusca.value; render(); };
-
-  filtros.append(
-    campoFiltro('Time', sTime), campoFiltro('Estado', sEstado),
-    campoFiltro('Responsável', sResp), campoFiltro('Buscar', iBusca),
-  );
-  main.appendChild(filtros);
-
-  const ordBox = document.createElement('div'); ordBox.className = 'tf-ord';
-  const sOrd = document.createElement('select'); sOrd.className = 'form-input';
-  [['prazo', 'Prazo'], ['titulo', 'Título'], ['time', 'Time'], ['responsavel', 'Responsável']]
-    .forEach(([v, l]) => sOrd.appendChild(opt(v, l)));
-  sOrd.value = ordCampo; sOrd.onchange = () => { ordCampo = sOrd.value; render(); };
-  const bDir = document.createElement('button'); bDir.className = 'btn-sm gray';
-  bDir.innerHTML = _svgIcon(ordDesc ? 'seta-dir' : 'seta-esq') + '<span>' + (ordDesc ? 'Decrescente' : 'Crescente') + '</span>';
-  bDir.onclick = () => { ordDesc = !ordDesc; render(); };
-  ordBox.append(campoFiltro('Ordenar por', sOrd));
-  const dirWrap = document.createElement('div'); dirWrap.appendChild(bDir); ordBox.appendChild(dirWrap);
-  main.appendChild(ordBox);
-
-  const filtradas = filtrar(TAREFAS, filtro);
-  const ordenadas = ordenar(filtradas, ordCampo, ordDesc);
+  const ordenadas = filtroTarefas ? filtroTarefas.aplicar(TAREFAS)
+                                  : ordenar(TAREFAS, 'prazo', false);
   if (!ordenadas.length) {
     const e = document.createElement('div'); e.className = 'empty';
     e.textContent = 'Nenhuma tarefa bate com esse filtro.';
@@ -625,6 +638,45 @@ function renderListaView(main) {
     return;
   }
   ordenadas.forEach(t => main.appendChild(linhaTarefaCompleta(t)));
+}
+
+// A configuração da barra de filtro da lista. Os filtros só aparecem quando há o que
+// escolher: oferecer "Time" para quem está em um time só é ocupar a tela com uma escolha
+// que não existe.
+let filtroTarefas = null;
+function configFiltroTarefas() {
+  const filtros = [
+    { id: 'estado', nome: 'Estado', opcoes: [
+      { id: 'afazer', nome: 'A fazer', testa: t => estadoDaTarefa(t) === 'afazer' },
+      { id: 'andamento', nome: 'Em andamento', testa: t => estadoDaTarefa(t) === 'andamento' },
+      { id: 'feita', nome: 'Feita', testa: t => estadoDaTarefa(t) === 'feita' },
+    ] },
+  ];
+  if (TIMES.length > 1) {
+    filtros.push({ id: 'time', nome: 'Time', opcoes: TIMES.map(s => (
+      { id: s.valor, nome: s.label || s.valor, testa: t => t.time_slug === s.valor })) });
+  }
+  const resp = responsaveisUnicos(TAREFAS);
+  if (resp.length) {
+    filtros.push({ id: 'responsavel', nome: 'Responsável', opcoes: [
+      { id: '__sem__', nome: 'Sem responsável', testa: t => !t.responsavel_id },
+    ].concat(resp.map(r => ({ id: r.id, nome: r.label, testa: t => t.responsavel_id === r.id }))) });
+  }
+  const cfg = {
+    chave: 'tarefas-lista',
+    rotulo: ['tarefa', 'tarefas'],
+    ordemPadrao: 'prazo',
+    ordens: [
+      { id: 'prazo', nome: 'Prazo', valor: t => t.prazo || null },
+      { id: 'titulo', nome: 'Título', valor: t => t.titulo },
+      { id: 'time', nome: 'Time', valor: t => LABEL_TIME[t.time_slug] || t.time_slug },
+    ],
+    filtros,
+    busca: { placeholder: 'Buscar tarefa...', campos: t => [t.titulo, t.observacao] },
+  };
+  cfg.desempate = (t) => t.titulo;
+  cfg.contar = (e) => FiltroLista.aplicar(TAREFAS, e, cfg).length;
+  return cfg;
 }
 
 // ── VISÃO: POR TIME ────────────────────────────────────────────────
