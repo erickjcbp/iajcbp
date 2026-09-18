@@ -88,8 +88,13 @@ const MODULO = rmod.ok && rmod.d && rmod.d[0] ? rmod.d[0].id : null;
 if (!MODULO) { console.error('Módulo acólitos não encontrado.'); process.exit(1); }
 
 const filtro = MARCADOS ? 'senha_provisoria=is.true' : 'user_id=is.null';
+// Por padrão a folha traz todo mundo que não foi desligado — inclusive quem está afastado.
+// Com --so-ativos ela traz só quem está servindo agora: é o que se quer quando a folha vai
+// para o grupo, porque cobrar acesso de quem está afastado só gera ruído.
+const SO_ATIVOS = process.argv.includes('--so-ativos');
+const filtroStatus = SO_ATIVOS ? 'status=eq.ativo' : 'status=neq.desligado';
 const rm = await j(`${URL_}/rest/v1/acolitos_membros?select=id,nome,nivel,status,comunidade,` +
-  `data_nascimento,responsavel,nome_mae,nome_pai,user_id&${filtro}&status=neq.desligado&limit=2000`, { headers: h });
+  `data_nascimento,responsavel,nome_mae,nome_pai,user_id&${filtro}&${filtroStatus}&limit=2000`, { headers: h });
 if (!rm.ok) { console.error('Não consegui ler o cadastro:', rm.status, rm.d); process.exit(1); }
 
 // Ordem estável (o mesmo resultado a cada rodada) — e é a ordem da folha impressa.
