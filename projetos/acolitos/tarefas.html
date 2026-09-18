@@ -49,9 +49,16 @@
     .tf-acoes-extra[hidden] { display:none; }
     .tf-time-tag { font-size:10px; font-weight:700; letter-spacing:.4px; padding:2px 7px;
                    border-radius:999px; border:1px solid; white-space:nowrap; }
-    .tf-grupo-cab { width:100%; display:flex; align-items:center; gap:8px; padding:10px 12px;
-                    margin:10px 0 0; background:var(--surface2); border:1px solid var(--border-wine);
-                    border-radius:10px; cursor:pointer; text-align:left; }
+    .tf-area { width:100%; display:block; text-align:left; cursor:pointer; margin:12px 0 0;
+               padding:12px; background:var(--surface2); border:1px solid var(--border-wine);
+               border-left:3px solid var(--cor-area); border-radius:12px; }
+    .tf-area-topo { display:flex; align-items:center; gap:8px; }
+    .tf-area-ponto { width:9px; height:9px; border-radius:50%; background:var(--cor-area); flex:none; }
+    .tf-area-stats { display:flex; gap:10px; flex-wrap:wrap; font-size:11px; color:var(--text-muted); margin-top:6px; }
+    .tf-area-atraso { color:var(--danger-text); font-weight:700; }
+    .tf-area-barra { height:5px; border-radius:3px; background:var(--surface); overflow:hidden; margin:8px 0 5px; }
+    .tf-area-barra span { display:block; height:100%; background:var(--cor-area); }
+    .tf-area-rodape { font-size:11px; color:var(--text-muted); }
     .tf-seta { color:var(--gold); font-size:11px; width:10px; }
     .tf-grupo-nome { flex:1; min-width:0; font-family:'Sora',sans-serif; font-weight:700;
                      font-size:13px; color:var(--gold-light); letter-spacing:.5px; }
@@ -178,13 +185,24 @@ function quandoLabel(t) {
 // A etiqueta do time. A cor sai do próprio nome do setor (sempre a mesma para o mesmo
 // setor, sem tabela para manter), dentro da paleta da casa: vinho e dourado com variações de
 // matiz, para não virar arco-íris no meio do app.
+// A cor do setor vem do catálogo (Config → Times, guardada em meta.cor pela migration 083).
+// Setor criado depois e ainda sem cor cai numa cor tirada do próprio nome: sempre a mesma
+// para o mesmo setor, para a etiqueta não ficar cinza nem mudar a cada abertura.
+let COR_TIME = {};
+function corDoTime(slug) {
+  if (COR_TIME[slug]) return COR_TIME[slug];
+  let soma = 0; for (let i = 0; i < String(slug || '').length; i++) soma = (soma * 31 + slug.charCodeAt(i)) % 360;
+  return 'hsl(' + soma + ' 60% 72%)';
+}
+
 function etiquetaDoTime(t) {
   const slug = t.time_slug || '';
-  let soma = 0; for (let i = 0; i < slug.length; i++) soma = (soma * 31 + slug.charCodeAt(i)) % 360;
+  const cor = corDoTime(slug);
   const el = document.createElement('span');
   el.className = 'tf-time-tag';
-  el.style.borderColor = 'hsl(' + soma + ' 45% 45% / .7)';
-  el.style.color = 'hsl(' + soma + ' 60% 75%)';
+  el.style.borderColor = cor;
+  el.style.color = cor;
+  el.style.background = 'color-mix(in srgb, ' + cor + ' 12%, transparent)';
   el.textContent = LABEL_TIME[slug] || slug || 'sem time';
   return el;
 }
@@ -225,7 +243,8 @@ async function carregarTarefas() {
 }
 
 async function carregarSetores() {
-  const { data, error } = await sb.from('acolitos_listas').select('valor,label').eq('tipo', 'setor').order('label');
+  // `meta` traz a cor de cada setor (migration 083) — é o que diferencia as áreas na tela.
+  const { data, error } = await sb.from('acolitos_listas').select('valor,label,meta').eq('tipo', 'setor').order('label');
   if (error) console.error('Tarefas: carregar times falhou', error);
   return { data: data || [], error };
 }
@@ -268,7 +287,12 @@ async function carregarTudo() {
   });
   // O rótulo vem do catálogo INTEIRO: uma tarefa antiga de um time que a pessoa não vê mais
   // ainda precisa aparecer com nome de gente, não com o código do banco.
-  LABEL_TIME = {}; (rS.data || []).forEach(s => { LABEL_TIME[s.valor] = s.label; });
+  LABEL_TIME = {}; COR_TIME = {};
+  (rS.data || []).forEach(s => {
+    LABEL_TIME[s.valor] = s.label;
+    const c = s.meta && s.meta.cor;
+    if (typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c)) COR_TIME[s.valor] = c;
+  });
   RESPONSABILIDADES = rR.data; ERR_RESP = !!rR.error;
 }
 
@@ -755,17 +779,42 @@ function renderPorTime(main) {
     const pendentes = g.tarefas.filter(t => !t.concluida_em).length;
     let aberto = abertos.indexOf(slug) >= 0;
 
+    // O CARD DA ÁREA — mesmo desenho das Áreas do erickIA: ponto da cor do setor, nome,
+    // quantas coisas esperam, quantas atrasaram, e a barra do quanto já andou.
+    const atrasadas = g.tarefas.filter(t => !t.concluida_em && ehAtrasada(t)).length;
+    const feitas = g.tarefas.filter(t => t.concluida_em).length;
+    const progresso = g.tarefas.length ? Math.round((feitas / g.tarefas.length) * 100) : 0;
+    const cor = corDoTime(slug);
+
     const cab = document.createElement('button');
-    cab.type = 'button'; cab.className = 'tf-grupo-cab';
-    const seta = document.createElement('span'); seta.className = 'tf-seta';
+    cab.type = 'button'; cab.className = 'tf-area';
+    cab.style.setProperty('--cor-area', cor);
+
+    const topo = document.createElement('div'); topo.className = 'tf-area-topo';
+    const ponto = document.createElement('span'); ponto.className = 'tf-area-ponto';
     const nome = document.createElement('span'); nome.className = 'tf-grupo-nome';
     nome.textContent = g.time.label || slug;
-    // A contagem é das ABERTAS: "3" aqui quer dizer "três coisas esperando", não
-    // "três tarefas já feitas neste time" — que não ajuda ninguém a decidir o dia.
-    const cont = document.createElement('span'); cont.className = 'tf-grupo-cont';
-    cont.textContent = pendentes ? String(pendentes) : '—';
-    if (!pendentes) cont.style.opacity = '.5';
-    cab.append(seta, nome, cont);
+    const seta = document.createElement('span'); seta.className = 'tf-seta';
+    topo.append(ponto, nome, seta);
+
+    // Os números que fazem decidir o dia: o que espera e o que já passou do prazo.
+    const stats = document.createElement('div'); stats.className = 'tf-area-stats';
+    const s1 = document.createElement('span');
+    s1.textContent = pendentes ? pendentes + (pendentes === 1 ? ' pendente' : ' pendentes') : 'nada pendente';
+    if (!pendentes) s1.style.opacity = '.6';
+    stats.appendChild(s1);
+    if (atrasadas) {
+      const s2 = document.createElement('span'); s2.className = 'tf-area-atraso';
+      s2.textContent = atrasadas + (atrasadas === 1 ? ' atrasada' : ' atrasadas');
+      stats.appendChild(s2);
+    }
+    const barra = document.createElement('div'); barra.className = 'tf-area-barra';
+    const cheio = document.createElement('span'); cheio.style.width = progresso + '%';
+    barra.appendChild(cheio);
+    const rodape = document.createElement('div'); rodape.className = 'tf-area-rodape';
+    rodape.textContent = g.tarefas.length ? progresso + '% concluído' : 'sem tarefas ainda';
+
+    cab.append(topo, stats, barra, rodape);
     main.appendChild(cab);
 
     const corpo = document.createElement('div');
@@ -779,6 +828,13 @@ function renderPorTime(main) {
       corpo.appendChild(resp);
     }
     renderRotinasDoTime(corpo, slug);
+    const acoesArea = document.createElement('div');
+    acoesArea.style.cssText = 'display:flex;gap:8px;margin:2px 0 10px;';
+    const bTarefa = document.createElement('button'); bTarefa.className = 'mini';
+    bTarefa.textContent = '+ Tarefa';
+    bTarefa.onclick = () => abrirFormTarefa(null, slug);
+    acoesArea.appendChild(bTarefa);
+    corpo.appendChild(acoesArea);
     if (!g.tarefas.length) {
       const vazio = document.createElement('div'); vazio.className = 'tf-obs'; vazio.style.marginBottom = '10px';
       vazio.textContent = 'Nenhuma tarefa deste time.';
@@ -807,7 +863,7 @@ function renderPorTime(main) {
 // ── Criar tarefa ──
 // Sem argumento: criar. Com uma tarefa: editar a mesma tarefa, no mesmo formulário — dois
 // formulários parecidos viram dois lugares para consertar cada regra.
-async function abrirFormTarefa(tarefa) {
+async function abrirFormTarefa(tarefa, timePadrao) {
   const editando = !!tarefa;
   const [setoresR, membrosR] = await Promise.all([carregarSetores(), carregarResponsaveisPermitidos()]);
   // Recorta pelos times DA PESSOA, igual ao carregarTudo. Este formulário relê o catálogo do
@@ -863,6 +919,10 @@ async function abrirFormTarefa(tarefa) {
       o.textContent = tarefa.time_slug + ' (time removido)'; sTime.appendChild(o);
     }
     sTime.value = tarefa.time_slug;
+  } else if (timePadrao && setores.some(x => x.valor === timePadrao)) {
+    // Criando de dentro de uma Área, o time já vem escolhido: ninguém abre a Formação para
+    // criar tarefa da Secretaria, e escolher de novo é um passo que só dá chance de errar.
+    sTime.value = timePadrao;
   }
   mk('Time', sTime);
 
@@ -986,7 +1046,7 @@ function renderAbas(main) {
   const defs = [
     { id:'quadro', label:'Quadro',   icone:'quadro' },
     { id:'lista',  label:'Lista',    icone:'lista' },
-    { id:'time',   label:'Por time', icone:'users' },
+    { id:'time',   label:'Áreas',    icone:'users' },
   ];
   defs.forEach(d => {
     const b = document.createElement('button'); b.className = modoVisao === d.id ? 'on' : '';
@@ -1006,7 +1066,7 @@ function render() {
     ? 'Toque em Avançar/Voltar pra mudar de coluna — ou arraste, se estiver no computador.'
     : modoVisao === 'lista'
       ? 'Filtre e ordene como precisar.'
-      : 'A responsabilidade fixa de cada time, e as tarefas dele.';
+      : 'Uma área por setor: o que ele cuida, as rotinas e as tarefas dele.';
   main.appendChild(hint);
 
   if (ERR_TAREFAS) {

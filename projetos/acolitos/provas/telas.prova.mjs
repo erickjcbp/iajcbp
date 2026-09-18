@@ -2548,7 +2548,8 @@ async function provaTarefasEtiquetaHoraEArvore(provas) {
       var main = document.getElementById('main-content') || document.body;
       var txt = main.textContent || '';
       var etiquetas = [].slice.call(main.querySelectorAll('.tf-time-tag')).map(function (e) { return e.textContent; });
-      var cabecas = [].slice.call(main.querySelectorAll('.tf-grupo-cab'));
+      // a seção por time virou CARD DE ÁREA (18/09): a classe mudou junto
+      var cabecas = [].slice.call(main.querySelectorAll('.tf-area'));
       var fechados = cabecas.filter(function (c) { return c.getAttribute('aria-expanded') === 'false'; })
                             .map(function (c) { return c.querySelector('.tf-grupo-nome').textContent; });
       var abertos = cabecas.filter(function (c) { return c.getAttribute('aria-expanded') === 'true'; })
@@ -2584,7 +2585,7 @@ async function provaTarefasEtiquetaHoraEArvore(provas) {
 
   const porTime = await abrir('time');
   const c = porTime.avaliado || {};
-  exigir(c.cabecas === 4, 'a visão Por time vira árvore: uma seção por time', 'seções: ' + c.cabecas);
+  exigir(c.cabecas === 4, 'a visão Áreas mostra um card por setor', 'cards: ' + c.cabecas);
   exigir((c.etiquetas || []).length === 0, 'e ali a etiqueta do time NÃO se repete — o título do grupo já diz');
   exigir((c.fechados || []).indexOf('Espiritualidade') >= 0,
     'time sem tarefa em aberto nasce FECHADO', 'fechados: ' + JSON.stringify(c.fechados));
