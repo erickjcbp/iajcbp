@@ -2511,6 +2511,89 @@ async function provaPlanoDaIA(provas) {
   exigir(a.naoInventaTudoCerto === true, 'e NÃO diz "nenhum gargalo" quando nem chegou a perguntar');
 }
 
+async function provaTarefasEtiquetaHoraEArvore(provas) {
+  console.log('\n\x1b[1mTarefas: etiqueta do time, hora combinada e a árvore por time\x1b[0m');
+
+  // Queixas do dono em 18/09: "vejo tarefas mas não tem um badge de qual setor é",
+  // "não tem como marcar horário" e "a visão por time está ruim — podia ser em árvore".
+  const tarefas = [
+    { id: 't1', titulo: 'Gerar a arte da escala', time_slug: 'escala', responsavel_id: null,
+      prazo: '2026-09-18', hora: '19:00:00', observacao: null, recorrencia: 'nenhuma',
+      concluida_em: null, andamento_em: null, rotina_id: null, criada_em: '2026-09-18T10:00:00Z' },
+    { id: 't2', titulo: 'Postar no grupo', time_slug: 'midia', responsavel_id: null,
+      prazo: '2026-09-18', hora: '18:30:00', observacao: null, recorrencia: 'nenhuma',
+      concluida_em: null, andamento_em: null, rotina_id: null, criada_em: '2026-09-18T10:00:00Z' },
+    { id: 't3', titulo: 'Conferir cadastros', time_slug: 'secretaria', responsavel_id: null,
+      prazo: '2026-09-16', hora: null, observacao: null, recorrencia: 'nenhuma',
+      concluida_em: null, andamento_em: null, rotina_id: null, criada_em: '2026-09-10T10:00:00Z' },
+    { id: 't4', titulo: 'Oração da semana', time_slug: 'espiritualidade', responsavel_id: null,
+      prazo: '2026-09-21', hora: null, observacao: null, recorrencia: 'nenhuma',
+      concluida_em: '2026-09-18T09:00:00Z', andamento_em: null, rotina_id: null, criada_em: '2026-09-14T10:00:00Z' },
+  ];
+  const setores = ['escala', 'midia', 'secretaria', 'espiritualidade']
+    .map((v) => ({ tipo: 'setor', valor: v, label: v[0].toUpperCase() + v.slice(1) }));
+
+  const abrir = (modo) => provas.abrir('tarefas.html', {
+    papel: PAPEIS.admin,
+    tabelas: {
+      acolitos_tarefas: { data: tarefas },
+      acolitos_rotinas: { data: [] },
+      acolitos_listas: { data: setores },
+    },
+    rpcs: { acolitos_rotinas_materializar: { data: 0 } },
+    avaliar: `
+      try { localStorage.removeItem('tarefas-times-abertos'); } catch (e) {}
+      modoVisao = '${modo}'; render();
+      await new Promise(function (s) { setTimeout(s, 150); });
+      var main = document.getElementById('main-content') || document.body;
+      var txt = main.textContent || '';
+      var etiquetas = [].slice.call(main.querySelectorAll('.tf-time-tag')).map(function (e) { return e.textContent; });
+      var cabecas = [].slice.call(main.querySelectorAll('.tf-grupo-cab'));
+      var fechados = cabecas.filter(function (c) { return c.getAttribute('aria-expanded') === 'false'; })
+                            .map(function (c) { return c.querySelector('.tf-grupo-nome').textContent; });
+      var abertos = cabecas.filter(function (c) { return c.getAttribute('aria-expanded') === 'true'; })
+                           .map(function (c) { return c.querySelector('.tf-grupo-nome').textContent; });
+      // Busca LITERAL de propósito: dentro de um texto com crase, a barra da data fecharia
+      // a expressão regular no meio ("18/09" vira fim de regex + bandeiras inválidas).
+      return {
+        etiquetas: etiquetas,
+        comHora: txt.indexOf('vence sex 18/09 às 19h') >= 0,
+        horaQuebrada: txt.indexOf('às 18:30') >= 0 || txt.indexOf('h30min') >= 0 || txt.indexOf('às 0h') >= 0,
+        comMeiaHora: txt.indexOf('às 18h30') >= 0,
+        semHoraNaoInventa: txt.indexOf('vence qua 16/09') >= 0 && txt.indexOf('16/09 às') < 0,
+        cabecas: cabecas.length, fechados: fechados, abertos: abertos
+      };
+    `,
+  });
+
+  const lista = await abrir('lista');
+  const a = lista.avaliado || {};
+  exigir(!lista.erroAvaliar, 'a Lista desenha com etiqueta e hora sem estourar', lista.erroAvaliar);
+  exigir(r_obj(lista), 'a prova da Lista chegou ao fim', 'avaliado: ' + JSON.stringify(lista.avaliado));
+  exigir((a.etiquetas || []).length === 4, 'na Lista, toda tarefa diz de qual time é', 'etiquetas: ' + JSON.stringify(a.etiquetas));
+  exigir(a.comHora === true, 'a hora combinada aparece do jeito que a pastoral fala ("às 19h")');
+  exigir(a.comMeiaHora === true, 'e a meia hora vira "18h30", não "18:30"');
+  exigir(a.horaQuebrada === false, 'sem "18:30", "18h30min" nem "0h" — nada de jeito de máquina');
+  exigir(a.semHoraNaoInventa === true, 'tarefa SEM hora não ganha hora inventada',
+    'dizer "às 00h" seria inventar um combinado que ninguém fez');
+
+  const quadro = await abrir('quadro');
+  const b = quadro.avaliado || {};
+  exigir((b.etiquetas || []).length >= 3, 'no Quadro também dá para ver de qual time é cada cartão',
+    'etiquetas: ' + JSON.stringify(b.etiquetas));
+
+  const porTime = await abrir('time');
+  const c = porTime.avaliado || {};
+  exigir(c.cabecas === 4, 'a visão Por time vira árvore: uma seção por time', 'seções: ' + c.cabecas);
+  exigir((c.etiquetas || []).length === 0, 'e ali a etiqueta do time NÃO se repete — o título do grupo já diz');
+  exigir((c.fechados || []).indexOf('Espiritualidade') >= 0,
+    'time sem tarefa em aberto nasce FECHADO', 'fechados: ' + JSON.stringify(c.fechados));
+  exigir((c.abertos || []).indexOf('Escala') >= 0,
+    'e o time com trabalho para hoje nasce aberto', 'abertos: ' + JSON.stringify(c.abertos));
+}
+
+function r_obj(r) { return !!(r && r.avaliado && typeof r.avaliado === 'object'); }
+
 async function provaRecadoDaFotoAparece(provas) {
   console.log('\n\x1b[1mRecado da foto: o convite desenha, e só some quando a foto sobe\x1b[0m');
 
@@ -2603,6 +2686,7 @@ try {
     await provaAcompanhamentoDaFormacao(provas);
     await provaRotinasDoTime(provas);
     await provaPlanoDaIA(provas);
+    await provaTarefasEtiquetaHoraEArvore(provas);
     await provaAvisosAbreComAsProximasMissas(provas);
     await provaAvisosMostraNomeDeQuemEstaAfastado(provas);
     await provaRosterFalhoNaoApagaFiltroDePessoa(provas);

@@ -47,6 +47,17 @@
        display vence hidden. Este projeto já levou esse golpe antes — as ações "extras"
        apareciam todas, e o cartão ficava com o mesmo paredão de botão de sempre. */
     .tf-acoes-extra[hidden] { display:none; }
+    .tf-time-tag { font-size:10px; font-weight:700; letter-spacing:.4px; padding:2px 7px;
+                   border-radius:999px; border:1px solid; white-space:nowrap; }
+    .tf-grupo-cab { width:100%; display:flex; align-items:center; gap:8px; padding:10px 12px;
+                    margin:10px 0 0; background:var(--surface2); border:1px solid var(--border-wine);
+                    border-radius:10px; cursor:pointer; text-align:left; }
+    .tf-seta { color:var(--gold); font-size:11px; width:10px; }
+    .tf-grupo-nome { flex:1; min-width:0; font-family:'Sora',sans-serif; font-weight:700;
+                     font-size:13px; color:var(--gold-light); letter-spacing:.5px; }
+    .tf-grupo-cont { font-size:11px; font-weight:700; color:var(--text-muted);
+                     background:var(--surface); border:1px solid var(--border); border-radius:999px;
+                     min-width:24px; text-align:center; padding:1px 6px; }
     .tf-acoes { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
     .tf-badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:9.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; border:1px solid; }
     .tf-badge.tf-afazer    { background:var(--surface3); color:var(--text-muted); border-color:var(--border); }
@@ -146,6 +157,36 @@ function prazoLabel(prazo) {
   const DIAS = ['dom','seg','ter','qua','qui','sex','sáb'];
   const d = new Date(prazo + 'T00:00:00');
   return 'vence ' + DIAS[d.getDay()] + ' ' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+// '18:00:00' → '18h'  ·  '18:30:00' → '18h30'. Do jeito que a pastoral fala e que o resto do
+// app já escreve as missas — não '18:00', que é jeito de máquina.
+function horaLabel(hora) {
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(hora || ''));
+  if (!m) return '';
+  return Number(m[1]) + 'h' + (m[2] === '00' ? '' : m[2]);
+}
+
+// Quando a tarefa vence, com hora se houver. Sem hora é tarefa do dia inteiro — e dizer
+// "às 00h" seria inventar um combinado que ninguém fez.
+function quandoLabel(t) {
+  const base = prazoLabel(t.prazo);
+  const h = horaLabel(t.hora);
+  return (t.prazo && h) ? base + ' às ' + h : base;
+}
+
+// A etiqueta do time. A cor sai do próprio nome do setor (sempre a mesma para o mesmo
+// setor, sem tabela para manter), dentro da paleta da casa: vinho e dourado com variações de
+// matiz, para não virar arco-íris no meio do app.
+function etiquetaDoTime(t) {
+  const slug = t.time_slug || '';
+  let soma = 0; for (let i = 0; i < slug.length; i++) soma = (soma * 31 + slug.charCodeAt(i)) % 360;
+  const el = document.createElement('span');
+  el.className = 'tf-time-tag';
+  el.style.borderColor = 'hsl(' + soma + ' 45% 45% / .7)';
+  el.style.color = 'hsl(' + soma + ' 60% 75%)';
+  el.textContent = LABEL_TIME[slug] || slug || 'sem time';
+  return el;
 }
 
 function nomeResponsavel(t) {
@@ -483,8 +524,12 @@ function linhaTarefaCompleta(t) {
   const tit = document.createElement('div'); tit.className = 'tf-tit'; tit.textContent = t.titulo;
   const badge = document.createElement('span'); badge.className = 'tf-badge tf-' + estado; badge.textContent = ESTADO_LABEL[estado];
   titRow.append(tit, badge);
+  // A etiqueta do time, ao lado do estado: na Lista e no Quadro as tarefas de times
+  // diferentes se misturam, e sem ela não dava para saber de quem era a tarefa sem ler a
+  // linha miúda embaixo. Na visão Por time ela não entra — ali o título do grupo já diz.
+  if (modoVisao !== 'time') titRow.appendChild(etiquetaDoTime(t));
   const meta = document.createElement('div'); meta.className = 'tf-meta' + (atrasada ? ' tf-atrasada-txt' : '');
-  meta.textContent = [prazoLabel(t.prazo), (LABEL_TIME[t.time_slug] || t.time_slug), nomeResponsavel(t)].join(' · ');
+  meta.textContent = [quandoLabel(t), nomeResponsavel(t)].join(' · ');
   body.append(titRow, meta);
   if (t.observacao) {
     // Cortada em duas linhas; toca e abre. Observação inteira empurrava a tarefa seguinte
@@ -540,8 +585,8 @@ function cartaoTarefa(t, estadoAtual) {
   card.ondragstart = (e) => { e.dataTransfer.setData('text/plain', String(t.id)); };
   const tit = document.createElement('div'); tit.className = 'tf-card-tit'; tit.textContent = t.titulo;
   const meta = document.createElement('div'); meta.className = 'tf-card-meta' + (atrasada ? ' tf-atrasada-txt' : '');
-  meta.textContent = [prazoLabel(t.prazo), (LABEL_TIME[t.time_slug] || t.time_slug), nomeResponsavel(t)].join(' · ');
-  card.append(tit, meta);
+  meta.textContent = [quandoLabel(t), nomeResponsavel(t)].join(' · ');
+  card.append(tit, etiquetaDoTime(t), meta);
   if (t.observacao) {
     const obs = document.createElement('div'); obs.className = 'tf-card-obs'; obs.textContent = t.observacao;
     card.appendChild(obs);
@@ -682,31 +727,80 @@ function configFiltroTarefas() {
 // ── VISÃO: POR TIME ────────────────────────────────────────────────
 // agruparPorTime garante que TODO time aparece, mesmo sem tarefa — um time vazio é
 // informação (ninguém cuidou de nada ali), esconder faria parecer que o time não existe.
+// Quais times estão abertos. Sem isto, treze times com responsabilidade, rotinas e tarefas
+// viravam uma página de rolar sem fim — o dono abria e não achava o dele.
+const TIMES_ABERTOS_CHAVE = 'tarefas-times-abertos';
+function timesAbertos() {
+  try { const g = JSON.parse(localStorage.getItem(TIMES_ABERTOS_CHAVE)); return Array.isArray(g) ? g : null; }
+  catch (e) { return null; }
+}
+function guardarTimesAbertos(lista) {
+  try { localStorage.setItem(TIMES_ABERTOS_CHAVE, JSON.stringify(lista)); } catch (e) {}
+}
+
 function renderPorTime(main) {
   const grupos = agruparPorTime(TAREFAS, TIMES);
   if (!grupos.length) { renderNadaAqui(main); return; }
   grupos.sort((a, b) => (a.time.label || a.time.valor).localeCompare(b.time.label || b.time.valor, 'pt-BR'));
+
+  // Na primeira vez, abre só quem tem tarefa em aberto: é onde há trabalho hoje. Depois
+  // disso vale a escolha da pessoa, guardada no aparelho.
+  let abertos = timesAbertos();
+  if (!abertos) {
+    abertos = grupos.filter(g => g.tarefas.some(t => !t.concluida_em)).map(g => g.time.valor);
+  }
+
   grupos.forEach(g => {
-    const h = document.createElement('div'); h.className = 'tf-grupo-titulo';
-    h.textContent = g.time.label || g.time.valor;
-    main.appendChild(h);
+    const slug = g.time.valor;
+    const pendentes = g.tarefas.filter(t => !t.concluida_em).length;
+    let aberto = abertos.indexOf(slug) >= 0;
+
+    const cab = document.createElement('button');
+    cab.type = 'button'; cab.className = 'tf-grupo-cab';
+    const seta = document.createElement('span'); seta.className = 'tf-seta';
+    const nome = document.createElement('span'); nome.className = 'tf-grupo-nome';
+    nome.textContent = g.time.label || slug;
+    // A contagem é das ABERTAS: "3" aqui quer dizer "três coisas esperando", não
+    // "três tarefas já feitas neste time" — que não ajuda ninguém a decidir o dia.
+    const cont = document.createElement('span'); cont.className = 'tf-grupo-cont';
+    cont.textContent = pendentes ? String(pendentes) : '—';
+    if (!pendentes) cont.style.opacity = '.5';
+    cab.append(seta, nome, cont);
+    main.appendChild(cab);
+
+    const corpo = document.createElement('div');
     if (ERR_RESP) {
       const av = document.createElement('div'); av.className = 'tf-resp tf-resp-erro';
       av.textContent = 'Não foi possível carregar a responsabilidade deste time.';
-      main.appendChild(av);
-    } else if (RESPONSABILIDADES[g.time.valor]) {
+      corpo.appendChild(av);
+    } else if (RESPONSABILIDADES[slug]) {
       const resp = document.createElement('div'); resp.className = 'tf-resp';
-      resp.textContent = RESPONSABILIDADES[g.time.valor];
-      main.appendChild(resp);
+      resp.textContent = RESPONSABILIDADES[slug];
+      corpo.appendChild(resp);
     }
-    renderRotinasDoTime(main, g.time.valor);
+    renderRotinasDoTime(corpo, slug);
     if (!g.tarefas.length) {
       const vazio = document.createElement('div'); vazio.className = 'tf-obs'; vazio.style.marginBottom = '10px';
       vazio.textContent = 'Nenhuma tarefa deste time.';
-      main.appendChild(vazio);
+      corpo.appendChild(vazio);
     } else {
-      ordenar(g.tarefas, 'prazo', false).forEach(t => main.appendChild(linhaTarefaCompleta(t)));
+      ordenar(g.tarefas, 'prazo', false).forEach(t => corpo.appendChild(linhaTarefaCompleta(t)));
     }
+    main.appendChild(corpo);
+
+    const pintar = () => {
+      seta.textContent = aberto ? '▾' : '▸';
+      corpo.style.display = aberto ? '' : 'none';
+      cab.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+    };
+    cab.onclick = () => {
+      aberto = !aberto;
+      const atuais = timesAbertos() || abertos;
+      const sem = atuais.filter(x => x !== slug);
+      guardarTimesAbertos(aberto ? sem.concat([slug]) : sem);
+      pintar();
+    };
+    pintar();
   });
 }
 
@@ -818,6 +912,10 @@ async function abrirFormTarefa(tarefa) {
   const iPrazo = document.createElement('input'); iPrazo.className = 'form-input'; iPrazo.type = 'date';
   if (editando && tarefa.prazo) iPrazo.value = tarefa.prazo;
   mk('Prazo (opcional)', iPrazo);
+  // A hora é opcional e depende do prazo: hora sem dia não marca nada.
+  const iHora = document.createElement('input'); iHora.className = 'form-input'; iHora.type = 'time';
+  if (editando && tarefa.hora) iHora.value = String(tarefa.hora).slice(0, 5);
+  mk('Hora (opcional)', iHora);
 
   const sRec = document.createElement('select'); sRec.className = 'form-input';
   [['nenhuma','Não se repete'], ['semanal','Toda semana'], ['mensal','Todo mês'], ['anual','Todo ano'], ['celebracao','A cada celebração']]
@@ -844,7 +942,8 @@ async function abrirFormTarefa(tarefa) {
     save.disabled = true; save.textContent = 'Salvando...';
     const payload = {
       titulo, time_slug: sTime.value, responsavel_id: sResp.value || null,
-      prazo: iPrazo.value || null, observacao: iObs.value.trim() || null,
+      prazo: iPrazo.value || null, hora: (iPrazo.value && iHora.value) ? iHora.value : null,
+      observacao: iObs.value.trim() || null,
       recorrencia: sRec.value, criada_por: ctx.membro ? ctx.membro.id : null,
     };
     let error, linhas;
@@ -854,7 +953,8 @@ async function abrirFormTarefa(tarefa) {
       // já não existe no banco.
       ({ data: linhas, error } = await sb.from('acolitos_tarefas').update({
         titulo, time_slug: sTime.value, responsavel_id: sResp.value || null,
-        prazo: iPrazo.value || null, observacao: iObs.value.trim() || null,
+        prazo: iPrazo.value || null, hora: (iPrazo.value && iHora.value) ? iHora.value : null,
+        observacao: iObs.value.trim() || null,
         recorrencia: sRec.value,
       }).eq('id', tarefa.id).select('id'));
       if (!error && (!linhas || !linhas.length)) {

@@ -14,6 +14,15 @@ chance de já ter acontecido antes é grande, e a resposta costuma estar aqui.
 
 ## Fechados em 18/09/2026
 
+**As quatro pessoas dos setores passaram a enxergar a aba Tarefas**
+- **O que era:** o cardápio entrou com 12 rotinas, mas Gustavo Santana (Vice-Coordenação,
+  Formação, Ordem e Disciplina) e Maria Eduarda Carli (Secretaria) não tinham a permissão
+  `tarefas` na ficha — 4 das 12 rotinas nasciam sem ninguém para ver.
+- **Conserto:** o dono marcou a permissão na ficha dos dois. Conferido no banco: os quatro
+  que estão em algum setor veem a aba.
+- **Efeito imediato:** as três primeiras tarefas das rotinas já nasceram — o motor rodou pela
+  primeira vez fora das provas.
+
 **O cardápio inicial dos 13 setores, e o rodízio do Orientador**
 - **O que era:** o motor de rotinas subiu e o cardápio ficou vazio — zero rotinas, 13 setores.
   E o campo onde o app guarda *o que cada time é* estava vazio para os 13: conferido, esse
