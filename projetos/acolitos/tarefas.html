@@ -848,13 +848,13 @@ function renderPorTime(main) {
     // A ordem dentro da área: o que se FAZ primeiro (criar e ver tarefa), a máquina que cria
     // sozinho por último. Antes as rotinas vinham na frente e empurravam as tarefas para baixo.
     const acoesArea = document.createElement('div'); acoesArea.className = 'tf-area-acoes';
-    const bTarefa = document.createElement('button'); bTarefa.className = 'mini';
+    const bTarefa = document.createElement('button'); bTarefa.className = 'mini-add';
     bTarefa.textContent = '+ Tarefa';
     bTarefa.onclick = () => abrirFormTarefa(null, slug);
-    const bProjeto = document.createElement('button'); bProjeto.className = 'mini';
+    const bProjeto = document.createElement('button'); bProjeto.className = 'mini-add';
     bProjeto.textContent = '+ Projeto';
     bProjeto.onclick = () => abrirFormTarefa(null, slug, 'projeto');
-    const bRotina = document.createElement('button'); bRotina.className = 'mini';
+    const bRotina = document.createElement('button'); bRotina.className = 'mini-add';
     bRotina.textContent = '+ Rotina';
     bRotina.onclick = () => abrirFormRotina(slug);
     acoesArea.append(bTarefa, bProjeto, bRotina);
@@ -1235,7 +1235,7 @@ function renderRotinasDoTime(main, timeSlug) {
         ' · próxima ' + (r.proxima ? formatDate(r.proxima) : '—');
       l.appendChild(txt);
       if (navCaps(ctx).isAdmin) {
-        const off = document.createElement('button'); off.className = 'mini';
+        const off = document.createElement('button'); off.className = 'btn-sm gray';
         off.textContent = 'Desligar';
         off.onclick = () => desligarRotina(r);
         l.appendChild(off);
@@ -1463,7 +1463,8 @@ function blocoDoProjeto(t) {
     const l = document.createElement('div');
     l.style.cssText = 'display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;';
     const marca = document.createElement('button');
-    marca.className = 'mini'; marca.style.cssText = 'padding:1px 7px;line-height:1.4;';
+    marca.className = 'btn-sm ' + (p.concluido_em ? 'green' : 'gray');
+    marca.style.cssText = 'padding:2px 8px;line-height:1.3;flex:none;';
     marca.textContent = p.concluido_em ? '✓' : '○';
     marca.title = p.concluido_em ? 'Desmarcar' : 'Concluir este passo';
     marca.onclick = () => virarPasso(p);
@@ -1472,8 +1473,8 @@ function blocoDoProjeto(t) {
     if (p.concluido_em) { txt.style.textDecoration = 'line-through'; txt.style.opacity = '.6'; }
     txt.textContent = p.titulo + (p.prazo ? ' · ' + formatDate(p.prazo) : '');
     if (p.prazo && !p.concluido_em && String(p.prazo) < hoje) txt.style.color = 'var(--danger-text)';
-    const del = document.createElement('button'); del.className = 'mini';
-    del.style.cssText = 'padding:1px 7px;line-height:1.4;'; del.textContent = '×';
+    const del = document.createElement('button'); del.className = 'mini-del';
+    del.style.cssText = 'width:26px;height:26px;'; del.textContent = '×';
     del.title = 'Apagar este passo';
     del.onclick = () => apagarPasso(p);
     l.append(marca, txt, del);
@@ -1486,7 +1487,7 @@ function blocoDoProjeto(t) {
   }
   caixa.appendChild(lista);
 
-  const add = document.createElement('button'); add.className = 'mini'; add.style.marginTop = '4px';
+  const add = document.createElement('button'); add.className = 'mini-add'; add.style.marginTop = '6px';
   add.textContent = '+ Passo';
   add.onclick = () => abrirFormPasso(t);
   caixa.appendChild(add);
