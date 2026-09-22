@@ -1364,6 +1364,103 @@ async function provaMembrosMostraQuemEntrouPorUltimo(provas) {
     'sem o filtro App, as opções restantes também não cortam o texto', 'cortadas: ' + JSON.stringify(b.rotulosCortados));
 }
 
+// Defeito real de 21/09/2026: o dono marcou a Ana Beatriz (13 anos, Matriz) como apta em
+// "vela" e ela NÃO apareceu no campo de seleção da Escala. A marcação tinha salvado certo;
+// quem a tirava era o kit "processional" (trava, Matriz, cruz+vela, 14+), que reprova ANTES
+// de olhar a habilitação. A tela de marcar aceitava calada — duas telas, duas verdades.
+// A prova exige as DUAS metades: avisa quem a trava barra, e fica quieta para quem passa.
+// (Escrita primeiro contra jornada-admin.html porque é ALI que se marca: a grade de
+// membros.html é código morto, nenhuma aba a chama.)
+async function provaAvisaQuandoATravaAnulaAMarcacao(provas) {
+  console.log('\n\x1b[1mMarcar função avisa quando a trava do kit anula a marcação\x1b[0m');
+
+  const CONFIG_COM_TRAVA = {
+    gerador: { kits: [{
+      id: 'processional', nome: 'Kit processional', ativo: true, modo: 'trava',
+      comunidades: ['matriz'], funcoes: ['cruz', 'vela'], idade_min: 14,
+      liberados: ['m-liberado'],
+    }] },
+  };
+  // idade relativa a HOJE — data cravada envelhece e a prova passaria a mentir com o tempo
+  const nascidoHaAnos = (n) => { const d = new Date(); d.setFullYear(d.getFullYear() - n); return d.toISOString().slice(0, 10); };
+
+  const membros = [
+    { id: 'm-nova',      nome: 'Ana Nova',      nivel: 'acolito_aspirante', comunidade: 'matriz', data_nascimento: nascidoHaAnos(13) },
+    { id: 'm-grande',    nome: 'Bruno Grande',  nivel: 'acolito_aspirante', comunidade: 'matriz', data_nascimento: nascidoHaAnos(16) },
+    { id: 'm-semdata',   nome: 'Caio SemData',  nivel: 'acolito_aspirante', comunidade: 'matriz', data_nascimento: null },
+    { id: 'm-liberado',  nome: 'Davi Liberado', nivel: 'acolito_aspirante', comunidade: 'matriz', data_nascimento: nascidoHaAnos(9) },
+    { id: 'm-outracom',  nome: 'Eva Antonio',   nivel: 'acolito_aspirante', comunidade: 'santo_antonio', data_nascimento: nascidoHaAnos(9) },
+  ];
+  // TODOS marcados APTOS em vela — a diferença entre eles tem de vir só da trava.
+  const habs = membros.map((m) => ({ membro_id: m.id, funcao: 'vela', proficiencia: 'apto' }));
+
+  const avaliar = `
+    const esperar = (ms) => new Promise(f => setTimeout(f, ms));
+    const out = {};
+    const gente = ${JSON.stringify(membros)};
+    // Fechar SÓ o modal que esta prova abriu. Cada modal do app empilha uma entrada no
+    // histórico e devolve um history.back() ao fechar; varrer '.modal-overlay' à toa
+    // devolve backs a mais e o navegador sai da página (a medição virava about:blank).
+    const fechar = () => { const abertos = [...document.querySelectorAll('.modal-overlay.open')]; if (abertos.length) abertos[abertos.length - 1].remove(); };
+    const avisoDe = async (id) => {
+      await abrirFuncoesEditor(gente.find(m => m.id === id));
+      await esperar(150);
+      const el = document.getElementById('ha-vela');
+      const txt = !el ? '(SEM O ELEMENTO DE AVISO)'
+        : (getComputedStyle(el).display !== 'none' ? el.textContent.trim() : '');
+      fechar(); await esperar(40);
+      return txt;
+    };
+    out.nova      = await avisoDe('m-nova');
+    out.grande    = await avisoDe('m-grande');
+    out.semdata   = await avisoDe('m-semdata');
+    out.liberado  = await avisoDe('m-liberado');
+    out.outracom  = await avisoDe('m-outracom');
+    // o aviso tem de SUMIR e VOLTAR ao mexer no seletor — não só no primeiro desenho
+    await abrirFuncoesEditor(gente.find(m => m.id === 'm-nova')); await esperar(150);
+    const cardDe = (rotulo) => [...document.querySelectorAll('.hab-card')]
+      .find(c => (c.querySelector('.hab-nome') || {}).textContent === rotulo);
+    const selVela = cardDe('Vela').querySelector('.hab-sel');
+    selVela.value = 'nao_treinado'; selVela.onchange();
+    out.depoisDeDesmarcar = getComputedStyle(document.getElementById('ha-vela')).display !== 'none';
+    selVela.value = 'apto'; selVela.onchange();
+    out.depoisDeRemarcar = getComputedStyle(document.getElementById('ha-vela')).display !== 'none';
+    out.avisoNoTuribulo = getComputedStyle(document.getElementById('ha-turibulo')).display !== 'none';
+    fechar();
+    return out;
+  `;
+
+  const r = await provas.abrir('jornada-admin.html', {
+    papel: PAPEIS.admin,
+    config: CONFIG_COM_TRAVA,
+    tabelas: { acolitos_membros: { data: membros }, acolitos_habilitacoes: { data: habs } },
+    avaliar,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar, 'a grade de funções abre sem estourar', r.erroAvaliar);
+  exigir((r.erros || []).length === 0, 'nenhum erro de JavaScript na tela', (r.erros || []).join(' | '));
+  exigir(/n[ãa]o vai entrar na escala da Matriz/i.test(a.nova || ''),
+    'marcada apta com 13 anos é AVISADA de que não vai entrar', 'saiu: ' + JSON.stringify(a.nova));
+  exigir(/14 anos/.test(a.nova || ''),
+    'o aviso diz a idade que a trava exige', 'saiu: ' + JSON.stringify(a.nova));
+  exigir(/Config/.test(a.nova || ''),
+    'o aviso diz ONDE abrir a exceção', 'saiu: ' + JSON.stringify(a.nova));
+  exigir(/sem data de nascimento/i.test(a.semdata || ''),
+    'quem está sem data de nascimento é avisado disso (a trava reprova quem não tem data)', 'saiu: ' + JSON.stringify(a.semdata));
+  exigir(a.grande === '',
+    'quem passa na trava NÃO é avisado (senão o aviso vira ruído e ninguém lê)', 'saiu: ' + JSON.stringify(a.grande));
+  exigir(a.liberado === '',
+    'quem foi liberado no nome NÃO é avisado, mesmo abaixo da idade', 'saiu: ' + JSON.stringify(a.liberado));
+  exigir(a.outracom === '',
+    'a trava é da Matriz: quem é de outra comunidade não é avisado', 'saiu: ' + JSON.stringify(a.outracom));
+  exigir(a.avisoNoTuribulo === false,
+    'função que nenhum kit governa não ganha aviso', 'turíbulo apareceu avisado');
+  exigir(a.depoisDeDesmarcar === false,
+    'desmarcar a função faz o aviso sumir na hora', 'aviso continuou visível');
+  exigir(a.depoisDeRemarcar === true,
+    'marcar de novo faz o aviso voltar na hora, sem recarregar a tela', 'aviso não voltou');
+}
+
 async function provaBarraMostraSoOQueATelaOferece(provas) {
   console.log('\n\x1b[1mBarra de filtro: mostra só o que a tela oferece\x1b[0m');
 
@@ -2765,6 +2862,7 @@ try {
     await provaAvisosAbreComAsProximasMissas(provas);
     await provaAvisosMostraNomeDeQuemEstaAfastado(provas);
     await provaRosterFalhoNaoApagaFiltroDePessoa(provas);
+    await provaAvisaQuandoATravaAnulaAMarcacao(provas);
   }
 } finally {
   await provas.encerrar();

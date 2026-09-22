@@ -138,6 +138,7 @@ export async function iniciarProvas() {
  *   config     o que cfg() deve devolver, ex.: { __funcoes:[...] }
  *   tabelas    resposta por tabela, ex.: { acolitos_membros:{ data:[...] } } ou { ...:{ error:{...} } }
  *   rpcs       resposta por função do banco, mesmo formato
+ *   foto       caminho de um .png, ou { caminho, seletor }, para retratar a tela ao final
  *   passos     o que fazer depois do init, em ordem. Cada passo é
  *                { chamar:'abrirSecao', args:['navegacao'] }  → chama a função global pelo nome
  *                { clicar:'Modelos de escala' }               → clica pelo texto, só no conteúdo
@@ -354,6 +355,18 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
     };
   }
 
+  // opcoes.foto: caminho onde gravar um retrato da tela ANTES de fechá-la. Existe para o
+  // dono poder olhar um desenho novo sem precisar publicar — prova verde não é tela vista.
+  // Aceita um caminho (página inteira) ou { caminho, seletor } para recortar um pedaço —
+  // modal é `position:fixed` e some do retrato de página inteira, que rola até o topo.
+  if (opcoes.foto) {
+    const alvo = typeof opcoes.foto === 'string' ? { caminho: opcoes.foto } : opcoes.foto;
+    try {
+      const el = alvo.seletor ? await pagina.$(alvo.seletor) : null;
+      if (alvo.seletor && !el) throw new Error('não achei ' + alvo.seletor + ' para fotografar');
+      await (el || pagina).screenshot({ path: alvo.caminho, fullPage: el ? undefined : true });
+    } catch (e) { erros.push('foto: ' + e.message); }
+  }
   await pagina.close();
   return { redirecionou: null, ...resultado, erros: [...new Set(erros)], arquivo, papel: papel.nome };
 }

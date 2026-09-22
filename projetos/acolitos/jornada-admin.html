@@ -32,6 +32,8 @@
     .mx-mini.go { border-color:var(--gold); color:var(--gold-light); background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2)); }
     .hab-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
     @media(min-width:480px){ .hab-grid { grid-template-columns:repeat(3,1fr); } }
+    .hab-aviso { font-size:10px; line-height:1.35; margin-top:6px; padding:5px 6px; border-radius:2px;
+                 background:rgba(212,160,96,.12); border:1px solid #d4a060; color:var(--text); }
     .hab-card { background:var(--surface2); border:1px solid var(--border); border-radius:3px; padding:10px; transition:border-color .2s; }
     .hab-card.nao_treinado  { border-color:var(--border); }
     .hab-card.em_formacao   { border-color:#d4a060; }
@@ -58,6 +60,7 @@
 <script src="senha-nova-core.js"></script>
 <script src="telefones-core.js"></script>
 <script src="formacao-core.js"></script>
+<script src="kits-core.js"></script>
 <script src="shared.js"></script>
 <script>
 const NIVEIS_SLUGS = () => NIVEIS.map(n => n.slug);
@@ -833,6 +836,25 @@ async function abrirFuncoesEditor(m) {
   const hab = {}; (habs || []).forEach(h => { hab[h.funcao] = h.proficiencia; });
   const dirty = new Set();
   body.textContent = '';
+  // AVISO DA TRAVA — marcar "apto" não garante a escala. Um kit em modo 'trava' (o
+  // processional da Matriz, 14+) reprova mesmo quem está marcado, e antes disto a pessoa
+  // apenas sumia do campo de seleção da Escala, sem explicação em lugar nenhum.
+  // Quem decide é a MESMA regra que a Escala usa (kits-core.js) — nunca uma cópia dela.
+  const COM_LABEL = { matriz: 'Matriz', santo_antonio: 'Sto. Antônio', outra: 'Outra comunidade' };
+  const kitsCfg = (typeof normalizarKits === 'function') ? normalizarKits(cfg('gerador', {}) || {}) : [];
+  const idadeDoMembro = m.data_nascimento ? calcIdade(m.data_nascimento) : null;
+  const avisoPara = (funcao, proficiencia) => (typeof avisoDeKit !== 'function') ? null : avisoDeKit({
+    kits: kitsCfg, comunidade: m.comunidade || 'matriz', funcao, membroId: m.id,
+    temHabilitacao: ['apto','experiente','referencia'].includes(proficiencia),
+    idade: idadeDoMembro, nivelInt: nivelInfo(m.nivel || 'aspirante').int,
+  });
+  const textoDoAviso = (a) => {
+    const base = 'Marcado, mas NÃO vai entrar na escala da ' + (COM_LABEL[a.comunidade] || a.comunidade)
+      + ': o "' + a.kit + '" exige ' + a.idadeMin + ' anos';
+    return a.motivo === 'sem_data'
+      ? base + ' e esta ficha está SEM data de nascimento. Preencha a data em Membros, ou libere esta pessoa no nome em Config › Gerador › Kits.'
+      : base + '. Para abrir exceção, libere esta pessoa no nome em Config › Gerador › Kits.';
+  };
   const grid = document.createElement('div'); grid.className = 'hab-grid';
   _devFuncoes.forEach(([id, label]) => {
     const nivel = hab[id] || 'nao_treinado';
@@ -841,8 +863,15 @@ async function abrirFuncoesEditor(m) {
     const nivelEl = document.createElement('div'); nivelEl.className = 'hab-nivel'; nivelEl.textContent = PROF_LABEL[nivel];
     const selEl = document.createElement('select'); selEl.className = 'hab-sel';
     PROF_NIVEIS.forEach(n => { const opt = document.createElement('option'); opt.value = n; opt.textContent = PROF_LABEL[n]; if (n === nivel) opt.selected = true; selEl.appendChild(opt); });
-    selEl.onchange = () => { hab[id] = selEl.value; dirty.add(id); card.className = 'hab-card ' + selEl.value; nivelEl.textContent = PROF_LABEL[selEl.value]; };
-    card.append(nome, nivelEl, selEl); grid.appendChild(card);
+    const avisoEl = document.createElement('div'); avisoEl.className = 'hab-aviso'; avisoEl.id = 'ha-' + id;
+    const pintarAviso = (prof) => {
+      const av = avisoPara(id, prof);
+      avisoEl.style.display = av ? '' : 'none';
+      avisoEl.textContent = av ? '\u26A0\uFE0F ' + textoDoAviso(av) : '';
+    };
+    selEl.onchange = () => { hab[id] = selEl.value; dirty.add(id); card.className = 'hab-card ' + selEl.value; nivelEl.textContent = PROF_LABEL[selEl.value]; pintarAviso(selEl.value); };
+    card.append(nome, nivelEl, selEl, avisoEl); grid.appendChild(card);
+    pintarAviso(nivel);
   });
   body.appendChild(grid);
   const save = document.createElement('button'); save.className = 'btn gold'; save.style.cssText = 'width:100%;margin-top:14px;'; save.textContent = 'Salvar';

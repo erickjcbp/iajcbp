@@ -2,7 +2,7 @@
 // Rodar: node --test projetos/acolitos/kits-core.test.js
 const test = require('node:test');
 const assert = require('node:assert');
-const { podeNaFuncao, normalizarKits } = require('./kits-core.js');
+const { podeNaFuncao, normalizarKits, avisoDeKit } = require('./kits-core.js');
 
 // Kit que LIBERA: estar na idade já basta, mesmo sem habilitação. (é o Sto. Antônio de hoje)
 const KIT_LIBERA = {
@@ -76,4 +76,56 @@ test('sem configuração nenhuma, o padrão histórico é mantido (Sto. Antônio
   const kits = normalizarKits({});
   assert.deepStrictEqual(kits[0].comunidades, ['santo_antonio']);
   assert.strictEqual(kits[0].idade_min, 7);
+});
+
+// ── O AVISO: marquei a pessoa como apta, mas um kit que TRAVA vai anular isso ────────
+// Nasceu de um caso real (21/09/2026): a Ana Beatriz foi marcada apta em "vela" e sumiu
+// do campo de seleção da Escala sem nenhum aviso — a trava dos 14 anos da Matriz a
+// reprovava ANTES de olhar a habilitação. A tela de Membros aceitava calada.
+test('aviso: marcada apta mas abaixo da idade da trava — diz a idade que falta', () => {
+  const a = avisoDeKit({ kits: [KIT_LIBERA, KIT_TRAVA], comunidade: 'matriz', funcao: 'cruz',
+    membroId: 'm1', temHabilitacao: true, idade: 12, nivelInt: 1 });
+  assert.ok(a, 'devia avisar');
+  assert.strictEqual(a.motivo, 'idade');
+  assert.strictEqual(a.idadeMin, 14);
+  assert.strictEqual(a.kit, 'Kit processional');
+});
+
+test('aviso: marcada apta e SEM data de nascimento — a trava reprova por falta de data', () => {
+  const a = avisoDeKit({ kits: [KIT_LIBERA, KIT_TRAVA], comunidade: 'matriz', funcao: 'vela',
+    membroId: 'm1', temHabilitacao: true, idade: null, nivelInt: 1 });
+  assert.ok(a, 'devia avisar');
+  assert.strictEqual(a.motivo, 'sem_data');
+  assert.strictEqual(a.idadeMin, 14);
+});
+
+test('aviso: quem passa na trava não é avisado', () => {
+  assert.strictEqual(avisoDeKit({ kits: [KIT_LIBERA, KIT_TRAVA], comunidade: 'matriz',
+    funcao: 'cruz', membroId: 'm1', temHabilitacao: true, idade: 14, nivelInt: 1 }), null);
+});
+
+test('aviso: liberado nome a nome não é avisado', () => {
+  assert.strictEqual(avisoDeKit({ kits: [KIT_LIBERA, KIT_TRAVA], comunidade: 'matriz',
+    funcao: 'cruz', membroId: 'm-liberado', temHabilitacao: true, idade: 9, nivelInt: 1 }), null);
+});
+
+test('aviso: quem NÃO foi marcado apto não é avisado (não há contradição a mostrar)', () => {
+  assert.strictEqual(avisoDeKit({ kits: [KIT_LIBERA, KIT_TRAVA], comunidade: 'matriz',
+    funcao: 'cruz', membroId: 'm1', temHabilitacao: false, idade: 9, nivelInt: 1 }), null);
+});
+
+test('aviso: função sem kit governando nunca avisa', () => {
+  assert.strictEqual(avisoDeKit({ kits: [KIT_LIBERA, KIT_TRAVA], comunidade: 'matriz',
+    funcao: 'turibulo', membroId: 'm1', temHabilitacao: true, idade: 9, nivelInt: 1 }), null);
+});
+
+test('aviso: kit que LIBERA nunca avisa — ele só concede, nunca tira', () => {
+  assert.strictEqual(avisoDeKit({ kits: [KIT_LIBERA, KIT_TRAVA], comunidade: 'santo_antonio',
+    funcao: 'cruz', membroId: 'm1', temHabilitacao: true, idade: 5, nivelInt: 1 }), null);
+});
+
+test('aviso: kit desligado não avisa', () => {
+  const kits = [Object.assign({}, KIT_TRAVA, { ativo: false })];
+  assert.strictEqual(avisoDeKit({ kits, comunidade: 'matriz', funcao: 'cruz',
+    membroId: 'm1', temHabilitacao: true, idade: 9, nivelInt: 1 }), null);
 });

@@ -72,11 +72,32 @@
     return false;
   }
 
-  var api = { podeNaFuncao: podeNaFuncao, normalizarKits: normalizarKits, kitQueGoverna: kitQueGoverna };
+
+  // Por que esta marcação não vai valer? Responde só quando HÁ contradição: a pessoa foi
+  // marcada como apta e mesmo assim um kit que TRAVA a reprova. Serve para a tela avisar
+  // na hora de marcar, em vez de a pessoa sumir calada do campo de seleção da Escala.
+  // Não repete a regra: pergunta à própria `podeNaFuncao`, para as duas telas nunca
+  // discordarem. Devolve null quando não há nada a dizer.
+  function avisoDeKit(o) {
+    o = o || {};
+    if (!o.temHabilitacao) return null;              // sem marcação não há contradição
+    if (podeNaFuncao(o)) return null;                // passa: nada a avisar
+    var kit = kitQueGoverna(o.kits, o.comunidade, o.funcao);
+    if (!kit || kit.modo !== 'trava') return null;   // quem tira é a trava, e só ela
+    return {
+      motivo: o.idade == null ? 'sem_data' : 'idade',
+      idadeMin: kit.idade_min,
+      kit: kit.nome,
+      comunidade: o.comunidade,
+    };
+  }
+
+  var api = { podeNaFuncao: podeNaFuncao, normalizarKits: normalizarKits, kitQueGoverna: kitQueGoverna, avisoDeKit: avisoDeKit };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else {                                            // mesmo contrato de navegacao-core.js:
     global.podeNaFuncao = podeNaFuncao;             // as telas chamam pelo nome direto
     global.normalizarKits = normalizarKits;
     global.kitQueGoverna = kitQueGoverna;
+    global.avisoDeKit = avisoDeKit;
   }
 })(typeof globalThis !== 'undefined' ? globalThis : this);
