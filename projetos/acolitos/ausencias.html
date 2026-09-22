@@ -62,6 +62,7 @@
 <script src="filtro-lista-core.js"></script>
 <script src="senha-nova-core.js"></script>
 <script src="telefones-core.js"></script>
+<script src="paginar-core.js"></script>
 <script src="acesso-core.js"></script>
 <script src="shared.js"></script>
 <script src="gerador-substituto.js"></script>
@@ -396,7 +397,8 @@ async function carregarCargaAus(refData) {
     const { data: cels } = await sb.from('acolitos_celebracoes').select('id').gte('data', iniStr).lte('data', refData);
     const ids = (cels || []).map(c => c.id);
     if (!ids.length) return base;
-    const { data } = await sb.from('acolitos_escalas').select('membro_id').in('celebracao_id', ids).limit(5000);
+    // `.limit(5000)` NÃO vence o teto de mil do servidor: ele manda mil e responde 200.
+    const { data } = await lerTudo(() => sb.from('acolitos_escalas').select('membro_id').in('celebracao_id', ids));
     (data || []).forEach(e => { base[e.membro_id] = (base[e.membro_id] || 0) + 1; });
   } catch (err) { console.error('carga histórica (ausências) falhou', err); }
   return base;
@@ -417,7 +419,8 @@ async function autoTrocaAprovadas(itens) {
   if (!rosterMembrosAus || !rosterMembrosAus.length) return;
 
   const habMap = {}; (rosterHabsAus || []).forEach(h => { (habMap[h.membro_id] = habMap[h.membro_id] || {})[h.funcao] = h.proficiencia; });
-  const { data: dispRows } = await sb.from('acolitos_disponibilidade').select('membro_id,dia,horario');
+  // PAGINADO: 686 linhas hoje, teto de mil — passando dele, gente vira "indisponível" calada.
+  const { data: dispRows } = await lerTudo(() => sb.from('acolitos_disponibilidade').select('membro_id,dia,horario'));
   const dispMap = dispMapDeAus(dispRows);
   const config = { gerador: (typeof cfg === 'function' ? cfg('gerador', {}) : {}), funcoes_maiores: (typeof cfg === 'function' ? cfg('funcoes_maiores', null) : null) };
 
@@ -474,7 +477,8 @@ async function autoTrocaAprovadas(itens) {
 async function construirCtxMotor(it){
   await carregarRosterAus();
   const habMap = {}; (rosterHabsAus||[]).forEach(h => { (habMap[h.membro_id]=habMap[h.membro_id]||{})[h.funcao]=h.proficiencia; });
-  const { data: dispRows } = await sb.from('acolitos_disponibilidade').select('membro_id,dia,horario');
+  // PAGINADO: 686 linhas hoje, teto de mil — passando dele, gente vira "indisponível" calada.
+  const { data: dispRows } = await lerTudo(() => sb.from('acolitos_disponibilidade').select('membro_id,dia,horario'));
   const dispMap = dispMapDeAus(dispRows);
   const carga = await carregarCargaAus(it.data);
   const config = { gerador: (typeof cfg==='function'?cfg('gerador',{}):{}), funcoes_maiores: (typeof cfg==='function'?cfg('funcoes_maiores',null):null) };

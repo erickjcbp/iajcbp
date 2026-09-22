@@ -38,3 +38,19 @@ test('toda tela com os *-core carrega também a senha-nova-core.js', () => {
   const semHorario = telas.filter(f => !fs.readFileSync(path.join(dir, f), 'utf8').includes('horario-core.js'));
   assert.deepStrictEqual(semHorario, [], 'estas telas não carregam a regra do horário: ' + semHorario.join(', '));
 });
+
+// O leitor paginado é diferente dos de cima: nem toda tela precisa dele, só as que leem
+// tabela grande. Por isso a pergunta não é "todas carregam?", e sim "quem USA, carrega?".
+// Uma lista escrita à mão aqui envelheceria na primeira tela nova.
+//
+// Esquecer este <script> não quebra nada visível: `lerTudo` seria `undefined`, a chamada
+// estouraria dentro de um `await` e a tela mostraria lista vazia ou um pedaço dela — que é
+// exatamente o defeito que o leitor existe para tapar, de volta com outra roupa.
+test('toda tela que USA o leitor paginado carrega a paginar-core.js', () => {
+  const dir = __dirname;
+  const telas = fs.readdirSync(dir).filter(f => f.endsWith('.html'));
+  const usam = telas.filter(f => /\blerTudo\s*\(/.test(fs.readFileSync(path.join(dir, f), 'utf8')));
+  assert.ok(usam.length >= 5, 'esperava 5+ telas usando o leitor, achei ' + usam.length + ' — sumiu arquivo?');
+  const faltando = usam.filter(f => !fs.readFileSync(path.join(dir, f), 'utf8').includes('paginar-core.js'));
+  assert.deepStrictEqual(faltando, [], 'estas telas usam lerTudo() sem carregar a regra: ' + faltando.join(', '));
+});

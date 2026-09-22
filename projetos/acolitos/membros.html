@@ -121,6 +121,7 @@
 <script src="filtro-lista-core.js"></script>
 <script src="senha-nova-core.js"></script>
 <script src="telefones-core.js"></script>
+<script src="paginar-core.js"></script>
 <script src="shared.js"></script>
 <script src="planilha-xlsx.js"></script>
 <script>
@@ -400,7 +401,8 @@ async function planilhaCadastroXLSX(){
 
 async function relatorioMembrosCSV(){
   if(!todos.length){ baixarCSV('membros-backup', [['(sem membros)']]); return; }
-  const { data: habs } = await sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia');
+  // PAGINADO: 839 linhas hoje, teto de mil.
+  const { data: habs } = await lerTudo(() => sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia'));
   const habBy={}; (habs||[]).forEach(h=>{ (habBy[h.membro_id]=habBy[h.membro_id]||{})[h.funcao]=h.proficiencia; });
   let freqMap={}; try{ freqMap = await fetchFrequencia() || {}; }catch(e){}
   const memberCols=[...new Set(todos.flatMap(m=>Object.keys(m)))];

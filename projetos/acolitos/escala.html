@@ -275,6 +275,7 @@
 <script src="filtro-lista-core.js"></script>
 <script src="senha-nova-core.js"></script>
 <script src="telefones-core.js"></script>
+<script src="paginar-core.js"></script>
 <script src="kits-core.js"></script>
 <script src="confirmar-escala-core.js"></script>
 <script src="shared.js"></script>
@@ -509,8 +510,10 @@ async function loadDados() {
     });
     const [{ data: mems }, { data: habs }, { data: disps }, freqData, { data: auss }, { data: chs }] = await Promise.all([
       sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,casa_id,pode_outras_comunidades,data_nascimento,foto_url,observacoes,necessidades_especiais,nome_pai,nome_mae,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro,grupo_irmaos,escalar_com_irmao').eq('status','ativo').order('nome'),
-      sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia'),
-      sb.from('acolitos_disponibilidade').select('membro_id,dia,horario,restricao'),
+      // PAGINADAS: 839 e 686 linhas hoje, e o teto é mil. Ao passar dele, gente marcada
+      // como apta SOME do campo de seleção — o mesmo sintoma da trava, sem trava nenhuma.
+      lerTudo(() => sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia')),
+      lerTudo(() => sb.from('acolitos_disponibilidade').select('membro_id,dia,horario,restricao')),
       fetchFrequencia(),
       sb.from('acolitos_ausencias').select('membro_id,celebracao_id').in('celebracao_id', ids),
       sb.from('acolitos_chamadas').select('celebracao_id').in('celebracao_id', ids),
@@ -889,7 +892,8 @@ async function carregarCargaHistorica(refData) {
     const { data: cels } = await sb.from('acolitos_celebracoes').select('id').gte('data', iniStr).lte('data', ref);
     const ids = (cels || []).map(c => c.id);
     if (!ids.length) return base;
-    const { data } = await sb.from('acolitos_escalas').select('membro_id').in('celebracao_id', ids).limit(5000);
+    // `.limit(5000)` NÃO vence o teto de mil do servidor: ele manda mil e responde 200.
+    const { data } = await lerTudo(() => sb.from('acolitos_escalas').select('membro_id').in('celebracao_id', ids));
     (data || []).forEach(e => { base[e.membro_id] = (base[e.membro_id]||0)+1; });
   } catch (err) { console.error('carga histórica falhou', err); }
   return base;
@@ -1617,10 +1621,14 @@ async function _freqDados(de, ate){
     out.forEach(r=>{ const f=freq[r.m.id]; if(f){ r.servidas=f.servidas||0; r.faltas=(f.faltas_just||0)+(f.faltas_nao_just||0); r.atrasos=f.atrasos||0; r.taxa=(f.taxa!=null?f.taxa:null); r.ultima=f.ultima_participacao||null; } });
     return out;
   }
-  let q = sb.from('acolitos_escalas').select('membro_id,status,acolitos_celebracoes!inner(data)');
-  if(de) q=q.gte('acolitos_celebracoes.data', de);
-  if(ate) q=q.lte('acolitos_celebracoes.data', ate);
-  const { data } = await q;
+  // PAGINADO: um período largo passa de mil escalas e o banco corta calado — as taxas
+  // saíam menores que a verdade, e o PDF não tinha como avisar.
+  const montarQ = () => { let q = sb.from('acolitos_escalas').select('membro_id,status,acolitos_celebracoes!inner(data)');
+    if(de) q=q.gte('acolitos_celebracoes.data', de);
+    if(ate) q=q.lte('acolitos_celebracoes.data', ate);
+    return q; };
+  const { data, error: errFreq } = await lerTudo(montarQ);
+  if(errFreq) throw errFreq;   // lista curta virando relatório é pior que o relatório falhar
   (data||[]).forEach(e=>{ const r=byId[e.membro_id]; if(!r) return; const dt=e.acolitos_celebracoes&&e.acolitos_celebracoes.data;
     if(e.status==='presente'||e.status==='atrasado'){ r.servidas++; if(e.status==='atrasado') r.atrasos++; if(dt&&(!r.ultima||dt>r.ultima)) r.ultima=dt; }
     else if(e.status==='ausente'||e.status==='ausente_justificado'){ r.faltas++; }
@@ -1632,7 +1640,8 @@ function _freqOrdena(a){ return a.sort((x,y)=>{ if(x.taxa==null&&y.taxa==null) r
 async function freqPDF(){
   const de=document.getElementById('freq-de').value, ate=document.getElementById('freq-ate').value;
   if(de&&ate&&de>ate){ toast('A data inicial é maior que a final.','error'); return; }
-  const rows=await _freqDados(de,ate);
+  let rows; try { rows=await _freqDados(de,ate); }
+  catch(e){ console.error('frequência falhou', e); toast('Não consegui ler a frequência do período. Tente de novo.','error'); return; }
   const ordem=['matriz','santo_antonio','outra']; const grp={matriz:[],santo_antonio:[],outra:[]};
   rows.forEach(r=>grp[ordem.includes(r.m.comunidade)?r.m.comunidade:'outra'].push(r));
   const fmtD=d=>d?new Date(d+'T00:00:00').toLocaleDateString('pt-BR'):'—';
@@ -1649,7 +1658,9 @@ async function freqPDF(){
 async function freqCSV(){
   const de=document.getElementById('freq-de').value, ate=document.getElementById('freq-ate').value;
   if(de&&ate&&de>ate){ toast('A data inicial é maior que a final.','error'); return; }
-  const rows=await _freqDados(de,ate); _freqOrdena(rows);
+  let rows; try { rows=await _freqDados(de,ate); }
+  catch(e){ console.error('frequência falhou', e); toast('Não consegui ler a frequência do período. Tente de novo.','error'); return; }
+  _freqOrdena(rows);
   const fmtD=d=>d?new Date(d+'T00:00:00').toLocaleDateString('pt-BR'):'';
   const linhas=[['Comunidade','Membro','Servidas','Faltas','Atrasos','Taxa','Última']];
   rows.forEach(r=>linhas.push([ _freqComLabel(r.m.comunidade), r.m.nome||'', String(r.servidas), String(r.faltas), String(r.atrasos), (r.taxa==null?'':r.taxa+'%'), fmtD(r.ultima) ]));

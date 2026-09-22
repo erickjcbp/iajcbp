@@ -1371,6 +1371,49 @@ async function provaMembrosMostraQuemEntrouPorUltimo(provas) {
 // A prova exige as DUAS metades: avisa quem a trava barra, e fica quieta para quem passa.
 // (Escrita primeiro contra jornada-admin.html porque é ALI que se marca: a grade de
 // membros.html é código morto, nenhuma aba a chama.)
+// O TETO DE MIL LINHAS. O Supabase devolve no máximo 1000 linhas por pergunta, responde
+// HTTP 200 e não avisa que cortou — e `.limit(5000)` não vence isso. Medido no banco real
+// em 22/09/2026: o gráfico do Início desenhava 68 escalas de setembro quando eram 302,
+// porque o corte come justamente as linhas mais recentes. Parecia a pastoral esvaziando.
+//
+// O cenário é montado para que a prova SÓ passe com paginação: as primeiras mil linhas são
+// de um mês antigo, e as 300 do mês corrente vêm depois do corte. Sem paginar, o mês
+// corrente some inteiro do gráfico. (Verificado por mutação: tirando o lerTudo do
+// index.html, esta prova fica vermelha.)
+async function provaGraficoDoInicioNaoPerdeOMesCorrente(provas) {
+  console.log('\n\x1b[1mO gráfico do Início atravessa o teto de mil linhas do banco\x1b[0m');
+
+  const hoje = new Date();
+  const mesAtual = hoje.toISOString().slice(0, 7);
+  const antigo = new Date(hoje); antigo.setMonth(antigo.getMonth() - 3);
+  const mesAntigo = antigo.toISOString().slice(0, 7);
+  const escalas = [
+    ...Array.from({ length: 1000 }, () => ({ status: 'presente', acolitos_celebracoes: { data: mesAntigo + '-10' } })),
+    ...Array.from({ length: 300 }, () => ({ status: 'presente', acolitos_celebracoes: { data: mesAtual + '-10' } })),
+  ];
+
+  const r = await provas.abrir('index.html', {
+    papel: PAPEIS.admin,
+    tabelas: { acolitos_escalas: { data: escalas } },
+    avaliar: `
+      await new Promise(f => setTimeout(f, 500));
+      const card = [...document.querySelectorAll('.chart-card')].find(c => /Presen/.test(c.textContent));
+      if (!card) return { erro: 'não achei o gráfico de presença' };
+      // os números escritos em cima das barras (um por mês, servidas e faltas)
+      const vistos = [...new Set([...card.querySelectorAll('div')].map(d => d.textContent).filter(t => /^\\d+$/.test(t)))];
+      return { vistos };
+    `,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar && !a.erro, 'o Início abre com o gráfico', r.erroAvaliar || a.erro);
+  exigir((r.erros || []).length === 0, 'nenhum erro de JavaScript na tela', (r.erros || []).join(' | '));
+  exigir((a.vistos || []).includes('1000'),
+    'o gráfico conta as mil primeiras escalas', 'números vistos: ' + JSON.stringify(a.vistos));
+  exigir((a.vistos || []).includes('300'),
+    'e conta TAMBÉM as 300 que vêm depois do corte de mil — sem paginar, o mês corrente some inteiro',
+    'números vistos: ' + JSON.stringify(a.vistos));
+}
+
 async function provaAvisaQuandoATravaAnulaAMarcacao(provas) {
   console.log('\n\x1b[1mMarcar função avisa quando a trava do kit anula a marcação\x1b[0m');
 
@@ -2913,6 +2956,7 @@ try {
     await provaAvisosMostraNomeDeQuemEstaAfastado(provas);
     await provaRosterFalhoNaoApagaFiltroDePessoa(provas);
     await provaAvisaQuandoATravaAnulaAMarcacao(provas);
+    await provaGraficoDoInicioNaoPerdeOMesCorrente(provas);
   }
 } finally {
   await provas.encerrar();

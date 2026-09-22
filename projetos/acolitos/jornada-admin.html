@@ -61,6 +61,7 @@
 <script src="telefones-core.js"></script>
 <script src="formacao-core.js"></script>
 <script src="kits-core.js"></script>
+<script src="paginar-core.js"></script>
 <script src="shared.js"></script>
 <script>
 const NIVEIS_SLUGS = () => NIVEIS.map(n => n.slug);
@@ -373,7 +374,8 @@ const LIGAS_DEV = [
 ];
 let habAll = {}, _redrawCobertura = null, _redrawMatriz = null;
 async function carregarHabAll(){
-  const { data:habs } = await sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia');
+  // PAGINADO: 839 linhas hoje, teto de mil.
+  const { data:habs } = await lerTudo(() => sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia'));
   habAll = {}; (habs||[]).forEach(h=>{ (habAll[h.membro_id]=habAll[h.membro_id]||{})[h.funcao]=h.proficiencia; });
 }
 function bucketsFuncao(funcao){

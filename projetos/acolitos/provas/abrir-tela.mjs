@@ -236,15 +236,28 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
     // recusada e a tela dizendo "não há nada" em vez de "não consegui perguntar".
     const ok = (d) => ({ data: d, error: null, count: Array.isArray(d) ? d.length : 0 });
     const gravacoes = [];
-    const respostaDe = (tabela) => {
+    // `.range(de, ate)` RECORTA de verdade. Sem isto o banco de mentira devolvia a lista
+    // inteira a cada página, e o leitor paginado (paginar-core.js) pedia a página seguinte
+    // para sempre — a prova travava, e pior: passaria a medir uma leitura que não pagina.
+    const respostaDe = (tabela, recorte) => {
       const t = (opcoes.tabelas || {})[tabela];
       if (t && t.error) return { data: null, error: t.error, count: 0 };
-      if (t) return ok(t.data || []);
-      return ok([]);
+      const todas = t ? (t.data || []) : [];
+      // TETO DE MIL, como o PostgREST de verdade: sem paginar, uma lista maior vem CORTADA
+      // e a resposta continua sendo "deu certo". Sem isto aqui, uma prova de paginação
+      // passaria com a leitura não paginada — que é o defeito que ela deveria pegar.
+      const TETO = 1000;
+      const fatia = recorte
+        ? todas.slice(recorte[0], Math.min(recorte[1] + 1, recorte[0] + TETO))
+        : todas.slice(0, TETO);
+      // `count` é o TOTAL, como o Supabase responde com count exato — não o da fatia.
+      return { data: fatia, error: null, count: Array.isArray(todas) ? todas.length : 0 };
     };
     const cadeia = (tabela) => {
+      let recorte = null;
       const c = new Proxy({}, { get: (_alvo, chave) => {
-        if (chave === 'then') return (f) => Promise.resolve(respostaDe(tabela)).then(f);
+        if (chave === 'then') return (f) => Promise.resolve(respostaDe(tabela, recorte)).then(f);
+        if (chave === 'range') return (de, ate) => { recorte = [de, ate]; return c; };
         // grava o que a tela MANDARIA para o banco: às vezes a tela está certa e o
         // botão de salvar é que deixa coisa de fora (foi o caso dos Modelos de escala)
         if (chave === 'insert' || chave === 'upsert' || chave === 'update' || chave === 'delete') {
