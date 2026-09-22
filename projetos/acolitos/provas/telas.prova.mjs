@@ -1380,6 +1380,59 @@ async function provaMembrosMostraQuemEntrouPorUltimo(provas) {
 // de um mês antigo, e as 300 do mês corrente vêm depois do corte. Sem paginar, o mês
 // corrente some inteiro do gráfico. (Verificado por mutação: tirando o lerTudo do
 // index.html, esta prova fica vermelha.)
+// Os três primeiros cartões do Início faziam `resposta.count || 0`: quando o banco RECUSAVA
+// eles mostravam "0", idênticos a uma pastoral vazia. "Membros Ativos: 0" com 193 pessoas
+// cadastradas passa por lentidão do celular e ninguém investiga. O cartão de Freq. Média ao
+// lado já fazia certo — mostrava "—". Esta prova exige as DUAS metades: número quando dá
+// certo, e "—" com explicação quando não dá. Sem a primeira metade, um cartão quebrado que
+// nunca mostrasse nada também passaria.
+async function provaKpisDoInicioNaoViramZeroQuandoOBancoRecusa(provas) {
+  console.log('\n\x1b[1mOs números do Início não viram "0" quando o banco recusa\x1b[0m');
+
+  const gente = (n, p) => Array.from({ length: n }, (_, i) => ({ id: p + i, nome: 'P' + i, status: 'ativo', nivel: 'coroinha' }));
+  const COM_DADOS = {
+    acolitos_membros: { data: gente(42, 'm') },
+    acolitos_crm: { data: gente(7, 'c') },
+    acolitos_celebracoes: { data: gente(9, 'ce') },
+  };
+  const RECUSANDO = {
+    acolitos_membros: { error: { message: 'permission denied', code: '42501' } },
+    acolitos_crm: { error: { message: 'permission denied', code: '42501' } },
+    acolitos_celebracoes: { error: { message: 'permission denied', code: '42501' } },
+  };
+  const ler = `
+    await new Promise(f => setTimeout(f, 400));
+    return [...document.querySelectorAll('.kpi-card')].map(c => ({
+      label: (c.querySelector('.kpi-label') || {}).textContent,
+      valor: (c.querySelector('.kpi-value') || {}).textContent,
+      sub:   (c.querySelector('.kpi-sub') || {}).textContent,
+    }));
+  `;
+  const acha = (lista, label) => (lista || []).find(k => k.label === label) || {};
+
+  const bom = await provas.abrir('index.html', { papel: PAPEIS.admin, tabelas: COM_DADOS, avaliar: ler });
+  const ruim = await provas.abrir('index.html', { papel: PAPEIS.admin, tabelas: RECUSANDO, avaliar: ler });
+  exigir(!bom.erroAvaliar && !ruim.erroAvaliar, 'o Início abre nos dois casos', bom.erroAvaliar || ruim.erroAvaliar);
+
+  const CARTOES = [['Membros Ativos', '42'], ['Missas no Mês', '9'], ['Em Onboarding', '7']];
+  for (const [label, esperado] of CARTOES) {
+    exigir(acha(bom.avaliado, label).valor === esperado,
+      'com o banco respondendo, "' + label + '" mostra o número', 'mostrou: ' + JSON.stringify(acha(bom.avaliado, label)));
+    exigir(acha(ruim.avaliado, label).valor === '—',
+      'com o banco recusando, "' + label + '" mostra "—" e NÃO "0"', 'mostrou: ' + JSON.stringify(acha(ruim.avaliado, label)));
+    exigir(/não consegui/i.test(acha(ruim.avaliado, label).sub || ''),
+      'e diz por quê, embaixo do "—"', 'legenda: ' + JSON.stringify(acha(ruim.avaliado, label).sub));
+  }
+  // zero de VERDADE tem de continuar sendo zero — senão o conserto só troca uma mentira por outra
+  const vazio = await provas.abrir('index.html', {
+    papel: PAPEIS.admin,
+    tabelas: { acolitos_membros: { data: [] }, acolitos_crm: { data: [] }, acolitos_celebracoes: { data: [] } },
+    avaliar: ler,
+  });
+  exigir(acha(vazio.avaliado, 'Membros Ativos').valor === 0 || acha(vazio.avaliado, 'Membros Ativos').valor === '0',
+    'pastoral realmente vazia continua mostrando 0, não "—"', 'mostrou: ' + JSON.stringify(acha(vazio.avaliado, 'Membros Ativos')));
+}
+
 async function provaGraficoDoInicioNaoPerdeOMesCorrente(provas) {
   console.log('\n\x1b[1mO gráfico do Início atravessa o teto de mil linhas do banco\x1b[0m');
 
@@ -2957,6 +3010,7 @@ try {
     await provaRosterFalhoNaoApagaFiltroDePessoa(provas);
     await provaAvisaQuandoATravaAnulaAMarcacao(provas);
     await provaGraficoDoInicioNaoPerdeOMesCorrente(provas);
+    await provaKpisDoInicioNaoViramZeroQuandoOBancoRecusa(provas);
   }
 } finally {
   await provas.encerrar();

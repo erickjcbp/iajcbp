@@ -140,11 +140,8 @@ const FUNCOES = [
   {id:'mitra',          label:'Mitra',           cat:'Episcopal'},
   {id:'baculo',         label:'Báculo',          cat:'Episcopal'},
 ];
-const PROF_NIVEIS = ['nao_treinado','em_formacao','apto','experiente','referencia']; // proficiência (não confundir com NIVEIS da jornada, em shared.js)
-const NIVEL_LABEL = {
-  nao_treinado:'Não Treinado', em_formacao:'Em Formação',
-  apto:'Apto', experiente:'Experiente', referencia:'Referência'
-};
+// (PROF_NIVEIS e NIVEL_LABEL saíram junto com a grade de funções: a proficiência é
+// marcada na Jornada, e cada tela de lá tem as suas. Ver o commit desta limpeza.)
 const ROLE_LABEL = {
   cerimonario:'Cerimoniário', acolito:'Acólito', coroinha:'Coroinha',
   aspirante:'Aspirante', membro_equipe:'Equipe', subadmin:'Sub-Admin',
@@ -688,30 +685,6 @@ function editMulti(label, col, current, options, manage) {
   g.appendChild(box); return g;
 }
 
-// Adiciona/remove habilidade ou competência customizada (tabela acolitos_listas)
-async function addCustomLista(tipo) {
-  const nome = (await uiPrompt('Nova ' + (tipo === 'habilidade' ? 'habilidade' : 'competência') + ':') || '').trim();
-  if (!nome) return;
-  const valor = (tipo === 'habilidade' ? 'h_' : 'k_') + nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24) + '_' + Math.random().toString(36).slice(2, 6);
-  const { error } = await sbAdmin.from('acolitos_listas').insert({ tipo, valor, label: nome });
-  if (error) { await uiAlert('Não foi possível adicionar.'); return; }
-  const arr = tipo === 'habilidade' ? HABILIDADES : COMPETENCIAS;
-  const lbl = tipo === 'habilidade' ? HABILIDADE_LABEL : COMPETENCIA_LABEL;
-  arr.push([valor, nome]); lbl[valor] = nome;
-  listasCustom[tipo].push({ valor, label: nome });
-  renderTab('Evolução');
-}
-async function removeCustomLista(tipo, valor) {
-  const lbl = tipo === 'habilidade' ? HABILIDADE_LABEL : COMPETENCIA_LABEL;
-  if (!await uiConfirm('Remover "' + (lbl[valor] || valor) + '" da lista?')) return;
-  await sbAdmin.from('acolitos_listas').delete().eq('tipo', tipo).eq('valor', valor);
-  const arr = tipo === 'habilidade' ? HABILIDADES : COMPETENCIAS;
-  const i = arr.findIndex(x => x[0] === valor); if (i >= 0) arr.splice(i, 1);
-  delete lbl[valor];
-  listasCustom[tipo] = listasCustom[tipo].filter(x => x.valor !== valor);
-  renderTab('Evolução');
-}
-
 // Campos de equipe/coordenação (serve, coordenação, setores, permissões)
 function appendEquipeFields(el, m) {
   el.appendChild(editBool('Serve no altar? (tem jornada/ausências)', 'serve', m.serve !== false));
@@ -725,59 +698,6 @@ function appendEquipeFields(el, m) {
   reveal.appendChild(lblP);
   reveal.appendChild(editMulti('', 'permissoes', m.permissoes, MODULOS_LIBERAVEIS.map(x => [x[0], x[1]])));
   el.appendChild(reveal);
-}
-
-// Adiciona/remove função personalizada (tabela acolitos_listas, tipo 'funcao')
-async function addCustomFuncao() {
-  const nome = (await uiPrompt('Nova função (ex: Naveta 2, Boldriê, Báculo...):') || '').trim();
-  if (!nome) return;
-  const valor = 'f_' + nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24) + '_' + Math.random().toString(36).slice(2, 6);
-  const { error } = await sbAdmin.from('acolitos_listas').insert({ tipo: 'funcao', valor, label: nome });
-  if (error) { await uiAlert('Não foi possível adicionar.'); return; }
-  listasCustom.funcao.push({ valor, label: nome });
-  renderTab('Evolução');
-}
-async function removeCustomFuncao(valor) {
-  if (!await uiConfirm('Remover esta função personalizada?\n(As proficiências dela serão apagadas.)')) return;
-  await sbAdmin.from('acolitos_listas').delete().eq('tipo', 'funcao').eq('valor', valor);
-  await sbAdmin.from('acolitos_habilitacoes').delete().eq('funcao', valor);
-  listasCustom.funcao = listasCustom.funcao.filter(x => x.valor !== valor);
-  if (valor in habAtual) delete habAtual[valor];
-  renderTab('Evolução');
-}
-
-// Grade de habilitações (proficiência por função) — usada na aba Evolução
-async function appendHabilitacoes(el, m) {
-  const { data: habs } = await sbAdmin.from('acolitos_habilitacoes').select('*').eq('membro_id', m.id);
-  habAtual = {};
-  (habs || []).forEach(h => { habAtual[h.funcao] = h.proficiencia; });
-
-  const hdr = document.createElement('div'); hdr.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:6px;';
-  const add = document.createElement('button'); add.type = 'button'; add.className = 'mini-add'; add.textContent = '+ função';
-  add.onclick = () => addCustomFuncao();
-  hdr.appendChild(add); el.appendChild(hdr);
-
-  const funcoesAll = FUNCOES.concat(listasCustom.funcao.map(f => ({ id: f.valor, label: f.label, cat: 'Personalizadas', custom: true })));
-  const grid = document.createElement('div'); grid.className = 'hab-grid';
-  funcoesAll.forEach(fn => {
-    const nivel = habAtual[fn.id] || 'nao_treinado';
-    const card = document.createElement('div'); card.className = 'hab-card ' + nivel; card.id = 'hc-' + fn.id;
-    const nome = document.createElement('div'); nome.className = 'hab-nome'; nome.textContent = fn.label;
-    const nivelEl = document.createElement('div'); nivelEl.className = 'hab-nivel'; nivelEl.id = 'hn-' + fn.id;
-    nivelEl.textContent = NIVEL_LABEL[nivel];
-    const sel = document.createElement('select'); sel.className = 'hab-sel';
-    PROF_NIVEIS.forEach(n => { const opt = document.createElement('option'); opt.value = n; opt.textContent = NIVEL_LABEL[n]; if (n === nivel) opt.selected = true; sel.appendChild(opt); });
-    sel.onchange = () => { const v = sel.value; habAtual[fn.id] = v; card.className = 'hab-card ' + v; document.getElementById('hn-' + fn.id).textContent = NIVEL_LABEL[v]; setDirty(); };
-    card.append(nome, nivelEl, sel);
-    if (fn.custom) {
-      const del = document.createElement('button'); del.type = 'button'; del.className = 'mini-del'; del.textContent = '−'; del.title = 'Remover função';
-      del.style.cssText = 'position:absolute;top:4px;right:4px;width:22px;height:22px;font-size:13px;';
-      del.onclick = (e) => { e.stopPropagation(); removeCustomFuncao(fn.id); };
-      card.style.position = 'relative'; card.appendChild(del);
-    }
-    grid.appendChild(card);
-  });
-  el.appendChild(grid);
 }
 
 async function renderTab(tab) {

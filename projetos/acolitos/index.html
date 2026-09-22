@@ -694,12 +694,17 @@ async function renderDashboardEquipe(ctx) {
   const freqMedia = taxas.length ? Math.round(taxas.reduce((a,b)=>a+b,0)/taxas.length) : null;
 
   // KPIs
+  // `resposta.count || 0` dizia "0" quando o banco RECUSAVA, e "Membros Ativos: 0" numa
+  // pastoral de 193 pessoas passa por lentidão do celular. Agora falha vira "—" e o
+  // subtítulo diz o que houve — o mesmo que o cartão de Freq. Média já fazia.
+  const ativos = contagemHonesta(ativosR), missas = contagemHonesta(mesR), onboard = contagemHonesta(crmR);
+  const kpi = (label, c, sub) => ({ label, value: c.falhou ? '—' : c.valor, sub: c.falhou ? 'não consegui ler' : sub, falhou: c.falhou });
   const kpiGrid = document.createElement('div'); kpiGrid.className='kpi-grid';
   [
-    { label:'Membros Ativos', value: ativosR.count||0, sub:'na pastoral' },
+    kpi('Membros Ativos', ativos, 'na pastoral'),
     { label:'Freq. Média', value: freqMedia!=null ? freqMedia+'%' : '—', sub:'comparecimento' },
-    { label:'Missas no Mês', value: mesR.count||0, sub:'celebrações' },
-    { label:'Em Onboarding', value: crmR.count||0, sub:'no CRM' },
+    kpi('Missas no Mês', missas, 'celebrações'),
+    kpi('Em Onboarding', onboard, 'no CRM'),
   ].forEach(k => {
     const c=document.createElement('div'); c.className='kpi-card';
     const l=document.createElement('div'); l.className='kpi-label'; l.textContent=k.label;

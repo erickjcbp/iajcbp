@@ -37,7 +37,18 @@
     return { data: tudo, error: null, truncado: true };
   }
 
-  var api = { lerTudo: lerTudo, PAGINA_PADRAO: PAGINA_PADRAO };
+  // A contagem de uma consulta `{ count:'exact', head:true }`, SEM deixar falha virar
+  // número. `resposta.count || 0` transformava "o banco recusou" em "não há nenhum" — e a
+  // tela não tinha como distinguir os dois. Zero de verdade continua zero; falha vira null
+  // com a bandeira `falhou`, para quem desenha poder mostrar "—" em vez de mentir.
+  function contagemHonesta(resposta) {
+    if (!resposta || resposta.error || typeof resposta.count !== 'number') {
+      return { valor: null, falhou: true };
+    }
+    return { valor: resposta.count, falhou: false };
+  }
+
+  var api = { lerTudo: lerTudo, contagemHonesta: contagemHonesta, PAGINA_PADRAO: PAGINA_PADRAO };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  else { global.lerTudo = lerTudo; global.PAGINA_PADRAO = PAGINA_PADRAO; }
+  else { global.lerTudo = lerTudo; global.contagemHonesta = contagemHonesta; global.PAGINA_PADRAO = PAGINA_PADRAO; }
 })(typeof globalThis !== 'undefined' ? globalThis : this);

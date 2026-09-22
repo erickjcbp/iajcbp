@@ -85,3 +85,30 @@ test('o tamanho da página é respeitado (dá para pedir páginas menores)', asy
   await lerTudo(b.montar, { pagina: 100 });
   assert.deepStrictEqual(b.chamadas, [[0, 99], [100, 199], [200, 299]]);
 });
+
+// ── Contagem que não mente ────────────────────────────────────────────────────────────
+// Os três primeiros cartões do Início faziam `resposta.count || 0`. Provado com o provador
+// de telas em 22/09/2026: banco respondendo → 42/9/7; banco RECUSANDO → 0/0/0, sem aviso
+// nenhum. "Membros Ativos: 0" numa pastoral de 193 pessoas passa por lentidão do celular.
+const { contagemHonesta } = require('./paginar-core.js');
+
+test('contagem: banco respondeu, devolve o número', () => {
+  assert.deepStrictEqual(contagemHonesta({ count: 42, error: null }), { valor: 42, falhou: false });
+});
+
+test('contagem: ZERO de verdade continua sendo zero — não é falha', () => {
+  assert.deepStrictEqual(contagemHonesta({ count: 0, error: null }), { valor: 0, falhou: false });
+});
+
+test('contagem: banco recusou NÃO vira zero', () => {
+  const r = contagemHonesta({ count: null, error: { code: '42501' } });
+  assert.strictEqual(r.falhou, true);
+  assert.strictEqual(r.valor, null, 'devolver 0 aqui é o defeito inteiro');
+});
+
+test('contagem: resposta sem count e sem erro também é falha, não zero', () => {
+  // acontece quando a consulta nem chega a rodar (rede caiu, promessa rejeitada tratada)
+  assert.deepStrictEqual(contagemHonesta({}), { valor: null, falhou: true });
+  assert.deepStrictEqual(contagemHonesta(null), { valor: null, falhou: true });
+  assert.deepStrictEqual(contagemHonesta(undefined), { valor: null, falhou: true });
+});

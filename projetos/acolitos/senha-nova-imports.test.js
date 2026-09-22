@@ -54,3 +54,25 @@ test('toda tela que USA o leitor paginado carrega a paginar-core.js', () => {
   const faltando = usam.filter(f => !fs.readFileSync(path.join(dir, f), 'utf8').includes('paginar-core.js'));
   assert.deepStrictEqual(faltando, [], 'estas telas usam lerTudo() sem carregar a regra: ' + faltando.join(', '));
 });
+
+// Aba fantasma: `renderTab('X')` com um X que o `renderTab` não conhece.
+//
+// Não estoura, não avisa: o `renderTab` começa LIMPANDO o conteúdo da ficha e, se nenhum
+// `if` casar, simplesmente não desenha nada — a aba fica em branco. Foi o que sobrou em
+// membros.html quando a aba "Evolução" mudou de tela: quatro chamadas apontando para o
+// vazio, e a grade de funções inteira virou código que ninguém alcança.
+test('nenhuma tela chama renderTab com uma aba que não existe', () => {
+  const dir = __dirname;
+  const telas = fs.readdirSync(dir).filter((f) => f.endsWith('.html'))
+    .filter((f) => /function\s+renderTab\b/.test(fs.readFileSync(path.join(dir, f), 'utf8')));
+  assert.ok(telas.length >= 1, 'esperava ao menos uma tela com renderTab, achei ' + telas.length);
+  const fantasmas = [];
+  telas.forEach((f) => {
+    const txt = fs.readFileSync(path.join(dir, f), 'utf8');
+    const conhecidas = new Set([...txt.matchAll(/if \(tab === '([^']+)'\)/g)].map((m) => m[1]));
+    [...txt.matchAll(/renderTab\('([^']+)'\)/g)].forEach((m) => {
+      if (!conhecidas.has(m[1])) fantasmas.push(f + " → renderTab('" + m[1] + "')");
+    });
+  });
+  assert.deepStrictEqual(fantasmas, [], 'estas chamadas abrem uma aba que ninguém desenha: ' + fantasmas.join(', '));
+});
