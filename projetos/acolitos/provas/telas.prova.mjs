@@ -1399,6 +1399,9 @@ async function provaAvisaQuandoATravaAnulaAMarcacao(provas) {
     const esperar = (ms) => new Promise(f => setTimeout(f, ms));
     const out = {};
     const gente = ${JSON.stringify(membros)};
+    // A Jornada virou duas abas: a lista de funções só é carregada ao abrir a Evolução.
+    // Sem isto a grade nasce VAZIA e a prova mede uma tela que não existe.
+    await carregarDev(); await esperar(60);
     // Fechar SÓ o modal que esta prova abriu. Cada modal do app empilha uma entrada no
     // histórico e devolve um history.back() ao fechar; varrer '.modal-overlay' à toa
     // devolve backs a mais e o navegador sai da página (a medição virava about:blank).
@@ -1436,8 +1439,7 @@ async function provaAvisaQuandoATravaAnulaAMarcacao(provas) {
     // OS OUTROS DOIS CAMINHOS DE MARCAR. Esta tela grava proficiência por três lugares, e
     // um aviso que só existisse na grade seria o mesmo silêncio de antes, mudado de lugar.
     // (2) Mapa de Cobertura → uma função, a lista de todo mundo.
-    habAll['m-nova'] = { vela: 'apto' };
-    _devMembros = gente.slice();
+    await carregarHabAll();   // o caminho real do app, não um habAll montado à mão aqui
     abrirCoberturaFuncao('vela', 'Vela'); await esperar(150);
     const modalCob = [...document.querySelectorAll('.modal-overlay.open')].pop();
     out.cobertura = [...modalCob.querySelectorAll('.hab-aviso')]
