@@ -1389,7 +1389,8 @@ async function provaAvisaQuandoATravaAnulaAMarcacao(provas) {
     { id: 'm-grande',    nome: 'Bruno Grande',  nivel: 'acolito_aspirante', comunidade: 'matriz', data_nascimento: nascidoHaAnos(16) },
     { id: 'm-semdata',   nome: 'Caio SemData',  nivel: 'acolito_aspirante', comunidade: 'matriz', data_nascimento: null },
     { id: 'm-liberado',  nome: 'Davi Liberado', nivel: 'acolito_aspirante', comunidade: 'matriz', data_nascimento: nascidoHaAnos(9) },
-    { id: 'm-outracom',  nome: 'Eva Antonio',   nivel: 'acolito_aspirante', comunidade: 'santo_antonio', data_nascimento: nascidoHaAnos(9) },
+    { id: 'm-so-na-dela', nome: 'Eva Antonio',  nivel: 'acolito_aspirante', comunidade: 'santo_antonio', data_nascimento: nascidoHaAnos(9), pode_outras_comunidades: false },
+    { id: 'm-cruza',      nome: 'André Cruza',   nivel: 'acolito_aspirante', comunidade: 'santo_antonio', data_nascimento: nascidoHaAnos(12), pode_outras_comunidades: true },
   ];
   // TODOS marcados APTOS em vela — a diferença entre eles tem de vir só da trava.
   const habs = membros.map((m) => ({ membro_id: m.id, funcao: 'vela', proficiencia: 'apto' }));
@@ -1402,10 +1403,13 @@ async function provaAvisaQuandoATravaAnulaAMarcacao(provas) {
     // histórico e devolve um history.back() ao fechar; varrer '.modal-overlay' à toa
     // devolve backs a mais e o navegador sai da página (a medição virava about:blank).
     const fechar = () => { const abertos = [...document.querySelectorAll('.modal-overlay.open')]; if (abertos.length) abertos[abertos.length - 1].remove(); };
+    // Procurar pelo CARD, nunca por um id global: o id da função vem do banco e pode
+    // repetir o da lista fixa, e aí a prova leria o card errado e ficaria verde à toa.
+    const avisoDoCard = (funcao) => { const c = document.querySelector('.hab-card[data-funcao="' + funcao + '"]'); return c && c.querySelector('.hab-aviso'); };
     const avisoDe = async (id) => {
       await abrirFuncoesEditor(gente.find(m => m.id === id));
       await esperar(150);
-      const el = document.getElementById('ha-vela');
+      const el = avisoDoCard('vela');
       const txt = !el ? '(SEM O ELEMENTO DE AVISO)'
         : (getComputedStyle(el).display !== 'none' ? el.textContent.trim() : '');
       fechar(); await esperar(40);
@@ -1415,18 +1419,45 @@ async function provaAvisaQuandoATravaAnulaAMarcacao(provas) {
     out.grande    = await avisoDe('m-grande');
     out.semdata   = await avisoDe('m-semdata');
     out.liberado  = await avisoDe('m-liberado');
-    out.outracom  = await avisoDe('m-outracom');
+    out.soNaDela  = await avisoDe('m-so-na-dela');
+    out.cruza     = await avisoDe('m-cruza');
     // o aviso tem de SUMIR e VOLTAR ao mexer no seletor — não só no primeiro desenho
     await abrirFuncoesEditor(gente.find(m => m.id === 'm-nova')); await esperar(150);
     const cardDe = (rotulo) => [...document.querySelectorAll('.hab-card')]
       .find(c => (c.querySelector('.hab-nome') || {}).textContent === rotulo);
     const selVela = cardDe('Vela').querySelector('.hab-sel');
     selVela.value = 'nao_treinado'; selVela.onchange();
-    out.depoisDeDesmarcar = getComputedStyle(document.getElementById('ha-vela')).display !== 'none';
+    out.depoisDeDesmarcar = getComputedStyle(avisoDoCard('vela')).display !== 'none';
     selVela.value = 'apto'; selVela.onchange();
-    out.depoisDeRemarcar = getComputedStyle(document.getElementById('ha-vela')).display !== 'none';
-    out.avisoNoTuribulo = getComputedStyle(document.getElementById('ha-turibulo')).display !== 'none';
-    fechar();
+    out.depoisDeRemarcar = getComputedStyle(avisoDoCard('vela')).display !== 'none';
+    out.avisoNoTuribulo = getComputedStyle(avisoDoCard('turibulo')).display !== 'none';
+    fechar(); await esperar(40);
+
+    // OS OUTROS DOIS CAMINHOS DE MARCAR. Esta tela grava proficiência por três lugares, e
+    // um aviso que só existisse na grade seria o mesmo silêncio de antes, mudado de lugar.
+    // (2) Mapa de Cobertura → uma função, a lista de todo mundo.
+    habAll['m-nova'] = { vela: 'apto' };
+    _devMembros = gente.slice();
+    abrirCoberturaFuncao('vela', 'Vela'); await esperar(150);
+    const modalCob = [...document.querySelectorAll('.modal-overlay.open')].pop();
+    out.cobertura = [...modalCob.querySelectorAll('.hab-aviso')]
+      .filter(e => getComputedStyle(e).display !== 'none').map(e => e.textContent.trim());
+    out.coberturaPessoas = modalCob.querySelectorAll('.hab-sel').length;
+    fechar(); await esperar(40);
+
+    // (3) Matriz completa → a célula da tabela. Não há onde escrever, então avisa por recado.
+    const recados = [];
+    const toastReal = window.toast; window.toast = (t) => { recados.push(String(t)); };
+    const tabela = document.createElement('table'); const linha = document.createElement('tr');
+    const td = document.createElement('td'); const cel = document.createElement('div');
+    td.appendChild(cel); linha.appendChild(td); tabela.appendChild(linha); document.body.appendChild(tabela);
+    try {
+      editarCelula(td, cel, gente.find(m => m.id === 'm-nova'), 'vela'); await esperar(60);
+      const selCel = td.querySelector('select'); selCel.value = 'apto';
+      await selCel.onchange(); await esperar(120);
+    } catch (e) { out.erroDaCelula = String(e.message || e); }
+    window.toast = toastReal; tabela.remove();
+    out.recadoDaCelula = recados.join(' | ');
     return out;
   `;
 
@@ -1451,14 +1482,31 @@ async function provaAvisaQuandoATravaAnulaAMarcacao(provas) {
     'quem passa na trava NÃO é avisado (senão o aviso vira ruído e ninguém lê)', 'saiu: ' + JSON.stringify(a.grande));
   exigir(a.liberado === '',
     'quem foi liberado no nome NÃO é avisado, mesmo abaixo da idade', 'saiu: ' + JSON.stringify(a.liberado));
-  exigir(a.outracom === '',
-    'a trava é da Matriz: quem é de outra comunidade não é avisado', 'saiu: ' + JSON.stringify(a.outracom));
+  exigir(a.soNaDela === '',
+    'quem NÃO pode servir em outras comunidades e passa na trava da sua não é avisado', 'saiu: ' + JSON.stringify(a.soNaDela));
+  // O furo que a revisão achou: a Escala decide pela comunidade da MISSA. Quem tem
+  // `pode_outras_comunidades` aparece nas missas das outras, e passar na trava da própria
+  // comunidade não quer dizer nada sobre a de lá. No dado real era o André, 12 anos.
+  exigir(/n[ãa]o vai entrar na escala/i.test(a.cruza || '') && /Matriz/.test(a.cruza || ''),
+    'quem pode servir em OUTRA comunidade é avisado da trava DE LÁ, mesmo passando na da sua',
+    'saiu: ' + JSON.stringify(a.cruza));
   exigir(a.avisoNoTuribulo === false,
     'função que nenhum kit governa não ganha aviso', 'turíbulo apareceu avisado');
   exigir(a.depoisDeDesmarcar === false,
     'desmarcar a função faz o aviso sumir na hora', 'aviso continuou visível');
   exigir(a.depoisDeRemarcar === true,
     'marcar de novo faz o aviso voltar na hora, sem recarregar a tela', 'aviso não voltou');
+  exigir((a.cobertura || []).some(t => /n[ãa]o vai entrar na escala/i.test(t)),
+    'o Mapa de Cobertura também avisa (é por ali que se preenche função escassa)',
+    'avisos vistos: ' + JSON.stringify(a.cobertura));
+  // Neste cenário a trava barra exatamente 3 dos 6: a de 13 anos, a sem data e a que cruza
+  // de comunidade. Os outros 3 (16 anos, liberado no nome, e a que não sai da sua) passam.
+  exigir(a.coberturaPessoas === 6 && (a.cobertura || []).length === 3,
+    'e avisa SÓ de quem a trava barra — 3 avisos numa lista de 6 pessoas',
+    a.coberturaPessoas + ' pessoas, ' + (a.cobertura || []).length + ' avisos: ' + JSON.stringify(a.cobertura));
+  exigir(/n[ãa]o vai entrar na escala/i.test(a.recadoDaCelula || ''),
+    'a célula da Matriz completa avisa por recado, já que não tem onde escrever',
+    'recado: ' + JSON.stringify(a.recadoDaCelula));
 }
 
 async function provaBarraMostraSoOQueATelaOferece(provas) {

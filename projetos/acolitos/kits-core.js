@@ -87,17 +87,35 @@
     return {
       motivo: o.idade == null ? 'sem_data' : 'idade',
       idadeMin: kit.idade_min,
+      // Uma trava sem idade mínima ainda reprova quem não tem data de nascimento. Sem este
+      // campo a tela escrevia "exige 0 anos" e culpava a idade por uma regra que é outra.
+      exigeIdade: kit.idade_min > 0,
       kit: kit.nome,
       comunidade: o.comunidade,
     };
   }
 
-  var api = { podeNaFuncao: podeNaFuncao, normalizarKits: normalizarKits, kitQueGoverna: kitQueGoverna, avisoDeKit: avisoDeKit };
+  // A mesma pergunta, para TODAS as comunidades em que a pessoa pode servir. A Escala
+  // decide pela comunidade da MISSA, não pela do membro, e quem tem
+  // `pode_outras_comunidades` aparece nas missas das outras — perguntar só pela comunidade
+  // da pessoa deixa calado justamente o caso cruzado. Devolve uma lista (pode ser vazia).
+  function avisosDeKit(o) {
+    o = o || {};
+    var res = [];
+    (o.comunidades || []).forEach(function (com) {
+      var a = avisoDeKit(Object.assign({}, o, { comunidade: com }));
+      if (a) res.push(a);
+    });
+    return res;
+  }
+
+  var api = { podeNaFuncao: podeNaFuncao, normalizarKits: normalizarKits, kitQueGoverna: kitQueGoverna, avisoDeKit: avisoDeKit, avisosDeKit: avisosDeKit };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else {                                            // mesmo contrato de navegacao-core.js:
     global.podeNaFuncao = podeNaFuncao;             // as telas chamam pelo nome direto
     global.normalizarKits = normalizarKits;
     global.kitQueGoverna = kitQueGoverna;
     global.avisoDeKit = avisoDeKit;
+    global.avisosDeKit = avisosDeKit;
   }
 })(typeof globalThis !== 'undefined' ? globalThis : this);

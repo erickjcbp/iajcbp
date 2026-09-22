@@ -555,8 +555,10 @@ function abrirCoberturaFuncao(funcao, label){
     const nm=document.createElement('span'); nm.style.cssText='flex:1;min-width:0;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'; nm.textContent=m.apelido||m.nome;
     const sel=document.createElement('select'); sel.className='hab-sel'; sel.style.width='auto';
     PROF_NIVEIS.forEach(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=PROF_LABEL[n]; if(n===cur)o.selected=true; sel.appendChild(o); });
-    sel.onchange=async()=>{ const ok=await salvarProficiencia(m.id,funcao,sel.value); if(ok){ dot.style.background=(PROF_COR[sel.value]==='transparent'?'var(--border)':PROF_COR[sel.value]); } };
-    r.append(dot,nm,sel); box.appendChild(r);
+    const avisoEl=document.createElement('div'); avisoEl.className='hab-aviso'; avisoEl.style.cssText='margin:0 0 8px;';
+    const pintarAviso=(prof)=>{ const t=textoDaTrava(avisosDaTrava(m,funcao,prof)); avisoEl.style.display=t?'':'none'; avisoEl.textContent=t; };
+    sel.onchange=async()=>{ const ok=await salvarProficiencia(m.id,funcao,sel.value); if(ok){ dot.style.background=(PROF_COR[sel.value]==='transparent'?'var(--border)':PROF_COR[sel.value]); pintarAviso(sel.value); } };
+    r.append(dot,nm,sel); box.appendChild(r); box.appendChild(avisoEl); pintarAviso(cur);
   });
   const close=document.createElement('button'); close.className='btn-sm gray'; close.style.cssText='width:100%;margin-top:14px;'; close.textContent='Fechar'; close.onclick=()=>{ ov.remove(); if(_redrawMatriz) _redrawMatriz(); };
   md.appendChild(close); ov.appendChild(md); document.body.appendChild(ov);
@@ -609,13 +611,15 @@ function editarCelula(td, cell, m, funcao){
   PROF_NIVEIS.forEach(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=PROF_LABEL[n]; if(n===cur)o.selected=true; sel.appendChild(o); });
   cell.style.display='none'; td.appendChild(sel); sel.focus();
   const fechar=()=>{ if(sel.parentNode) sel.remove(); cell.style.display=''; };
-  sel.onchange=async()=>{ const ok=await salvarProficiencia(m.id,funcao,sel.value); if(ok){ const c=PROF_COR[sel.value]; cell.style.background=(c==='transparent'?'transparent':c); cell.title=(m.apelido||m.nome)+' — '+PROF_LABEL[sel.value]; } fechar(); };
+  sel.onchange=async()=>{ const ok=await salvarProficiencia(m.id,funcao,sel.value); if(ok){ const c=PROF_COR[sel.value]; cell.style.background=(c==='transparent'?'transparent':c); cell.title=(m.apelido||m.nome)+' — '+PROF_LABEL[sel.value];
+    // Numa célula de tabela não há onde escrever o aviso, então ele vem por recado.
+    const t=textoDaTrava(avisosDaTrava(m,funcao,sel.value)); if(t) toast(t,'error'); } fechar(); };
   sel.onblur=fechar;
 }
 let _devMembros = [], _devFuncoes = [], _devComps = [];
 async function carregarDev() {
   const [{ data: mems }, { data: listas }] = await Promise.all([
-    sb.from('acolitos_membros').select('id,nome,apelido,nivel,foto_url,comunidade,casa_id,data_nascimento,competencias_desenvolvidas,desenvolvimento_competencias').eq('status', 'ativo').order('nome'),
+    sb.from('acolitos_membros').select('id,nome,apelido,nivel,foto_url,comunidade,casa_id,data_nascimento,pode_outras_comunidades,competencias_desenvolvidas,desenvolvimento_competencias').eq('status', 'ativo').order('nome'),
     sb.from('acolitos_listas').select('valor,label,tipo').in('tipo', ['funcao', 'competencia']),
   ]);
   _devMembros = mems || [];
@@ -824,6 +828,59 @@ async function concederMissao(missaoId, mm, ov) {
   if (ov) ov.remove(); abrirPanorama(mm);
 }
 
+// ── AVISO DA TRAVA ────────────────────────────────────────────────────────────────────
+// Marcar "apto" não garante a escala: um kit em modo 'trava' (o processional da Matriz,
+// 14+) reprova mesmo quem está marcado, e sem aviso a pessoa apenas some do campo de
+// seleção da Escala. Quem decide é a MESMA regra que a Escala usa (kits-core.js) — nunca
+// uma cópia dela. Mora aqui, no escopo do arquivo, porque esta tela marca proficiência por
+// TRÊS caminhos (a grade de funções, o Mapa de Cobertura e a Matriz completa) e um aviso
+// que só existisse num deles seria o mesmo silêncio de antes, mudado de lugar.
+const COM_LABEL_PADRAO = { matriz: 'Matriz', santo_antonio: 'Sto. Antônio', outra: 'Outra comunidade' };
+function _rotuloComunidade(slug) {
+  const lista = (typeof cfg === 'function') ? cfg('comunidades', null) : null;
+  const achado = Array.isArray(lista) ? lista.find(c => c.slug === slug) : null;
+  return (achado && achado.label) || COM_LABEL_PADRAO[slug] || slug;
+}
+// A Escala decide pela comunidade da MISSA, não pela do membro, e quem tem
+// `pode_outras_comunidades` aparece nas missas das outras. Só comunidade com kit pode
+// travar alguém, então conferir as dos kits (mais a da própria pessoa) cobre todos os
+// casos sem depender de uma lista de comunidades que talvez nem esteja configurada.
+function _comunidadesQueValemPara(m, kits) {
+  const propria = m.comunidade || 'matriz';
+  if (!m.pode_outras_comunidades) return [propria];
+  const dosKits = [];
+  (kits || []).forEach(k => (k.comunidades || []).forEach(c => { if (dosKits.indexOf(c) < 0) dosKits.push(c); }));
+  return dosKits.indexOf(propria) >= 0 ? dosKits : [propria].concat(dosKits);
+}
+function avisosDaTrava(m, funcao, proficiencia) {
+  if (typeof avisosDeKit !== 'function') return [];
+  const kits = (typeof normalizarKits === 'function') ? normalizarKits(cfg('gerador', {}) || {}) : [];
+  return avisosDeKit({
+    kits, comunidades: _comunidadesQueValemPara(m, kits), funcao, membroId: m.id,
+    temHabilitacao: ['apto', 'experiente', 'referencia'].includes(proficiencia),
+    idade: m.data_nascimento ? calcIdade(m.data_nascimento) : null,
+    nivelInt: nivelInfo(m.nivel || 'aspirante').int,
+  });
+}
+function textoDaTrava(avisos) {
+  if (!avisos.length) return '';
+  const onde = avisos.map(a => _rotuloComunidade(a.comunidade));
+  const kit = avisos[0].kit;
+  // "exige N anos" só quando há idade a exigir: uma trava sem idade mínima reprova pela
+  // FALTA DE DATA, e culpar a idade ali mandaria o leitor procurar a coisa errada.
+  const porque = avisos[0].motivo === 'sem_data'
+    ? (avisos[0].exigeIdade
+        ? 'o "' + kit + '" exige ' + avisos[0].idadeMin + ' anos e esta ficha está SEM data de nascimento'
+        : 'o "' + kit + '" não aceita ficha SEM data de nascimento')
+    : 'o "' + kit + '" exige ' + avisos[0].idadeMin + ' anos';
+  const comoResolver = avisos[0].motivo === 'sem_data'
+    ? ' Preencha a data em Membros, ou libere esta pessoa no nome em Config › Gerador › Kits.'
+    : ' Para abrir exceção, libere esta pessoa no nome em Config › Gerador › Kits.';
+  return '\u26A0\uFE0F Marcado, mas NÃO vai entrar na escala d'
+    + (onde.length > 1 ? 'estas comunidades: ' + onde.join(', ') : 'a ' + onde[0])
+    + ': ' + porque + '.' + comoResolver;
+}
+
 // [Funções] = grade de proficiência por função (acolitos_habilitacoes) — a fonte real do desenvolvimento
 async function abrirFuncoesEditor(m) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
@@ -836,25 +893,6 @@ async function abrirFuncoesEditor(m) {
   const hab = {}; (habs || []).forEach(h => { hab[h.funcao] = h.proficiencia; });
   const dirty = new Set();
   body.textContent = '';
-  // AVISO DA TRAVA — marcar "apto" não garante a escala. Um kit em modo 'trava' (o
-  // processional da Matriz, 14+) reprova mesmo quem está marcado, e antes disto a pessoa
-  // apenas sumia do campo de seleção da Escala, sem explicação em lugar nenhum.
-  // Quem decide é a MESMA regra que a Escala usa (kits-core.js) — nunca uma cópia dela.
-  const COM_LABEL = { matriz: 'Matriz', santo_antonio: 'Sto. Antônio', outra: 'Outra comunidade' };
-  const kitsCfg = (typeof normalizarKits === 'function') ? normalizarKits(cfg('gerador', {}) || {}) : [];
-  const idadeDoMembro = m.data_nascimento ? calcIdade(m.data_nascimento) : null;
-  const avisoPara = (funcao, proficiencia) => (typeof avisoDeKit !== 'function') ? null : avisoDeKit({
-    kits: kitsCfg, comunidade: m.comunidade || 'matriz', funcao, membroId: m.id,
-    temHabilitacao: ['apto','experiente','referencia'].includes(proficiencia),
-    idade: idadeDoMembro, nivelInt: nivelInfo(m.nivel || 'aspirante').int,
-  });
-  const textoDoAviso = (a) => {
-    const base = 'Marcado, mas NÃO vai entrar na escala da ' + (COM_LABEL[a.comunidade] || a.comunidade)
-      + ': o "' + a.kit + '" exige ' + a.idadeMin + ' anos';
-    return a.motivo === 'sem_data'
-      ? base + ' e esta ficha está SEM data de nascimento. Preencha a data em Membros, ou libere esta pessoa no nome em Config › Gerador › Kits.'
-      : base + '. Para abrir exceção, libere esta pessoa no nome em Config › Gerador › Kits.';
-  };
   const grid = document.createElement('div'); grid.className = 'hab-grid';
   _devFuncoes.forEach(([id, label]) => {
     const nivel = hab[id] || 'nao_treinado';
@@ -863,11 +901,12 @@ async function abrirFuncoesEditor(m) {
     const nivelEl = document.createElement('div'); nivelEl.className = 'hab-nivel'; nivelEl.textContent = PROF_LABEL[nivel];
     const selEl = document.createElement('select'); selEl.className = 'hab-sel';
     PROF_NIVEIS.forEach(n => { const opt = document.createElement('option'); opt.value = n; opt.textContent = PROF_LABEL[n]; if (n === nivel) opt.selected = true; selEl.appendChild(opt); });
-    const avisoEl = document.createElement('div'); avisoEl.className = 'hab-aviso'; avisoEl.id = 'ha-' + id;
+    const avisoEl = document.createElement('div'); avisoEl.className = 'hab-aviso';
+    card.setAttribute('data-funcao', id);   // `id` vem do banco e pode repetir o da lista fixa
     const pintarAviso = (prof) => {
-      const av = avisoPara(id, prof);
-      avisoEl.style.display = av ? '' : 'none';
-      avisoEl.textContent = av ? '\u26A0\uFE0F ' + textoDoAviso(av) : '';
+      const txt = textoDaTrava(avisosDaTrava(m, id, prof));
+      avisoEl.style.display = txt ? '' : 'none';
+      avisoEl.textContent = txt;
     };
     selEl.onchange = () => { hab[id] = selEl.value; dirty.add(id); card.className = 'hab-card ' + selEl.value; nivelEl.textContent = PROF_LABEL[selEl.value]; pintarAviso(selEl.value); };
     card.append(nome, nivelEl, selEl, avisoEl); grid.appendChild(card);

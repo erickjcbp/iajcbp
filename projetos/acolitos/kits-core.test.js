@@ -2,7 +2,7 @@
 // Rodar: node --test projetos/acolitos/kits-core.test.js
 const test = require('node:test');
 const assert = require('node:assert');
-const { podeNaFuncao, normalizarKits, avisoDeKit } = require('./kits-core.js');
+const { podeNaFuncao, normalizarKits, avisoDeKit, avisosDeKit } = require('./kits-core.js');
 
 // Kit que LIBERA: estar na idade já basta, mesmo sem habilitação. (é o Sto. Antônio de hoje)
 const KIT_LIBERA = {
@@ -128,4 +128,57 @@ test('aviso: kit desligado não avisa', () => {
   const kits = [Object.assign({}, KIT_TRAVA, { ativo: false })];
   assert.strictEqual(avisoDeKit({ kits, comunidade: 'matriz', funcao: 'cruz',
     membroId: 'm1', temHabilitacao: true, idade: 9, nivelInt: 1 }), null);
+});
+
+// ── O aviso tem de olhar TODAS as comunidades onde a pessoa serve ────────────────────
+// Furo do primeiro conserto, achado na revisão: o aviso perguntava pela comunidade DA
+// PESSOA, mas a Escala decide pela comunidade DA MISSA — e quem tem
+// `pode_outras_comunidades` aparece nas missas das outras. No dado real havia o André
+// (12 anos, Sto. Antônio, pode servir na Matriz): passa no kit do Sto. Antônio, é travado
+// na Matriz, e o aviso ficava calado exatamente no caso que ele existe para cobrir.
+const ONDE = ['matriz', 'santo_antonio'];
+
+test('avisos: quem passa na própria comunidade mas é travado na outra É avisado, e diz onde', () => {
+  const avs = avisosDeKit({ kits: [KIT_LIBERA, KIT_TRAVA], comunidades: ONDE, funcao: 'vela',
+    membroId: 'm1', temHabilitacao: true, idade: 12, nivelInt: 1 });
+  assert.strictEqual(avs.length, 1);
+  assert.strictEqual(avs[0].comunidade, 'matriz');
+  assert.strictEqual(avs[0].idadeMin, 14);
+});
+
+test('avisos: quem passa em todas as comunidades não é avisado', () => {
+  assert.deepStrictEqual(avisosDeKit({ kits: [KIT_LIBERA, KIT_TRAVA], comunidades: ONDE,
+    funcao: 'vela', membroId: 'm1', temHabilitacao: true, idade: 20, nivelInt: 1 }), []);
+});
+
+test('avisos: uma comunidade só continua funcionando (é o caso de quem não sai da sua)', () => {
+  const avs = avisosDeKit({ kits: [KIT_LIBERA, KIT_TRAVA], comunidades: ['santo_antonio'],
+    funcao: 'vela', membroId: 'm1', temHabilitacao: true, idade: 12, nivelInt: 1 });
+  assert.deepStrictEqual(avs, []);
+});
+
+test('avisos: sem marcação não avisa em comunidade nenhuma', () => {
+  assert.deepStrictEqual(avisosDeKit({ kits: [KIT_LIBERA, KIT_TRAVA], comunidades: ONDE,
+    funcao: 'vela', membroId: 'm1', temHabilitacao: false, idade: 12, nivelInt: 1 }), []);
+});
+
+test('avisos: sem lista de comunidades não inventa nenhuma', () => {
+  assert.deepStrictEqual(avisosDeKit({ kits: [KIT_LIBERA, KIT_TRAVA], comunidades: [],
+    funcao: 'vela', membroId: 'm1', temHabilitacao: true, idade: 12, nivelInt: 1 }), []);
+});
+
+test('aviso: trava SEM idade mínima não diz "exige 0 anos" — o que reprova é a falta de data', () => {
+  const kits = [Object.assign({}, KIT_TRAVA, { idade_min: 0, liberados: [] })];
+  const a = avisoDeKit({ kits, comunidade: 'matriz', funcao: 'cruz',
+    membroId: 'm1', temHabilitacao: true, idade: null, nivelInt: 1 });
+  assert.ok(a, 'devia avisar: a trava reprova quem não tem data, com ou sem idade mínima');
+  assert.strictEqual(a.motivo, 'sem_data');
+  assert.strictEqual(a.idadeMin, 0);
+  assert.strictEqual(a.exigeIdade, false, 'a tela precisa saber que NÃO há idade a citar');
+});
+
+test('aviso: trava COM idade mínima marca que há idade a citar', () => {
+  const a = avisoDeKit({ kits: [KIT_LIBERA, KIT_TRAVA], comunidade: 'matriz', funcao: 'cruz',
+    membroId: 'm1', temHabilitacao: true, idade: 12, nivelInt: 1 });
+  assert.strictEqual(a.exigeIdade, true);
 });
