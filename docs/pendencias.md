@@ -37,13 +37,6 @@ O que ainda NÃO foi feito:
   escolha do dono; um `CHECK` no banco derrubaria a transação inteira da ficha). **Hoje há 0
   marcados** — só dá para conferir depois que o dono marcar alguém e um mês fechar.
 
-- **⚠️ O registro de migrations do Supabase está DESATUALIZADO.** `supabase_migrations.schema_migrations`
-  tem 150 linhas e para em `20260716135123` (16/07), enquanto os arquivos de `docs/migrations/`
-  vão até 085 (setembro). As de agosto/setembro foram aplicadas direto, sem registrar — e a 085
-  seguiu a mesma prática de propósito, para não ficar registrada no meio de oito que não estão.
-  **Enquanto isso não for acertado, NUNCA rodar `supabase db push`**: ele tentaria reaplicar as
-  não registradas. Acertar = registrar as pendentes de uma vez, conferindo uma a uma.
-
 - **`carregarPesoRodizio` agora é UM só, no `shared.js`.** Vivia copiado em escala, caixa e
   ausências; as duas cópias alimentavam o motor de troca, e teriam ficado com a regra velha —
   aprovar uma ausência escolheria substituto ignorando os 2× por mês.

@@ -1,45 +1,8 @@
--- ============================================================
--- ACÓLITOS — a estrutura completa do banco, como está hoje
--- Fotografia tirada em 18/08/2026, direto do banco de produção.
---
--- PARA QUE SERVE
--- Rodando este arquivo num banco vazio, você tem de volta a estrutura inteira do app: as
--- tabelas, as colunas, as regras de quem pode ler e escrever o quê, e as funções. É o que
--- salva se a conta do Supabase for perdida, se algo for apagado sem querer, ou se você
--- quiser um banco de testes igual ao de verdade.
---
--- POR QUE ELE EXISTE
--- As migrations 012 a 042 — 31 mudanças de banco — foram aplicadas direto, sem virar arquivo.
--- Essas mudanças, uma a uma, estão perdidas: não há como saber o que cada uma fez. O que dá
--- para recuperar é o RESULTADO delas, que é o que este arquivo guarda. Sem ele não havia como
--- reconstruir o banco do zero, e era o risco mais sério do projeto.
---
--- COMO USAR
--- Banco novo → rode este arquivo primeiro, e depois TODAS as migrations posteriores à data
---   desta fotografia. Hoje (20/08/2026) isso quer dizer da 057 em diante. Este número tem
---   de subir junto com cada migration nova, senão a reconstrução pula a mudança em silêncio
---   — e a 057 é uma TRAVA de segurança (cada time só vê as tarefas dele): pular seria abrir
---   o quadro dos onze times para qualquer pessoa de equipe, sem ninguém perceber.
--- Banco que já existe → NÃO rode. Ele recria tudo; é fotografia, não remendo.
---
--- O QUE NÃO ESTÁ AQUI
--- • Os DADOS. Só a estrutura — nenhum membro, nenhuma escala, nenhum lançamento.
--- • O schema `auth` do Supabase (contas e logins). Ele é do Supabase e nasce com o projeto;
---   por isso este arquivo só roda num projeto Supabase, não num Postgres pelado.
--- • As extensões, que o Supabase já instala sozinho num projeto novo.
---
--- CONFERIDO ao tirar: 40 tabelas, 92 funções, 75 regras de acesso, proteção de linha ligada
--- nas 40 tabelas, 312 permissões concedidas e 87 revogadas. Nenhuma chave ou senha dentro
--- (procurei antes de guardar).
---
--- Quando o banco mudar bastante, tire outra fotografia e substitua este arquivo.
--- ============================================================
-
 --
 -- PostgreSQL database dump
 --
 
-\restrict YrDvTceW7O1t9MlqtuRWggxKTN8veSx8rRgeTcEyDyquebeLUxEcecD3ZIqfhcD
+\restrict dYF9d7ZlH3gMFxLIliJ9gacNen4XqRlRhuSDpuGftPmV5G8BFgLlxoEijPziWYL
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.4
@@ -162,6 +125,55 @@ end; $$;
 
 
 --
+-- Name: acolitos_atividade_listar(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acolitos_atividade_listar() RETURNS jsonb
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+begin
+  if not acolitos_is_superadmin() then return jsonb_build_object('erro','sem_permissao'); end if;
+
+  return jsonb_build_object(
+    -- Quem tem login. Vai com foto, nível e casa para a lista poder usar o mesmo
+    -- avatar do resto do app (brasão da casa incluído, migration 058).
+    'contas', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', m.id, 'nome', m.nome, 'apelido', m.apelido,
+        'foto_url', m.foto_url, 'nivel', m.nivel, 'casa_id', m.casa_id,
+        'usuario',    coalesce(l.usuario, split_part(u.email,'@',1)),
+        'ultimo_uso', (select max(s.updated_at) from auth.sessions s where s.user_id = m.user_id),
+        'entrou_em',  u.last_sign_in_at,
+        'criada_em',  u.created_at,
+        -- Contadas as INSCRIÇÕES, não os aparelhos adivinhados: é para cá que o
+        -- aviso vai ser mandado de verdade. Um celular que trocou de inscrição
+        -- aparece como 2 até o próximo envio, que apaga a morta sozinho.
+        'sino',       exists(select 1 from acolitos_push_subs p where p.user_id = m.user_id),
+        'sino_desde', (select min(p.criado_em) from acolitos_push_subs p where p.user_id = m.user_id),
+        'aparelhos',  (select count(*) from acolitos_push_subs p where p.user_id = m.user_id)
+      ) order by m.nome)
+      from acolitos_membros m
+      left join acolitos_logins l on l.membro_id = m.id
+      join auth.users u on u.id = m.user_id
+      where m.status='ativo' and m.user_id is not null
+    ), '[]'::jsonb),
+
+    -- Quem está ativo e não tem login nenhum. Não é detalhe: em 20/08 são 135 de
+    -- 176, e é a informação mais acionável da tela — essa gente não consegue abrir
+    -- o app de jeito nenhum.
+    'sem_conta', coalesce((
+      select jsonb_agg(jsonb_build_object('id', m.id, 'nome', m.nome, 'nivel', m.nivel) order by m.nome)
+      from acolitos_membros m
+      where m.status='ativo' and m.user_id is null
+    ), '[]'::jsonb),
+
+    'ativos', (select count(*) from acolitos_membros where status='ativo')
+  );
+end; $$;
+
+
+--
 -- Name: acolitos_ausencia_pendente_count(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -278,10 +290,17 @@ CREATE FUNCTION public.acolitos_ausencia_publica_celebracoes() RETURNS jsonb
     AS $$
   select coalesce(jsonb_agg(jsonb_build_object(
     'id', id, 'data', data, 'horario', horario, 'comunidade', comunidade
-  ) order by data, horario), '[]'::jsonb)
+  ) order by data, minutos), '[]'::jsonb)
   from public.acolitos_celebracoes
   where data >= current_date and data <= (current_date + interval '3 months')::date;
 $$;
+
+
+--
+-- Name: FUNCTION acolitos_ausencia_publica_celebracoes(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.acolitos_ausencia_publica_celebracoes() IS 'Celebrações futuras para a página pública de ausências (ausencias-publica.html, sem login), ordenadas por data e hora em MINUTOS (072; antes ordenava horario como texto). Continua executável por anon. Prova: provar-072.';
 
 
 --
@@ -399,6 +418,46 @@ begin
   end loop;
   return v_n;
 end; $$;
+
+
+--
+-- Name: acolitos_avisar_todos(text, uuid[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acolitos_avisar_todos(p_texto text, p_membros uuid[] DEFAULT NULL::uuid[]) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_role text := acolitos_get_role(auth.uid()); v_n int; v_msg text;
+begin
+  if v_role is null or v_role not in ('coord_admin','subadmin') then
+    return jsonb_build_object('erro','sem_permissao');
+  end if;
+
+  v_msg := trim(coalesce(p_texto,''));
+  if v_msg = '' then return jsonb_build_object('erro','sem_texto'); end if;
+  v_msg := left(v_msg, 500);
+
+  -- status='ativo' e user_id not null: quem não tem login não abre o app, e afastado não
+  -- recebe recado da coordenação. É o mesmo recorte que a acolitos_quest_criar já usa.
+  update acolitos_membros
+     set avisos = coalesce(avisos,'[]'::jsonb) || jsonb_build_array(jsonb_build_object(
+           'tipo','aviso', 'msg', v_msg, 'logout', false, 'seen', false,
+           'ts', (extract(epoch from now())*1000)::bigint))
+   where status = 'ativo'
+     and user_id is not null
+     and (p_membros is null or id = any(p_membros));
+
+  get diagnostics v_n = row_count;
+  return jsonb_build_object('ok', true, 'notificados', v_n);
+end; $$;
+
+
+--
+-- Name: FUNCTION acolitos_avisar_todos(p_texto text, p_membros uuid[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.acolitos_avisar_todos(p_texto text, p_membros uuid[]) IS 'Aviso da coordenação: grava em acolitos_membros.avisos (sininho + pop-up). p_membros null = todos os ativos com login. Só coord_admin/subadmin. Prova: docs/provas/provar-067-aviso-fica-no-app.sql';
 
 
 --
@@ -566,7 +625,8 @@ CREATE FUNCTION public.acolitos_campeoes() RETURNS jsonb
   select coalesce(jsonb_agg(jsonb_build_object(
            'temporada', c.temporada_nome, 'liga', c.liga,
            'membro', coalesce(nullif(mb.apelido,''), c.membro_nome),
-           'membro_id', c.membro_id, 'xp', c.xp)
+           'membro_id', c.membro_id, 'xp', c.xp,
+           'foto_url', mb.foto_url, 'nivel', mb.nivel, 'casa_id', mb.casa_id)
          order by c.created_at desc, c.liga), '[]'::jsonb)
   from acolitos_campeoes c
   left join acolitos_membros mb on mb.id = c.membro_id;
@@ -761,21 +821,21 @@ CREATE FUNCTION public.acolitos_destaques() RETURNS json
     AS $$
   select json_build_object(
     'servos', (select coalesce(json_agg(x),'[]'::json) from (
-        select m.id, coalesce(nullif(m.apelido,''),m.nome) as nome, m.foto_url, m.nivel, count(e.id) as total
+        select m.id, coalesce(nullif(m.apelido,''),m.nome) as nome, m.foto_url, m.nivel, m.casa_id, count(e.id) as total
         from public.acolitos_membros m join public.acolitos_escalas e
           on e.membro_id=m.id and e.status in ('presente','atrasado')
-        where m.status='ativo' group by m.id, m.apelido, m.nome, m.foto_url, m.nivel
+        where m.status='ativo' group by m.id, m.apelido, m.nome, m.foto_url, m.nivel, m.casa_id
         order by total desc, nome) x),
     'versateis', (select coalesce(json_agg(x),'[]'::json) from (
-        select m.id, coalesce(nullif(m.apelido,''),m.nome) as nome, m.foto_url, m.nivel, count(h.id) as total
+        select m.id, coalesce(nullif(m.apelido,''),m.nome) as nome, m.foto_url, m.nivel, m.casa_id, count(h.id) as total
         from public.acolitos_membros m join public.acolitos_habilitacoes h
           on h.membro_id=m.id and h.proficiencia in ('apto','experiente','referencia')
-        where m.status='ativo' group by m.id, m.apelido, m.nome, m.foto_url, m.nivel
+        where m.status='ativo' group by m.id, m.apelido, m.nome, m.foto_url, m.nivel, m.casa_id
         order by total desc, nome) x),
     'prontos', (select coalesce(json_agg(x),'[]'::json) from (
-        select m.id, coalesce(nullif(m.apelido,''),m.nome) as nome, m.foto_url, m.nivel, count(d.id) as total
+        select m.id, coalesce(nullif(m.apelido,''),m.nome) as nome, m.foto_url, m.nivel, m.casa_id, count(d.id) as total
         from public.acolitos_membros m join public.acolitos_disponibilidade d on d.membro_id=m.id
-        where m.status='ativo' group by m.id, m.apelido, m.nome, m.foto_url, m.nivel
+        where m.status='ativo' group by m.id, m.apelido, m.nome, m.foto_url, m.nivel, m.casa_id
         order by total desc, nome) x)
   );
 $$;
@@ -861,7 +921,7 @@ CREATE FUNCTION public.acolitos_escalas_futuras() RETURNS json
     LANGUAGE sql STABLE SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
-  select coalesce(json_agg(c order by c.data, c.horario), '[]'::json)
+  select coalesce(json_agg(c order by c.data, public.acolitos_minutos_do_horario(c.horario)), '[]'::json)
   from (
     select cel.id, cel.data, cel.horario, cel.comunidade, cel.tipo,
       coalesce((
@@ -878,6 +938,13 @@ $$;
 
 
 --
+-- Name: FUNCTION acolitos_escalas_futuras(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.acolitos_escalas_futuras() IS 'Escalas futuras (aba "Próximas" de escalas-membro.html), ordenadas por data e hora em MINUTOS (072; antes ordenava horario como texto). Prova: provar-072.';
+
+
+--
 -- Name: acolitos_escalas_passadas(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -885,7 +952,7 @@ CREATE FUNCTION public.acolitos_escalas_passadas() RETURNS json
     LANGUAGE sql STABLE SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
-  select coalesce(json_agg(c order by c.data desc, c.horario desc), '[]'::json)
+  select coalesce(json_agg(c order by c.data desc, public.acolitos_minutos_do_horario(c.horario) desc), '[]'::json)
   from (
     select cel.id, cel.data, cel.horario, cel.comunidade, cel.tipo,
       coalesce((
@@ -898,10 +965,17 @@ CREATE FUNCTION public.acolitos_escalas_passadas() RETURNS json
     from public.acolitos_celebracoes cel
     where cel.data < (now() at time zone 'America/Sao_Paulo')::date
       and exists (select 1 from public.acolitos_escalas e2 where e2.celebracao_id = cel.id)
-    order by cel.data desc, cel.horario desc
+    order by cel.data desc, cel.minutos desc
     limit 60
   ) c;
 $$;
+
+
+--
+-- Name: FUNCTION acolitos_escalas_passadas(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.acolitos_escalas_passadas() IS 'Escalas passadas (aba "Próximas", histórico, de escalas-membro.html), ordenadas por data e hora em MINUTOS (072; antes ordenava horario como texto, dentro e fora do limit 60). Prova: provar-072.';
 
 
 --
@@ -954,6 +1028,90 @@ end; $$;
 
 
 --
+-- Name: acolitos_faltas_contar(uuid[], date, date, text[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acolitos_faltas_contar(p_membros uuid[] DEFAULT NULL::uuid[], p_desde date DEFAULT NULL::date, p_ate date DEFAULT NULL::date, p_comunidades text[] DEFAULT NULL::text[]) RETURNS integer
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_role text := acolitos_get_role(auth.uid()); v_n integer;
+begin
+  if v_role is null or v_role not in ('coord_admin','subadmin','membro_equipe') then
+    raise exception 'sem_permissao' using errcode = '42501';
+  end if;
+  select count(*) into v_n
+    from acolitos_chamadas_itens ci
+    join acolitos_chamadas ch on ch.id = ci.chamada_id
+    join acolitos_escalas e on e.id = ci.escala_id
+    join acolitos_celebracoes cel on cel.id = ch.celebracao_id
+   where ci.resultado = 'ausente'
+     and (p_membros is null or e.membro_id = any(p_membros))
+     and (p_desde is null or cel.data >= p_desde)
+     and (p_ate is null or cel.data <= p_ate)
+     and (p_comunidades is null or cel.comunidade = any(p_comunidades));
+  return v_n;
+end; $$;
+
+
+--
+-- Name: FUNCTION acolitos_faltas_contar(p_membros uuid[], p_desde date, p_ate date, p_comunidades text[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.acolitos_faltas_contar(p_membros uuid[], p_desde date, p_ate date, p_comunidades text[]) IS 'Quantas faltas batem com os filtros. Mesma trava de acolitos_faltas_filtradas.';
+
+
+--
+-- Name: acolitos_faltas_filtradas(uuid[], date, date, text[], integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acolitos_faltas_filtradas(p_membros uuid[] DEFAULT NULL::uuid[], p_desde date DEFAULT NULL::date, p_ate date DEFAULT NULL::date, p_comunidades text[] DEFAULT NULL::text[], p_limite integer DEFAULT 80) RETURNS jsonb
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_role text := acolitos_get_role(auth.uid());
+begin
+  if v_role is null or v_role not in ('coord_admin','subadmin','membro_equipe') then
+    raise exception 'sem_permissao' using errcode = '42501';
+  end if;
+  return coalesce((
+    select jsonb_agg(t.x order by t.d desc, t.m desc nulls last)
+      from (
+        select jsonb_build_object(
+                 'membro_id', m.id,
+                 'membro', coalesce(nullif(m.apelido,''), m.nome),
+                 'funcao', e.funcao,
+                 'data', cel.data, 'horario', cel.horario, 'comunidade', cel.comunidade,
+                 'substituto', case when ci.substituto_id is not null
+                                    then coalesce(nullif(sub.apelido,''), sub.nome) end
+               ) as x,
+               cel.data as d, public.acolitos_minutos_do_horario(cel.horario) as m
+          from acolitos_chamadas_itens ci
+          join acolitos_chamadas ch on ch.id = ci.chamada_id
+          join acolitos_escalas e on e.id = ci.escala_id
+          join acolitos_celebracoes cel on cel.id = ch.celebracao_id
+          join acolitos_membros m on m.id = e.membro_id
+          left join acolitos_membros sub on sub.id = ci.substituto_id
+         where ci.resultado = 'ausente'
+           and (p_membros is null or e.membro_id = any(p_membros))
+           and (p_desde is null or cel.data >= p_desde)
+           and (p_ate is null or cel.data <= p_ate)
+           and (p_comunidades is null or cel.comunidade = any(p_comunidades))
+         order by cel.data desc, public.acolitos_minutos_do_horario(cel.horario) desc nulls last
+         limit greatest(1, least(coalesce(p_limite, 80), 500))
+      ) t
+  ), '[]'::jsonb);
+end; $$;
+
+
+--
+-- Name: FUNCTION acolitos_faltas_filtradas(p_membros uuid[], p_desde date, p_ate date, p_comunidades text[], p_limite integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.acolitos_faltas_filtradas(p_membros uuid[], p_desde date, p_ate date, p_comunidades text[], p_limite integer) IS 'Faltas (chamada = ausente) filtradas no banco, ordenadas por data e hora em MINUTOS (070). Só coord_admin/subadmin/membro_equipe; sem permissão = 42501. Prova: provar-069.';
+
+
+--
 -- Name: acolitos_faltas_recentes(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -984,6 +1142,106 @@ begin
     ) t
   ), '[]'::jsonb);
 end; $$;
+
+
+--
+-- Name: acolitos_formacao_acompanhamento(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acolitos_formacao_acompanhamento() RETURNS TABLE(membro_id uuid, nome text, status text, nivel text, faixa text, dias_parado integer, capitulo_atual integer, obrigatorias_feitas integer, obrigatorias_do_capitulo integer, ultima_missa date, ultimo_progresso date, telefone text)
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+begin
+  -- Portão explícito. Devolver lista vazia para quem não pode ver seria pior do que recusar:
+  -- a tela diria "ninguém parado" e a coordenação acreditaria. Este projeto já levou esse golpe.
+  --
+  -- ⚠️ O `coalesce` NÃO é enfeite. `acolitos_get_role` devolve NULO para quem ele não conhece,
+  -- e em SQL `NULO not in (...)` não é FALSO — é NULO. Sem o coalesce o `if` nunca disparava e
+  -- o portão ficava ESCANCARADO: qualquer pessoa logada leria telefone e progresso de todos.
+  -- Foi a seção 7 da prova que pegou isto, minutos depois de a função subir.
+  if coalesce(public.acolitos_get_role(auth.uid()), '') not in ('coord_admin', 'subadmin', 'membro_equipe') then
+    raise exception 'Sem acesso ao acompanhamento da Formação'
+      using errcode = '42501';
+  end if;
+
+  return query
+  with base as (
+    select m.id,
+           m.nome,
+           m.status,
+           coalesce(nullif(m.nivel, ''), null) as nivel,
+           (u.last_sign_in_at is not null) as entrou_no_app,
+           -- A regra da casa para o telefone (projetos/acolitos/telefones-core.js): o número
+           -- de recado primeiro, o do responsável como reserva. O da própria pessoa entra por
+           -- último porque boa parte é criança e o aparelho é da mãe ou do pai.
+           coalesce(nullif(m.celular_recado, ''), nullif(m.celular_responsavel, ''),
+                    nullif(m.celular_mae, ''), nullif(m.telefone, '')) as telefone,
+           (select max(p.created_at)::date from public.acolitos_missao_progresso p
+             where p.membro_id = m.id and p.status in ('concluida', 'medalha')) as ultimo_progresso,
+           (select max(c.data) from public.acolitos_escalas e
+              join public.acolitos_celebracoes c on c.id = e.celebracao_id
+             where e.membro_id = m.id and c.data <= current_date) as ultima_missa
+      from public.acolitos_membros m
+      left join auth.users u on u.id = m.user_id
+     where coalesce(m.status, '') <> 'desligado'
+  ),
+  comCapitulo as (
+    select b.*,
+           -- o capítulo atual é o PRIMEIRO com alguma obrigatória ainda por fazer
+           (select min(q.capitulo) from public.acolitos_missoes q
+             where q.nivel_alvo = b.nivel and q.obrigatoria and q.ativo
+               and not exists (select 1 from public.acolitos_missao_progresso p
+                                where p.membro_id = b.id and p.missao_id = q.id
+                                  and p.status in ('concluida', 'medalha'))) as capitulo_atual
+      from base b
+  )
+  select c.id,
+         c.nome,
+         c.status,
+         c.nivel,
+         case
+           when not c.entrou_no_app then 'nunca_entrou'
+           when c.ultimo_progresso is null then 'travado'
+           when greatest(c.ultimo_progresso, coalesce(c.ultima_missa, c.ultimo_progresso))
+                < current_date - 30 then 'parou'
+           else 'andando'
+         end as faixa,
+         case
+           when c.ultimo_progresso is null then null
+           else (current_date - greatest(c.ultimo_progresso,
+                                         coalesce(c.ultima_missa, c.ultimo_progresso)))::integer
+         end as dias_parado,
+         c.capitulo_atual,
+         (select count(*)::integer from public.acolitos_missoes q
+           where q.nivel_alvo = c.nivel and q.capitulo = c.capitulo_atual
+             and q.obrigatoria and q.ativo
+             and exists (select 1 from public.acolitos_missao_progresso p
+                          where p.membro_id = c.id and p.missao_id = q.id
+                            and p.status in ('concluida', 'medalha'))) as obrigatorias_feitas,
+         (select count(*)::integer from public.acolitos_missoes q
+           where q.nivel_alvo = c.nivel and q.capitulo = c.capitulo_atual
+             and q.obrigatoria and q.ativo) as obrigatorias_do_capitulo,
+         c.ultima_missa,
+         c.ultimo_progresso,
+         c.telefone
+    from comCapitulo c
+   order by case
+              when not c.entrou_no_app then 0
+              when c.ultimo_progresso is null then 1
+              when greatest(c.ultimo_progresso, coalesce(c.ultima_missa, c.ultimo_progresso))
+                   < current_date - 30 then 2
+              else 3
+            end,
+            c.nome;
+end $$;
+
+
+--
+-- Name: FUNCTION acolitos_formacao_acompanhamento(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.acolitos_formacao_acompanhamento() IS 'Uma linha por membro (fora os desligados) com a faixa de acompanhamento da Formação: nunca_entrou, travado, parou (30 dias sem missão e sem servir) ou andando. Já vem na ordem da urgência. Prova: docs/provas/provar-075-acompanhamento-da-formacao.sql';
 
 
 --
@@ -1130,6 +1388,42 @@ end; $$;
 
 
 --
+-- Name: acolitos_integrado_vira_aspirante(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acolitos_integrado_vira_aspirante() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+begin
+  if new.etapa is distinct from 'integrado' then
+    return new;
+  end if;
+
+  -- o degrau, só para quem ainda não tem
+  update public.acolitos_membros
+     set nivel = 'aspirante'
+   where id = new.membro_id
+     and coalesce(nivel, '') = '';
+
+  -- a função Apoio. `do nothing` no conflito: quem já é experiente ou referência no Apoio
+  -- não pode ser rebaixado para apto por causa de uma mudança de etapa.
+  insert into public.acolitos_habilitacoes (membro_id, funcao, proficiencia)
+  values (new.membro_id, 'apoio', 'apto')
+  on conflict (membro_id, funcao) do nothing;
+
+  return new;
+end $$;
+
+
+--
+-- Name: FUNCTION acolitos_integrado_vira_aspirante(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.acolitos_integrado_vira_aspirante() IS 'Ao ficar "integrado" no CRM, a pessoa ganha o degrau Aspirante (se não tiver nenhum) e a função Apoio como apta (sem rebaixar quem já é mais). Prova: docs/provas/provar-074-integrado-vira-aspirante.sql';
+
+
+--
 -- Name: acolitos_is_superadmin(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1235,12 +1529,12 @@ begin
   return jsonb_build_object('membros', coalesce((
     select jsonb_agg(jsonb_build_object(
       'id', m.id, 'nome', m.nome, 'nivel', m.nivel, 'user_id', m.user_id,
+      'status', m.status,
       'tem_conta', (m.user_id is not null),
       'usuario', coalesce(l.usuario, split_part(u.email,'@',1))) order by m.nome)
     from acolitos_membros m
     left join acolitos_logins l on l.membro_id = m.id
     left join auth.users u on u.id = m.user_id
-    where m.status='ativo'
   ), '[]'::jsonb));
 end; $$;
 
@@ -1291,6 +1585,7 @@ CREATE FUNCTION public.acolitos_membro_card(p_id uuid) RETURNS json
     'nome_completo', m.nome,
     'foto_url', m.foto_url,
     'nivel', m.nivel,
+    'casa_id', m.casa_id,
     'comunidade', m.comunidade,
     'total_servido', (select count(*) from public.acolitos_escalas e where e.membro_id=m.id and e.status in ('presente','atrasado')),
     'funcoes', (select count(*) from public.acolitos_habilitacoes h where h.membro_id=m.id and h.proficiencia in ('apto','experiente','referencia')),
@@ -1299,12 +1594,19 @@ CREATE FUNCTION public.acolitos_membro_card(p_id uuid) RETURNS json
         from public.acolitos_escalas e
         join public.acolitos_celebracoes cel on cel.id=e.celebracao_id
         where e.membro_id=m.id and e.status in ('presente','atrasado')
-        order by cel.data desc, cel.horario desc
+        order by cel.data desc, cel.minutos desc
         limit 8) u), '[]'::json)
   )
   from public.acolitos_membros m
   where m.id = p_id and m.status='ativo';
 $$;
+
+
+--
+-- Name: FUNCTION acolitos_membro_card(p_id uuid); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.acolitos_membro_card(p_id uuid) IS 'Cartão do membro (destaques.html), com as últimas presenças ordenadas por data e hora em MINUTOS (072; antes ordenava horario como texto). Prova: provar-072.';
 
 
 --
@@ -1317,10 +1619,38 @@ CREATE FUNCTION public.acolitos_membros_display(p_ids uuid[]) RETURNS jsonb
     AS $$
   select coalesce(jsonb_object_agg(m.id::text, jsonb_build_object(
            'id', m.id, 'nome', m.nome, 'apelido', m.apelido,
-           'foto_url', m.foto_url, 'nivel', m.nivel)), '{}'::jsonb)
+           'foto_url', m.foto_url, 'nivel', m.nivel, 'casa_id', m.casa_id)), '{}'::jsonb)
   from acolitos_membros m
   where m.id = any(coalesce(p_ids, '{}'::uuid[]));
 $$;
+
+
+--
+-- Name: acolitos_membros_ja_entraram(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acolitos_membros_ja_entraram() RETURNS TABLE(membro_id uuid)
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_role text := acolitos_get_role(auth.uid());
+begin
+  if v_role is null or v_role not in ('coord_admin','subadmin','membro_equipe') then
+    raise exception 'sem_permissao' using errcode = '42501';
+  end if;
+  return query
+    select m.id
+      from acolitos_membros m
+      join auth.users u on u.id = m.user_id
+     where u.last_sign_in_at is not null;
+end; $$;
+
+
+--
+-- Name: FUNCTION acolitos_membros_ja_entraram(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.acolitos_membros_ja_entraram() IS 'Ids dos membros que já entraram no app (filtro da aba Membros). Só devolve membro_id. Sem permissão = erro 42501. Prova: docs/provas/provar-068-quem-ja-entrou.sql';
 
 
 --
@@ -1365,6 +1695,41 @@ CREATE FUNCTION public.acolitos_meu_membro_id() RETURNS uuid
     AS $$
   select id from public.acolitos_membros where user_id = auth.uid() and status = 'ativo' limit 1;
 $$;
+
+
+--
+-- Name: acolitos_meus_times(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acolitos_meus_times(uid uuid) RETURNS text[]
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select coalesce(m.setores, '{}'::text[])
+  from public.acolitos_membros m
+  where m.user_id = uid
+  limit 1;
+$$;
+
+
+--
+-- Name: acolitos_minutos_do_horario(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acolitos_minutos_do_horario(p text) RETURNS integer
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    SET search_path TO 'public'
+    AS $$
+  select (m[1]::int * 60 + coalesce(nullif(m[2], '')::int, 0))
+    from regexp_match(p, '^\s*(\d{1,2})\s*[h:]\s*(\d{0,2})') as m
+$$;
+
+
+--
+-- Name: FUNCTION acolitos_minutos_do_horario(p text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.acolitos_minutos_do_horario(p text) IS 'Converte "7h", "18h30", "19:00" em minutos desde 00:00, para ordenar horário como hora, não como texto. NULL se não casar o padrão. Prova: provar-069 seção 5.';
 
 
 --
@@ -1851,13 +2216,13 @@ begin
   if v_id is null then return jsonb_build_object('temporada', null, 'ligas', '[]'::jsonb, 'eu_id', (select id from acolitos_membros where user_id=v_uid)); end if;
   with xp as (select membro_id, sum(xp) xp from acolitos_xp_temporada where temporada_id=v_id group by membro_id),
   base as (
-    select m.id, coalesce(nullif(m.apelido,''), m.nome) as nome, m.nivel, m.foto_url, coalesce(x.xp,0) xp,
+    select m.id, coalesce(nullif(m.apelido,''), m.nome) as nome, m.nivel, m.foto_url, m.casa_id, coalesce(x.xp,0) xp,
       case when m.nivel in ('aspirante','coroinha','acolito_aspirante') then 'iniciantes'
            when m.nivel in ('acolito_guardiao','acolito_sentinela') then 'acolitos' else 'cerimoniarios' end liga
     from acolitos_membros m left join xp x on x.membro_id=m.id where m.status='ativo')
   select jsonb_agg(jsonb_build_object('liga',liga,'membros',membros) order by ord) into v_res from (
     select liga, case liga when 'iniciantes' then 1 when 'acolitos' then 2 else 3 end ord,
-      jsonb_agg(jsonb_build_object('id',id,'nome',nome,'nivel',nivel,'foto_url',foto_url,'xp',xp) order by xp desc, nome) membros
+      jsonb_agg(jsonb_build_object('id',id,'nome',nome,'nivel',nivel,'foto_url',foto_url,'casa_id',casa_id,'xp',xp) order by xp desc, nome) membros
     from base where xp > 0 group by liga
   ) g;
   return jsonb_build_object('temporada', jsonb_build_object('nome',v_nome,'inicio',v_ini,'fim',v_fim),
@@ -1926,6 +2291,7 @@ begin
     'membros', coalesce((
       select jsonb_agg(jsonb_build_object(
         'id', m.id, 'nome', m.nome, 'apelido', m.apelido, 'foto_url', m.foto_url, 'nivel', m.nivel,
+        'casa_id', m.casa_id,
         'comunidade', m.comunidade, 'pode_outras_comunidades', m.pode_outras_comunidades,
         'grupo_irmaos', m.grupo_irmaos, 'escalar_com_irmao', m.escalar_com_irmao,
         'data_nascimento', m.data_nascimento
@@ -1939,6 +2305,158 @@ begin
   ) into v_result;
   return v_result;
 end; $$;
+
+
+--
+-- Name: acolitos_rotinas_materializar(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acolitos_rotinas_materializar() RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare
+  meus text[];
+  papel text;
+  criadas integer := 0;
+  r record;
+  p record;
+  prox date;
+  abertas integer;
+  vagas integer;
+  contexto text;
+begin
+  papel := coalesce(public.acolitos_get_role(auth.uid()), '');
+  if papel not in ('coord_admin', 'subadmin', 'membro_equipe') then
+    raise exception 'Sem acesso às rotinas' using errcode = '42501';
+  end if;
+  meus := coalesce(public.acolitos_meus_times(auth.uid()), '{}'::text[]);
+
+  for r in
+    select * from public.acolitos_rotinas
+     where ativa
+       and proxima <= current_date
+       and (papel in ('coord_admin','subadmin') or time_slug = any(meus))
+     for update
+  loop
+    if r.fonte in ('acompanhamento', 'rodizio') then
+      -- o lote é o teto de conversas ABERTAS, não o número de tarefas criadas por dia: quem
+      -- não falou com ninguém ontem não recebe dois nomes hoje
+      select count(*) into abertas from public.acolitos_tarefas t
+       where t.rotina_id = r.id and t.concluida_em is null;
+      vagas := greatest(coalesce(r.lote, 3) - abertas, 0);
+
+      for p in
+        select a.membro_id, a.nome, a.nivel, a.faixa, a.dias_parado,
+               a.ultima_missa, a.ultimo_progresso
+          from public.acolitos_formacao_acompanhamento() a
+          join public.acolitos_membros m on m.id = a.membro_id
+         where (
+                 -- ACOMPANHAMENTO: só quem está dentro do app e não anda
+                 (r.fonte = 'acompanhamento' and a.faixa in ('parou', 'travado'))
+                 or
+                 -- RODÍZIO: todo mundo do grupo, indo bem ou não; só os ativos, e nunca quem
+                 -- está no próprio setor da rotina (o orientador não se orienta)
+                 (r.fonte = 'rodizio'
+                  and coalesce(a.status, '') = 'ativo'
+                  and a.nivel = any(coalesce(r.alvo_niveis, '{}'::text[]))
+                  and not (r.time_slug = any(coalesce(m.setores, '{}'::text[]))))
+               )
+           -- fora da fila: quem já tem conversa em aberto, e quem foi procurado há pouco
+           -- (senão a mesma pessoa volta amanhã, porque o dado dela não muda por ter sido ouvida)
+           and not exists (select 1 from public.acolitos_tarefas t
+                            where t.rotina_id = r.id and t.alvo_id = a.membro_id
+                              and (t.concluida_em is null
+                                   or t.concluida_em > now() - make_interval(days => coalesce(r.descanso_dias, 30))))
+         order by
+           -- no rodízio, primeiro quem está sem conversa há mais tempo (nunca procurado vem
+           -- na frente); no acompanhamento, primeiro quem parou, e há mais tempo
+           case when r.fonte = 'rodizio' then 0
+                when a.faixa = 'parou' then 0 else 1 end,
+           case when r.fonte = 'rodizio'
+                then (select max(t2.criada_em) from public.acolitos_tarefas t2
+                       where t2.rotina_id = r.id and t2.alvo_id = a.membro_id)
+                else null end asc nulls first,
+           a.dias_parado desc nulls last,
+           a.nome
+         limit vagas
+      loop
+        if r.fonte = 'rodizio' then
+          contexto := case p.nivel
+                        when 'acolito_sentinela' then 'Acólito Sentinela'
+                        when 'aspirante_cerimoniario' then 'Aspirante a Cerimoniário'
+                        when 'cerimoniario_aspirante' then 'Cerimoniário Aspirante'
+                        when 'cerimoniario_guardiao' then 'Cerimoniário Guardião'
+                        when 'cerimoniario_magistral' then 'Cerimoniário Magistral'
+                        when 'cerimoniario_mor' then 'Cerimoniário-Mor'
+                        else coalesce(p.nivel, 'sem degrau') end
+            || ' · última missa: ' || coalesce(to_char(p.ultima_missa, 'DD/MM/YYYY'), 'nunca serviu')
+            || ' · última missão: ' || coalesce(to_char(p.ultimo_progresso, 'DD/MM/YYYY'), 'nenhuma ainda')
+            || case when p.faixa = 'parou' then ' · PAROU há ' || coalesce(p.dias_parado::text, '?') || ' dias'
+                    when p.faixa = 'travado' then ' · entrou no app e não começou a trilha'
+                    when p.faixa = 'nunca_entrou' then ' · nunca abriu o app'
+                    else '' end
+            || '. Pergunte como andam as coisas — na pastoral e fora dela.';
+
+          insert into public.acolitos_tarefas
+            (titulo, time_slug, responsavel_id, prazo, observacao, recorrencia, criada_por, rotina_id, alvo_id)
+          values ('Conversar com ' || p.nome, r.time_slug, r.responsavel_id, r.proxima,
+                  contexto, 'nenhuma', r.criada_por, r.id, p.membro_id);
+        else
+          insert into public.acolitos_tarefas
+            (titulo, time_slug, responsavel_id, prazo, observacao, recorrencia, criada_por, rotina_id, alvo_id)
+          values ('Falar com ' || p.nome, r.time_slug, r.responsavel_id, r.proxima,
+                  case when p.faixa = 'parou'
+                       then 'Parou há ' || coalesce(p.dias_parado::text, '?') || ' dias: nenhuma missão e nenhuma missa servida nesse tempo. Pergunte como estão as coisas.'
+                       else 'Entrou no app e não começou a trilha. Ajude a dar o primeiro passo.' end,
+                  'nenhuma', r.criada_por, r.id, p.membro_id);
+        end if;
+        criadas := criadas + 1;
+      end loop;
+
+    else
+      -- rotina de título fixo (o comportamento da 077)
+      if exists (select 1 from public.acolitos_tarefas t
+                  where t.rotina_id = r.id and t.concluida_em is null) then
+        continue;
+      end if;
+      insert into public.acolitos_tarefas
+        (titulo, time_slug, responsavel_id, prazo, observacao, recorrencia, criada_por, rotina_id)
+      values (r.titulo, r.time_slug, r.responsavel_id, r.proxima, r.observacao, 'nenhuma', r.criada_por, r.id);
+      criadas := criadas + 1;
+    end if;
+
+    -- a próxima data sai da que venceu, não de hoje
+    prox := case r.recorrencia
+              when 'diaria'  then r.proxima + 1
+              when 'semanal' then r.proxima + 7
+              when 'mensal'  then (r.proxima + interval '1 month')::date
+              when 'anual'   then (r.proxima + interval '1 year')::date
+              when 'celebracao' then (
+                select min(c.data) from public.acolitos_celebracoes c where c.data > r.proxima)
+            end;
+    if prox is null then prox := r.proxima; end if;
+    while prox <= current_date loop
+      prox := case r.recorrencia
+                when 'diaria'  then prox + 1
+                when 'semanal' then prox + 7
+                when 'mensal'  then (prox + interval '1 month')::date
+                when 'anual'   then (prox + interval '1 year')::date
+                else current_date + 1
+              end;
+    end loop;
+    update public.acolitos_rotinas set proxima = prox where id = r.id;
+  end loop;
+
+  return criadas;
+end $$;
+
+
+--
+-- Name: FUNCTION acolitos_rotinas_materializar(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.acolitos_rotinas_materializar() IS 'Cria as tarefas vencidas das rotinas dos times de quem chama. "fixa": uma tarefa por vez com o título escrito. "acompanhamento": uma por PESSOA parada. "rodizio": uma volta completa por um grupo de níveis, quem está sem conversa há mais tempo primeiro, sem incluir quem é do próprio setor. Prova: docs/provas/provar-080-rodizio-do-orientador.sql';
 
 
 --
@@ -2323,10 +2841,10 @@ CREATE FUNCTION public.acolitos_solicitos() RETURNS jsonb
   select coalesce(jsonb_agg(x order by (x->>'total')::int desc, x->>'membro'), '[]'::jsonb)
   from (
     select jsonb_build_object('membro_id', m.id, 'membro', coalesce(nullif(m.apelido,''),m.nome),
-             'foto_url', m.foto_url, 'nivel', m.nivel, 'total', count(*)) as x
+             'foto_url', m.foto_url, 'nivel', m.nivel, 'casa_id', m.casa_id, 'total', count(*)) as x
     from acolitos_presencas_avulsas pa join acolitos_membros m on m.id=pa.membro_id
     where m.status='ativo'
-    group by m.id, m.apelido, m.nome, m.foto_url, m.nivel
+    group by m.id, m.apelido, m.nome, m.foto_url, m.nivel, m.casa_id
   ) t;
 $$;
 
@@ -2495,7 +3013,7 @@ begin
   select coalesce(jsonb_agg(jsonb_build_object(
            'celebracao_id', c.id, 'data', c.data, 'horario', c.horario,
            'comunidade', c.comunidade, 'tipo', c.tipo, 'funcao', mo.funcao
-         ) order by c.data, c.horario), '[]'::jsonb) into v_out
+         ) order by c.data, c.minutos), '[]'::jsonb) into v_out
   from public.acolitos_celebracoes c
   join public.acolitos_modelos mo
     on mo.tipo = c.tipo and mo.comunidade = c.comunidade
@@ -2512,6 +3030,13 @@ begin
     );
   return jsonb_build_object('vagas', v_out);
 end; $$;
+
+
+--
+-- Name: FUNCTION acolitos_vagas_abertas_membro(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.acolitos_vagas_abertas_membro() IS 'Vagas abertas para o membro logado ("ESCALA EU!" em escalas-membro.html), ordenadas por data e hora em MINUTOS (072; antes ordenava horario como texto). Prova: provar-072.';
 
 
 --
@@ -2630,6 +3155,57 @@ COMMENT ON TABLE public.acolitos_ausencias_pendentes IS 'Fila de avisos de ausê
 
 
 --
+-- Name: acolitos_celebracoes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.acolitos_celebracoes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    data date NOT NULL,
+    horario text NOT NULL,
+    comunidade text DEFAULT 'matriz'::text NOT NULL,
+    tipo text DEFAULT 'missa_comum'::text NOT NULL,
+    observacoes text,
+    created_by uuid,
+    created_at timestamp with time zone DEFAULT now(),
+    minutos integer GENERATED ALWAYS AS (public.acolitos_minutos_do_horario(horario)) STORED,
+    CONSTRAINT acolitos_celebracoes_comunidade_check CHECK ((comunidade = ANY (ARRAY['matriz'::text, 'santo_antonio'::text])))
+);
+
+
+--
+-- Name: COLUMN acolitos_celebracoes.minutos; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.acolitos_celebracoes.minutos IS 'A hora da missa em minutos do dia, calculada de `horario`. Serve para ORDENAR: horario é texto sem zero e ordena errado. Prova: docs/provas/provar-071-celebracao-em-ordem.sql';
+
+
+--
+-- Name: acolitos_ausencias_v; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.acolitos_ausencias_v WITH (security_invoker='true') AS
+ SELECT a.id,
+    a.membro_id,
+    a.celebracao_id,
+    a.motivo,
+    a.observacao,
+    a.created_at,
+    COALESCE(c.data, a.data) AS missa_data,
+    c.horario AS missa_horario,
+    c.comunidade AS missa_comunidade,
+    public.acolitos_minutos_do_horario(c.horario) AS missa_minutos
+   FROM (public.acolitos_ausencias a
+     LEFT JOIN public.acolitos_celebracoes c ON ((c.id = a.celebracao_id)));
+
+
+--
+-- Name: VIEW acolitos_ausencias_v; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON VIEW public.acolitos_ausencias_v IS 'Ausências com a data/horário/comunidade da missa, para filtrar na consulta. security_invoker: obedece às regras de acolitos_ausencias. missa_minutos ordena o horário como hora (070). Prova: provar-069.';
+
+
+--
 -- Name: acolitos_campeoes; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2662,23 +3238,6 @@ CREATE TABLE public.acolitos_casas (
     ordem integer DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     tipo text DEFAULT 'membro'::text NOT NULL
-);
-
-
---
--- Name: acolitos_celebracoes; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.acolitos_celebracoes (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    data date NOT NULL,
-    horario text NOT NULL,
-    comunidade text DEFAULT 'matriz'::text NOT NULL,
-    tipo text DEFAULT 'missa_comum'::text NOT NULL,
-    observacoes text,
-    created_by uuid,
-    created_at timestamp with time zone DEFAULT now(),
-    CONSTRAINT acolitos_celebracoes_comunidade_check CHECK ((comunidade = ANY (ARRAY['matriz'::text, 'santo_antonio'::text])))
 );
 
 
@@ -2732,6 +3291,30 @@ CREATE TABLE public.acolitos_crm (
     observacoes text,
     CONSTRAINT acolitos_crm_etapa_check CHECK ((etapa = ANY (ARRAY['aprovacao_cadastro'::text, 'integracao'::text, 'whatsapp'::text, 'tunica'::text, 'disponivel_escala'::text, 'integrado'::text])))
 );
+
+
+--
+-- Name: acolitos_crm_comentarios; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.acolitos_crm_comentarios (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    membro_id uuid NOT NULL,
+    autor_id uuid,
+    texto text NOT NULL,
+    quando timestamp with time zone DEFAULT now() NOT NULL,
+    etapa text,
+    etapa_de text,
+    etapa_para text,
+    CONSTRAINT acolitos_crm_comentarios_texto_check CHECK ((btrim(texto) <> ''::text))
+);
+
+
+--
+-- Name: TABLE acolitos_crm_comentarios; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.acolitos_crm_comentarios IS 'Linha do tempo do CRM: comentários com autor e data. Só inserção — não se edita nem se apaga.';
 
 
 --
@@ -2925,6 +3508,13 @@ CREATE TABLE public.acolitos_listas (
 
 
 --
+-- Name: COLUMN acolitos_listas.meta; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.acolitos_listas.meta IS 'Extras da lista. Para tipo=setor: {"cor":"#rrggbb"} — a cor do setor nas etiquetas e no card da Área (migration 083).';
+
+
+--
 -- Name: acolitos_liturgia_override; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3008,10 +3598,34 @@ CREATE TABLE public.acolitos_membros (
     contato_principal text,
     celular_responsavel text,
     responsavel_whatsapp boolean DEFAULT false NOT NULL,
+    investido boolean,
+    senha_provisoria boolean DEFAULT false NOT NULL,
+    escalar_frequente boolean DEFAULT false NOT NULL,
     CONSTRAINT acolitos_membros_comunidade_check CHECK ((comunidade = ANY (ARRAY['matriz'::text, 'santo_antonio'::text, 'outra'::text]))),
     CONSTRAINT acolitos_membros_contato_principal_check CHECK (((contato_principal IS NULL) OR (contato_principal = ANY (ARRAY['mae'::text, 'pai'::text])))),
     CONSTRAINT acolitos_membros_status_check CHECK ((status = ANY (ARRAY['ativo'::text, 'afastado'::text, 'desligado'::text, 'em_integracao'::text])))
 );
+
+
+--
+-- Name: COLUMN acolitos_membros.investido; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.acolitos_membros.investido IS 'Se a pessoa já foi investida. O app é a fonte desde 27/08/2026; antes vivia só na planilha da escala.';
+
+
+--
+-- Name: COLUMN acolitos_membros.senha_provisoria; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.acolitos_membros.senha_provisoria IS 'Verdadeira enquanto a pessoa ainda usa a senha impressa da folha de acesso. O app não deixa passar da tela "crie sua senha" enquanto isto for verdadeiro.';
+
+
+--
+-- Name: COLUMN acolitos_membros.escalar_frequente; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.acolitos_membros.escalar_frequente IS 'Marcado na aba Disponibilidade da ficha: o gerador conta esta pessoa como meia vez a menos no mês, então ela serve ~1 vez a mais por mês — sem nunca passar na frente de quem ainda deve os 2x do mês.';
 
 
 --
@@ -3114,6 +3728,58 @@ CREATE TABLE public.acolitos_push_subs (
 
 
 --
+-- Name: acolitos_rotinas; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.acolitos_rotinas (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    time_slug text NOT NULL,
+    titulo text NOT NULL,
+    observacao text,
+    recorrencia text NOT NULL,
+    proxima date DEFAULT CURRENT_DATE NOT NULL,
+    responsavel_id uuid,
+    ativa boolean DEFAULT true NOT NULL,
+    criada_em timestamp with time zone DEFAULT now() NOT NULL,
+    criada_por uuid,
+    fonte text DEFAULT 'fixa'::text NOT NULL,
+    lote integer DEFAULT 3 NOT NULL,
+    descanso_dias integer DEFAULT 30 NOT NULL,
+    alvo_niveis text[],
+    CONSTRAINT acolitos_rotinas_fonte_check CHECK ((fonte = ANY (ARRAY['fixa'::text, 'acompanhamento'::text, 'rodizio'::text]))),
+    CONSTRAINT acolitos_rotinas_recorrencia_check CHECK ((recorrencia = ANY (ARRAY['diaria'::text, 'semanal'::text, 'mensal'::text, 'anual'::text, 'celebracao'::text])))
+);
+
+
+--
+-- Name: TABLE acolitos_rotinas; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.acolitos_rotinas IS 'O cardápio de rotinas de cada setor: escreve-se uma vez e a tarefa nasce sozinha quando vence. Só uma viva por vez. Prova: docs/provas/provar-077-rotinas-do-setor.sql';
+
+
+--
+-- Name: COLUMN acolitos_rotinas.fonte; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.acolitos_rotinas.fonte IS '"fixa" = a tarefa sai do título escrito na rotina. "acompanhamento" = o app escolhe as pessoas paradas e cria uma tarefa por pessoa, até o limite de `lote` abertas.';
+
+
+--
+-- Name: COLUMN acolitos_rotinas.descanso_dias; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.acolitos_rotinas.descanso_dias IS 'Depois de uma conversa, quantos dias a pessoa sai da fila desta rotina. Sem isto ela voltaria no dia seguinte, porque o dado dela não muda só por ter sido procurada.';
+
+
+--
+-- Name: COLUMN acolitos_rotinas.alvo_niveis; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.acolitos_rotinas.alvo_niveis IS 'Só para fonte = rodizio: os níveis que entram na roda de conversas. Ex.: do acólito sentinela para cima.';
+
+
+--
 -- Name: acolitos_semana_override; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3160,6 +3826,29 @@ CREATE TABLE public.acolitos_substituto_creditos (
 
 
 --
+-- Name: acolitos_tarefa_passos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.acolitos_tarefa_passos (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    tarefa_id uuid NOT NULL,
+    titulo text NOT NULL,
+    prazo date,
+    responsavel_id uuid,
+    concluido_em timestamp with time zone,
+    ordem integer DEFAULT 0 NOT NULL,
+    criado_em timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: TABLE acolitos_tarefa_passos; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.acolitos_tarefa_passos IS 'Os passos de um projeto. Passo COM prazo é um marco — é por ele que se sabe se o projeto vai fechar. Prova: docs/provas/provar-084-projeto-e-passos.sql';
+
+
+--
 -- Name: acolitos_tarefas; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3178,8 +3867,36 @@ CREATE TABLE public.acolitos_tarefas (
     andamento_em timestamp with time zone,
     andamento_por uuid,
     origem_id uuid,
-    CONSTRAINT acolitos_tarefas_recorrencia_check CHECK ((recorrencia = ANY (ARRAY['nenhuma'::text, 'semanal'::text, 'mensal'::text, 'anual'::text, 'celebracao'::text])))
+    rotina_id uuid,
+    alvo_id uuid,
+    hora time without time zone,
+    tipo text DEFAULT 'tarefa'::text NOT NULL,
+    inicio date,
+    checkpoints jsonb,
+    CONSTRAINT acolitos_tarefas_recorrencia_check CHECK ((recorrencia = ANY (ARRAY['nenhuma'::text, 'semanal'::text, 'mensal'::text, 'anual'::text, 'celebracao'::text]))),
+    CONSTRAINT acolitos_tarefas_tipo_check CHECK ((tipo = ANY (ARRAY['tarefa'::text, 'projeto'::text])))
 );
+
+
+--
+-- Name: COLUMN acolitos_tarefas.hora; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.acolitos_tarefas.hora IS 'Hora combinada da tarefa (opcional). Sem fuso de propósito: é uma combinação humana ("às 18h"), não um instante. Vazio = tarefa do dia inteiro.';
+
+
+--
+-- Name: COLUMN acolitos_tarefas.tipo; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.acolitos_tarefas.tipo IS 'tarefa (atômica) ou projeto (começo, meio e fim, com passos e marcos). Regras: projetos/acolitos/projeto-core.js';
+
+
+--
+-- Name: COLUMN acolitos_tarefas.inicio; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.acolitos_tarefas.inicio IS 'Quando o projeto começou. Sem isto não dá para dizer quanto do tempo já correu — e a barra de tempo fica sem resposta, de propósito, em vez de mostrar zero.';
 
 
 --
@@ -3194,6 +3911,34 @@ CREATE TABLE public.acolitos_temporadas (
     ativa boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
+
+--
+-- Name: acolitos_vinculo_tentativas; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.acolitos_vinculo_tentativas (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    quando timestamp with time zone DEFAULT now() NOT NULL,
+    user_id uuid,
+    nome_digitado text NOT NULL,
+    nascimento_informado date,
+    nome_mae_informado text,
+    resultado text NOT NULL,
+    membro_id uuid,
+    resolvido boolean DEFAULT false NOT NULL,
+    resolvido_por uuid,
+    resolvido_em timestamp with time zone,
+    liberado boolean DEFAULT false NOT NULL,
+    CONSTRAINT acolitos_vinculo_tentativas_resultado_check CHECK ((resultado = ANY (ARRAY['confirmado'::text, 'prova_nao_bateu'::text, 'travado'::text])))
+);
+
+
+--
+-- Name: TABLE acolitos_vinculo_tentativas; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.acolitos_vinculo_tentativas IS 'Fila da coordenação: quem tentou se cadastrar, bateu com uma ficha existente e não provou ser a pessoa.';
 
 
 --
@@ -3387,6 +4132,14 @@ ALTER TABLE ONLY public.acolitos_chamadas
 
 ALTER TABLE ONLY public.acolitos_config
     ADD CONSTRAINT acolitos_config_pkey PRIMARY KEY (chave);
+
+
+--
+-- Name: acolitos_crm_comentarios acolitos_crm_comentarios_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.acolitos_crm_comentarios
+    ADD CONSTRAINT acolitos_crm_comentarios_pkey PRIMARY KEY (id);
 
 
 --
@@ -3606,6 +4359,14 @@ ALTER TABLE ONLY public.acolitos_push_subs
 
 
 --
+-- Name: acolitos_rotinas acolitos_rotinas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.acolitos_rotinas
+    ADD CONSTRAINT acolitos_rotinas_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: acolitos_semana_override acolitos_semana_override_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3630,6 +4391,14 @@ ALTER TABLE ONLY public.acolitos_substituto_creditos
 
 
 --
+-- Name: acolitos_tarefa_passos acolitos_tarefa_passos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.acolitos_tarefa_passos
+    ADD CONSTRAINT acolitos_tarefa_passos_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: acolitos_tarefas acolitos_tarefas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3643,6 +4412,14 @@ ALTER TABLE ONLY public.acolitos_tarefas
 
 ALTER TABLE ONLY public.acolitos_temporadas
     ADD CONSTRAINT acolitos_temporadas_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: acolitos_vinculo_tentativas acolitos_vinculo_tentativas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.acolitos_vinculo_tentativas
+    ADD CONSTRAINT acolitos_vinculo_tentativas_pkey PRIMARY KEY (id);
 
 
 --
@@ -3739,10 +4516,59 @@ CREATE UNIQUE INDEX acolitos_aus_pend_uniq_cel ON public.acolitos_ausencias_pend
 
 
 --
+-- Name: acolitos_crm_comentarios_por_membro; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX acolitos_crm_comentarios_por_membro ON public.acolitos_crm_comentarios USING btree (membro_id, quando DESC);
+
+
+--
 -- Name: acolitos_hab_pedidos_pend_uniq; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX acolitos_hab_pedidos_pend_uniq ON public.acolitos_hab_pedidos USING btree (membro_id, funcao) WHERE (status = 'em_analise'::text);
+
+
+--
+-- Name: acolitos_membros_senha_provisoria; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX acolitos_membros_senha_provisoria ON public.acolitos_membros USING btree (senha_provisoria) WHERE senha_provisoria;
+
+
+--
+-- Name: acolitos_passos_marcos_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX acolitos_passos_marcos_idx ON public.acolitos_tarefa_passos USING btree (prazo) WHERE ((prazo IS NOT NULL) AND (concluido_em IS NULL));
+
+
+--
+-- Name: acolitos_passos_tarefa_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX acolitos_passos_tarefa_idx ON public.acolitos_tarefa_passos USING btree (tarefa_id);
+
+
+--
+-- Name: acolitos_rotinas_proxima_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX acolitos_rotinas_proxima_idx ON public.acolitos_rotinas USING btree (proxima) WHERE ativa;
+
+
+--
+-- Name: acolitos_rotinas_time_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX acolitos_rotinas_time_idx ON public.acolitos_rotinas USING btree (time_slug);
+
+
+--
+-- Name: acolitos_tarefas_alvo_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX acolitos_tarefas_alvo_idx ON public.acolitos_tarefas USING btree (rotina_id, alvo_id) WHERE (concluida_em IS NULL);
 
 
 --
@@ -3767,6 +4593,13 @@ CREATE INDEX acolitos_tarefas_prazo_idx ON public.acolitos_tarefas USING btree (
 
 
 --
+-- Name: acolitos_tarefas_rotina_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX acolitos_tarefas_rotina_idx ON public.acolitos_tarefas USING btree (rotina_id) WHERE (concluida_em IS NULL);
+
+
+--
 -- Name: acolitos_tarefas_time_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3778,6 +4611,20 @@ CREATE INDEX acolitos_tarefas_time_idx ON public.acolitos_tarefas USING btree (t
 --
 
 CREATE UNIQUE INDEX acolitos_temporadas_uma_ativa ON public.acolitos_temporadas USING btree (ativa) WHERE ativa;
+
+
+--
+-- Name: acolitos_vinculo_tentativas_fila; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX acolitos_vinculo_tentativas_fila ON public.acolitos_vinculo_tentativas USING btree (resolvido, quando DESC);
+
+
+--
+-- Name: acolitos_vinculo_tentativas_por_conta; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX acolitos_vinculo_tentativas_por_conta ON public.acolitos_vinculo_tentativas USING btree (user_id, quando DESC);
 
 
 --
@@ -3841,6 +4688,13 @@ CREATE INDEX idx_solic_status ON public.acolitos_solicitacoes USING btree (statu
 --
 
 CREATE INDEX ix_xp_temp ON public.acolitos_xp_temporada USING btree (temporada_id, membro_id);
+
+
+--
+-- Name: acolitos_crm acolitos_crm_integrado; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER acolitos_crm_integrado AFTER INSERT OR UPDATE OF etapa ON public.acolitos_crm FOR EACH ROW EXECUTE FUNCTION public.acolitos_integrado_vira_aspirante();
 
 
 --
@@ -3960,6 +4814,14 @@ ALTER TABLE ONLY public.acolitos_chamadas_itens
 
 ALTER TABLE ONLY public.acolitos_chamadas
     ADD CONSTRAINT acolitos_chamadas_realizada_por_fkey FOREIGN KEY (realizada_por) REFERENCES auth.users(id);
+
+
+--
+-- Name: acolitos_crm_comentarios acolitos_crm_comentarios_membro_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.acolitos_crm_comentarios
+    ADD CONSTRAINT acolitos_crm_comentarios_membro_id_fkey FOREIGN KEY (membro_id) REFERENCES public.acolitos_membros(id) ON DELETE CASCADE;
 
 
 --
@@ -4123,6 +4985,14 @@ ALTER TABLE ONLY public.acolitos_presencas_avulsas
 
 
 --
+-- Name: acolitos_rotinas acolitos_rotinas_responsavel_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.acolitos_rotinas
+    ADD CONSTRAINT acolitos_rotinas_responsavel_id_fkey FOREIGN KEY (responsavel_id) REFERENCES public.acolitos_membros(id) ON DELETE SET NULL;
+
+
+--
 -- Name: acolitos_semana_override acolitos_semana_override_missao_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4187,6 +5057,30 @@ ALTER TABLE ONLY public.acolitos_substituto_creditos
 
 
 --
+-- Name: acolitos_tarefa_passos acolitos_tarefa_passos_responsavel_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.acolitos_tarefa_passos
+    ADD CONSTRAINT acolitos_tarefa_passos_responsavel_id_fkey FOREIGN KEY (responsavel_id) REFERENCES public.acolitos_membros(id) ON DELETE SET NULL;
+
+
+--
+-- Name: acolitos_tarefa_passos acolitos_tarefa_passos_tarefa_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.acolitos_tarefa_passos
+    ADD CONSTRAINT acolitos_tarefa_passos_tarefa_id_fkey FOREIGN KEY (tarefa_id) REFERENCES public.acolitos_tarefas(id) ON DELETE CASCADE;
+
+
+--
+-- Name: acolitos_tarefas acolitos_tarefas_alvo_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.acolitos_tarefas
+    ADD CONSTRAINT acolitos_tarefas_alvo_id_fkey FOREIGN KEY (alvo_id) REFERENCES public.acolitos_membros(id) ON DELETE SET NULL;
+
+
+--
 -- Name: acolitos_tarefas acolitos_tarefas_andamento_por_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4216,6 +5110,22 @@ ALTER TABLE ONLY public.acolitos_tarefas
 
 ALTER TABLE ONLY public.acolitos_tarefas
     ADD CONSTRAINT acolitos_tarefas_responsavel_id_fkey FOREIGN KEY (responsavel_id) REFERENCES public.acolitos_membros(id) ON DELETE SET NULL;
+
+
+--
+-- Name: acolitos_tarefas acolitos_tarefas_rotina_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.acolitos_tarefas
+    ADD CONSTRAINT acolitos_tarefas_rotina_id_fkey FOREIGN KEY (rotina_id) REFERENCES public.acolitos_rotinas(id) ON DELETE SET NULL;
+
+
+--
+-- Name: acolitos_vinculo_tentativas acolitos_vinculo_tentativas_membro_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.acolitos_vinculo_tentativas
+    ADD CONSTRAINT acolitos_vinculo_tentativas_membro_id_fkey FOREIGN KEY (membro_id) REFERENCES public.acolitos_membros(id) ON DELETE SET NULL;
 
 
 --
@@ -4471,6 +5381,20 @@ CREATE POLICY "Autenticados leem tools ativas" ON public.tools FOR SELECT USING 
 
 
 --
+-- Name: acolitos_crm_comentarios CRM escreve comentários; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "CRM escreve comentários" ON public.acolitos_crm_comentarios FOR INSERT WITH CHECK (((autor_id = auth.uid()) AND (public.acolitos_is_superadmin(auth.uid()) OR (public.acolitos_get_role(auth.uid()) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text, 'membro_equipe'::text])))));
+
+
+--
+-- Name: acolitos_crm_comentarios CRM lê comentários; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "CRM lê comentários" ON public.acolitos_crm_comentarios FOR SELECT USING ((public.acolitos_is_superadmin(auth.uid()) OR (public.acolitos_get_role(auth.uid()) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text, 'membro_equipe'::text]))));
+
+
+--
 -- Name: acolitos_escalas Cerimonario atualiza status; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -4489,6 +5413,20 @@ CREATE POLICY "Cerimonario gerencia ausencias" ON public.acolitos_ausencias USIN
 --
 
 CREATE POLICY "Conta confirma presenca propria" ON public.acolitos_evento_presencas USING (public.acolitos_controla_membro(membro_id)) WITH CHECK (public.acolitos_controla_membro(membro_id));
+
+
+--
+-- Name: acolitos_vinculo_tentativas Coordenação resolve as tentativas; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Coordenação resolve as tentativas" ON public.acolitos_vinculo_tentativas FOR UPDATE USING ((public.acolitos_is_superadmin(auth.uid()) OR (public.acolitos_get_role(auth.uid()) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text, 'membro_equipe'::text]))));
+
+
+--
+-- Name: acolitos_vinculo_tentativas Coordenação vê as tentativas; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Coordenação vê as tentativas" ON public.acolitos_vinculo_tentativas FOR SELECT USING ((public.acolitos_is_superadmin(auth.uid()) OR (public.acolitos_get_role(auth.uid()) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text, 'membro_equipe'::text]))));
 
 
 --
@@ -4793,10 +5731,56 @@ CREATE POLICY "Override leitura autenticada" ON public.acolitos_liturgia_overrid
 
 
 --
+-- Name: acolitos_tarefa_passos Passos: coordenação vê e mexe em tudo; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Passos: coordenação vê e mexe em tudo" ON public.acolitos_tarefa_passos TO authenticated USING ((COALESCE(public.acolitos_get_role(auth.uid()), ''::text) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text]))) WITH CHECK ((COALESCE(public.acolitos_get_role(auth.uid()), ''::text) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text])));
+
+
+--
+-- Name: acolitos_tarefa_passos Passos: equipe só no time dela; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Passos: equipe só no time dela" ON public.acolitos_tarefa_passos TO authenticated USING (((COALESCE(public.acolitos_get_role(auth.uid()), ''::text) = 'membro_equipe'::text) AND (EXISTS ( SELECT 1
+   FROM public.acolitos_tarefas t
+  WHERE ((t.id = acolitos_tarefa_passos.tarefa_id) AND (t.time_slug = ANY (COALESCE(public.acolitos_meus_times(auth.uid()), '{}'::text[])))))))) WITH CHECK (((COALESCE(public.acolitos_get_role(auth.uid()), ''::text) = 'membro_equipe'::text) AND (EXISTS ( SELECT 1
+   FROM public.acolitos_tarefas t
+  WHERE ((t.id = acolitos_tarefa_passos.tarefa_id) AND (t.time_slug = ANY (COALESCE(public.acolitos_meus_times(auth.uid()), '{}'::text[]))))))));
+
+
+--
 -- Name: acolitos_push_subs Push subs do próprio dono; Type: POLICY; Schema: public; Owner: -
 --
 
 CREATE POLICY "Push subs do próprio dono" ON public.acolitos_push_subs TO authenticated USING ((user_id = auth.uid())) WITH CHECK ((user_id = auth.uid()));
+
+
+--
+-- Name: acolitos_rotinas Rotinas: alterar é da coordenação; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Rotinas: alterar é da coordenação" ON public.acolitos_rotinas FOR UPDATE TO authenticated USING ((COALESCE(public.acolitos_get_role(auth.uid()), ''::text) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text]))) WITH CHECK ((COALESCE(public.acolitos_get_role(auth.uid()), ''::text) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text])));
+
+
+--
+-- Name: acolitos_rotinas Rotinas: apagar é da coordenação; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Rotinas: apagar é da coordenação" ON public.acolitos_rotinas FOR DELETE TO authenticated USING ((COALESCE(public.acolitos_get_role(auth.uid()), ''::text) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text])));
+
+
+--
+-- Name: acolitos_rotinas Rotinas: o setor cria as suas; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Rotinas: o setor cria as suas" ON public.acolitos_rotinas FOR INSERT TO authenticated WITH CHECK (((COALESCE(public.acolitos_get_role(auth.uid()), ''::text) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text])) OR (time_slug = ANY (COALESCE(public.acolitos_meus_times(auth.uid()), '{}'::text[])))));
+
+
+--
+-- Name: acolitos_rotinas Rotinas: o setor lê as suas; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Rotinas: o setor lê as suas" ON public.acolitos_rotinas FOR SELECT TO authenticated USING (((COALESCE(public.acolitos_get_role(auth.uid()), ''::text) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text])) OR (time_slug = ANY (COALESCE(public.acolitos_meus_times(auth.uid()), '{}'::text[])))));
 
 
 --
@@ -4814,17 +5798,17 @@ CREATE POLICY "Superadmin gerencia config" ON public.acolitos_config USING (publ
 
 
 --
--- Name: acolitos_tarefas Tarefas escrita coordenacao; Type: POLICY; Schema: public; Owner: -
+-- Name: acolitos_tarefas Tarefas: coordenação vê e mexe em tudo; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Tarefas escrita coordenacao" ON public.acolitos_tarefas TO authenticated USING ((public.acolitos_get_role(auth.uid()) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text, 'membro_equipe'::text]))) WITH CHECK ((public.acolitos_get_role(auth.uid()) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text, 'membro_equipe'::text])));
+CREATE POLICY "Tarefas: coordenação vê e mexe em tudo" ON public.acolitos_tarefas TO authenticated USING ((public.acolitos_get_role(auth.uid()) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text]))) WITH CHECK ((public.acolitos_get_role(auth.uid()) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text])));
 
 
 --
--- Name: acolitos_tarefas Tarefas leitura coordenacao; Type: POLICY; Schema: public; Owner: -
+-- Name: acolitos_tarefas Tarefas: equipe só no time dela; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Tarefas leitura coordenacao" ON public.acolitos_tarefas FOR SELECT TO authenticated USING ((public.acolitos_get_role(auth.uid()) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text, 'membro_equipe'::text])));
+CREATE POLICY "Tarefas: equipe só no time dela" ON public.acolitos_tarefas TO authenticated USING (((public.acolitos_get_role(auth.uid()) = 'membro_equipe'::text) AND (time_slug = ANY (public.acolitos_meus_times(auth.uid()))))) WITH CHECK (((public.acolitos_get_role(auth.uid()) = 'membro_equipe'::text) AND (time_slug = ANY (public.acolitos_meus_times(auth.uid())))));
 
 
 --
@@ -4900,6 +5884,12 @@ ALTER TABLE public.acolitos_config ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.acolitos_crm ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: acolitos_crm_comentarios; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.acolitos_crm_comentarios ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: acolitos_crm_historico; Type: ROW SECURITY; Schema: public; Owner: -
@@ -5010,6 +6000,12 @@ ALTER TABLE public.acolitos_presencas_avulsas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.acolitos_push_subs ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: acolitos_rotinas; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.acolitos_rotinas ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: acolitos_semana_override; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -5028,6 +6024,12 @@ ALTER TABLE public.acolitos_solicitacoes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.acolitos_substituto_creditos ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: acolitos_tarefa_passos; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.acolitos_tarefa_passos ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: acolitos_tarefas; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -5038,6 +6040,12 @@ ALTER TABLE public.acolitos_tarefas ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.acolitos_temporadas ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: acolitos_vinculo_tentativas; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.acolitos_vinculo_tentativas ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: acolitos_xp_temporada; Type: ROW SECURITY; Schema: public; Owner: -
@@ -5138,6 +6146,15 @@ GRANT ALL ON FUNCTION public.acolitos_aplicar_troca_escala(p_celebracao_id uuid,
 
 
 --
+-- Name: FUNCTION acolitos_atividade_listar(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.acolitos_atividade_listar() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.acolitos_atividade_listar() TO authenticated;
+GRANT ALL ON FUNCTION public.acolitos_atividade_listar() TO service_role;
+
+
+--
 -- Name: FUNCTION acolitos_ausencia_pendente_count(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -5198,6 +6215,15 @@ GRANT ALL ON FUNCTION public.acolitos_ausencia_publica_enviar(p_membros uuid[], 
 REVOKE ALL ON FUNCTION public.acolitos_avaliar_missoes(p_membro uuid, p_niveis text[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.acolitos_avaliar_missoes(p_membro uuid, p_niveis text[]) TO authenticated;
 GRANT ALL ON FUNCTION public.acolitos_avaliar_missoes(p_membro uuid, p_niveis text[]) TO service_role;
+
+
+--
+-- Name: FUNCTION acolitos_avisar_todos(p_texto text, p_membros uuid[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.acolitos_avisar_todos(p_texto text, p_membros uuid[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.acolitos_avisar_todos(p_texto text, p_membros uuid[]) TO authenticated;
+GRANT ALL ON FUNCTION public.acolitos_avisar_todos(p_texto text, p_membros uuid[]) TO service_role;
 
 
 --
@@ -5389,12 +6415,39 @@ GRANT ALL ON FUNCTION public.acolitos_estrelas_lote(p_membros uuid[]) TO service
 
 
 --
+-- Name: FUNCTION acolitos_faltas_contar(p_membros uuid[], p_desde date, p_ate date, p_comunidades text[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.acolitos_faltas_contar(p_membros uuid[], p_desde date, p_ate date, p_comunidades text[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.acolitos_faltas_contar(p_membros uuid[], p_desde date, p_ate date, p_comunidades text[]) TO authenticated;
+GRANT ALL ON FUNCTION public.acolitos_faltas_contar(p_membros uuid[], p_desde date, p_ate date, p_comunidades text[]) TO service_role;
+
+
+--
+-- Name: FUNCTION acolitos_faltas_filtradas(p_membros uuid[], p_desde date, p_ate date, p_comunidades text[], p_limite integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.acolitos_faltas_filtradas(p_membros uuid[], p_desde date, p_ate date, p_comunidades text[], p_limite integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.acolitos_faltas_filtradas(p_membros uuid[], p_desde date, p_ate date, p_comunidades text[], p_limite integer) TO authenticated;
+GRANT ALL ON FUNCTION public.acolitos_faltas_filtradas(p_membros uuid[], p_desde date, p_ate date, p_comunidades text[], p_limite integer) TO service_role;
+
+
+--
 -- Name: FUNCTION acolitos_faltas_recentes(); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.acolitos_faltas_recentes() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.acolitos_faltas_recentes() TO authenticated;
 GRANT ALL ON FUNCTION public.acolitos_faltas_recentes() TO service_role;
+
+
+--
+-- Name: FUNCTION acolitos_formacao_acompanhamento(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.acolitos_formacao_acompanhamento() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.acolitos_formacao_acompanhamento() TO authenticated;
+GRANT ALL ON FUNCTION public.acolitos_formacao_acompanhamento() TO service_role;
 
 
 --
@@ -5458,6 +6511,15 @@ GRANT ALL ON FUNCTION public.acolitos_hab_revisoes_minhas(p_membro uuid) TO serv
 REVOKE ALL ON FUNCTION public.acolitos_habilitados_funcao(p_funcao text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.acolitos_habilitados_funcao(p_funcao text) TO authenticated;
 GRANT ALL ON FUNCTION public.acolitos_habilitados_funcao(p_funcao text) TO service_role;
+
+
+--
+-- Name: FUNCTION acolitos_integrado_vira_aspirante(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.acolitos_integrado_vira_aspirante() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.acolitos_integrado_vira_aspirante() TO authenticated;
+GRANT ALL ON FUNCTION public.acolitos_integrado_vira_aspirante() TO service_role;
 
 
 --
@@ -5542,6 +6604,15 @@ GRANT ALL ON FUNCTION public.acolitos_membros_display(p_ids uuid[]) TO service_r
 
 
 --
+-- Name: FUNCTION acolitos_membros_ja_entraram(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.acolitos_membros_ja_entraram() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.acolitos_membros_ja_entraram() TO authenticated;
+GRANT ALL ON FUNCTION public.acolitos_membros_ja_entraram() TO service_role;
+
+
+--
 -- Name: FUNCTION acolitos_membros_por_setor(p_setores text[]); Type: ACL; Schema: public; Owner: -
 --
 
@@ -5566,6 +6637,24 @@ GRANT ALL ON FUNCTION public.acolitos_meu_grupo() TO service_role;
 REVOKE ALL ON FUNCTION public.acolitos_meu_membro_id() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.acolitos_meu_membro_id() TO authenticated;
 GRANT ALL ON FUNCTION public.acolitos_meu_membro_id() TO service_role;
+
+
+--
+-- Name: FUNCTION acolitos_meus_times(uid uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.acolitos_meus_times(uid uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.acolitos_meus_times(uid uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.acolitos_meus_times(uid uuid) TO service_role;
+
+
+--
+-- Name: FUNCTION acolitos_minutos_do_horario(p text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.acolitos_minutos_do_horario(p text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.acolitos_minutos_do_horario(p text) TO authenticated;
+GRANT ALL ON FUNCTION public.acolitos_minutos_do_horario(p text) TO service_role;
 
 
 --
@@ -5719,6 +6808,15 @@ GRANT ALL ON FUNCTION public.acolitos_roster_nomes() TO service_role;
 REVOKE ALL ON FUNCTION public.acolitos_roster_substituicao() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.acolitos_roster_substituicao() TO authenticated;
 GRANT ALL ON FUNCTION public.acolitos_roster_substituicao() TO service_role;
+
+
+--
+-- Name: FUNCTION acolitos_rotinas_materializar(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.acolitos_rotinas_materializar() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.acolitos_rotinas_materializar() TO authenticated;
+GRANT ALL ON FUNCTION public.acolitos_rotinas_materializar() TO service_role;
 
 
 --
@@ -5949,16 +7047,31 @@ GRANT ALL ON TABLE public.acolitos_ausencias TO service_role;
 -- Name: TABLE acolitos_ausencias_pendentes; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.acolitos_ausencias_pendentes TO anon;
 GRANT ALL ON TABLE public.acolitos_ausencias_pendentes TO authenticated;
 GRANT ALL ON TABLE public.acolitos_ausencias_pendentes TO service_role;
+
+
+--
+-- Name: TABLE acolitos_celebracoes; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.acolitos_celebracoes TO anon;
+GRANT ALL ON TABLE public.acolitos_celebracoes TO authenticated;
+GRANT ALL ON TABLE public.acolitos_celebracoes TO service_role;
+
+
+--
+-- Name: TABLE acolitos_ausencias_v; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.acolitos_ausencias_v TO authenticated;
+GRANT ALL ON TABLE public.acolitos_ausencias_v TO service_role;
 
 
 --
 -- Name: TABLE acolitos_campeoes; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.acolitos_campeoes TO anon;
 GRANT ALL ON TABLE public.acolitos_campeoes TO authenticated;
 GRANT ALL ON TABLE public.acolitos_campeoes TO service_role;
 
@@ -5970,15 +7083,6 @@ GRANT ALL ON TABLE public.acolitos_campeoes TO service_role;
 GRANT ALL ON TABLE public.acolitos_casas TO anon;
 GRANT ALL ON TABLE public.acolitos_casas TO authenticated;
 GRANT ALL ON TABLE public.acolitos_casas TO service_role;
-
-
---
--- Name: TABLE acolitos_celebracoes; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.acolitos_celebracoes TO anon;
-GRANT ALL ON TABLE public.acolitos_celebracoes TO authenticated;
-GRANT ALL ON TABLE public.acolitos_celebracoes TO service_role;
 
 
 --
@@ -6018,6 +7122,15 @@ GRANT ALL ON TABLE public.acolitos_crm TO service_role;
 
 
 --
+-- Name: TABLE acolitos_crm_comentarios; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.acolitos_crm_comentarios TO anon;
+GRANT ALL ON TABLE public.acolitos_crm_comentarios TO authenticated;
+GRANT ALL ON TABLE public.acolitos_crm_comentarios TO service_role;
+
+
+--
 -- Name: TABLE acolitos_crm_historico; Type: ACL; Schema: public; Owner: -
 --
 
@@ -6039,7 +7152,6 @@ GRANT ALL ON TABLE public.acolitos_disponibilidade TO service_role;
 -- Name: TABLE acolitos_escala_artes; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.acolitos_escala_artes TO anon;
 GRANT ALL ON TABLE public.acolitos_escala_artes TO authenticated;
 GRANT ALL ON TABLE public.acolitos_escala_artes TO service_role;
 
@@ -6093,7 +7205,6 @@ GRANT ALL ON TABLE public.acolitos_frequencia TO service_role;
 -- Name: TABLE acolitos_hab_pedidos; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.acolitos_hab_pedidos TO anon;
 GRANT ALL ON TABLE public.acolitos_hab_pedidos TO authenticated;
 GRANT ALL ON TABLE public.acolitos_hab_pedidos TO service_role;
 
@@ -6120,7 +7231,6 @@ GRANT ALL ON TABLE public.acolitos_listas TO service_role;
 -- Name: TABLE acolitos_liturgia_override; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.acolitos_liturgia_override TO anon;
 GRANT ALL ON TABLE public.acolitos_liturgia_override TO authenticated;
 GRANT ALL ON TABLE public.acolitos_liturgia_override TO service_role;
 
@@ -6129,7 +7239,6 @@ GRANT ALL ON TABLE public.acolitos_liturgia_override TO service_role;
 -- Name: TABLE acolitos_logins; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.acolitos_logins TO anon;
 GRANT ALL ON TABLE public.acolitos_logins TO authenticated;
 GRANT ALL ON TABLE public.acolitos_logins TO service_role;
 
@@ -6174,7 +7283,6 @@ GRANT ALL ON TABLE public.acolitos_modelos TO service_role;
 -- Name: TABLE acolitos_presencas_avulsas; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.acolitos_presencas_avulsas TO anon;
 GRANT ALL ON TABLE public.acolitos_presencas_avulsas TO authenticated;
 GRANT ALL ON TABLE public.acolitos_presencas_avulsas TO service_role;
 
@@ -6183,16 +7291,23 @@ GRANT ALL ON TABLE public.acolitos_presencas_avulsas TO service_role;
 -- Name: TABLE acolitos_push_subs; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.acolitos_push_subs TO anon;
 GRANT ALL ON TABLE public.acolitos_push_subs TO authenticated;
 GRANT ALL ON TABLE public.acolitos_push_subs TO service_role;
+
+
+--
+-- Name: TABLE acolitos_rotinas; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.acolitos_rotinas TO anon;
+GRANT ALL ON TABLE public.acolitos_rotinas TO authenticated;
+GRANT ALL ON TABLE public.acolitos_rotinas TO service_role;
 
 
 --
 -- Name: TABLE acolitos_semana_override; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.acolitos_semana_override TO anon;
 GRANT ALL ON TABLE public.acolitos_semana_override TO authenticated;
 GRANT ALL ON TABLE public.acolitos_semana_override TO service_role;
 
@@ -6210,9 +7325,17 @@ GRANT ALL ON TABLE public.acolitos_solicitacoes TO service_role;
 -- Name: TABLE acolitos_substituto_creditos; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.acolitos_substituto_creditos TO anon;
 GRANT ALL ON TABLE public.acolitos_substituto_creditos TO authenticated;
 GRANT ALL ON TABLE public.acolitos_substituto_creditos TO service_role;
+
+
+--
+-- Name: TABLE acolitos_tarefa_passos; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.acolitos_tarefa_passos TO anon;
+GRANT ALL ON TABLE public.acolitos_tarefa_passos TO authenticated;
+GRANT ALL ON TABLE public.acolitos_tarefa_passos TO service_role;
 
 
 --
@@ -6233,10 +7356,18 @@ GRANT ALL ON TABLE public.acolitos_temporadas TO service_role;
 
 
 --
+-- Name: TABLE acolitos_vinculo_tentativas; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.acolitos_vinculo_tentativas TO anon;
+GRANT ALL ON TABLE public.acolitos_vinculo_tentativas TO authenticated;
+GRANT ALL ON TABLE public.acolitos_vinculo_tentativas TO service_role;
+
+
+--
 -- Name: TABLE acolitos_xp_temporada; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON TABLE public.acolitos_xp_temporada TO anon;
 GRANT ALL ON TABLE public.acolitos_xp_temporada TO authenticated;
 GRANT ALL ON TABLE public.acolitos_xp_temporada TO service_role;
 
@@ -6358,5 +7489,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON T
 -- PostgreSQL database dump complete
 --
 
-\unrestrict YrDvTceW7O1t9MlqtuRWggxKTN8veSx8rRgeTcEyDyquebeLUxEcecD3ZIqfhcD
+\unrestrict dYF9d7ZlH3gMFxLIliJ9gacNen4XqRlRhuSDpuGftPmV5G8BFgLlxoEijPziWYL
 

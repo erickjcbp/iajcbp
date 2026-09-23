@@ -1,4 +1,49 @@
 ==================================================================
+ ONDE MORA O REGISTRO DAS MUDANÇAS DO BANCO  (levantado em 23/09/2026)
+==================================================================
+
+Existem TRÊS coisas diferentes, e elas NÃO se conversam. Confundir
+uma com a outra já me fez dar um alarme falso — vale ler antes.
+
+1) docs/migrations/  -> 56 arquivos (001 a 085). É o registro ESCRITO
+                        À MÃO pelo projeto. É aqui que se escreve uma
+                        mudança nova, e é aqui que se lê o porquê dela.
+
+2) db/estrutura-completa.sql -> A FOTOGRAFIA do banco inteiro: todas
+                        as tabelas, funções, policies e permissões,
+                        como estão AGORA. É o único arquivo capaz de
+                        reconstruir o banco do zero. Rodando num banco
+                        VAZIO ela devolve tudo; num banco que já
+                        existe, NÃO rodar.
+
+3) O histórico do painel do Supabase (supabase_migrations) -> 150
+                        entradas, guardadas automaticamente quando
+                        alguém roda SQL pelo editor do site. Parou em
+                        16/07/2026, quando se passou a aplicar SQL por
+                        fora do painel.
+
+ATENÇÃO: (1) e (3) NUNCA estiveram em sincronia — são 150 entradas
+contra 56 arquivos, com ZERO nomes em comum. Um nunca acompanhou o
+outro, e não há nada a "consertar" entre eles. Também não existe pasta
+supabase/ nem CLI ligado neste repo, então o `supabase db push` não
+tem o que reaplicar.
+
+REGRA PRÁTICA ao mexer no banco:
+  a) escrever o arquivo em docs/migrations/0XX_nome.sql, explicando
+     por que a mudança existe;
+  b) ENSAIAR antes, que roda de verdade e desfaz:
+       psql "$SUPABASE_DB_URL" -c "begin; <o sql>; rollback;"
+  c) aplicar:
+       psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f docs/migrations/0XX_nome.sql
+  d) REGERAR A FOTOGRAFIA — é o passo que costuma ser esquecido, e é
+     ele que mantém o banco reconstruível:
+       pg_dump "$SUPABASE_DB_URL" --schema-only --schema=public --no-owner \
+         > db/estrutura-completa.sql
+     NUNCA usar --no-privileges: ele tira os GRANT/REVOKE e a
+     fotografia sai SEM A TRAVA de segurança.
+  e) procurar segredo no arquivo antes de commitar.
+
+==================================================================
  PASTA: db/   —  SCRIPTS DE SEGURANÇA DO BANCO DE DADOS (SQL)
 ==================================================================
 
