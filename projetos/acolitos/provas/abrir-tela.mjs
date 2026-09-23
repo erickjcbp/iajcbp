@@ -139,6 +139,7 @@ export async function iniciarProvas() {
  *   tabelas    resposta por tabela, ex.: { acolitos_membros:{ data:[...] } } ou { ...:{ error:{...} } }
  *   rpcs       resposta por função do banco, mesmo formato
  *   foto       caminho de um .png, ou { caminho, seletor }, para retratar a tela ao final
+ *   largura    largura da janela em px (padrão 390; use 375 para a medida do padrão da casa)
  *   passos     o que fazer depois do init, em ordem. Cada passo é
  *                { chamar:'abrirSecao', args:['navegacao'] }  → chama a função global pelo nome
  *                { clicar:'Modelos de escala' }               → clica pelo texto, só no conteúdo
@@ -188,7 +189,8 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
     if (!r.url().startsWith('http://127.0.0.1:')) return r.abort();
     r.continue();
   });
-  await pagina.setViewport({ width: 390, height: 900 });
+  // 390 é o padrão; `largura` existe para medir no 375 que o padrão da casa exige.
+  await pagina.setViewport({ width: opcoes.largura || 390, height: opcoes.altura || 900 });
   await pagina.evaluateOnNewDocument((modo) => {
     try { localStorage.setItem('nav-mode', modo); } catch (e) {}
     // Desliga o service worker DENTRO da prova. Não é frescura: o shared.js recarrega a

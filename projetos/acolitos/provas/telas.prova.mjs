@@ -42,6 +42,80 @@ function registrar(ok, titulo, detalhe) {
 function exigir(cond, titulo, detalhe) { registrar(!!cond, titulo, detalhe); }
 
 // ── As provas ────────────────────────────────────────────────────────────────
+async function provaRodizioMostraAsDuasContasSeparadas(provas) {
+  console.log('\n\x1b[1mA aba Rodízio separa "sem escalar" de "sem servir"\x1b[0m');
+  // Pedido do dono em 23/09/2026: "vejo a lista de quantas semanas o membro está sem servir".
+  // Medindo o banco na mesma conversa: 25 pessoas com 3-4 semanas, 44 dos 45 parados COM
+  // disponibilidade e habilitação. A aba só ajuda se as duas contas aparecerem SEPARADAS —
+  // juntas, quem serviu num domingo sem chamada vira "sumido" e a coordenação liga à toa.
+  const dia = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
+  const esc = (membro, status, n, extra) => Object.assign(
+    { membro_id: membro, substituto_id: null, status, acolitos_celebracoes: { data: dia(n) } }, extra || {});
+
+  const r = await provas.abrir('escala.html', {
+    papel: PAPEIS.admin,
+    tabelas: {
+      acolitos_membros: { data: [
+        { id: 'm1', nome: 'Pedro Prova',  nivel: 'coroinha',  comunidade: 'matriz', status: 'ativo' },
+        { id: 'm2', nome: 'Sumida Prova', nivel: 'aspirante', comunidade: 'matriz', status: 'ativo' },
+        { id: 'm3', nome: 'Joao Prova',   nivel: 'acolito_aspirante', comunidade: 'matriz', status: 'ativo' },
+      ] },
+      acolitos_escalas: { data: [
+        esc('m1', 'presente', 35),   // serviu há 5 semanas
+        esc('m1', 'ausente',  14),   // escalado há 2 semanas e NÃO foi
+        esc('m3', 'presente', 70),   // última presença há 10 semanas
+        esc('m3', 'escalado', 35),   // escalado há 5 e a chamada nunca fechou
+      ] },
+    },
+    passos: [{ chamar: 'setAba', args: ['rodizio'] }],
+    // Ler a TABELA célula a célula, não o texto da página: um "2 sem" solto passaria mesmo
+    // se estivesse na linha errada, na coluna errada ou fora da tabela.
+    avaliar: `
+      const tds = (tr) => [...tr.children].map((td) => td.textContent.trim());
+      const linhas = [...document.querySelectorAll('#view-rodizio tbody tr')].map(tds);
+      return {
+        cabecalho: [...document.querySelectorAll('#view-rodizio thead th')].map((t) => t.textContent.trim()),
+        linhas,
+        regua: (document.querySelector('#view-rodizio .rodizio-regua') || {}).textContent || '',
+        visivel: document.getElementById('view-rodizio').style.display !== 'none',
+      };`,
+  });
+
+  exigir(r.passosFalhos.length === 0, 'a aba Rodízio abre', r.passosFalhos.join(' | '));
+  exigir(!r.erroAvaliar, 'a aba desenha sem estourar', r.erroAvaliar);
+  const a = r.avaliado || {};
+  exigir(a.visivel === true, 'a área da aba fica visível', 'view-rodizio continuou escondida');
+  exigir(['Sem escalar', 'Sem servir', 'Faltas'].every((h) => (a.cabecalho || []).includes(h)),
+    'as duas contas são COLUNAS diferentes, e as faltas uma terceira',
+    'cabeçalho veio: ' + JSON.stringify(a.cabecalho));
+
+  const linhaDe = (nome) => (a.linhas || []).find((l) => (l[0] || '').includes(nome)) || [];
+  const pedro = linhaDe('Pedro');
+  exigir(pedro[1] === '2 sem' && pedro[2] === '5 sem' && pedro[3] === '1',
+    'Pedro: 2 semanas sem escalar, 5 sem servir, 1 falta — três números, um calendário só',
+    'veio ' + JSON.stringify(pedro));
+
+  const sumida = linhaDe('Sumida');
+  exigir(sumida[1] === 'nunca' && sumida[2] === 'nunca',
+    'quem nunca entrou em escala mostra "nunca", não "0 sem"',
+    'veio ' + JSON.stringify(sumida));
+
+  // A discordância É o aviso: escalado há 5 semanas, última presença há 10. Ou ele faltou
+  // calado, ou ninguém fechou a chamada — e a tela tem de dizer qual, não engolir.
+  const joao = linhaDe('Joao');
+  exigir(joao[1] === '5 sem' && joao[2] === '10 sem',
+    'quando as duas contas discordam, a tela mostra AS DUAS',
+    'veio ' + JSON.stringify(joao));
+  // O motivo mora sob o NOME (célula 0), não numa coluna que só aparece rolando de lado.
+  exigir(/[Cc]hamada não fechada/.test(joao[0] || ''),
+    'e o "por quê" acusa a chamada que ficou aberta, junto do nome',
+    'a célula do nome veio: ' + JSON.stringify(joao[0]));
+
+  exigir(/vagas por fim de semana/.test(a.regua) && /ativos/.test(a.regua),
+    'a régua do grupo aparece — sem ela "3 semanas parado" parece defeito',
+    'a régua veio: ' + JSON.stringify(a.regua));
+}
+
 async function provaFumaca(provas, filtro) {
   console.log('\n\x1b[1mFUMAÇA — toda tela abre em todos os papéis\x1b[0m');
   const lista = filtro ? TELAS.filter((t) => t === filtro) : TELAS;
@@ -3011,6 +3085,7 @@ try {
     await provaAvisaQuandoATravaAnulaAMarcacao(provas);
     await provaGraficoDoInicioNaoPerdeOMesCorrente(provas);
     await provaKpisDoInicioNaoViramZeroQuandoOBancoRecusa(provas);
+    await provaRodizioMostraAsDuasContasSeparadas(provas);
   }
 } finally {
   await provas.encerrar();

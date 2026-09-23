@@ -1,11 +1,32 @@
 # Acólitos — o que está pendente
 
-Atualizado em 18/09/2026. Esta é A LISTA: abrir aqui antes de decidir o que fazer.
+Atualizado em 23/09/2026. Esta é A LISTA: abrir aqui antes de decidir o que fazer.
 Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi commitado.
 
 ---
 
 ## 1. Pendente
+
+**Rodízio — o que a medição de 23/09/2026 deixou pendente.** A aba Rodízio está na Escala
+(terceira aba, junto de Operacional e Planilha) e mostra as duas contas separadas — "sem
+escalar" e "sem servir" — mais faltas e o motivo. O que ela revelou e ainda NÃO foi feito:
+
+- **"Frequente" na disponibilidade do membro (pedido do dono, 23/09).** Marcar poucas pessoas
+  (5-10) para o gerador escalar com mais frequência. Medido: com 10 frequentes servindo todo
+  fim de semana, o resto passa de uma vez a cada 2,3 para 2,5 fins de semana — cabe. Com 20+
+  NÃO cabe (vira 2,8 e piora o buraco que a aba existe para mostrar). **Precisa de desenho
+  próprio**: mexe no gerador em três lugares (`planejarVagas`, `gerarEscalaSemana` e
+  `gerador-substituto.js`) e de coluna nova no banco. O `.env` está preenchido e o pooler
+  responde, então a migration é possível. **Exigir um TETO no número de marcados**, senão
+  marcam 40 e ninguém percebe que o resto parou de servir.
+- **As 20 pessoas acima do piso.** 16 com 4+ semanas sem serem escaladas e 4 que nunca
+  entraram em escala nenhuma (Heloísa, Rayssa, Maria Eduarda e Augusto — todas aspirantes,
+  **uma única habilitação cada**, e é isso que fecha as portas do gerador para elas).
+- **O piso do grupo é o limite de verdade: faltam 13 vagas por fim de semana.** 76 vagas
+  (25 sábado + 51 domingo) para 177 ativos, e o gerador não repete ninguém no mesmo fim de
+  semana → 177/76 = **uma vez a cada 2,3 fins de semana, no melhor caso possível**. Para
+  ninguém passar de 2 semanas seriam necessárias 89 vagas. Isso não é software: é mais posto
+  por missa ou mais celebração com escala. **Decisão do dono/coordenação.**
 
 **Rotinas — o que ficou para depois (18/09).** O cardápio está no ar. Falta: as rotinas que
 nascem da **agenda das missas** (véspera de celebração gera "separar as vestes"), a **IA

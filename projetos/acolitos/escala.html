@@ -103,6 +103,20 @@
     .planilha-table tr.nivel-group td { background:linear-gradient(90deg, rgba(232,185,74,.16), rgba(232,185,74,.03)); border-top:1px solid var(--gold-dim); border-bottom:1px solid var(--gold-dim); padding:6px 10px; position:sticky; left:0; }
     .planilha-table tr.nivel-group td > div { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--gold-light); }
     .planilha-table tr.nivel-group:hover td { background:linear-gradient(90deg, rgba(232,185,74,.16), rgba(232,185,74,.03)); }
+    .rodizio-regua {
+      font-size:11.5px; line-height:1.5; color:var(--text-muted);
+      background:var(--surface2); border:1px solid var(--border);
+      border-left:2px solid var(--gold-dim); border-radius:4px;
+      padding:9px 11px; margin:0 0 12px;
+    }
+    .rodizio-alerta {
+      display:inline-block; padding:2px 7px; border-radius:2px; font-weight:700;
+      background:color-mix(in srgb, var(--warn-text) 30%, transparent); color:var(--text);
+    }
+    .rodizio-motivo { font-size:9.5px; line-height:1.3; color:var(--text-muted); white-space:normal; max-width:150px; }
+    .rodizio-acoes { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+    .rodizio-acoes .btn-sm { flex:1 1 auto; justify-content:center; white-space:nowrap; }
+    .rodizio-contagem { font-size:11px; color:var(--text-muted); margin:10px 0 0; }
     .escala-cell {
       display:inline-block; padding:2px 6px; border-radius:2px;
       font-size:10px; font-family:'Sora',sans-serif;
@@ -165,7 +179,7 @@
         <div class="escala-mais-menu" id="escala-mais-menu" role="menu">
           <button class="mais-item" role="menuitem" onclick="maisAcao(abrirModelos)">⚙️ Modelos</button>
           <button class="mais-item" role="menuitem" onclick="maisAcao(function(){ location.href='ausencias.html'; })">Ausências</button>
-          <button class="mais-item" role="menuitem" onclick="maisAcao(abrirRelatorioFrequencia)">📊 Frequência</button>
+          <button class="mais-item" role="menuitem" onclick="maisAcao(function(){ setAba('rodizio'); })">📊 Rodízio e frequência</button>
           <button class="mais-item" role="menuitem" onclick="maisAcao(escalaPDF)">🖨 Escala PDF</button>
           <button class="mais-item" role="menuitem" id="btn-arte-semana" style="display:none" onclick="maisAcao(arteSemana)">🎨 Arte da semana</button>
         </div>
@@ -175,9 +189,11 @@
   <div class="aba-toggle">
     <button class="aba-btn active" id="btn-cards"    onclick="setAba('cards')">Operacional</button>
     <button class="aba-btn"        id="btn-planilha" onclick="setAba('planilha')">Planilha</button>
+    <button class="aba-btn"        id="btn-rodizio"  onclick="setAba('rodizio')">Rodízio</button>
   </div>
   <div id="view-cards"></div>
   <div id="view-planilha" style="display:none;"></div>
+  <div id="view-rodizio" style="display:none;"></div>
 </div>
 
 <!-- Modal montagem -->
@@ -278,6 +294,7 @@
 <script src="paginar-core.js"></script>
 <script src="kits-core.js"></script>
 <script src="confirmar-escala-core.js"></script>
+<script src="rodizio-core.js"></script>
 <script src="shared.js"></script>
 <script src="gerador-substituto.js"></script>
 <script>
@@ -364,7 +381,7 @@ async function salvarModelo() {
   if (error) { msg.className = 'msg error'; msg.textContent = 'Erro ao salvar.'; return; }
   msg.className = 'msg success'; msg.textContent = '✓ Modelo salvo.';
   await loadModelos();
-  abaAtual === 'cards' ? renderCards() : renderPlanilha();
+  desenharAba(abaAtual);
 }
 const FUNCAO_LABEL = {
   apoio:'Apoio', cruz:'Cruz', vela:'Vela', sineta:'Sineta', sinao:'Sinão',
@@ -429,7 +446,7 @@ async function init() {
   if(_est){
     if(_est.com!==undefined){ const f=document.getElementById('filtro-com'); if(f) f.value=_est.com; }
     if(_est.hist){ verHistorico = true; const b=document.getElementById('btn-hist-escala'); if(b){ b.classList.add('gold'); b.classList.remove('gray'); b.textContent='🕓 Histórico ✓'; } }
-    if(_est.aba){ abaAtual = _est.aba; }
+    if(_est.aba && ABAS.indexOf(_est.aba)>=0){ abaAtual = _est.aba; }
     window.__escRestoreY = _est.y!=null ? _est.y : null;
   }
 
@@ -487,6 +504,10 @@ function toggleHistorico(){
 }
 
 async function loadDados() {
+  // A escala mudou (gerou, salvou, trocou de comunidade): o Rodízio foi lido do banco e
+  // agora está velho. Zerar aqui faz a aba reler na próxima vez que for desenhada — deixar
+  // o número antigo na tela seria pior que demorar um segundo.
+  rodizioLinhas = null; rodizioErro = null;
   const com = document.getElementById('filtro-com').value;
   const hoje = new Date(); const fim = new Date(hoje); fim.setDate(hoje.getDate()+56);
   const ini = new Date(hoje); if(verHistorico) ini.setDate(hoje.getDate()-90);
@@ -546,25 +567,33 @@ async function loadDados() {
     freqMap = freqData || {};
   }
 
-  abaAtual==='cards' ? renderCards() : renderPlanilha();
+  await desenharAba(abaAtual);
 
   // Aplica a aba restaurada no toggle visual + restaura a rolagem salva (uma vez, após o render)
-  document.getElementById('view-cards').style.display = abaAtual==='cards'?'':'none';
-  document.getElementById('view-planilha').style.display = abaAtual==='planilha'?'':'none';
-  const bc=document.getElementById('btn-cards'), bp=document.getElementById('btn-planilha');
-  if(bc) bc.classList.toggle('active',abaAtual==='cards');
-  if(bp) bp.classList.toggle('active',abaAtual==='planilha');
+  pintarAba(abaAtual);
   if(window.__escRestoreY!=null){ const y=window.__escRestoreY; window.__escRestoreY=null; requestAnimationFrame(()=>window.scrollTo(0,y)); }
 }
 
-function setAba(a) {
-  abaAtual=a;
-  document.getElementById('view-cards').style.display = a==='cards'?'':'none';
-  document.getElementById('view-planilha').style.display = a==='planilha'?'':'none';
-  document.getElementById('btn-cards').classList.toggle('active',a==='cards');
-  document.getElementById('btn-planilha').classList.toggle('active',a==='planilha');
-  a==='cards' ? renderCards() : renderPlanilha();
+const ABAS = ['cards','planilha','rodizio'];
+function pintarAba(a){
+  ABAS.forEach(function(k){
+    const v=document.getElementById('view-'+k); if(v) v.style.display = (k===a?'':'none');
+    const b=document.getElementById('btn-'+k);  if(b) b.classList.toggle('active', k===a);
+  });
+}
+// Devolve a promessa do desenho: a aba Rodízio vai ao banco, e quem troca de aba (ou prova
+// a tela) precisa poder ESPERAR o desenho terminar. Sem isso a aba respondia "pronto" com a
+// tabela ainda vazia.
+function desenharAba(a){
+  if(a==='cards') return renderCards();
+  if(a==='planilha') return renderPlanilha();
+  return renderRodizio();
+}
+async function setAba(a) {
+  abaAtual = ABAS.indexOf(a)>=0 ? a : 'cards';   // aba inventada cai no operacional, não em tela branca
+  pintarAba(abaAtual);
   salvarEstadoEscala();
+  await desenharAba(abaAtual);
 }
 
 function getCobertura(celebId, comunidade, tipo) {
@@ -1434,7 +1463,7 @@ function fecharMontagem(){
   if(montagemDirty){
     montagemDirty=false;
     const y = window.scrollY;
-    (abaAtual==='cards' ? renderCards() : renderPlanilha());   // re-render de MEMÓRIA (sem rede)
+    desenharAba(abaAtual);   // re-render de MEMÓRIA (sem rede)
     window.scrollTo(0, y);                                     // preserva o lugar
   }
 }
@@ -1666,6 +1695,225 @@ async function freqCSV(){
   rows.forEach(r=>linhas.push([ _freqComLabel(r.m.comunidade), r.m.nome||'', String(r.servidas), String(r.faltas), String(r.atrasos), (r.taxa==null?'':r.taxa+'%'), fmtD(r.ultima) ]));
   baixarCSV('frequencia', linhas);
 }
+// ── Aba Rodízio: quem está parado, há quanto tempo e POR QUÊ ────────────────
+// Duas contas que pareciam a mesma e não são: "sem escalar" (faz quanto tempo o nome não
+// entra numa escala) e "sem servir" (faz quanto tempo a pessoa não aparece). Elas só
+// discordam quando a chamada de um domingo não foi fechada — e aí a tela diz isso, em vez
+// de mostrar como sumido quem serviu.
+const RODIZIO_PROF_OK = ['apto','experiente','referencia'];
+let rodizioLinhas = null, rodizioPiso = null, rodizioVagas = null;
+let rodizioErro = null, rodizioCarregando = false, filtroRodizio = null, cfgRodizio = null;
+
+async function carregarRodizio(){
+  const hoje = hojeLocal();
+  // O resto da tela só carrega os membros quando há celebração na janela (loadDados). Filtre
+  // uma comunidade sem missa marcada e o Rodízio ficava em branco dizendo "sem membros" —
+  // quando a pergunta dele ("quem está parado") é justamente a que não depende de ter missa.
+  if (!membros.length) {
+    const { data: ms } = await sb.from('acolitos_membros')
+      .select('id,nome,apelido,nivel,comunidade,casa_id,foto_url')
+      .eq('status','ativo').order('nome');
+    membros = ms || [];
+  }
+  const de = new Date(hoje+'T00:00:00'); de.setDate(de.getDate()-365);
+  // PAGINADO: um ano passa de mil escalas com folga, e o banco corta calado — a lista sairia
+  // dizendo "nunca escalado" para gente que serve todo mês.
+  const { data, error } = await lerTudo(() => sb.from('acolitos_escalas')
+    .select('membro_id,substituto_id,status,acolitos_celebracoes!inner(data)')
+    .gte('acolitos_celebracoes.data', de.toISOString().slice(0,10)));
+  if (error) throw error;   // lista curta virando diagnóstico é pior que a aba falhar
+  const escalas = (data||[]).map(e => ({
+    membro_id: e.membro_id, substituto_id: e.substituto_id, status: e.status,
+    data: e.acolitos_celebracoes && e.acolitos_celebracoes.data,
+  }));
+
+  // O piso do grupo: vagas medidas nas 6 semanas JÁ ACONTECIDAS (escala futura ainda pode mudar).
+  const corte = new Date(hoje+'T00:00:00'); corte.setDate(corte.getDate()-42);
+  const corteStr = corte.toISOString().slice(0,10);
+  rodizioVagas = RodizioCore.vagasPorFimDeSemana(
+    escalas.filter(e => e.data && e.data <= hoje && e.data > corteStr));
+  rodizioPiso = RodizioCore.pisoDoGrupo({ vagasPorFimDeSemana: rodizioVagas, ativos: membros.length });
+
+  const linhas = RodizioCore.montarRodizio({ membros, escalas, hoje });
+  const teto = rodizioPiso ? rodizioPiso.teto : null;
+  linhas.forEach(l => {
+    const habs = habMap[l.membro.id] || {};
+    const nHab = Object.keys(habs).filter(f => RODIZIO_PROF_OK.indexOf(habs[f]) >= 0).length;
+    l.motivo = RodizioCore.motivoDe(l, { habilitacoes:nHab, faixas:(dispMap[l.membro.id]||[]).length }, teto);
+  });
+  rodizioLinhas = linhas;
+}
+
+// null = "nunca". Mostrar 0 diria "serviu esta semana" de quem nunca serviu.
+function _rodSemanas(n){ return n==null ? 'nunca' : (n===0 ? 'esta semana' : n+' sem'); }
+// Ordenação: "nunca" é o MAIS parado de todos, mas a barra joga vazio para o fim mesmo na
+// ordem decrescente. Por isso o nunca entra na conta como um número grande, não como vazio.
+function _rodOrd(n){ return n==null ? 999 : n; }
+
+function configFiltroRodizio(){
+  const cfg = {
+    chave: 'rodizio',
+    rotulo: ['membro','membros'],
+    ordemPadrao: 'parado',
+    ordens: [
+      { id:'parado',     nome:'Mais tempo sem escalar',  desc:true, valor: l => _rodOrd(l.semEscalar),
+        legenda: l => RodizioCore.rotuloDoMotivo(l.motivo) === '—' ? '' : RodizioCore.rotuloDoMotivo(l.motivo) },
+      { id:'recente',    nome:'Menos tempo sem escalar',            valor: l => _rodOrd(l.semEscalar) },
+      { id:'sem_servir', nome:'Mais tempo sem servir',   desc:true, valor: l => _rodOrd(l.semServir) },
+      { id:'faltas',     nome:'Mais faltas',             desc:true, valor: l => l.faltas },
+      { id:'nome',       nome:'Nome A–Z',                           valor: l => l.membro.nome },
+    ],
+    filtros: [
+      { id:'nivel', nome:'Nível', opcoes: [
+        { id:'cerimonario', nome:'Cerimoniários', testa: l => nivelInfo(l.membro.nivel||'aspirante').base === 'cerimonario' },
+        { id:'acolito',     nome:'Acólitos',      testa: l => nivelInfo(l.membro.nivel||'aspirante').base === 'acolito' },
+        { id:'coroinha',    nome:'Coroinhas',     testa: l => nivelInfo(l.membro.nivel||'aspirante').base === 'coroinha' },
+        { id:'aspirante',   nome:'Aspirantes',    testa: l => nivelInfo(l.membro.nivel||'aspirante').base === 'aspirante' },
+      ] },
+      { id:'comunidade', nome:'Comunidade', opcoes: [
+        { id:'matriz',        nome:'Matriz',        testa: l => l.membro.comunidade === 'matriz' },
+        { id:'santo_antonio', nome:'Santo Antônio', testa: l => l.membro.comunidade === 'santo_antonio' },
+        { id:'outra',         nome:'Outra',         testa: l => l.membro.comunidade !== 'matriz' && l.membro.comunidade !== 'santo_antonio' },
+      ] },
+      // Escolha ÚNICA: ligar "8+" com "4+" ligado daria a lista do 4+, e o número mentiria.
+      { id:'parado', nome:'Tempo parado', unico:true, opcoes: [
+        { id:'acima', nome:'Acima do piso do grupo', testa: l => l.motivo !== 'no_piso' },
+        { id:'m4',    nome:'4+ semanas',             testa: l => _rodOrd(l.semEscalar) >= 4 },
+        { id:'m8',    nome:'8+ semanas',             testa: l => _rodOrd(l.semEscalar) >= 8 },
+        { id:'m12',   nome:'12+ semanas',            testa: l => _rodOrd(l.semEscalar) >= 12 },
+      ] },
+    ],
+    busca: { placeholder:'Buscar nome...', campos: l => [l.membro.nome, l.membro.apelido] },
+    desempate: l => l.membro.nome,   // o padrão procura item.nome, e aqui o nome mora um andar abaixo
+  };
+  cfg.contar = (e) => FiltroLista.aplicar(rodizioLinhas||[], e, cfg).length;
+  return cfg;
+}
+
+async function renderRodizio(){
+  const el = document.getElementById('view-rodizio');
+  if (!rodizioLinhas && !rodizioErro) {
+    if (rodizioCarregando) return;            // trocar de aba duas vezes não pede o banco duas vezes
+    rodizioCarregando = true;
+    el.textContent='';
+    const c=document.createElement('p'); c.className='empty'; c.textContent='Lendo o histórico do último ano…'; el.appendChild(c);
+    try { await carregarRodizio(); rodizioErro = null; }
+    catch(e){ console.error('rodízio falhou', e); rodizioErro='Não consegui ler o histórico de escalas. Tente de novo.'; }
+    finally { rodizioCarregando = false; }
+    if (abaAtual !== 'rodizio') return;       // o usuário já saiu daqui enquanto carregava
+  }
+  desenharRodizio();
+}
+
+function desenharRodizio(){
+  const el=document.getElementById('view-rodizio'); el.textContent='';
+  if(rodizioErro){ const p=document.createElement('p'); p.className='empty'; p.textContent=rodizioErro; el.appendChild(p); return; }
+  if(!rodizioLinhas || !rodizioLinhas.length){ const p=document.createElement('p'); p.className='empty'; p.textContent='Sem membros para exibir.'; el.appendChild(p); return; }
+
+  // A régua do grupo. Sem ela, "3 semanas parado" parece defeito quando é o piso do tamanho
+  // do grupo — e a coordenação sai atrás de 45 pessoas em vez das 20 que dá para consertar.
+  const regua=document.createElement('p'); regua.className='rodizio-regua';
+  regua.textContent = rodizioPiso
+    ? rodizioVagas+' vagas por fim de semana · '+membros.length+' ativos · com rodízio perfeito cada um serve a cada '
+      +String(rodizioPiso.semanas).replace('.',',')+' semanas. Acima de '+rodizioPiso.teto+' é o que dá para consertar.'
+    : 'Sem escalas recentes suficientes para calcular o piso do grupo.';
+  el.appendChild(regua);
+
+  const alvo=document.createElement('div'); el.appendChild(alvo);
+  const lista=document.createElement('div'); el.appendChild(lista);
+
+  cfgRodizio = configFiltroRodizio();
+  filtroRodizio = montarFiltroLista(alvo, cfgRodizio, ()=>pintarRodizio(lista));
+
+  const acoes=document.createElement('div'); acoes.className='rodizio-acoes';
+  const bPdf=document.createElement('button'); bPdf.className='btn-sm gold'; bPdf.textContent='🖨 Imprimir/PDF'; bPdf.onclick=rodizioPDF;
+  const bCsv=document.createElement('button'); bCsv.className='btn-sm gray'; bCsv.textContent='⬇️ CSV'; bCsv.onclick=rodizioCSV;
+  const bPer=document.createElement('button'); bPer.className='btn-sm gray'; bPer.textContent='📅 Frequência por período'; bPer.onclick=abrirRelatorioFrequencia;
+  acoes.append(bPdf,bCsv,bPer); el.appendChild(acoes);
+
+  pintarRodizio(lista);
+}
+
+// O que está NA TELA agora — é isto que o PDF e o CSV levam, não a lista inteira.
+function rodizioVisivel(){
+  return filtroRodizio ? filtroRodizio.aplicar(rodizioLinhas||[]) : (rodizioLinhas||[]);
+}
+
+function pintarRodizio(lista){
+  lista.textContent='';
+  const linhas = rodizioVisivel();
+  if(!linhas.length){ const p=document.createElement('p'); p.className='empty'; p.textContent='Ninguém nesta situação.'; lista.appendChild(p); return; }
+
+  const wrap=document.createElement('div'); wrap.className='planilha-wrap';
+  const table=document.createElement('table'); table.className='planilha-table';
+  const thead=document.createElement('thead'); const hr=document.createElement('tr');
+  // O "por quê" era a 5ª coluna e, no telefone, só aparecia rolando a tabela de lado — logo
+  // a parte que responde a pergunta do dono era a que ninguém via. Agora mora sob o nome.
+  ['Membro','Sem escalar','Sem servir','Faltas','Última vez'].forEach((h,i)=>{
+    const th=document.createElement('th'); if(i===0) th.className='sticky-left';
+    if(i>0&&i<4) th.style.textAlign='center';
+    th.textContent=h; hr.appendChild(th);
+  });
+  thead.appendChild(hr); table.appendChild(thead);
+
+  const tbody=document.createElement('tbody');
+  linhas.forEach(l=>{
+    const m=l.membro, tr=document.createElement('tr');
+    const habs=habMap[m.id]||{};
+
+    const tdN=document.createElement('td'); tdN.className='sticky-left';
+    const box=document.createElement('div'); box.style.cssText='display:flex;align-items:center;gap:8px;';
+    box.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30, { nivelSlug: m.nivel || nivelFromRole(patchRoleFromHabs(habs)), casaSlug: casaSlugDe(m) }));
+    const nm=document.createElement('div'); nm.style.cssText='min-width:0;line-height:1.15;';
+    const n1=document.createElement('div'); n1.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;'; n1.textContent=m.apelido||m.nome;
+    const n2=document.createElement('div'); n2.style.cssText='font-size:9.5px;color:var(--text-muted);white-space:nowrap;';
+    n2.textContent=nivelInfo(m.nivel||'aspirante').label+' · '+_freqComLabel(m.comunidade);
+    nm.append(n1,n2);
+    const motivo=RodizioCore.rotuloDoMotivo(l.motivo);
+    if(motivo!=='—'){ const n3=document.createElement('div'); n3.className='rodizio-motivo'; n3.textContent=motivo; nm.appendChild(n3); }
+    box.appendChild(nm); tdN.appendChild(box); tr.appendChild(tdN);
+
+    const cel=(txt)=>{ const td=document.createElement('td'); td.style.cssText='text-align:center;font-size:11px;'; td.textContent=txt; return td; };
+    // Acima do piso do grupo destaca por FUNDO, com o texto na cor normal: texto pequeno
+    // pintado de âmbar mede 1,4:1 no tema claro — some da tela justamente em quem importa.
+    const tdE=document.createElement('td'); tdE.style.cssText='text-align:center;font-size:11px;';
+    const marca=document.createElement('span');
+    marca.textContent=_rodSemanas(l.semEscalar);
+    if(l.motivo!=='no_piso') marca.className='rodizio-alerta'; else marca.style.fontWeight='700';
+    tdE.appendChild(marca); tr.appendChild(tdE);
+    tr.appendChild(cel(_rodSemanas(l.semServir)));
+    tr.appendChild(cel(l.faltas ? String(l.faltas) : '—'));
+
+    const tdU=document.createElement('td'); tdU.style.cssText='text-align:center;font-size:11px;color:var(--text-muted);';
+    tdU.textContent = l.ultimaServida ? formatDate(l.ultimaServida).slice(0,5) : '—'; tr.appendChild(tdU);
+
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody); wrap.appendChild(table); lista.appendChild(wrap);
+
+  const cont=document.createElement('p'); cont.className='rodizio-contagem';
+  cont.textContent='Mostrando '+linhas.length+' de '+(rodizioLinhas||[]).length+' membros ativos.';
+  lista.appendChild(cont);
+}
+
+function _rodLinhasExport(){
+  return rodizioVisivel().map(l => [
+    l.membro.nome||'', _rodSemanas(l.semEscalar), _rodSemanas(l.semServir),
+    String(l.faltas), RodizioCore.rotuloDoMotivo(l.motivo),
+    l.ultimaServida ? formatDate(l.ultimaServida) : '',
+  ]);
+}
+function rodizioPDF(){
+  const rows=_rodLinhasExport();
+  const corpo = rows.length
+    ? relTabela(['Membro','Sem escalar','Sem servir','Faltas','Por quê','Última vez'], rows)
+    : '<p class="muted">Sem dados.</p>';
+  abrirRelatorio({ titulo:'Rodízio', subtitulo:'Acólitos · '+(rodizioPiso ? rodizioVagas+' vagas por fim de semana · piso de '+String(rodizioPiso.semanas).replace('.',',')+' semanas' : 'piso não calculado'), corpo });
+}
+function rodizioCSV(){
+  baixarCSV('rodizio', [['Membro','Sem escalar','Sem servir','Faltas','Por que','Ultima vez']].concat(_rodLinhasExport()));
+}
+
 function abrirRelatorioFrequencia(){
   const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
   const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='420px';
