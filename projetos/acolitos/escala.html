@@ -908,27 +908,6 @@ function elegivelFuncao(m, f, comKey) {
   });
 }
 
-// Carga histórica p/ rodízio: consulta DIRETO no banco quantas vezes cada membro já foi escalado
-// nas ~6 semanas até o fim de semana de referência (NÃO depende do que está carregado na tela —
-// considera o histórico real, inclusive semanas passadas que a tela não traz).
-async function carregarCargaHistorica(refData) {
-  const ref = refData || hojeLocal();
-  const _gerJ = (typeof cfg === 'function') ? (cfg('gerador', {}) || {}) : {};
-  const _dias = Number(_gerJ.janela_dias) || 42;
-  const ini = new Date(ref + 'T00:00:00'); ini.setDate(ini.getDate() - _dias); // janela móvel (config, default 6 semanas)
-  const iniStr = ini.toISOString().slice(0,10);
-  const base = {};
-  try {
-    // 2 passos (sem filtro em tabela aninhada, que falhava em silêncio): IDs das celebrações da janela → conta escalas
-    const { data: cels } = await sb.from('acolitos_celebracoes').select('id').gte('data', iniStr).lte('data', ref);
-    const ids = (cels || []).map(c => c.id);
-    if (!ids.length) return base;
-    // `.limit(5000)` NÃO vence o teto de mil do servidor: ele manda mil e responde 200.
-    const { data } = await lerTudo(() => sb.from('acolitos_escalas').select('membro_id').in('celebracao_id', ids));
-    (data || []).forEach(e => { base[e.membro_id] = (base[e.membro_id]||0)+1; });
-  } catch (err) { console.error('carga histórica falhou', err); }
-  return base;
-}
 
 let FUNCOES_MAIORES = new Set(['cred_altar','cred_credencia','missal','turibulo','naveta','mitra','baculo']);
 let FUNCOES_SEM_CERIMONIARIO = new Set(['apoio']); // cerimoniário (nível 6+) só entra nessas funções MANUALMENTE — nunca pelo gerador automático
@@ -944,7 +923,9 @@ function planejarVagas(vagas, horKey, ausNesta, usados, carga, usadoFds, comKey)
   const apta = (id,f) => { const m = memById[id]; if (!m) return false; if (FUNCOES_SEM_CERIMONIARIO.has(f) && nint[id] >= 6) return false; return elegivelFuncao(m, f, comKey); }; // cerimoniário nunca em 'apoio' pelo gerador (só manual)
   const disp = id => !horKey || (dispMap[id]||[]).includes(horKey);
   const livres = () => res.map((r,i)=>r?-1:i).filter(i=>i>=0);
-  const assign = (i,id) => { res[i]=id; usados.add(id); usadoFds.add(id); carga[id]=(carga[id]||0)+1; };
+  // sobe O MÊS e a janela de uma vez: subir só a janela deixaria quem acabou de ser
+  // escalado ainda valendo como "0 no mês" para a vaga seguinte.
+  const assign = (i,id) => { res[i]=id; usados.add(id); usadoFds.add(id); carga[id]=(carga[id]||0)+RodizioCore.PESO_MES+1; };
   const bloqueados = new Set();
   const ehCerimo = m => nint[m.id] >= 6; // cerimoniário = nível 6+
   // POOL DURO: apto + DISPONÍVEL no horário + não-ausente + sem repetir na missa + não bloqueado
@@ -1034,7 +1015,7 @@ async function gerarEscalaAuto() {
   ausMap[celAtual.id] = ausNesta;
   const open = pendingEdicao.filter(pe => !pe.sel.value);
   const usados = new Set(); pendingEdicao.forEach(pe => { if (pe.sel.value) usados.add(pe.sel.value); });
-  const cargaH = await carregarCargaHistorica(celAtual.data);
+  const cargaH = await carregarPesoRodizio(celAtual.data);
   const res = planejarVagas(open.map(pe=>pe.funcao), horKeyDe(celAtual), ausNesta, usados, cargaH, new Set(usados), celAtual.comunidade);
   res.forEach((id,i) => { if (id) { open[i].sel.value = id; open[i].sel.classList.add('filled'); } });
   const vazias = res.filter(r => !r).length;
@@ -1067,7 +1048,7 @@ function refreshDuplicatasMissa(){
 // Monta o ctx do motor único (GeradorSubstituto) a partir do estado já carregado na tela da escala.
 // Reutilizado por trocarPosicao (Task 3) e futuramente por outras telas (Task 4).
 async function montarCtxSub(celeb, funcao, membroAusenteId, usadosNaMissa, usadoFds){
-  const carga = await carregarCargaHistorica(celeb.data);
+  const carga = await carregarPesoRodizio(celeb.data);
   return {
     funcao: funcao,
     comunidade: celeb.comunidade,
@@ -1163,7 +1144,7 @@ async function gerarEscalaSemana(celebs, btnEl) {
   const txt0 = btnEl ? btnEl.textContent : '';
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Gerando...'; }
   const ordc = celebs.slice().sort((a,b) => a.data.localeCompare(b.data) || compararHorario(a.horario, b.horario));
-  const carga = await carregarCargaHistorica(ordc[0] ? ordc[0].data : ''); // rodízio: histórico real (banco) — ref = data mais antiga
+  const carga = await carregarPesoRodizio(ordc[0] ? ordc[0].data : ''); // rodízio: histórico real (banco) — ref = data mais antiga
   const ausFresh = await carregarAusenciasFresh(ordc);
   const usadoFds = new Set();                // ninguém repete no fim de semana
   ordc.forEach(c => (escalasMap[c.id]||[]).forEach(e => usadoFds.add(e.membro_id))); // já escalados contam
@@ -1202,7 +1183,7 @@ async function gerarEscalaSemana(celebs, btnEl) {
   };
   const novas = [];
   const colocar = (s, m) => {
-    s.filled = true; usadoFds.add(m.id); usadosMissa[s.c.id].add(m.id); carga[m.id] = (carga[m.id]||0)+1;
+    s.filled = true; usadoFds.add(m.id); usadosMissa[s.c.id].add(m.id); carga[m.id] = (carga[m.id]||0)+RodizioCore.PESO_MES+1;
     novas.push({ celebracao_id: s.c.id, membro_id: m.id, funcao: s.funcao, created_by: ctx.user.id });
   };
   // GREEDY GLOBAL: preenche sempre a vaga com MENOS candidatos primeiro (reserva os "frescos" p/ onde há pouca opção)

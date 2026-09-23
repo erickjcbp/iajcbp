@@ -83,6 +83,56 @@
     return linhas;
   }
 
+  // O rodízio compara UM número em cinco lugares (irmãos, funções maiores, menores, gerador
+  // da semana e motor de troca) e o incrementa em dois. A regra do mês entra DENTRO dele:
+  // assim nenhuma dessas comparações pode deixar a regra passar, porque nenhuma sabe que ela
+  // existe. (Regra escrita em cinco lugares é regra que um dia falta em um — foi o que
+  // aconteceu com o "cerimoniário nunca no apoio", que escapava pelos blocos de irmãos.)
+  //
+  //   peso = vezes no mês × 1000 + escalas na janela de 6 semanas
+  //
+  // A parte de cima manda; a de baixo desempata. No primeiro fim de semana do mês todo mundo
+  // está em 0 e o desempate é o rodízio que já existia — a mudança não vira reviravolta.
+  var PESO_MES = 1000;
+
+  function _n(v) { var x = Number(v); return Number.isFinite(x) && x > 0 ? x : 0; }
+
+  function pesoRodizio(vezesNoMes, cargaJanela) {
+    // A janela é limitada para NUNCA transbordar em "mais um mês": um transbordo trataria
+    // quem está em 0/2 como se já tivesse cumprido, e o defeito não apareceria em lugar nenhum.
+    return _n(vezesNoMes) * PESO_MES + Math.min(_n(cargaJanela), PESO_MES - 1);
+  }
+
+  // Dadas as escalas já lidas do banco (cada uma com membro_id e a DATA da celebração),
+  // devolve o peso de cada membro. Aqui mora a única regra que a consulta não sabe: QUAL data
+  // conta para o mês e qual conta para a janela.
+  //
+  //   mês    = o mês de `refData` INTEIRO, inclusive os dias que ainda vêm (escala já montada
+  //            para o dia 20 precisa pesar quando se monta o dia 6);
+  //   janela = só para TRÁS, de refData-janelaDias até refData (é rodízio, não previsão).
+  //
+  // Quem não aparece em nenhum dos dois fica FORA do mapa: o gerador lê `carga[id]||0`, e um
+  // zero escrito à toa seria indistinguível de um zero de verdade.
+  function contarParaRodizio(opts) {
+    opts = opts || {};
+    var ref = opts.refData;
+    var dias = _n(opts.janelaDias) || 42;
+    var mes = mesDe(ref);
+    var ini = new Date(Date.parse(ref + 'T00:00:00Z') - dias * 86400000).toISOString().slice(0, 10);
+    var noMes = {}, naJanela = {}, vistos = {};
+    (opts.escalas || []).forEach(function (e) {
+      var d = e && e.data;
+      if (!d) return;
+      if (mesDe(d) === mes) { noMes[e.membro_id] = (noMes[e.membro_id] || 0) + 1; vistos[e.membro_id] = 1; }
+      if (d >= ini && d <= ref) { naJanela[e.membro_id] = (naJanela[e.membro_id] || 0) + 1; vistos[e.membro_id] = 1; }
+    });
+    var peso = {};
+    Object.keys(vistos).forEach(function (id) {
+      peso[id] = pesoRodizio(noMes[id] || 0, naJanela[id] || 0);
+    });
+    return peso;
+  }
+
   // A REGRA da pastoral (dita pelo dono em 23/09/2026): todo membro serve 2x por mês.
   // Fica como número, e não cravada no meio da conta, porque é decisão dele e pode mudar.
   var META_PADRAO = 2;
@@ -178,6 +228,7 @@
   var api = { semanasSem: semanasSem, montarRodizio: montarRodizio,
                pisoDoGrupo: pisoDoGrupo, vagasPorFimDeSemana: vagasPorFimDeSemana, motivoDe: motivoDe, rotuloDoMotivo: rotuloDoMotivo,
                META_PADRAO: META_PADRAO, mesDe: mesDe,
+               PESO_MES: PESO_MES, pesoRodizio: pesoRodizio, contarParaRodizio: contarParaRodizio,
                fimDeSemanaRestantes: fimDeSemanaRestantes, resumoDaRegra: resumoDaRegra };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else { global.RodizioCore = api; }

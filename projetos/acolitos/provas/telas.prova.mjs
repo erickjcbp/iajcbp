@@ -139,6 +139,68 @@ async function provaRodizioMostraAsDuasContasSeparadas(provas) {
     'a régua veio: ' + JSON.stringify(a.regua));
 }
 
+async function provaGeradorPerseguueARegraDoMes(provas) {
+  console.log('\n\x1b[1mO gerador escala primeiro quem está abaixo da regra do mês\x1b[0m');
+  // Medido em 23/09/2026: 20 a 24 pessoas ficam em ZERO no mês enquanto 50 servem 3 ou 4 —
+  // e faltam só 10 turnos no mês inteiro. O rodízio velho olhava uma janela de 6 semanas, que
+  // não sabe da regra do mês. Esta prova chama o gerador DE VERDADE (planejarVagas), com a
+  // carga montada pela regra nova, e exige que ele prefira quem está devendo.
+  const r = await provas.abrir('escala.html', {
+    papel: PAPEIS.admin,
+    tabelas: {
+      acolitos_membros: { data: [
+        { id: 'cumpriu', nome: 'Cumpriu A Regra', nivel: 'coroinha', comunidade: 'matriz', status: 'ativo' },
+        { id: 'devendo', nome: 'Devendo No Mes',  nivel: 'coroinha', comunidade: 'matriz', status: 'ativo' },
+      ] },
+      acolitos_habilitacoes: { data: [
+        { membro_id: 'cumpriu', funcao: 'apoio', proficiencia: 'apto' },
+        { membro_id: 'devendo', funcao: 'apoio', proficiencia: 'apto' },
+      ] },
+      // Sem celebração na janela o loadDados nem chega a ler as habilitações, e o gerador
+      // fica sem candidato nenhum — o mesmo acoplamento que deixava a aba Rodízio em branco.
+      acolitos_celebracoes: { data: [
+        { id: 'c1', data: '2026-09-27', horario: '19h', minutos: 1140, comunidade: 'matriz', tipo: 'dominical' },
+      ] },
+    },
+    avaliar: `
+      // "cumpriu" serviu 2x em setembro e mais nada. "devendo" serviu TRÊS vezes em agosto
+      // (dentro da janela de 6 semanas) e NENHUMA em setembro. Pelo rodízio velho, "cumpriu"
+      // (2 escalas) iria antes de "devendo" (3). Pela regra do mês, tem de ser o contrário.
+      const carga = RodizioCore.contarParaRodizio({
+        refData: '2026-09-23', janelaDias: 42,
+        escalas: [
+          { membro_id: 'cumpriu', data: '2026-09-06' }, { membro_id: 'cumpriu', data: '2026-09-13' },
+          { membro_id: 'devendo', data: '2026-08-16' }, { membro_id: 'devendo', data: '2026-08-23' },
+          { membro_id: 'devendo', data: '2026-08-30' },
+        ],
+      });
+      const cargaCrua = { cumpriu: 2, devendo: 3 };   // o que o rodízio velho veria
+      const chamar = (c) => planejarVagas(['apoio'], null, new Set(), new Set(), Object.assign({}, c), new Set(), 'matriz');
+      return {
+        membrosNaTela: membros.map((m) => m.id),
+        habilitados: Object.keys(habMap),
+        escolhidoPelaRegra: chamar(carga)[0],
+        escolhidoPeloRodizioVelho: chamar(cargaCrua)[0],
+        pesos: carga,
+      };`,
+  });
+
+  exigir(!r.erroAvaliar, 'o gerador roda sem estourar', r.erroAvaliar);
+  const a = r.avaliado || {};
+  exigir((a.membrosNaTela || []).length === 2 && (a.habilitados || []).length === 2,
+    'os dois candidatos chegaram ao gerador, com habilitação lida',
+    'membros: ' + JSON.stringify(a.membrosNaTela) + ' · habilitados: ' + JSON.stringify(a.habilitados));
+
+  // O contraste é a prova: com o número VELHO o gerador escolhe o outro. Se os dois lados
+  // dessem o mesmo nome, a prova passaria sem a regra nova existir.
+  exigir(a.escolhidoPeloRodizioVelho === 'cumpriu',
+    'com o número velho o gerador escolheria quem JÁ cumpriu (era o defeito)',
+    'escolheu ' + JSON.stringify(a.escolhidoPeloRodizioVelho));
+  exigir(a.escolhidoPelaRegra === 'devendo',
+    'com a regra do mês ele escolhe quem está DEVENDO, mesmo tendo servido mais nas 6 semanas',
+    'escolheu ' + JSON.stringify(a.escolhidoPelaRegra) + ' — pesos ' + JSON.stringify(a.pesos));
+}
+
 async function provaFumaca(provas, filtro) {
   console.log('\n\x1b[1mFUMAÇA — toda tela abre em todos os papéis\x1b[0m');
   const lista = filtro ? TELAS.filter((t) => t === filtro) : TELAS;
@@ -3109,6 +3171,7 @@ try {
     await provaGraficoDoInicioNaoPerdeOMesCorrente(provas);
     await provaKpisDoInicioNaoViramZeroQuandoOBancoRecusa(provas);
     await provaRodizioMostraAsDuasContasSeparadas(provas);
+    await provaGeradorPerseguueARegraDoMes(provas);
   }
 } finally {
   await provas.encerrar();

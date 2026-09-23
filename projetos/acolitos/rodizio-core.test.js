@@ -314,3 +314,103 @@ test('o resumo da régua conta quem cumpriu, de quantos, sem arredondar para bon
   ]);
   assert.deepStrictEqual(r, { cumpriram: 2, total: 4, emZero: 1 });
 });
+
+// ── O gerador perseguindo a regra ───────────────────────────────────────────
+// O rodízio inteiro compara UM número (`carga[id]`) em cinco lugares: bloco de irmãos,
+// funções maiores, funções menores, gerador da semana e motor de troca. A regra do mês entra
+// DENTRO desse número, não como critério novo em cada um deles — regra escrita em cinco
+// lugares é regra que um dia falta em um, e esse gerador já tem essa cicatriz (o
+// "cerimoniário nunca no apoio" escapava pelos blocos de irmãos).
+const { pesoRodizio, PESO_MES } = require('./rodizio-core.js');
+
+test('A INVERSÃO: quem está em 0 no mês vence quem já cumpriu, mesmo servindo mais nas 6 semanas', () => {
+  // É o coração da mudança. Sem ela, os 50 que servem 3-4x continuam na frente dos 20 que
+  // ficam em zero, e a regra de 2x por mês nunca sai do papel.
+  assert.ok(pesoRodizio(0, 5) < pesoRodizio(2, 0));
+  assert.ok(pesoRodizio(1, 9) < pesoRodizio(2, 0));
+});
+
+test('empatados no mês, quem desempata é o rodízio de 6 semanas que já existia', () => {
+  // No PRIMEIRO fim de semana do mês todo mundo está em 0: o gerador tem de se comportar
+  // exatamente como antes, senão a mudança vira reviravolta.
+  assert.ok(pesoRodizio(0, 1) < pesoRodizio(0, 3));
+  assert.strictEqual(pesoRodizio(0, 3) - pesoRodizio(0, 1), 2);
+});
+
+test('quem passou da regra vai para o fim, e quanto mais passou, mais para o fim', () => {
+  assert.ok(pesoRodizio(2, 0) < pesoRodizio(3, 0));
+  assert.ok(pesoRodizio(3, 0) < pesoRodizio(4, 0));
+});
+
+test('a carga das 6 semanas NUNCA transborda para dentro da conta do mês', () => {
+  // Se um número grande na parte de baixo virasse "mais um mês", alguém em 0/2 seria
+  // tratado como se já tivesse cumprido — e o defeito seria invisível.
+  assert.ok(pesoRodizio(0, 999999) < pesoRodizio(1, 0));
+  assert.ok(pesoRodizio(0, PESO_MES) < pesoRodizio(1, 0));
+});
+
+test('sem número nenhum o peso é zero, não NaN', () => {
+  // O `freqMap` antigo deste gerador dava NaN, e NaN em comparação não ordena nada:
+  // a fila saía na ordem de chegada, sem rodízio, e ninguém via.
+  assert.strictEqual(pesoRodizio(), 0);
+  assert.strictEqual(pesoRodizio(null, undefined), 0);
+  assert.ok(Number.isFinite(pesoRodizio('x', 'y')));
+});
+
+test('um turno a mais na geração sobe o mês E a janela de uma vez só', () => {
+  // Dentro de uma geração o gerador incrementa a carga de quem acabou de escalar. Subir só
+  // a janela deixaria a pessoa em "0 no mês" depois de já ter sido escalada neste mês.
+  assert.strictEqual(pesoRodizio(0, 0) + PESO_MES + 1, pesoRodizio(1, 1));
+});
+
+// ── contarParaRodizio: QUAL data conta para o mês e qual conta para a janela ─
+const { contarParaRodizio } = require('./rodizio-core.js');
+
+const REF = '2026-09-23';   // quarta; janela de 42 dias começa em 12/08
+const pesoDe = (escalas, ref) => contarParaRodizio({ escalas, refData: ref || REF, janelaDias: 42 });
+
+test('escala do MÊS QUE VEM não conta em nada — o mês é o da celebração sendo montada', () => {
+  const p = pesoDe([{ membro_id: 'm1', data: '2026-10-04' }]);
+  assert.strictEqual(p.m1, undefined);
+});
+
+test('o resto do mês que ainda vem conta no MÊS, e não na janela', () => {
+  // Gerar o dia 6 tem de pesar no dia 20: sem isso o gerador monta o mês inteiro achando
+  // que todo mundo está em zero, e a regra não sai do papel.
+  const p = pesoDe([{ membro_id: 'm1', data: '2026-09-27' }]);
+  assert.strictEqual(p.m1, pesoRodizio(1, 0));
+});
+
+test('escala dentro da janela e do mês conta nos DOIS', () => {
+  const p = pesoDe([{ membro_id: 'm1', data: '2026-09-06' }]);
+  assert.strictEqual(p.m1, pesoRodizio(1, 1));
+});
+
+test('escala do mês passado, ainda dentro da janela, conta SÓ na janela', () => {
+  // 20/08 está a 34 dias de 23/09 (dentro dos 42) mas é agosto: pesa no rodízio, não na regra.
+  const p = pesoDe([{ membro_id: 'm1', data: '2026-08-20' }]);
+  assert.strictEqual(p.m1, pesoRodizio(0, 1));
+});
+
+test('escala velha demais não conta em lugar nenhum', () => {
+  const p = pesoDe([{ membro_id: 'm1', data: '2026-07-05' }]);
+  assert.strictEqual(p.m1, undefined);
+});
+
+test('quem nunca apareceu fica FORA do mapa — e `carga[id]||0` resolve, sem NaN', () => {
+  const p = pesoDe([{ membro_id: 'm1', data: '2026-09-06' }]);
+  assert.strictEqual(p.m2, undefined);
+  assert.strictEqual((p.m2 || 0), 0);
+});
+
+test('A INVERSÃO de ponta a ponta: quem está em 0 no mês vence quem cumpriu', () => {
+  // m1: duas vezes em setembro (cumpriu) e nada mais. m2: três vezes em agosto, dentro da
+  // janela, e NENHUMA em setembro. Pelo rodízio velho m1 (2) iria antes de m2 (3); pela
+  // regra, m2 tem de ir primeiro.
+  const p = pesoDe([
+    { membro_id: 'm1', data: '2026-09-06' }, { membro_id: 'm1', data: '2026-09-13' },
+    { membro_id: 'm2', data: '2026-08-16' }, { membro_id: 'm2', data: '2026-08-23' },
+    { membro_id: 'm2', data: '2026-08-30' },
+  ]);
+  assert.ok(p.m2 < p.m1, 'quem está em 0/2 tem de ser escalado antes de quem já fez 2');
+});

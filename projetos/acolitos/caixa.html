@@ -32,6 +32,7 @@
 <script src="telefones-core.js"></script>
 <script src="paginar-core.js"></script>
 <script src="acesso-core.js"></script>
+<script src="rodizio-core.js"></script>
 <script src="shared.js"></script>
 <script src="gerador-substituto.js"></script>
 <script>
@@ -55,23 +56,8 @@ async function carregarRosterAus() {
 }
 
 // ── Motor único (GeradorSubstituto) — auto-troca ao APROVAR ausência pública ──
-// Espelha carregarCargaHistorica/dispMapDe/horKeyDe da escala.html (mesma janela/regra).
-async function carregarCargaAus(refData) {
-  const _ger = (typeof cfg === 'function') ? (cfg('gerador', {}) || {}) : {};
-  const dias = Number(_ger.janela_dias) || 42;
-  const ini = new Date(refData + 'T00:00:00'); ini.setDate(ini.getDate() - dias);
-  const iniStr = ini.toISOString().slice(0, 10);
-  const base = {};
-  try {
-    const { data: cels } = await sb.from('acolitos_celebracoes').select('id').gte('data', iniStr).lte('data', refData);
-    const ids = (cels || []).map(c => c.id);
-    if (!ids.length) return base;
-    // `.limit(5000)` NÃO vence o teto de mil do servidor: ele manda mil e responde 200.
-    const { data } = await lerTudo(() => sb.from('acolitos_escalas').select('membro_id').in('celebracao_id', ids));
-    (data || []).forEach(e => { base[e.membro_id] = (base[e.membro_id] || 0) + 1; });
-  } catch (err) { console.error('carga histórica (caixa) falhou', err); }
-  return base;
-}
+// O peso do rodízio vem do shared.js (carregarPesoRodizio): era copiado aqui, e a cópia
+// ficou para trás quando a regra de 2x por mês entrou no gerador.
 function dispMapDeAus(rows) { const m = {}; (rows || []).forEach(r => { (m[r.membro_id] = m[r.membro_id] || []).push(r.dia + '_' + r.horario); }); return m; }
 function horKeyDeCelAus(c) { const dow = new Date(c.data + 'T00:00:00').getDay(); const diaK = dow===0?'domingo':dow===6?'sabado':null; return diaK ? diaK + '_' + c.horario : null; }
 
@@ -114,7 +100,7 @@ async function autoTrocaAprovadas(itens) {
     const cel = celDe(p);
     if (!cel || !cel.id) continue; // não achou a celebração — não força nada
     try {
-      if (!cargaPorData[cel.data]) cargaPorData[cel.data] = await carregarCargaAus(cel.data);
+      if (!cargaPorData[cel.data]) cargaPorData[cel.data] = await carregarPesoRodizio(cel.data);
       const carga = cargaPorData[cel.data];
       const t = await GeradorSubstituto.aplicarTrocaEscala(sb,
         { celebracao_id: cel.id, comunidade: cel.comunidade, data: cel.data, membroAusenteId: p.membro_id },
@@ -149,7 +135,7 @@ async function construirCtxMotor(it){
   // PAGINADO: 686 linhas hoje, teto de mil — passando dele, gente vira "indisponível" calada.
   const { data: dispRows } = await lerTudo(() => sb.from('acolitos_disponibilidade').select('membro_id,dia,horario'));
   const dispMap = dispMapDeAus(dispRows);
-  const carga = await carregarCargaAus(it.data);
+  const carga = await carregarPesoRodizio(it.data);
   const config = { gerador: (typeof cfg==='function'?cfg('gerador',{}):{}), funcoes_maiores: (typeof cfg==='function'?cfg('funcoes_maiores',null):null) };
   const { data: linhas } = await sb.from('acolitos_escalas').select('membro_id,status').eq('celebracao_id', it.celebracao_id);
   const usadosNaMissa = new Set((linhas||[]).filter(e => e.status==='escalado'||e.status==='presente'||e.status==='atrasado').map(e => e.membro_id));

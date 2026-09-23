@@ -2231,6 +2231,48 @@ function aplicarIdentidade() {
 // mexe no app, saindo da missa.
 //
 // Existe um teste que impede a volta do jeito antigo: projetos/acolitos/fuso.test.js.
+// ── RODÍZIO: o peso que ordena a fila ────────────────────────────────────────
+// Vivia COPIADA em três telas (escala, caixa e ausências), e as duas cópias alimentavam o
+// motor de troca. Mudar a regra só na escala faria aprovar uma ausência escolher substituto
+// pela regra velha — e ninguém veria, porque o número continua parecendo um número.
+//
+// O que ele é: `vezes no mês × 1000 + escalas na janela de 6 semanas` (RodizioCore.pesoRodizio).
+// A parte de cima é A REGRA da pastoral — 2x por mês; a de baixo é o rodízio que já existia e
+// agora só desempata. O gerador compara este número em cinco lugares e não sabe que a regra
+// existe: é de propósito, para nenhum deles poder esquecê-la.
+//
+// O MÊS é o da celebração sendo montada (gerar em 30/09 a escala de 04/10 conta para outubro),
+// e inclui escala JÁ MONTADA para o resto do mês — gerar o dia 6 tem de pesar no dia 20.
+async function carregarPesoRodizio(refData) {
+  const ref = refData || hojeLocal();
+  const _ger = (typeof cfg === 'function') ? (cfg('gerador', {}) || {}) : {};
+  const dias = Number(_ger.janela_dias) || 42;
+  const ini = new Date(ref + 'T00:00:00'); ini.setDate(ini.getDate() - dias);
+  const iniJanela = ini.toISOString().slice(0, 10);
+  const mes = ref.slice(0, 7);
+  const [ay, am] = mes.split('-').map(Number);
+  const mesIni = mes + '-01';
+  const mesFim = new Date(Date.UTC(ay, am, 0)).toISOString().slice(0, 10);
+  const de = iniJanela < mesIni ? iniJanela : mesIni;
+  const ate = ref > mesFim ? ref : mesFim;
+  const peso = {};
+  try {
+    const { data: cels } = await sb.from('acolitos_celebracoes').select('id,data').gte('data', de).lte('data', ate);
+    const dataDe = {}; (cels || []).forEach(c => { dataDe[c.id] = c.data; });
+    const ids = Object.keys(dataDe);
+    if (!ids.length) return peso;
+    // `.limit(5000)` NÃO vence o teto de mil do servidor: ele manda mil e responde 200.
+    const { data } = await lerTudo(() => sb.from('acolitos_escalas').select('membro_id,celebracao_id').in('celebracao_id', ids));
+    // Quem decide que data conta para o mês e que data conta para a janela é o core, que tem
+    // prova escrita. Aqui só se lê o banco e se cola a data em cada escala.
+    return RodizioCore.contarParaRodizio({
+      escalas: (data || []).map(e => ({ membro_id: e.membro_id, data: dataDe[e.celebracao_id] })),
+      refData: ref, janelaDias: dias,
+    });
+  } catch (err) { console.error('peso do rodízio falhou', err); }
+  return peso;
+}
+
 function hojeLocal() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')

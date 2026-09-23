@@ -21,10 +21,17 @@ que a regra. Não usar aquele número para pedir mais posto no altar.)
 
 O que ainda NÃO foi feito:
 
-- **O gerador perseguir os 2× (PRÓXIMO PASSO, acordado com o dono).** Hoje ele ordena por
-  `carga[id]` (escalas nas últimas 6 semanas), que é janela móvel e não sabe da regra do MÊS.
-  Enquanto 20 a 24 pessoas ficam em zero no mês, 50 passam de 2. A aba mostra; o gerador é
-  quem conserta.
+- **O gerador já persegue os 2× — FALTA CONFERIR NO USO (23/09/2026).** O `carga[id]` deixou
+  de ser "escalas nas últimas 6 semanas" e passou a ser `vezes no mês × 1000 + janela de 6
+  semanas` (`RodizioCore.pesoRodizio`), então quem está em 0/2 passa na frente de quem já fez
+  2, e no primeiro fim de semana do mês nada muda (todos em 0, desempata o rodízio antigo).
+  A conta vive num número só porque o gerador o compara em CINCO lugares — regra escrita em
+  cinco lugares é regra que um dia falta em um. **Só sai desta lista quando outubro fechar e a
+  aba Rodízio mostrar mais gente em 2/2 do que em agosto (121 de 177).** Lembrar que "Gerar
+  escala da semana" só preenche vaga VAZIA: semana já montada não se rebalanceia sozinha.
+- **`carregarPesoRodizio` agora é UM só, no `shared.js`.** Vivia copiado em escala, caixa e
+  ausências; as duas cópias alimentavam o motor de troca, e teriam ficado com a regra velha —
+  aprovar uma ausência escolheria substituto ignorando os 2× por mês.
 
 - **"Frequente" na disponibilidade do membro (pedido do dono, 23/09).** Marcar poucas pessoas
   (5-10) para o gerador escalar com mais frequência. Medido: com 10 frequentes servindo todo
