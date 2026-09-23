@@ -68,6 +68,10 @@
     .member-card-setor { font-size:9px; color:var(--gold); font-weight:700; margin-top:3px; line-height:1.2; }
     #btn-salvar.pulse { animation:salvarPulse 1.3s ease-in-out infinite; }
     @keyframes salvarPulse { 0%,100%{ box-shadow:0 0 0 0 var(--red-glow); } 50%{ box-shadow:0 0 14px 2px var(--red-glow); } }
+    .frequentes-aviso {
+      margin-top:6px; padding:8px 10px; border-radius:4px;
+      background:color-mix(in srgb, var(--warn-text) 30%, transparent); color:var(--text);
+    }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -652,6 +656,45 @@ function editSelect(label, col, val, opts) {
   s.onchange = () => { fichaEdits[col] = s.value; setDirty(); };
   g.appendChild(s); return g;
 }
+// "N de 10 marcados", e o aviso do custo ao passar de 10. AVISA, não trava: foi a escolha do
+// dono, e uma trava aqui viraria `CHECK` derrubando a transação inteira da ficha por causa de
+// uma preferência. O teto de 10 saiu de conta medida: com 10 marcados servindo o extra, o
+// resto do grupo passa de uma vez a cada 2,3 para 2,5 fins de semana — cabe. Com 20+, não.
+const TETO_FREQUENTES = 10;
+async function pintarContagemFrequentes(alvo, membroId) {
+  alvo.textContent = '';
+  let ids;
+  try {
+    const { data, error } = await sbAdmin.from('acolitos_membros')
+      .select('id').eq('escalar_frequente', true).eq('status', 'ativo');
+    if (error) throw error;
+    ids = (data || []).map(x => x.id);
+  } catch (e) {
+    // Sem a contagem, dizer "0 de 10" seria falha virando número — e convidaria a marcar mais.
+    console.error('contagem de frequentes falhou', e);
+    alvo.textContent = 'Não consegui contar quantos já estão marcados.';
+    return;
+  }
+  // Conta o que está NA TELA agora, não o que está gravado: marcar e ver o número parado
+  // faria o aviso chegar só depois de salvar, tarde demais para desistir.
+  const marcadoAqui = fichaEdits.escalar_frequente !== undefined
+    ? !!fichaEdits.escalar_frequente
+    : ids.indexOf(membroId) >= 0;
+  const total = ids.filter(id => id !== membroId).length + (marcadoAqui ? 1 : 0);
+
+  const linha = document.createElement('div');
+  linha.textContent = total + ' de ' + TETO_FREQUENTES + ' marcados na pastoral.';
+  alvo.appendChild(linha);
+  if (total > TETO_FREQUENTES) {
+    const aviso = document.createElement('div');
+    aviso.className = 'frequentes-aviso';
+    aviso.textContent = 'Acima de ' + TETO_FREQUENTES + ' marcados, o turno extra deles começa a '
+      + 'sair do resto do grupo — e o buraco de quem não cumpre os 2× por mês volta a crescer. '
+      + 'Dá para salvar assim mesmo.';
+    alvo.appendChild(aviso);
+  }
+}
+
 function editBool(label, col, val, onChange) {
   const g = fGroup(label);
   const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;gap:8px;';
@@ -760,6 +803,28 @@ async function renderTab(tab) {
       chk.onchange = () => { if (chk.checked) fichaDisp.add(key); else fichaDisp.delete(key); setDirty(); };
       row.append(lbl, chk); el.appendChild(row);
     });
+
+    // ── Escalar com mais frequência ──────────────────────────────────────────
+    // Pedido do dono (23/09/2026). Mora aqui, na aba que ele indicou, mas a coluna é de
+    // `acolitos_membros`: a de disponibilidade é APAGADA e regravada inteira a cada
+    // salvamento da ficha, e a marca sumiria sem erro nenhum.
+    const sep = document.createElement('div');
+    sep.style.cssText = 'margin:18px 0 10px;border-top:1px solid var(--border);';
+    el.appendChild(sep);
+
+    const expl = document.createElement('p');
+    expl.style.cssText = 'font-size:11.5px;line-height:1.5;color:var(--text-muted);margin:0 0 10px;';
+    expl.textContent = 'A regra é todo mundo servir 2× por mês. Quem for marcado aqui passa na frente '
+      + 'de quem já cumpriu a regra — nunca na frente de quem ainda está devendo — e acaba servindo '
+      + 'cerca de 1 vez a mais por mês.';
+    el.appendChild(expl);
+
+    const contagem = document.createElement('p');
+    contagem.style.cssText = 'font-size:11.5px;line-height:1.5;margin:8px 0 0;color:var(--text-muted);';
+    el.appendChild(editBool('Escalar com mais frequência?', 'escalar_frequente', m.escalar_frequente,
+      () => pintarContagemFrequentes(contagem, m.id)));
+    el.appendChild(contagem);
+    pintarContagemFrequentes(contagem, m.id);
   }
 
   if (tab === 'Família') {

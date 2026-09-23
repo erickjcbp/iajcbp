@@ -2263,11 +2263,20 @@ async function carregarPesoRodizio(refData) {
     if (!ids.length) return peso;
     // `.limit(5000)` NÃO vence o teto de mil do servidor: ele manda mil e responde 200.
     const { data } = await lerTudo(() => sb.from('acolitos_escalas').select('membro_id,celebracao_id').in('celebracao_id', ids));
+    // Quem o dono marcou como "frequente". Se esta leitura falhar (coluna ainda não aplicada
+    // num ambiente, permissão), o gerador segue SEM o favor — que é o comportamento de antes,
+    // e não um número errado. Falhar calado aqui só custaria o bônus, nunca a regra.
+    let frequentes = [];
+    try {
+      const { data: fq, error: errFq } = await sb.from('acolitos_membros').select('id').eq('escalar_frequente', true);
+      if (errFq) throw errFq;
+      frequentes = (fq || []).map(x => x.id);
+    } catch (e) { console.warn('marca "frequente" indisponível — gerando sem ela', e); }
     // Quem decide que data conta para o mês e que data conta para a janela é o core, que tem
     // prova escrita. Aqui só se lê o banco e se cola a data em cada escala.
     return RodizioCore.contarParaRodizio({
       escalas: (data || []).map(e => ({ membro_id: e.membro_id, data: dataDe[e.celebracao_id] })),
-      refData: ref, janelaDias: dias,
+      refData: ref, janelaDias: dias, frequentes,
     });
   } catch (err) { console.error('peso do rodízio falhou', err); }
   return peso;

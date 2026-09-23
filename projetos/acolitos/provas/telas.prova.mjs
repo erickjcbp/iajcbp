@@ -201,6 +201,56 @@ async function provaGeradorPerseguueARegraDoMes(provas) {
     'escolheu ' + JSON.stringify(a.escolhidoPelaRegra) + ' — pesos ' + JSON.stringify(a.pesos));
 }
 
+async function provaMarcaFrequenteNaFicha(provas) {
+  console.log('\n\x1b[1mA marca "frequente" na aba Disponibilidade da ficha\x1b[0m');
+  // Pedido do dono (23/09/2026). A marca mora em `acolitos_membros`, NÃO em
+  // `acolitos_disponibilidade`: ao salvar a ficha o app apaga e regrava a disponibilidade
+  // inteira, e a marca sumiria sem erro nenhum.
+  const marcados = Array.from({ length: 11 }, (_, i) => ({
+    id: 'f' + i, nome: 'Frequente ' + i, nivel: 'coroinha', comunidade: 'matriz',
+    status: 'ativo', escalar_frequente: true,
+  }));
+  const r = await provas.abrir('membros.html', {
+    papel: PAPEIS.admin,
+    tabelas: { acolitos_membros: { data: marcados } },
+    avaliar: `
+      await abrirFicha(todos[0]);
+      const aba = [...document.querySelectorAll('.ficha-tab')].find((b) => /Disponibilidade/.test(b.textContent));
+      if (!aba) return { erro: 'não achei a aba Disponibilidade' };
+      aba.click();
+      await new Promise((s) => setTimeout(s, 400));
+      const corpo = document.getElementById('ficha-corpo') || document.getElementById('modal-ficha');
+      const texto = corpo.innerText;
+      // Clica o "Sim" do grupo da marca e manda salvar, para ver o que iria para o banco.
+      const grupos = [...corpo.querySelectorAll('.form-group')];
+      const g = grupos.find((x) => /mais frequência/i.test(x.textContent));
+      if (!g) return { texto, erro: 'não achei o campo da marca' };
+      [...g.querySelectorAll('.form-toggle')].find((b) => b.textContent.trim() === 'Sim').click();
+      await new Promise((s) => setTimeout(s, 250));
+      await salvarFicha();
+      return { texto, textoDepois: corpo.innerText, edits: JSON.stringify(fichaEdits) };`,
+  });
+
+  exigir(!r.erroAvaliar, 'a ficha abre e a aba Disponibilidade desenha', r.erroAvaliar);
+  const a = r.avaliado || {};
+  exigir(!a.erro, 'a marca existe na aba Disponibilidade', a.erro);
+  exigir(/mais frequência/i.test(a.texto || ''),
+    'a marca fica na aba que o dono pediu, não numa tela nova',
+    'o texto da aba não fala em frequência');
+  exigir(/de 10 marcados/.test(a.texto || ''),
+    'a aba diz quantos já estão marcados — ninguém marca 40 sem perceber',
+    'não achei o contador no texto da aba');
+  exigir(/começa a sair do resto do grupo/.test(a.textoDepois || a.texto || ''),
+    'passando de 10, avisa o custo (e não trava — foi a escolha do dono)',
+    'não achei o aviso do teto');
+
+  // O botão pode estar certo e o Salvar deixar de fora — já aconteceu nos Modelos de escala.
+  const gravou = r.gravacoes.filter((g) => g.tabela === 'acolitos_membros' && g.acao === 'update');
+  exigir(gravou.some((g) => g.dados && g.dados.escalar_frequente === true),
+    'e o Salvar leva a marca para o banco',
+    'o que o Salvar mandaria: ' + JSON.stringify(gravou.map((g) => g.dados)));
+}
+
 async function provaFumaca(provas, filtro) {
   console.log('\n\x1b[1mFUMAÇA — toda tela abre em todos os papéis\x1b[0m');
   const lista = filtro ? TELAS.filter((t) => t === filtro) : TELAS;
@@ -3172,6 +3222,7 @@ try {
     await provaKpisDoInicioNaoViramZeroQuandoOBancoRecusa(provas);
     await provaRodizioMostraAsDuasContasSeparadas(provas);
     await provaGeradorPerseguueARegraDoMes(provas);
+    await provaMarcaFrequenteNaFicha(provas);
   }
 } finally {
   await provas.encerrar();

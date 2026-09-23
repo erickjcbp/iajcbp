@@ -414,3 +414,52 @@ test('A INVERSÃO de ponta a ponta: quem está em 0 no mês vence quem cumpriu',
   ]);
   assert.ok(p.m2 < p.m1, 'quem está em 0/2 tem de ser escalado antes de quem já fez 2');
 });
+
+// ── FREQUENTE: meia vez a menos no mês ──────────────────────────────────────
+// Pedido do dono em 23/09/2026, com as três decisões dele: fura a fila mas continua na fila ·
+// cerca de 1 vez a mais por mês e meio · avisa ao passar de 10 marcados (não trava).
+const META = 2;
+
+test('o frequente passa na frente de quem também já cumpriu', () => {
+  assert.ok(pesoRodizio(2, 0, true) < pesoRodizio(2, 0, false));
+});
+
+test('mas NUNCA na frente de quem ainda está devendo — a regra vence o favor', () => {
+  // É a trava que faz o favor não roubar da regra. Sem ela, marcar frequentes atrasaria
+  // justamente as 20 pessoas que a aba Rodízio existe para resgatar.
+  assert.ok(pesoRodizio(1, 0, false) < pesoRodizio(2, 0, true), 'quem fez 1 vai antes do frequente que fez 2');
+  assert.ok(pesoRodizio(0, 9, false) < pesoRodizio(2, 0, true), 'quem fez 0 vai antes, mesmo com carga alta');
+});
+
+test('o bônus SE ESGOTA: ganho o turno extra, o frequente cai atrás de quem está em 2', () => {
+  // 2 → 2,5 → 3. Depois do turno extra ele volta para o fim da fila sozinho, sem teto
+  // escrito no código e sem caso especial.
+  assert.ok(pesoRodizio(2, 0, false) < pesoRodizio(3, 0, true));
+});
+
+test('entre dois frequentes, desempata o rodízio de 6 semanas, como sempre', () => {
+  assert.ok(pesoRodizio(2, 1, true) < pesoRodizio(2, 4, true));
+});
+
+test('um turno a mais na geração continua sendo PESO_MES+1, inclusive no frequente', () => {
+  // O gerador soma isso a quem acabou de escalar. Se a conta do frequente não fechasse com
+  // a mesma soma, ele ganharia o bônus DUAS vezes na mesma geração.
+  assert.strictEqual(pesoRodizio(2, 0, true) + PESO_MES + 1, pesoRodizio(3, 1, true));
+});
+
+test('sem a marca, nada muda — o peso é idêntico ao de antes', () => {
+  assert.strictEqual(pesoRodizio(2, 3, false), pesoRodizio(2, 3));
+  assert.strictEqual(pesoRodizio(0, 0, false), 0);
+});
+
+test('contarParaRodizio aplica a marca a partir da lista de frequentes', () => {
+  const p = contarParaRodizio({
+    refData: REF, janelaDias: 42, frequentes: ['m2'],
+    escalas: [
+      { membro_id: 'm1', data: '2026-09-06' }, { membro_id: 'm1', data: '2026-09-13' },
+      { membro_id: 'm2', data: '2026-09-06' }, { membro_id: 'm2', data: '2026-09-13' },
+    ],
+  });
+  assert.ok(p.m2 < p.m1, 'os dois fizeram 2; o frequente vai primeiro');
+  assert.strictEqual(p.m1 - p.m2, PESO_MES / 2);
+});

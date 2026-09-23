@@ -115,6 +115,11 @@
     }
     .rodizio-regua strong { display:block; margin-bottom:3px; color:var(--text); }
     .rodizio-regua-nota { margin-top:4px; opacity:.75; }
+    .rodizio-selo {
+      display:inline-block; margin-top:3px; padding:1px 6px; border-radius:2px;
+      font-size:9px; letter-spacing:.5px; text-transform:uppercase;
+      background:color-mix(in srgb, var(--gold) 26%, transparent); color:var(--text);
+    }
     .rodizio-motivo { font-size:9.5px; line-height:1.3; color:var(--text-muted); white-space:normal; max-width:150px; }
     .rodizio-acoes { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
     .rodizio-acoes .btn-sm { flex:1 1 auto; justify-content:center; white-space:nowrap; }
@@ -532,7 +537,7 @@ async function loadDados() {
       escalasMap[e.celebracao_id].push(e);
     });
     const [{ data: mems }, { data: habs }, { data: disps }, freqData, { data: auss }, { data: chs }] = await Promise.all([
-      sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,casa_id,pode_outras_comunidades,data_nascimento,foto_url,observacoes,necessidades_especiais,nome_pai,nome_mae,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro,grupo_irmaos,escalar_com_irmao').eq('status','ativo').order('nome'),
+      sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,casa_id,escalar_frequente,pode_outras_comunidades,data_nascimento,foto_url,observacoes,necessidades_especiais,nome_pai,nome_mae,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro,grupo_irmaos,escalar_com_irmao').eq('status','ativo').order('nome'),
       // PAGINADAS: 839 e 686 linhas hoje, e o teto é mil. Ao passar dele, gente marcada
       // como apta SOME do campo de seleção — o mesmo sintoma da trava, sem trava nenhuma.
       lerTudo(() => sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia')),
@@ -1694,7 +1699,7 @@ async function carregarRodizio(){
   // quando a pergunta dele ("quem está parado") é justamente a que não depende de ter missa.
   if (!membros.length) {
     const { data: ms } = await sb.from('acolitos_membros')
-      .select('id,nome,apelido,nivel,comunidade,casa_id,foto_url')
+      .select('id,nome,apelido,nivel,comunidade,casa_id,foto_url,escalar_frequente')
       .eq('status','ativo').order('nome');
     membros = ms || [];
   }
@@ -1763,6 +1768,9 @@ function configFiltroRodizio(){
         { id:'outra',         nome:'Outra',         testa: l => l.membro.comunidade !== 'matriz' && l.membro.comunidade !== 'santo_antonio' },
       ] },
       // Escolha ÚNICA: ligar "8+" com "4+" ligado daria a lista do 4+, e o número mentiria.
+      { id:'frequente', nome:'Frequência', opcoes: [
+        { id:'sim', nome:'Marcados como frequentes', testa: l => !!l.membro.escalar_frequente },
+      ] },
       { id:'parado', nome:'Situação', unico:true, opcoes: [
         { id:'abaixo', nome:'Abaixo da regra este mês', testa: l => l.abaixoDaRegra },
         { id:'zero',   nome:'Nenhuma vez este mês',     testa: l => !l.vezesNoMes },
@@ -1873,6 +1881,9 @@ function pintarRodizio(lista){
     nm.append(n1,n2);
     const motivo=RodizioCore.rotuloDoMotivo(l.motivo);
     if(motivo!=='—'){ const n3=document.createElement('div'); n3.className='rodizio-motivo'; n3.textContent=motivo; nm.appendChild(n3); }
+    // Sem o selo, um frequente servindo mais que os outros parece defeito do rodízio — e é
+    // justamente o contrário: é alguém que o dono marcou de propósito.
+    if(m.escalar_frequente){ const sf=document.createElement('div'); sf.className='rodizio-selo'; sf.textContent='frequente'; nm.appendChild(sf); }
     box.appendChild(nm); tdN.appendChild(box); tr.appendChild(tdN);
 
     const cel=(txt)=>{ const td=document.createElement('td'); td.style.cssText='text-align:center;font-size:11px;'; td.textContent=txt; return td; };

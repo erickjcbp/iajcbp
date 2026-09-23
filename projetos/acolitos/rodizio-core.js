@@ -97,10 +97,15 @@
 
   function _n(v) { var x = Number(v); return Number.isFinite(x) && x > 0 ? x : 0; }
 
-  function pesoRodizio(vezesNoMes, cargaJanela) {
+  function pesoRodizio(vezesNoMes, cargaJanela, frequente) {
+    // FREQUENTE (pedido do dono, 23/09/2026): conta como se tivesse servido MEIA VEZ A MENOS
+    // no mês. Meia, e não uma: assim ele passa na frente de quem também já cumpriu, e NUNCA
+    // na frente de quem ainda está devendo — o favor não rouba da regra. E o bônus se esgota
+    // sozinho (2 → 2,5 → 3 cai atrás de quem está em 2), sem teto escrito no código.
+    var mes = _n(vezesNoMes) * PESO_MES - (frequente ? PESO_MES / 2 : 0);
     // A janela é limitada para NUNCA transbordar em "mais um mês": um transbordo trataria
     // quem está em 0/2 como se já tivesse cumprido, e o defeito não apareceria em lugar nenhum.
-    return _n(vezesNoMes) * PESO_MES + Math.min(_n(cargaJanela), PESO_MES - 1);
+    return mes + Math.min(_n(cargaJanela), PESO_MES - 1);
   }
 
   // Dadas as escalas já lidas do banco (cada uma com membro_id e a DATA da celebração),
@@ -119,6 +124,8 @@
     var dias = _n(opts.janelaDias) || 42;
     var mes = mesDe(ref);
     var ini = new Date(Date.parse(ref + 'T00:00:00Z') - dias * 86400000).toISOString().slice(0, 10);
+    var freq = {};
+    (opts.frequentes || []).forEach(function (id) { freq[id] = 1; });
     var noMes = {}, naJanela = {}, vistos = {};
     (opts.escalas || []).forEach(function (e) {
       var d = e && e.data;
@@ -128,7 +135,7 @@
     });
     var peso = {};
     Object.keys(vistos).forEach(function (id) {
-      peso[id] = pesoRodizio(noMes[id] || 0, naJanela[id] || 0);
+      peso[id] = pesoRodizio(noMes[id] || 0, naJanela[id] || 0, !!freq[id]);
     });
     return peso;
   }
