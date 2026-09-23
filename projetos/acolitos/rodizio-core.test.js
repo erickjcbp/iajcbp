@@ -246,3 +246,71 @@ test('missa no meio da semana conta no fim de semana dela, sem virar um a mais',
   const v = vagasPorFimDeSemana([...nEscalas('2026-09-19', 10), ...nEscalas('2026-09-17', 10)]);
   assert.strictEqual(v, 20);
 });
+
+// ── A REGRA da pastoral: servir 2x por mês ──────────────────────────────────
+// Dita pelo dono em 23/09/2026: "a princípio é para todos os membros, servirem 2x por mês, é
+// regra". A régua da aba deixou de ser a minha conta de capacidade e passou a ser esta.
+const { fimDeSemanaRestantes, resumoDaRegra } = require('./rodizio-core.js');
+
+test('o mês corrente conta ESCALA FUTURA dele — quem já está no dia 27 está em dia', () => {
+  // A pergunta da coordenação é "dá tempo de arrumar?". Escondendo a escala já montada,
+  // a lista mandaria encaixar de novo quem já estava encaixada.
+  const [l] = montarRodizio({
+    membros: [PEDRO],
+    escalas: [
+      { membro_id: 'm1', status: 'presente', data: '2026-09-06' },
+      { membro_id: 'm1', status: 'escalado', data: '2026-09-27' },
+    ],
+    hoje: HOJE,
+  });
+  assert.strictEqual(l.vezesNoMes, 2);
+  assert.strictEqual(l.abaixoDaRegra, false);
+});
+
+test('escala do mês passado não conta para o mês corrente', () => {
+  const [l] = montarRodizio({
+    membros: [PEDRO],
+    escalas: [
+      { membro_id: 'm1', status: 'presente', data: '2026-08-30' },
+      { membro_id: 'm1', status: 'presente', data: '2026-09-06' },
+    ],
+    hoje: HOJE,
+  });
+  assert.strictEqual(l.vezesNoMes, 1);
+  assert.strictEqual(l.abaixoDaRegra, true, 'uma vez no mês é metade da regra');
+});
+
+test('quem não entrou em nada no mês fica em zero, e zero aqui é verdade', () => {
+  // Diferente dos relógios: ali null quer dizer "nunca"; aqui 0 é um fato do mês.
+  const [l] = montarRodizio({ membros: [PEDRO], escalas: [], hoje: HOJE });
+  assert.strictEqual(l.vezesNoMes, 0);
+  assert.strictEqual(l.abaixoDaRegra, true);
+});
+
+test('a meta é ajustável — 2 é o padrão, não um número cravado', () => {
+  const um = montarRodizio({
+    membros: [PEDRO], hoje: HOJE, meta: 1,
+    escalas: [{ membro_id: 'm1', status: 'presente', data: '2026-09-06' }],
+  });
+  assert.strictEqual(um[0].abaixoDaRegra, false, 'com meta 1, uma vez já cumpre');
+});
+
+test('quantos fins de semana ainda cabem no mês — 23/09 tem só o do dia 27', () => {
+  // Setembro de 2026 tem domingos em 6, 13, 20 e 27.
+  assert.strictEqual(fimDeSemanaRestantes('2026-09-23'), 1);
+  assert.strictEqual(fimDeSemanaRestantes('2026-09-01'), 4);
+});
+
+test('no próprio domingo já não "resta" aquele fim de semana', () => {
+  // A missa é hoje: mandar a coordenação encaixar alguém nela seria tarde.
+  assert.strictEqual(fimDeSemanaRestantes('2026-09-27'), 0);
+  assert.strictEqual(fimDeSemanaRestantes('2026-09-28'), 0);
+});
+
+test('o resumo da régua conta quem cumpriu, de quantos, sem arredondar para bonito', () => {
+  const r = resumoDaRegra([
+    { vezesNoMes: 2, abaixoDaRegra: false }, { vezesNoMes: 3, abaixoDaRegra: false },
+    { vezesNoMes: 1, abaixoDaRegra: true },  { vezesNoMes: 0, abaixoDaRegra: true },
+  ]);
+  assert.deepStrictEqual(r, { cumpriram: 2, total: 4, emZero: 1 });
+});

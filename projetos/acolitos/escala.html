@@ -113,6 +113,8 @@
       display:inline-block; padding:2px 7px; border-radius:2px; font-weight:700;
       background:color-mix(in srgb, var(--warn-text) 30%, transparent); color:var(--text);
     }
+    .rodizio-regua strong { display:block; margin-bottom:3px; color:var(--text); }
+    .rodizio-regua-nota { margin-top:4px; opacity:.75; }
     .rodizio-motivo { font-size:9.5px; line-height:1.3; color:var(--text-muted); white-space:normal; max-width:150px; }
     .rodizio-acoes { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
     .rodizio-acoes .btn-sm { flex:1 1 auto; justify-content:center; white-space:nowrap; }
@@ -1739,7 +1741,9 @@ async function carregarRodizio(){
   linhas.forEach(l => {
     const habs = habMap[l.membro.id] || {};
     const nHab = Object.keys(habs).filter(f => RODIZIO_PROF_OK.indexOf(habs[f]) >= 0).length;
-    l.motivo = RodizioCore.motivoDe(l, { habilitacoes:nHab, faixas:(dispMap[l.membro.id]||[]).length }, teto);
+    l.motivo = l.abaixoDaRegra
+      ? RodizioCore.motivoDe(l, { habilitacoes:nHab, faixas:(dispMap[l.membro.id]||[]).length }, teto)
+      : 'no_piso';   // em dia com a regra do mês: não há o que explicar
   });
   rodizioLinhas = linhas;
 }
@@ -1754,8 +1758,10 @@ function configFiltroRodizio(){
   const cfg = {
     chave: 'rodizio',
     rotulo: ['membro','membros'],
-    ordemPadrao: 'parado',
+    ordemPadrao: 'regra',
     ordens: [
+      { id:'regra',      nome:'Menos vezes este mês',               valor: l => l.vezesNoMes,
+        legenda: l => RodizioCore.rotuloDoMotivo(l.motivo) === '—' ? '' : RodizioCore.rotuloDoMotivo(l.motivo) },
       { id:'parado',     nome:'Mais tempo sem escalar',  desc:true, valor: l => _rodOrd(l.semEscalar),
         legenda: l => RodizioCore.rotuloDoMotivo(l.motivo) === '—' ? '' : RodizioCore.rotuloDoMotivo(l.motivo) },
       { id:'recente',    nome:'Menos tempo sem escalar',            valor: l => _rodOrd(l.semEscalar) },
@@ -1776,8 +1782,9 @@ function configFiltroRodizio(){
         { id:'outra',         nome:'Outra',         testa: l => l.membro.comunidade !== 'matriz' && l.membro.comunidade !== 'santo_antonio' },
       ] },
       // Escolha ÚNICA: ligar "8+" com "4+" ligado daria a lista do 4+, e o número mentiria.
-      { id:'parado', nome:'Tempo parado', unico:true, opcoes: [
-        { id:'acima', nome:'Acima do piso do grupo', testa: l => l.motivo !== 'no_piso' },
+      { id:'parado', nome:'Situação', unico:true, opcoes: [
+        { id:'abaixo', nome:'Abaixo da regra este mês', testa: l => l.abaixoDaRegra },
+        { id:'zero',   nome:'Nenhuma vez este mês',     testa: l => !l.vezesNoMes },
         { id:'m4',    nome:'4+ semanas',             testa: l => _rodOrd(l.semEscalar) >= 4 },
         { id:'m8',    nome:'8+ semanas',             testa: l => _rodOrd(l.semEscalar) >= 8 },
         { id:'m12',   nome:'12+ semanas',            testa: l => _rodOrd(l.semEscalar) >= 12 },
@@ -1812,11 +1819,25 @@ function desenharRodizio(){
 
   // A régua do grupo. Sem ela, "3 semanas parado" parece defeito quando é o piso do tamanho
   // do grupo — e a coordenação sai atrás de 45 pessoas em vez das 20 que dá para consertar.
+  // A REGRA da pastoral vem primeiro; a conta de capacidade vira nota de rodapé. O dono
+  // mede o grupo por "2x por mês", não pelo piso que eu calculei — e a lista que ele abre
+  // toda semana é a de quem ainda não cumpriu ESTE mês, enquanto dá tempo de arrumar.
+  const res = RodizioCore.resumoDaRegra(rodizioLinhas);
+  const faltam = RodizioCore.fimDeSemanaRestantes(hojeLocal());
   const regua=document.createElement('p'); regua.className='rodizio-regua';
-  regua.textContent = rodizioPiso
-    ? rodizioVagas+' vagas por fim de semana · '+membros.length+' ativos · com rodízio perfeito cada um serve a cada '
-      +String(rodizioPiso.semanas).replace('.',',')+' semanas. Acima de '+rodizioPiso.teto+' é o que dá para consertar.'
-    : 'Sem escalas recentes suficientes para calcular o piso do grupo.';
+  const l1=document.createElement('strong');
+  l1.textContent='A regra é servir '+RodizioCore.META_PADRAO+'× por mês.';
+  const l2=document.createElement('div');
+  l2.textContent = res.cumpriram+' de '+res.total+' cumpriram este mês'
+    + (res.emZero ? ' · '+res.emZero+' ainda não serviram nenhuma vez' : '')
+    + ' · ' + (faltam ? (faltam===1 ? 'ainda cabe 1 fim de semana' : 'ainda cabem '+faltam+' fins de semana')
+                      : 'não sobra fim de semana neste mês');
+  regua.append(l1,l2);
+  if(rodizioPiso){
+    const l3=document.createElement('div'); l3.className='rodizio-regua-nota';
+    l3.textContent='O calendário tem '+rodizioVagas+' vagas por fim de semana para '+membros.length+' ativos.';
+    regua.appendChild(l3);
+  }
   el.appendChild(regua);
 
   const alvo=document.createElement('div'); el.appendChild(alvo);
@@ -1849,9 +1870,9 @@ function pintarRodizio(lista){
   const thead=document.createElement('thead'); const hr=document.createElement('tr');
   // O "por quê" era a 5ª coluna e, no telefone, só aparecia rolando a tabela de lado — logo
   // a parte que responde a pergunta do dono era a que ninguém via. Agora mora sob o nome.
-  ['Membro','Sem escalar','Sem servir','Faltas','Última vez'].forEach((h,i)=>{
+  ['Membro','Este mês','Sem escalar','Sem servir','Faltas','Última vez'].forEach((h,i)=>{
     const th=document.createElement('th'); if(i===0) th.className='sticky-left';
-    if(i>0&&i<4) th.style.textAlign='center';
+    if(i>0&&i<5) th.style.textAlign='center';
     th.textContent=h; hr.appendChild(th);
   });
   thead.appendChild(hr); table.appendChild(thead);
@@ -1874,13 +1895,17 @@ function pintarRodizio(lista){
     box.appendChild(nm); tdN.appendChild(box); tr.appendChild(tdN);
 
     const cel=(txt)=>{ const td=document.createElement('td'); td.style.cssText='text-align:center;font-size:11px;'; td.textContent=txt; return td; };
-    // Acima do piso do grupo destaca por FUNDO, com o texto na cor normal: texto pequeno
-    // pintado de âmbar mede 1,4:1 no tema claro — some da tela justamente em quem importa.
-    const tdE=document.createElement('td'); tdE.style.cssText='text-align:center;font-size:11px;';
+
+    // "Este mês" é a coluna da REGRA, e por isso vem logo depois do nome. Quem está abaixo
+    // destaca por FUNDO, com o texto na cor normal: texto pequeno pintado de âmbar mede
+    // 1,4:1 no tema claro — sumiria justamente em quem importa.
+    const tdR=document.createElement('td'); tdR.style.cssText='text-align:center;font-size:11px;';
     const marca=document.createElement('span');
-    marca.textContent=_rodSemanas(l.semEscalar);
-    if(l.motivo!=='no_piso') marca.className='rodizio-alerta'; else marca.style.fontWeight='700';
-    tdE.appendChild(marca); tr.appendChild(tdE);
+    marca.textContent=l.vezesNoMes+' / '+RodizioCore.META_PADRAO;
+    if(l.abaixoDaRegra) marca.className='rodizio-alerta'; else marca.style.fontWeight='700';
+    tdR.appendChild(marca); tr.appendChild(tdR);
+
+    tr.appendChild(cel(_rodSemanas(l.semEscalar)));
     tr.appendChild(cel(_rodSemanas(l.semServir)));
     tr.appendChild(cel(l.faltas ? String(l.faltas) : '—'));
 
@@ -1898,7 +1923,8 @@ function pintarRodizio(lista){
 
 function _rodLinhasExport(){
   return rodizioVisivel().map(l => [
-    l.membro.nome||'', _rodSemanas(l.semEscalar), _rodSemanas(l.semServir),
+    l.membro.nome||'', l.vezesNoMes+'/'+RodizioCore.META_PADRAO,
+    _rodSemanas(l.semEscalar), _rodSemanas(l.semServir),
     String(l.faltas), RodizioCore.rotuloDoMotivo(l.motivo),
     l.ultimaServida ? formatDate(l.ultimaServida) : '',
   ]);
@@ -1906,12 +1932,12 @@ function _rodLinhasExport(){
 function rodizioPDF(){
   const rows=_rodLinhasExport();
   const corpo = rows.length
-    ? relTabela(['Membro','Sem escalar','Sem servir','Faltas','Por quê','Última vez'], rows)
+    ? relTabela(['Membro','Este mês','Sem escalar','Sem servir','Faltas','Por quê','Última vez'], rows)
     : '<p class="muted">Sem dados.</p>';
   abrirRelatorio({ titulo:'Rodízio', subtitulo:'Acólitos · '+(rodizioPiso ? rodizioVagas+' vagas por fim de semana · piso de '+String(rodizioPiso.semanas).replace('.',',')+' semanas' : 'piso não calculado'), corpo });
 }
 function rodizioCSV(){
-  baixarCSV('rodizio', [['Membro','Sem escalar','Sem servir','Faltas','Por que','Ultima vez']].concat(_rodLinhasExport()));
+  baixarCSV('rodizio', [['Membro','Este mes','Sem escalar','Sem servir','Faltas','Por que','Ultima vez']].concat(_rodLinhasExport()));
 }
 
 function abrirRelatorioFrequencia(){

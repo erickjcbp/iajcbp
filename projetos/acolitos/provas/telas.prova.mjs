@@ -59,20 +59,26 @@ async function provaRodizioMostraAsDuasContasSeparadas(provas) {
         { id: 'm1', nome: 'Pedro Prova',  nivel: 'coroinha',  comunidade: 'matriz', status: 'ativo' },
         { id: 'm2', nome: 'Sumida Prova', nivel: 'aspirante', comunidade: 'matriz', status: 'ativo' },
         { id: 'm3', nome: 'Joao Prova',   nivel: 'acolito_aspirante', comunidade: 'matriz', status: 'ativo' },
+        { id: 'm4', nome: 'EmDia Prova',  nivel: 'coroinha',  comunidade: 'matriz', status: 'ativo' },
       ] },
       acolitos_escalas: { data: [
         esc('m1', 'presente', 35),   // serviu há 5 semanas
         esc('m1', 'ausente',  14),   // escalado há 2 semanas e NÃO foi
         esc('m3', 'presente', 70),   // última presença há 10 semanas
         esc('m3', 'escalado', 35),   // escalado há 5 e a chamada nunca fechou
+        esc('m4', 'presente', 0), esc('m4', 'presente', 0),   // hoje, duas vezes: cumpriu a regra do mês
       ] },
     },
     passos: [{ chamar: 'setAba', args: ['rodizio'] }],
     // Ler a TABELA célula a célula, não o texto da página: um "2 sem" solto passaria mesmo
     // se estivesse na linha errada, na coluna errada ou fora da tabela.
     avaliar: `
-      const tds = (tr) => [...tr.children].map((td) => td.textContent.trim());
-      const linhas = [...document.querySelectorAll('#view-rodizio tbody tr')].map(tds);
+      const linhas = [...document.querySelectorAll('#view-rodizio tbody tr')].map((tr) => ({
+        celulas: [...tr.children].map((td) => td.textContent.trim()),
+        // O destaque é o que o olho pega primeiro: se ele acender em quem está em dia, a
+        // lista manda a coordenação atrás da pessoa errada.
+        temAlerta: !!tr.querySelector('.rodizio-alerta'),
+      }));
       return {
         cabecalho: [...document.querySelectorAll('#view-rodizio thead th')].map((t) => t.textContent.trim()),
         linhas,
@@ -85,25 +91,39 @@ async function provaRodizioMostraAsDuasContasSeparadas(provas) {
   exigir(!r.erroAvaliar, 'a aba desenha sem estourar', r.erroAvaliar);
   const a = r.avaliado || {};
   exigir(a.visivel === true, 'a área da aba fica visível', 'view-rodizio continuou escondida');
-  exigir(['Sem escalar', 'Sem servir', 'Faltas'].every((h) => (a.cabecalho || []).includes(h)),
-    'as duas contas são COLUNAS diferentes, e as faltas uma terceira',
+  exigir(['Este mês', 'Sem escalar', 'Sem servir', 'Faltas'].every((h) => (a.cabecalho || []).includes(h)),
+    'a regra do mês e as duas contas são COLUNAS diferentes',
     'cabeçalho veio: ' + JSON.stringify(a.cabecalho));
+  exigir((a.cabecalho || [])[1] === 'Este mês',
+    'a coluna da REGRA vem logo depois do nome, onde não precisa rolar para ver',
+    'a 2ª coluna é: ' + JSON.stringify((a.cabecalho || [])[1]));
 
-  const linhaDe = (nome) => (a.linhas || []).find((l) => (l[0] || '').includes(nome)) || [];
+  const achar = (nome) => (a.linhas || []).find((l) => (l.celulas[0] || '').includes(nome)) || { celulas: [] };
+  const linhaDe = (nome) => achar(nome).celulas;
   const pedro = linhaDe('Pedro');
-  exigir(pedro[1] === '2 sem' && pedro[2] === '5 sem' && pedro[3] === '1',
+  exigir(pedro[2] === '2 sem' && pedro[3] === '5 sem' && pedro[4] === '1',
     'Pedro: 2 semanas sem escalar, 5 sem servir, 1 falta — três números, um calendário só',
     'veio ' + JSON.stringify(pedro));
 
   const sumida = linhaDe('Sumida');
-  exigir(sumida[1] === 'nunca' && sumida[2] === 'nunca',
+  exigir(sumida[2] === 'nunca' && sumida[3] === 'nunca',
     'quem nunca entrou em escala mostra "nunca", não "0 sem"',
     'veio ' + JSON.stringify(sumida));
+  exigir(sumida[1] === '0 / 2' && achar('Sumida').temAlerta === true,
+    'quem não serviu nenhuma vez no mês aparece 0 / 2 e DESTACADO',
+    'veio ' + JSON.stringify(sumida[1]) + ', destaque=' + achar('Sumida').temAlerta);
+
+  // A regra do dono (23/09/2026): 2x por mês. Quem cumpriu não pode acender alarme —
+  // uma lista que destaca todo mundo não aponta ninguém.
+  const emdia = achar('EmDia');
+  exigir(emdia.celulas[1] === '2 / 2' && emdia.temAlerta === false,
+    'quem já cumpriu a regra do mês aparece 2 / 2 e SEM destaque',
+    'veio ' + JSON.stringify(emdia.celulas[1]) + ', destaque=' + emdia.temAlerta);
 
   // A discordância É o aviso: escalado há 5 semanas, última presença há 10. Ou ele faltou
   // calado, ou ninguém fechou a chamada — e a tela tem de dizer qual, não engolir.
   const joao = linhaDe('Joao');
-  exigir(joao[1] === '5 sem' && joao[2] === '10 sem',
+  exigir(joao[2] === '5 sem' && joao[3] === '10 sem',
     'quando as duas contas discordam, a tela mostra AS DUAS',
     'veio ' + JSON.stringify(joao));
   // O motivo mora sob o NOME (célula 0), não numa coluna que só aparece rolando de lado.
@@ -111,8 +131,11 @@ async function provaRodizioMostraAsDuasContasSeparadas(provas) {
     'e o "por quê" acusa a chamada que ficou aberta, junto do nome',
     'a célula do nome veio: ' + JSON.stringify(joao[0]));
 
-  exigir(/vagas por fim de semana/.test(a.regua) && /ativos/.test(a.regua),
-    'a régua do grupo aparece — sem ela "3 semanas parado" parece defeito',
+  exigir(/A regra é servir 2× por mês/.test(a.regua) && /cumpriram este mês/.test(a.regua),
+    'a régua do topo é A REGRA DO DONO, não a minha conta de capacidade',
+    'a régua veio: ' + JSON.stringify(a.regua));
+  exigir(/fim de semana|fins de semana/.test(a.regua),
+    'e diz quantos fins de semana ainda cabem — senão a lista chega tarde demais',
     'a régua veio: ' + JSON.stringify(a.regua));
 }
 

@@ -28,11 +28,13 @@
   function montarRodizio(opts) {
     opts = opts || {};
     var hoje = opts.hoje;
+    var meta = opts.meta == null ? META_PADRAO : opts.meta;
+    var mesCorrente = mesDe(hoje);
     var por = {};
     var linhas = (opts.membros || []).map(function (m) {
       var l = { membro: m, ultimaEscalada: null, ultimaServida: null, ultimaPendente: null,
                 faltas: 0, jaNaProxima: false, chamadaPendente: false,
-                semEscalar: null, semServir: null };
+                semEscalar: null, semServir: null, vezesNoMes: 0, abaixoDaRegra: true };
       por[m.id] = l;
       return l;
     });
@@ -40,6 +42,11 @@
     (opts.escalas || []).forEach(function (e) {
       if (!e.data) return;
       var titular = por[e.membro_id];
+
+      // A REGRA é do MÊS, e conta escala já montada para os dias que ainda vêm: a pergunta
+      // da coordenação é "dá tempo de arrumar?", e esconder quem já está encaixada mandaria
+      // encaixar de novo. Por isso esta contagem vem ANTES do corte de futuro lá embaixo.
+      if (titular && mesDe(e.data) === mesCorrente) titular.vezesNoMes++;
 
       // Celebração que ainda não aconteceu não mexe em relógio de passado — só avisa que a
       // pessoa já está encaixada. Sem isso, "sem escalar" viraria semana negativa.
@@ -71,8 +78,37 @@
       // provavelmente serviu e ninguém fechou a chamada. Pendência mais VELHA que a última
       // presença não acende — seria alarme falso.
       l.chamadaPendente = !!l.ultimaPendente && (!l.ultimaServida || l.ultimaPendente > l.ultimaServida);
+      l.abaixoDaRegra = l.vezesNoMes < meta;
     });
     return linhas;
+  }
+
+  // A REGRA da pastoral (dita pelo dono em 23/09/2026): todo membro serve 2x por mês.
+  // Fica como número, e não cravada no meio da conta, porque é decisão dele e pode mudar.
+  var META_PADRAO = 2;
+
+  function mesDe(dataISO) { return String(dataISO || '').slice(0, 7); }
+
+  // Quantos fins de semana ainda CABEM no mês. É o que diz se a lista ainda é acionável:
+  // "3 pessoas em zero e nenhum fim de semana sobrando" é outra conversa de "e ainda cabem 2".
+  // O domingo de hoje não conta: encaixar alguém na missa de hoje é tarde.
+  function fimDeSemanaRestantes(hojeISO) {
+    var t = Date.parse(hojeISO + 'T00:00:00Z');
+    var d = new Date(t);
+    var mes = d.getUTCMonth(), n = 0;
+    // anda até o próximo domingo e conta os domingos que ainda caem dentro do mês
+    var prox = new Date(t + ((7 - d.getUTCDay()) % 7 || 7) * 86400000);
+    while (prox.getUTCMonth() === mes) { n++; prox = new Date(prox.getTime() + 7 * 86400000); }
+    return n;
+  }
+
+  function resumoDaRegra(linhas) {
+    var l = linhas || [];
+    return {
+      cumpriram: l.filter(function (x) { return !x.abaixoDaRegra; }).length,
+      total: l.length,
+      emZero: l.filter(function (x) { return !x.vezesNoMes; }).length,
+    };
   }
 
   // O fim de semana de uma data: o DOMINGO que o fecha. Sábado e domingo caem no mesmo balde
@@ -140,7 +176,9 @@
   }
 
   var api = { semanasSem: semanasSem, montarRodizio: montarRodizio,
-               pisoDoGrupo: pisoDoGrupo, vagasPorFimDeSemana: vagasPorFimDeSemana, motivoDe: motivoDe, rotuloDoMotivo: rotuloDoMotivo };
+               pisoDoGrupo: pisoDoGrupo, vagasPorFimDeSemana: vagasPorFimDeSemana, motivoDe: motivoDe, rotuloDoMotivo: rotuloDoMotivo,
+               META_PADRAO: META_PADRAO, mesDe: mesDe,
+               fimDeSemanaRestantes: fimDeSemanaRestantes, resumoDaRegra: resumoDaRegra };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else { global.RodizioCore = api; }
 })(typeof globalThis !== 'undefined' ? globalThis : this);

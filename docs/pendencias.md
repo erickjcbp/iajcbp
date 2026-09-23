@@ -8,8 +8,23 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 ## 1. Pendente
 
 **Rodízio — o que a medição de 23/09/2026 deixou pendente.** A aba Rodízio está na Escala
-(terceira aba, junto de Operacional e Planilha) e mostra as duas contas separadas — "sem
-escalar" e "sem servir" — mais faltas e o motivo. O que ela revelou e ainda NÃO foi feito:
+(terceira aba, junto de Operacional e Planilha). A régua dela é **A REGRA DA PASTORAL: todo
+membro serve 2× por mês**, dita pelo dono em 23/09. Mostra "este mês" (X/2, destacado quem
+está abaixo), as duas contas separadas — "sem escalar" e "sem servir" — faltas e o motivo.
+
+⚠️ **NÃO é falta de vaga, é distribuição.** Medido em agosto (mês fechado): o calendário
+entregou **344** turnos e a regra pede **354** — faltam **10 no mês inteiro**. Faltam 76
+turnos para quem ficou abaixo de 2×, e **sobram 66** em 50 pessoas que serviram 3 ou 4 vezes.
+Redistribuindo o que já existe, cobre-se 66 dos 76. (Uma conta anterior minha dizia "faltam 13
+vagas por fim de semana" — aquilo respondia "ninguém passar de 2 semanas", que é mais exigente
+que a regra. Não usar aquele número para pedir mais posto no altar.)
+
+O que ainda NÃO foi feito:
+
+- **O gerador perseguir os 2× (PRÓXIMO PASSO, acordado com o dono).** Hoje ele ordena por
+  `carga[id]` (escalas nas últimas 6 semanas), que é janela móvel e não sabe da regra do MÊS.
+  Enquanto 20 a 24 pessoas ficam em zero no mês, 50 passam de 2. A aba mostra; o gerador é
+  quem conserta.
 
 - **"Frequente" na disponibilidade do membro (pedido do dono, 23/09).** Marcar poucas pessoas
   (5-10) para o gerador escalar com mais frequência. Medido: com 10 frequentes servindo todo
