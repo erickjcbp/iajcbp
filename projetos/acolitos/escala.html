@@ -1300,10 +1300,19 @@ async function arteRender(md, domISO, isAdmin){
   const dataLbl = (typeof dataCurta==='function') ? dataCurta(domISO) : domISO;
   let html='<p style="font-size:12px;color:var(--text-muted);margin:-4px 0 12px;">Fim de semana do domingo <b>'+relEsc(dataLbl)+'</b></p>';
   if(arte){
-    const src=arte.png_url+'?t='+Date.now();
-    html+='<img src="'+_arteEscAttr(src)+'" alt="Arte da escala" style="width:100%;border-radius:10px;border:1px solid var(--border);display:block;">'
+    // fim de semana cheio demais sai em 2 artes (png_url = sábado, png_url_domingo = domingo)
+    const partes = arte.png_url_domingo
+      ? [{ url:arte.png_url, rot:'Sábado', arq:'sabado' }, { url:arte.png_url_domingo, rot:'Domingo', arq:'domingo' }]
+      : [{ url:arte.png_url, rot:'', arq:'' }];
+    const t=Date.now();
+    html+=(partes.length>1?'<p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Muitas missas neste fim de semana — a escala saiu em <b>2 artes</b>.</p>':'')
+      +'<div style="display:grid;grid-template-columns:repeat('+partes.length+',1fr);gap:8px;">'
+      +partes.map(p=>'<div>'+(p.rot?'<div style="font-size:12px;font-weight:700;margin-bottom:4px;">'+p.rot+'</div>':'')
+        +'<img src="'+_arteEscAttr(p.url+'?t='+t)+'" alt="Arte da escala'+(p.rot?' — '+p.rot:'')+'" style="width:100%;border-radius:10px;border:1px solid var(--border);display:block;"></div>').join('')
+      +'</div>'
       +'<div style="font-size:11px;color:var(--text-muted);margin:6px 0 12px;">'+relEsc(arte.descricao||'')+' · '+(arte.gerado_por==='cron'?'gerada automaticamente':'gerada manualmente')+'</div>'
-      +'<button class="btn-sm gold" style="width:100%;" id="arte-baixar">⬇️ Baixar PNG</button>';
+      +'<div style="display:flex;gap:8px;">'+partes.map((p,i)=>'<button class="btn-sm gold arte-baixar" style="flex:1;" data-i="'+i+'">⬇️ Baixar '+(p.rot||'PNG')+'</button>').join('')+'</div>';
+    md._artePartes=partes;
   } else {
     html+='<p class="empty" style="margin:16px 0;">Ainda não gerada para este fim de semana.'+(isAdmin?' Use "Gerar/Atualizar" abaixo.':'')+'</p>';
   }
@@ -1318,7 +1327,8 @@ async function arteRender(md, domISO, isAdmin){
       +'<p style="font-size:11px;color:var(--text-muted);margin-top:8px;">Depois de "Gerar/Atualizar", aguarde ~1 min e reabra para ver a nova arte.</p>';
   }
   body.innerHTML=html;
-  const bb=body.querySelector('#arte-baixar'); if(bb&&arte) bb.onclick=()=>baixarArte(arte.png_url, domISO);
+  body.querySelectorAll('.arte-baixar').forEach(b=>{ const p=md._artePartes[+b.dataset.i];
+    b.onclick=()=>baixarArte(p.url, domISO+(p.arq?'-'+p.arq:'')); });
   if(isAdmin){
     body.querySelector('#arte-ov-save').onclick=()=>salvarAjusteArte(md,domISO);
     body.querySelector('#arte-regen').onclick=()=>regenerarArte(md,domISO);

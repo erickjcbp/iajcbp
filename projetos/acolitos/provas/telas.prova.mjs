@@ -251,6 +251,34 @@ async function provaMarcaFrequenteNaFicha(provas) {
     'o que o Salvar mandaria: ' + JSON.stringify(gravou.map((g) => g.dados)));
 }
 
+async function provaArteEmDuasPartes(provas) {
+  console.log('\n\x1b[1mArte da semana: 1 imagem, ou 2 quando o fim de semana não coube\x1b[0m');
+  // 28/09/2026: 6 missas e 88 nomes cortaram o domingo 19h da arte. Decisão do dono:
+  // "somente quando precisar, duas artes". png_url = única ou sábado; png_url_domingo só
+  // quando dividiu.
+  const base = { domingo_data: '2026-10-04', descricao: '27º Domingo', gerado_por: 'cron',
+    png_url: 'http://127.0.0.1/a.png' };
+  const abrir = (arte) => provas.abrir('escala.html', {
+    papel: PAPEIS.membro,
+    tabelas: { acolitos_escala_artes: { data: [arte] } },
+    avaliar: `
+      await arteSemana();
+      const b = document.getElementById('arte-body');
+      return { imgs: b.querySelectorAll('img').length,
+        botoes: [...b.querySelectorAll('.arte-baixar')].map((x) => x.textContent.trim()),
+        texto: b.innerText };`,
+  });
+  const um = (await abrir(base)).avaliado || {};
+  exigir(um.imgs === 1 && um.botoes.length === 1, 'arte única: uma imagem e um botão de baixar',
+    JSON.stringify(um));
+  const dois = (await abrir({ ...base, png_url_domingo: 'http://127.0.0.1/b.png' })).avaliado || {};
+  exigir(dois.imgs === 2, 'duas artes: as duas imagens aparecem no modal', JSON.stringify(dois));
+  exigir(/Sábado/.test(dois.botoes[0] || '') && /Domingo/.test(dois.botoes[1] || ''),
+    'e cada uma tem o seu botão de baixar, com o dia no nome', JSON.stringify(dois.botoes));
+  exigir(/2 artes/.test(dois.texto || ''), 'o modal avisa que desta vez saíram 2 artes',
+    'texto: ' + (dois.texto || '').slice(0, 200));
+}
+
 async function provaFumaca(provas, filtro) {
   console.log('\n\x1b[1mFUMAÇA — toda tela abre em todos os papéis\x1b[0m');
   const lista = filtro ? TELAS.filter((t) => t === filtro) : TELAS;
@@ -3223,6 +3251,7 @@ try {
     await provaRodizioMostraAsDuasContasSeparadas(provas);
     await provaGeradorPerseguueARegraDoMes(provas);
     await provaMarcaFrequenteNaFicha(provas);
+    await provaArteEmDuasPartes(provas);
   }
 } finally {
   await provas.encerrar();

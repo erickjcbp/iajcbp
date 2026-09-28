@@ -11,8 +11,24 @@ O caminho completo, em ordem:
   1. descobre qual é o fim de semana alvo        (fim-de-semana.mjs)
   2. lê as escalas no banco                      (dados.mjs)
   3. resolve a cor e a festa litúrgica do dia    (liturgico.mjs)
-  4. desenha o HTML e vira PNG                   (render.mjs + template.html)
+  4. desenha o HTML e vira PNG                   (render.mjs + template.html
+                                                  + colunas.mjs)
   5. publica a imagem e anota na tabela          (gerar.mjs)
+
+
+QUANDO SAEM DUAS ARTES (desde 28/09/2026)
+-----------------------------------------
+O quadro é fixo: 2160 x 4800. Cada missa vai para a coluna mais
+curta (colunas.mjs), o que já aproveita o buraco embaixo de uma
+missa pequena. Se mesmo assim o fim de semana não cabe, saem DUAS
+artes — uma do sábado, outra do domingo. A letra NÃO encolhe:
+foi a escolha do dono ("somente quando precisar, duas artes").
+
+  arte única  →  <domingo>.png          (coluna png_url)
+  duas artes  →  <domingo>-sabado.png   (coluna png_url)
+                 <domingo>-domingo.png  (coluna png_url_domingo)
+
+png_url_domingo vazia = arte única. Migration 086.
 
 
 QUEM DÁ A PARTIDA (isto importa)
@@ -43,6 +59,7 @@ Os arquivos
   rotulos.js        traduz nomes internos para nomes de gente
                     (acolito_guardiao -> Acólito Guardião)
   render.mjs        transforma o HTML em imagem PNG
+  colunas.mjs       em que coluna (esq/dir) cada missa entra
   template.html     o desenho da arte
   assets/           fontes e imagens que a arte usa
   _slice.mjs        utilitário interno

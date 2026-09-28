@@ -4,7 +4,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { alvoFimDeSemana } from './fim-de-semana.mjs'
 import { carregarDados } from './dados.mjs'
-import { renderPNG } from './render.mjs'
+import { renderArtes } from './render.mjs'
 
 const URL = process.env.SUPABASE_URL
 // aceita os dois nomes (o .env do repo usa SUPABASE_SERVICE_KEY; o CI usa SUPABASE_SERVICE_ROLE_KEY)
@@ -46,24 +46,32 @@ async function main() {
   }
   console.log(`Missas: ${todas.length} | escalados: ${totalEscalados} | ${dados.tempo} / ${dados.cor}`)
 
-  const png = await renderPNG(dados)
-  console.log('PNG gerado:', png.length, 'bytes')
+  const artes = await renderArtes(dados)
 
-  const path = `${domingo}.png`
-  const up = await sb.storage.from('artes-escala').upload(path, png, {
-    contentType: 'image/png', upsert: true,
-  })
-  if (up.error) throw up.error
-  const { data: pub } = sb.storage.from('artes-escala').getPublicUrl(path)
+  // Uma arte: `<domingo>.png`. Duas: `<domingo>-sabado.png` + `<domingo>-domingo.png`.
+  // `png_url` é sempre a primeira (a única, ou a do sábado) e `png_url_domingo` só existe
+  // quando dividiu — assim quem só conhece `png_url` continua achando uma arte válida.
+  const urls = {}
+  for (const { parte, png } of artes) {
+    console.log(`PNG ${parte}:`, png.length, 'bytes')
+    const path = parte === 'unica' ? `${domingo}.png` : `${domingo}-${parte}.png`
+    const up = await sb.storage.from('artes-escala').upload(path, png, {
+      contentType: 'image/png', upsert: true,
+    })
+    if (up.error) throw up.error
+    urls[parte] = sb.storage.from('artes-escala').getPublicUrl(path).data.publicUrl
+  }
 
   const gerado_por = process.env.GERADO_POR || 'cron'
   const { error: te } = await sb.from('acolitos_escala_artes').upsert({
-    domingo_data: domingo, png_url: pub.publicUrl,
+    domingo_data: domingo,
+    png_url: urls.unica || urls.sabado,
+    png_url_domingo: urls.domingo || null,   // null ao voltar para arte única: o app para de mostrar a 2ª
     tempo: dados.tempo, descricao: dados.descricao, cor: dados.cor,
     gerado_em: new Date().toISOString(), gerado_por,
   })
   if (te) throw te
-  console.log('Arte publicada:', pub.publicUrl)
+  console.log('Arte publicada:', Object.values(urls).join(' + '))
 
   await avisarCoordenacao(domingo)
 }

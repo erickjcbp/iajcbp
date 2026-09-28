@@ -256,10 +256,14 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
       return { data: fatia, error: null, count: Array.isArray(todas) ? todas.length : 0 };
     };
     const cadeia = (tabela) => {
-      let recorte = null;
+      let recorte = null, umSo = false;
       const c = new Proxy({}, { get: (_alvo, chave) => {
-        if (chave === 'then') return (f) => Promise.resolve(respostaDe(tabela, recorte)).then(f);
+        if (chave === 'then') return (f) => Promise.resolve(respostaDe(tabela, recorte)).then((r) =>
+          // `.maybeSingle()`/`.single()` devolvem a LINHA, não a lista: sem isto a tela
+          // recebia um array e lia `arte.png_url` como undefined.
+          umSo && !r.error ? { ...r, data: r.data[0] || null } : r).then(f);
         if (chave === 'range') return (de, ate) => { recorte = [de, ate]; return c; };
+        if (chave === 'maybeSingle' || chave === 'single') return () => { umSo = true; return c; };
         // grava o que a tela MANDARIA para o banco: às vezes a tela está certa e o
         // botão de salvar é que deixa coisa de fora (foi o caso dos Modelos de escala)
         if (chave === 'insert' || chave === 'upsert' || chave === 'update' || chave === 'delete') {
