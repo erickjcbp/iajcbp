@@ -265,7 +265,8 @@ async function provaArteEmDuasPartes(provas) {
       await arteSemana();
       const b = document.getElementById('arte-body');
       return { imgs: b.querySelectorAll('img').length,
-        botoes: [...b.querySelectorAll('.arte-baixar')].map((x) => x.textContent.trim()),
+        botoes: [...b.querySelectorAll('#arte-baixar')].map((x) => x.textContent.trim()),
+        ladoALado: (() => { const [x, y] = b.querySelectorAll('img'); return !!y && Math.abs(x.getBoundingClientRect().top - y.getBoundingClientRect().top) < 2; })(),
         texto: b.innerText };`,
   });
   const um = (await abrir(base)).avaliado || {};
@@ -273,8 +274,9 @@ async function provaArteEmDuasPartes(provas) {
     JSON.stringify(um));
   const dois = (await abrir({ ...base, png_url_domingo: 'http://127.0.0.1/b.png' })).avaliado || {};
   exigir(dois.imgs === 2, 'duas artes: as duas imagens aparecem no modal', JSON.stringify(dois));
-  exigir(/Sábado/.test(dois.botoes[0] || '') && /Domingo/.test(dois.botoes[1] || ''),
-    'e cada uma tem o seu botão de baixar, com o dia no nome', JSON.stringify(dois.botoes));
+  exigir(dois.ladoALado, 'as duas ficam LADO A LADO, não uma embaixo da outra', JSON.stringify(dois));
+  exigir(dois.botoes.length === 1 && /2 artes/.test(dois.botoes[0]),
+    'um botão só, que baixa as duas', JSON.stringify(dois.botoes));
   exigir(/2 artes/.test(dois.texto || ''), 'o modal avisa que desta vez saíram 2 artes',
     'texto: ' + (dois.texto || '').slice(0, 200));
 }

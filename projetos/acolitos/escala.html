@@ -1311,8 +1311,9 @@ async function arteRender(md, domISO, isAdmin){
         +'<img src="'+_arteEscAttr(p.url+'?t='+t)+'" alt="Arte da escala'+(p.rot?' — '+p.rot:'')+'" style="width:100%;border-radius:10px;border:1px solid var(--border);display:block;"></div>').join('')
       +'</div>'
       +'<div style="font-size:11px;color:var(--text-muted);margin:6px 0 12px;">'+relEsc(arte.descricao||'')+' · '+(arte.gerado_por==='cron'?'gerada automaticamente':'gerada manualmente')+'</div>'
-      +'<div style="display:flex;gap:8px;">'+partes.map((p,i)=>'<button class="btn-sm gold arte-baixar" style="flex:1;" data-i="'+i+'">⬇️ Baixar '+(p.rot||'PNG')+'</button>').join('')+'</div>';
+      +'<button class="btn-sm gold" style="width:100%;" id="arte-baixar">⬇️ Baixar'+(partes.length>1?' as 2 artes':' PNG')+'</button>';
     md._artePartes=partes;
+    if(partes.length>1) md.style.maxWidth='620px';   // as duas lado a lado, mesmo que menores
   } else {
     html+='<p class="empty" style="margin:16px 0;">Ainda não gerada para este fim de semana.'+(isAdmin?' Use "Gerar/Atualizar" abaixo.':'')+'</p>';
   }
@@ -1327,20 +1328,32 @@ async function arteRender(md, domISO, isAdmin){
       +'<p style="font-size:11px;color:var(--text-muted);margin-top:8px;">Depois de "Gerar/Atualizar", aguarde ~1 min e reabra para ver a nova arte.</p>';
   }
   body.innerHTML=html;
-  body.querySelectorAll('.arte-baixar').forEach(b=>{ const p=md._artePartes[+b.dataset.i];
-    b.onclick=()=>baixarArte(p.url, domISO+(p.arq?'-'+p.arq:'')); });
+  const bb=body.querySelector('#arte-baixar'); if(bb) bb.onclick=()=>baixarArte(md._artePartes, domISO);
   if(isAdmin){
     body.querySelector('#arte-ov-save').onclick=()=>salvarAjusteArte(md,domISO);
     body.querySelector('#arte-regen').onclick=()=>regenerarArte(md,domISO);
   }
 }
-async function baixarArte(url, domISO){
+// Baixa TODAS as partes num clique só. No celular, o jeito que entrega as duas de uma vez é
+// a folha de compartilhar (Salvar imagens / WhatsApp); o download por <a> no iPhone só
+// pega a primeira. Sem folha (computador), baixa uma depois da outra.
+async function baixarArte(partes, domISO){
+  const nome=p=>'escala-'+domISO+(p.arq?'-'+p.arq:'')+'.png';
+  let blobs;
   try{
-    const r=await fetch(url+'?t='+Date.now());
-    const blob=await r.blob(); const u=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=u; a.download='escala-'+domISO+'.png'; document.body.appendChild(a); a.click(); a.remove();
+    blobs=await Promise.all(partes.map(p=>fetch(p.url+'?t='+Date.now()).then(r=>{ if(!r.ok) throw new Error(r.status); return r.blob(); })));
+  }catch(e){ partes.forEach(p=>window.open(p.url,'_blank')); return; }
+  const files=blobs.map((b,i)=>new File([b], nome(partes[i]), { type:'image/png' }));
+  if(partes.length>1 && navigator.canShare && navigator.canShare({ files })){
+    try{ await navigator.share({ files, title:'Escala do fim de semana' }); return; }
+    catch(e){ if(e && e.name==='AbortError') return; }   // cancelou a folha: não baixar por cima
+  }
+  for(const [i,f] of files.entries()){
+    const u=URL.createObjectURL(f);
+    const a=document.createElement('a'); a.href=u; a.download=f.name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(u),4000);
-  }catch(e){ window.open(url,'_blank'); }
+    if(i<files.length-1) await new Promise(ok=>setTimeout(ok,700));   // o navegador recusa 2 downloads no mesmo instante
+  }
 }
 async function salvarAjusteArte(md, domISO){
   const tempo=(md.querySelector('#ov-tempo').value||'').trim();
