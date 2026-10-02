@@ -124,3 +124,8 @@ o mesmo nome. A lista de pessoas e as permissões estão no topo do arquivo.
 Feito em 02/10/2026: Daiane Silva, Leticia Aranda, Luana Tank, Michelly Keller, Sandra Mello e
 Edilaine Nunes — permissões retiros + tesouraria. As senhas ficam em entregas/ (ignorado pelo git).
 serve=false tira a pessoa da Escala, do Rodízio e dos números do Início (escala.html, index.html).
+
+GUIA DA EQUIPE (02/10/2026)
+  node criar-logins/tirar-fotos-equipe.mjs criar-logins/fotos-equipe     (fotos reais, dados inventados)
+  node criar-logins/gerar-pdfs-equipe.mjs <acessos.json> entregas          (gera os 2 PDFs)
+O PDF de acessos tem senhas: só nasce em entregas/ (ignorado pelo git). O tutorial não tem dado de ninguém.

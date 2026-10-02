@@ -712,7 +712,7 @@ function lancarEntrada(modo) {
     campos: venda ? [
       { k:'item', label:'Item vendido', req:true, placeholder:'Ex: pingente de São Tarcísio' },
       { k:'qtd', label:'Quantidade', tipo:'number', step:'1', padrao:1, req:true, metade:true },
-      { k:'preco', label:'Preço unitário (R$)', tipo:'number', req:true, metade:true },
+      { k:'preco', label:'Preço cada (R$)', tipo:'number', req:true, metade:true },
       { k:'data', label:'Data', tipo:'date', padrao:hojeLocal() },
     ] : [
       { k:'valor', label:'Valor (R$)', tipo:'number', req:true },

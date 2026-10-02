@@ -66,6 +66,7 @@ const barrados = [];
  *               { clicar:'Próximas' }                clica pelo texto, dentro do conteúdo
  *             NUNCA "rode este código": nada de new Function com texto de fora.
  *   altura    recorte (padrão: a tela inteira do celular)
+ *   semInit   tela que não tem init() (o login.html): só abre e espera
  */
 async function foto(o) {
   const url = `http://127.0.0.1:${PORTA}/projetos/acolitos/${o.arquivo}`;
@@ -102,7 +103,7 @@ async function foto(o) {
 
   await pg.goto(url, { waitUntil: 'networkidle0', timeout: 40000 });
 
-  const resultado = await pg.evaluate(async (papel, membro, tabelas, rpcs, passos, fecharBanner, ficarNaAbertura, rolarAte) => {
+  const resultado = await pg.evaluate(async (papel, membro, tabelas, rpcs, passos, fecharBanner, ficarNaAbertura, rolarAte, semInit) => {
     const ctx = { membership: { role: papel.role }, membro, conta: membro,
                   user: { id: membro.user_id, email: papel.email || 'foto@teste' } };
     // hideSplash() mora no initModulo DE VERDADE. Sem chamar aqui, a tela de abertura
@@ -117,8 +118,10 @@ async function foto(o) {
 
     const ok = (d) => ({ data: d, error: null, count: Array.isArray(d) ? d.length : 0 });
     const respostaDe = (t) => (tabelas[t] ? ok(tabelas[t]) : ok([]));
-    const cadeia = (t) => { const c = new Proxy({}, { get: (_a, k) => {
-      if (k === 'then') return (f) => Promise.resolve(respostaDe(t)).then(f);
+    const cadeia = (t) => { let umSo = false; const c = new Proxy({}, { get: (_a, k) => {
+      // `.maybeSingle()` / `.single()` devolvem a LINHA, não a lista (como o banco de verdade)
+      if (k === 'then') return (f) => Promise.resolve(respostaDe(t)).then((r) => (umSo ? { ...r, data: r.data[0] || null } : r)).then(f);
+      if (k === 'maybeSingle' || k === 'single') return () => { umSo = true; return c; };
       return () => c; } }); return c; };
     window.sb = window.sb || {};
     sb.from = (t) => cadeia(t);
@@ -126,7 +129,7 @@ async function foto(o) {
     sb.auth = sb.auth || {};
     sb.auth.getSession = async () => ({ data: { session: { user: ctx.user } } });
 
-    try { await init(); } catch (e) { return { estourou: String(e).slice(0, 120) }; }
+    if (!semInit) { try { await init(); } catch (e) { return { estourou: String(e).slice(0, 120) }; } }
     await new Promise((s) => setTimeout(s, 700));
 
     // Passos NOMEADOS, como no motor de provas. Nada de executar texto: o que chega aqui
@@ -187,7 +190,7 @@ async function foto(o) {
       .filter((x) => visivel.includes(x));
     return { estourou: null, falhos, tapando, lixo, texto: (raiz.innerText || '').trim().length,
              amostra: (raiz.innerText || '').trim().slice(0, 70).replace(/\n/g, ' · ') };
-  }, o.papel, o.membro, o.tabelas || {}, o.rpcs || {}, o.passos || [], o.fecharBanner !== false, !!o.ficarNaAbertura, o.rolarAte || null);
+  }, o.papel, o.membro, o.tabelas || {}, o.rpcs || {}, o.passos || [], o.fecharBanner !== false, !!o.ficarNaAbertura, o.rolarAte || null, !!o.semInit);
 
   const destino = path.join(SAIDA, o.nome + '.png');
   // A foto é da JANELA, não do documento. Com `clip` a partir do topo do documento, uma
