@@ -1283,6 +1283,9 @@ function renderHeader(ctx, activePage) {
     : '../../midia/logos/Logo%20Igreja%20colorido.png';
   logoImg.alt = 'JCBP';
   logoImg.id = 'header-logo-img';
+  // Logo enviado em Config › Identidade, se houver; qualquer falha volta ao brasão de sempre.
+  const _logoCustom = ((cfg('identidade', {}) || {}).logo_url || '').trim();
+  if (_logoCustom) { const _padrao = logoImg.src; logoImg.src = _logoCustom; logoImg.onerror = () => { logoImg.onerror = null; logoImg.src = _padrao; }; }
   const logoText = document.createElement('span');
   logoText.textContent = 'Acólitos ';
   const goldSpan = document.createElement('span');
@@ -2219,7 +2222,47 @@ function aplicarIdentidade() {
   const root = document.documentElement;
   if (idn.cor_ouro) { root.style.setProperty('--gold', idn.cor_ouro); root.style.setProperty('--gold-light', idn.cor_ouro); }
   if (idn.cor_primaria) { root.style.setProperty('--wine', idn.cor_primaria); root.style.setProperty('--red', idn.cor_primaria); root.style.setProperty('--red-soft', idn.cor_primaria); }
+  aplicarFonteApp(idn.fonte);
 }
+
+// ── FONTE DO APP (Config › Identidade) ──────────────────────────────────────
+// Como funciona e por que assim: ver identidade-core.js. Resumo: a fonte escolhida é baixada do
+// Google Fonts e o nome da família é reescrito para 'Sora', que é o que o app inteiro já pede.
+// O CSS fica guardado no aparelho (localStorage) para a próxima abertura já nascer com a fonte
+// certa, sem piscar a padrão. Qualquer falha (sem rede, Google fora) deixa a fonte padrão: nunca
+// quebra a tela.
+function _injetarFonte(css) {
+  let el = document.getElementById('idn-fonte');
+  if (!el) { el = document.createElement('style'); el.id = 'idn-fonte'; document.head.appendChild(el); }
+  el.textContent = css;
+}
+function aplicarFonteDoCache() {
+  try {
+    const g = JSON.parse(localStorage.getItem('jcbp-fonte') || 'null');
+    if (g && g.css) _injetarFonte(g.css);
+  } catch (e) {}
+}
+function aplicarFonteApp(chave) {
+  try {
+    if (typeof IdentidadeCore === 'undefined') return;
+    if (IdentidadeCore.ehPadrao(chave)) {
+      const velho = document.getElementById('idn-fonte'); if (velho) velho.remove();
+      try { localStorage.removeItem('jcbp-fonte'); } catch (e) {}
+      return;
+    }
+    let g = null; try { g = JSON.parse(localStorage.getItem('jcbp-fonte') || 'null'); } catch (e) {}
+    if (g && g.chave === chave && g.css) { _injetarFonte(g.css); return; }   // já está guardada
+    const url = IdentidadeCore.urlGoogle(chave);
+    if (!url) return;
+    fetch(url).then(r => r.ok ? r.text() : Promise.reject(new Error('fonte ' + r.status))).then(css => {
+      const out = IdentidadeCore.reescreverFamilia(css, chave);
+      if (!out) return;
+      _injetarFonte(out);
+      try { localStorage.setItem('jcbp-fonte', JSON.stringify({ chave: chave, css: out })); } catch (e) {}
+    }).catch(() => {});
+  } catch (e) {}
+}
+aplicarFonteDoCache();
 // A data de HOJE no fuso de quem está usando o app.
 //
 // O jeito antigo — `new Date().toISOString()` cortado em 10 — devolvia a data em UTC.

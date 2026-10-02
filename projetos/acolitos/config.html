@@ -71,6 +71,7 @@
 <script src="times-core.js"></script>
 <script src="kits-core.js"></script>
 <script src="gerador-substituto.js"></script>
+<script src="identidade-core.js"></script>
 <script src="shared.js"></script>
 <script>
 // A seção inicial PRECISA existir em SECOES — senão o painel abre numa tela
@@ -930,21 +931,73 @@ async function renderAdmins(b){
 function renderIdentidade(b){
   b.textContent='';
   const idn = cfg('identidade', {}) || {};
+  const estado = { logo_url: idn.logo_url || '', fonte: idn.fonte || 'sora' };
   const mk=(label)=>{ const L=document.createElement('label'); L.style.cssText='display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px;'; L.textContent=label; b.appendChild(L); };
   mk('Nome da pastoral');
   const iNome=document.createElement('input'); iNome.className='form-input'; iNome.value=idn.nome||''; iNome.placeholder='Acólitos & Coroinhas'; b.appendChild(iNome);
   mk('Paróquia');
   const iPar=document.createElement('input'); iPar.className='form-input'; iPar.value=idn.paroquia||''; iPar.placeholder='Jesus Cristo Bom Pastor — Limeira/SP'; b.appendChild(iPar);
-  mk('Logo/brasão (URL — opcional)');
-  const iLogo=document.createElement('input'); iLogo.className='form-input'; iLogo.value=idn.logo_url||''; iLogo.placeholder='https://…'; b.appendChild(iLogo);
+
+  // ── Logo/brasão: ENVIAR a imagem (ou, se preferir, colar um link) ──
+  mk('Logo/brasão');
+  const caixaLogo=document.createElement('div'); caixaLogo.style.cssText='display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:12px;';
+  const prev=document.createElement('div'); prev.id='idn-logo-prev'; prev.style.cssText='width:72px;height:72px;border-radius:10px;background:var(--surface2);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:10px;color:var(--text-muted);text-align:center;flex:none;';
+  const pintaPrev=()=>{ prev.textContent=''; if(estado.logo_url){ const im=document.createElement('img'); im.src=estado.logo_url; im.alt='Logo'; im.style.cssText='max-width:100%;max-height:100%;object-fit:contain;'; im.onerror=()=>{ prev.textContent='não abriu'; }; prev.appendChild(im); } else prev.textContent='sem logo'; };
+  pintaPrev();
+  const acoes=document.createElement('div'); acoes.style.cssText='flex:1;min-width:170px;display:flex;flex-direction:column;gap:8px;';
+  const arq=document.createElement('input'); arq.type='file'; arq.accept='image/png,image/jpeg,image/webp'; arq.style.display='none'; arq.id='idn-logo-arquivo';
+  const msgLogo=document.createElement('div'); msgLogo.style.cssText='font-size:11.5px;color:var(--text-muted);min-height:15px;';
+  const btnEnviar=document.createElement('button'); btnEnviar.type='button'; btnEnviar.className='btn-sm gold'; btnEnviar.textContent='Enviar imagem do aparelho';
+  btnEnviar.onclick=()=>arq.click();
+  const btnTirar=document.createElement('button'); btnTirar.type='button'; btnTirar.className='btn-sm gray'; btnTirar.textContent='Remover logo';
+  btnTirar.onclick=()=>{ estado.logo_url=''; iLogo.value=''; pintaPrev(); msgLogo.textContent='Logo removido. Toque em "Salvar identidade" para valer.'; };
+  arq.onchange=async()=>{
+    const f=arq.files&&arq.files[0]; if(!f) return;
+    const v=IdentidadeCore.validarLogo(f);
+    if(!v.ok){ msgLogo.style.color='var(--danger-text)'; msgLogo.textContent=v.erro; arq.value=''; return; }
+    msgLogo.style.color='var(--text-muted)'; msgLogo.textContent='Enviando...'; btnEnviar.disabled=true;
+    const caminho=IdentidadeCore.caminhoLogo(Date.now(), v.ext);
+    const { error } = await sb.storage.from('identidade').upload(caminho, f, { upsert:false, contentType:f.type });
+    btnEnviar.disabled=false; arq.value='';
+    if(error){ msgLogo.style.color='var(--danger-text)'; msgLogo.textContent='Não foi possível enviar a imagem. Tente de novo.'; console.error(error); return; }
+    const { data: pub } = sb.storage.from('identidade').getPublicUrl(caminho);
+    estado.logo_url = (pub && pub.publicUrl) || ''; iLogo.value=estado.logo_url; pintaPrev();
+    msgLogo.style.color='var(--success-text)'; msgLogo.textContent='Imagem enviada. Toque em "Salvar identidade" para valer.';
+  };
+  const linhaBtn=document.createElement('div'); linhaBtn.style.cssText='display:flex;gap:8px;flex-wrap:wrap;'; linhaBtn.append(btnEnviar,btnTirar);
+  acoes.append(linhaBtn,msgLogo,arq);
+  caixaLogo.append(prev,acoes); b.appendChild(caixaLogo);
+  const dica=document.createElement('p'); dica.style.cssText='font-size:11px;color:var(--text-muted);margin:6px 0 0;'; dica.textContent='PNG, JPG ou WEBP, até 2 MB. Aparece no cabeçalho do app. Fundo transparente (PNG) fica melhor.'; b.appendChild(dica);
+  mk('Ou cole o endereço (link) de uma imagem');
+  const iLogo=document.createElement('input'); iLogo.className='form-input'; iLogo.value=estado.logo_url; iLogo.placeholder='https://…'; iLogo.oninput=()=>{ estado.logo_url=iLogo.value.trim(); pintaPrev(); }; b.appendChild(iLogo);
+
+  // ── Fonte do app: 4 escolhas (a padrão + 3 novas), cada uma desenhada na própria fonte ──
+  mk('Fonte do app');
+  const gradeF=document.createElement('div'); gradeF.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;';
+  IdentidadeCore.FONTES.forEach(f=>{          // baixa só para MOSTRAR o exemplo (as padrão já está carregada)
+    const u=IdentidadeCore.urlGoogle(f.chave); if(u && !document.querySelector('link[data-idn-fonte="'+f.chave+'"]')){ const l=document.createElement('link'); l.rel='stylesheet'; l.href=u; l.setAttribute('data-idn-fonte',f.chave); document.head.appendChild(l); }
+  });
+  const cartoes={};
+  const marca=()=>{ Object.keys(cartoes).forEach(k=>{ const on=(k===estado.fonte); cartoes[k].style.borderColor=on?'var(--gold)':'var(--border-wine)'; cartoes[k].style.background=on?'linear-gradient(165deg,rgba(232,185,74,.16),var(--surface))':'var(--surface)'; cartoes[k].setAttribute('aria-pressed', on?'true':'false'); }); };
+  IdentidadeCore.FONTES.forEach(f=>{
+    const c=document.createElement('button'); c.type='button'; c.setAttribute('data-fonte',f.chave);
+    c.style.cssText='text-align:left;cursor:pointer;border:1.5px solid var(--border-wine);border-radius:10px;padding:11px 12px;color:var(--text);';
+    const fam = f.familia ? "'"+f.familia+"',sans-serif" : "'Sora',sans-serif";
+    const n=document.createElement('div'); n.style.cssText='font-family:'+fam+';font-weight:700;font-size:16px;'; n.textContent=f.rotulo;
+    const ex=document.createElement('div'); ex.style.cssText='font-family:'+fam+';font-size:12.5px;margin-top:4px;line-height:1.4;'; ex.textContent='Escala das missas — Aa Bb 123';
+    const nt=document.createElement('div'); nt.style.cssText='font-size:10.5px;color:var(--text-muted);margin-top:4px;'; nt.textContent=f.nota;
+    c.append(n,ex,nt); c.onclick=()=>{ estado.fonte=f.chave; marca(); }; cartoes[f.chave]=c; gradeF.appendChild(c);
+  });
+  marca(); b.appendChild(gradeF);
+
   const cores=document.createElement('div'); cores.style.cssText='display:flex;gap:18px;margin-top:12px;align-items:center;';
   const colorBox=(label,val)=>{ const w=document.createElement('div'); const l=document.createElement('div'); l.style.cssText='font-size:11px;color:var(--text-muted);margin-bottom:4px;'; l.textContent=label; const c=document.createElement('input'); c.type='color'; c.value=val; c.style.cssText='width:52px;height:34px;border:none;background:none;cursor:pointer;'; w.append(l,c); cores.appendChild(w); return c; };
   const cPrim=colorBox('Cor primária', idn.cor_primaria||'#d11020');
   const cOuro=colorBox('Cor de destaque', idn.cor_ouro||'#e8b94a');
   b.appendChild(cores);
-  const hint=document.createElement('p'); hint.style.cssText='font-size:11px;color:var(--text-muted);margin:8px 0 0;'; hint.textContent='As cores aplicam no app inteiro (com fallback pro tema padrão).'; b.appendChild(hint);
+  const hint=document.createElement('p'); hint.style.cssText='font-size:11px;color:var(--text-muted);margin:8px 0 0;'; hint.textContent='As cores e a fonte aplicam no app inteiro (com fallback pro tema padrão).'; b.appendChild(hint);
   const save=document.createElement('button'); save.className='btn gold'; save.style.marginTop='14px'; save.textContent='Salvar identidade';
-  save.onclick=async()=>{ const novo={ nome:iNome.value.trim()||null, paroquia:iPar.value.trim()||null, logo_url:iLogo.value.trim()||null, cor_primaria:cPrim.value, cor_ouro:cOuro.value }; const ok=await setConfig('identidade', novo); if(ok && typeof aplicarIdentidade==='function') aplicarIdentidade(); };
+  save.onclick=async()=>{ const novo={ nome:iNome.value.trim()||null, paroquia:iPar.value.trim()||null, logo_url:(estado.logo_url||'').trim()||null, fonte:estado.fonte, cor_primaria:cPrim.value, cor_ouro:cOuro.value }; const ok=await setConfig('identidade', novo); if(ok && typeof aplicarIdentidade==='function') aplicarIdentidade(); };
   b.appendChild(save);
 }
 

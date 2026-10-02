@@ -22,6 +22,10 @@ test('toda tela com os *-core carrega também a senha-nova-core.js', () => {
   const semTel = telas.filter(f => !fs.readFileSync(path.join(dir, f), 'utf8').includes('telefones-core.js'));
   assert.deepStrictEqual(semTel, [], 'estas telas não carregam a regra dos telefones: ' + semTel.join(', '));
 
+  // E para a IDENTIDADE (fonte e logo): sem ela, a fonte escolhida em Config não chega à tela.
+  const semIdn = telas.filter(f => !fs.readFileSync(path.join(dir, f), 'utf8').includes('identidade-core.js'));
+  assert.deepStrictEqual(semIdn, [], 'estas telas não carregam a identidade: ' + semIdn.join(', '));
+
   // E para a regra do RECADO DA FOTO: sem o <script>, a tela quebra no primeiro aviso
   // da fila — `temFotoDePerfil` não existiria e o pop-up de QUALQUER aviso morreria
   // junto. Não é só o convite da foto que se perde: é a fila inteira daquela tela.

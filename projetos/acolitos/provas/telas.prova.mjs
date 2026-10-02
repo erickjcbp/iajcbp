@@ -3393,12 +3393,54 @@ async function provaEquipesDoRetiro(provas) {
   exigir(!(c.gravacoes || []).some(x => x.tabela === 'acolitos_retiro_equipes' && x.acao === 'insert'), 'e nada é gravado quando recusa', JSON.stringify(c.gravacoes));
 }
 
+
+async function provaIdentidadeUploadEFonte(provas) {
+  console.log('\n\x1b[1mConfig › Identidade: enviar o logo do aparelho e escolher a fonte\x1b[0m');
+  const r = await provas.abrir('config.html', {
+    papel: PAPEIS.admin, largura: 1100,
+    passos: [{ chamar: 'abrirSecao', args: ['identidade'] }],
+    foto: '/tmp/identidade-config.png',
+    avaliar: `const sp = document.getElementById('splash'); if (sp) sp.remove();
+      const subidos = [];
+      sb.storage = { from: (b) => ({
+        upload: async (caminho, arq, o) => { subidos.push({ b, caminho, tipo: o && o.contentType }); return { error: null }; },
+        getPublicUrl: (caminho) => ({ data: { publicUrl: 'https://exemplo.test/' + b + '/' + caminho } }) }) };
+      const cartoes = [...document.querySelectorAll('[data-fonte]')].map(c => c.getAttribute('data-fonte'));
+      const entrada = document.getElementById('idn-logo-arquivo');
+      // 1) arquivo inválido (PDF) é recusado e NADA sobe
+      let dt = new DataTransfer(); dt.items.add(new File(['x'], 'a.pdf', { type: 'application/pdf' }));
+      entrada.files = dt.files; entrada.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 100));
+      const recusou = document.getElementById('main-content').innerText.includes('PNG, JPG ou WEBP') && subidos.length === 0;
+      // 2) PNG válido sobe para o bucket identidade e vira a prévia
+      dt = new DataTransfer(); dt.items.add(new File([new Uint8Array(500)], 'brasao.png', { type: 'image/png' }));
+      entrada.files = dt.files; entrada.dispatchEvent(new Event('change'));
+      await new Promise(r => setTimeout(r, 200));
+      const campoLink = document.querySelector('input[placeholder="https://…"]');
+      // 3) escolhe Nunito e salva
+      document.querySelector('[data-fonte="nunito"]').click();
+      [...document.querySelectorAll('button')].find(x => x.textContent.trim() === 'Salvar identidade').click();
+      await new Promise(r => setTimeout(r, 300));
+      return { cartoes, recusou, subidos, prevSrc: campoLink && campoLink.value };`,
+  });
+  const a = r.avaliado || {};
+  exigir(!r.erroAvaliar && r.passosFalhos.length === 0, 'a seção Identidade abre', (r.erroAvaliar || '') + r.passosFalhos.join('|'));
+  exigir(JSON.stringify(a.cartoes) === JSON.stringify(['sora', 'nunito', 'merriweather', 'poppins']), 'há a fonte padrão e 3 fontes novas para escolher', JSON.stringify(a.cartoes));
+  exigir(a.recusou === true, 'arquivo que não é imagem (PDF) é recusado e nada é enviado', JSON.stringify(a));
+  exigir(a.subidos && a.subidos.length === 1 && a.subidos[0].b === 'identidade' && /^logo_\d+\.png$/.test(a.subidos[0].caminho) && a.subidos[0].tipo === 'image/png',
+    'o PNG sobe para o bucket "identidade", com nome novo e tipo certo', JSON.stringify(a.subidos));
+  exigir(/exemplo\.test\/identidade\/logo_\d+\.png/.test(a.prevSrc || ''), 'o endereço da imagem enviada preenche o campo de link (a prévia nasce dele)', String(a.prevSrc));
+  const up = (r.gravacoes || []).find(x => x.tabela === 'acolitos_config' && x.acao === 'upsert');
+  exigir(up && up.dados.chave === 'identidade' && up.dados.valor.fonte === 'nunito' && /identidade\/logo_/.test(up.dados.valor.logo_url || ''),
+    'salvar grava a fonte escolhida e o endereço do logo enviado', JSON.stringify(r.gravacoes));
+}
+
 // ── Partida ──────────────────────────────────────────────────────────────────
 const filtro = process.argv[2] || null;
 const provas = await iniciarProvas();
 const comecou = Date.now();
 try {
-  if (filtro === '--retiros') { await provaRetiros(provas); await provaTesourariaVinculaARetiro(provas); await provaEquipesDoRetiro(provas); }   // só a prova da aba Retiros
+  if (filtro === '--retiros') { await provaRetiros(provas); await provaTesourariaVinculaARetiro(provas); await provaEquipesDoRetiro(provas); await provaIdentidadeUploadEFonte(provas); }   // só a prova da aba Retiros
   else await provaFumaca(provas, filtro);
   if (!filtro) {
     await provaBarraAcendeSecao(provas);
@@ -3448,6 +3490,7 @@ try {
     await provaRetiros(provas);
     await provaTesourariaVinculaARetiro(provas);
     await provaEquipesDoRetiro(provas);
+    await provaIdentidadeUploadEFonte(provas);
   }
 } finally {
   await provas.encerrar();
