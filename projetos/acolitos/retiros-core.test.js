@@ -106,3 +106,41 @@ test('resumoDaArea: percentual, atrasos e orçamento', () => {
 test('resumoDaArea: área vazia não vira 0% — vira "não sei" (null)', () => {
   assert.strictEqual(R.resumoDaArea({}, HOJE).percentual, null);
 });
+
+test('conciliar: reconhece as categorias novas da Tesouraria (doacao, venda_item) e as antigas', () => {
+  const c = R.conciliar([], [
+    { tipo: 'entrada', valor: 10, categoria: 'doacao' },
+    { tipo: 'entrada', valor: 20, categoria: 'dizimo' },
+    { tipo: 'entrada', valor: 30, categoria: 'venda_item' },
+    { tipo: 'entrada', valor: 40, categoria: 'rifa' },
+    { tipo: 'entrada', valor: 50, categoria: 'mensalidade' },
+  ]);
+  assert.strictEqual(c.doacoes, 30);
+  assert.strictEqual(c.vendas, 70);
+  assert.strictEqual(c.entradas, 150, 'mensalidade conta como entrada, sem ser doação nem venda');
+});
+
+test('WhatsApp: valida, formata e monta o link só de número brasileiro de verdade', () => {
+  assert.strictEqual(R.whatsappValido('(19) 99907-1702'), true);
+  assert.strictEqual(R.whatsappValido('19999071702'), true);
+  assert.strictEqual(R.whatsappValido('+55 19 99907-1702'), true);
+  assert.strictEqual(R.whatsappValido('3000-0000'), false, 'sem DDD não vale');
+  assert.strictEqual(R.whatsappValido('123'), false);
+  assert.strictEqual(R.whatsappValido(''), false);
+  assert.strictEqual(R.whatsappValido('+44 20 7946 0958'), false, 'país que não é o 55');
+  assert.strictEqual(R.linkWhatsapp('(19) 99907-1702'), 'https://wa.me/5519999071702');
+  assert.strictEqual(R.linkWhatsapp('+55 19 99907-1702'), 'https://wa.me/5519999071702');
+  assert.strictEqual(R.linkWhatsapp('abc'), null);
+  assert.strictEqual(R.mostrarWhatsapp('19999071702'), '(19) 99907-1702');
+  assert.strictEqual(R.mostrarWhatsapp('1930001111'), '(19) 3000-1111');
+  assert.strictEqual(R.mostrarWhatsapp('+44 20 7946 0958'), '+44 20 7946 0958');
+});
+
+test('grupo do WhatsApp: só link do chat.whatsapp.com', () => {
+  assert.strictEqual(R.grupoWhatsappValido('https://chat.whatsapp.com/AbCdEf123456XYZ'), true);
+  assert.strictEqual(R.grupoWhatsappValido('https://chat.whatsapp.com/AbCdEf123456XYZ?mode=r'), true);
+  assert.strictEqual(R.grupoWhatsappValido('javascript:alert(1)'), false);
+  assert.strictEqual(R.grupoWhatsappValido('https://evil.com/chat.whatsapp.com/AbCdEf123456'), false);
+  assert.strictEqual(R.grupoWhatsappValido('http://chat.whatsapp.com/AbCdEf123456'), false);
+  assert.strictEqual(R.grupoWhatsappValido(''), false);
+});

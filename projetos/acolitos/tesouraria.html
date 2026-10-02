@@ -60,7 +60,7 @@
 <script src="shared.js"></script>
 <script>
 const CATEGORIAS = {
-  entrada: [['dizimo','Dízimo/Doação'],['mensalidade','Mensalidade'],['evento','Evento'],['rifa','Rifa/Venda'],['outro','Outro']],
+  entrada: [['dizimo','Dízimo/Doação'],['doacao','Doação'],['venda_item','Venda de item'],['mensalidade','Mensalidade'],['evento','Evento'],['rifa','Rifa/Venda'],['outro','Outro']],
   saida:   [['compras','Compras'],['tunicas','Túnicas/Vestes'],['evento','Evento'],['transporte','Transporte'],['manutencao','Manutenção'],['outro','Outro']],
 };
 let CAT_LABEL = {};
@@ -79,6 +79,12 @@ const MES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','
 const brl = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 let ctx = null, lancamentos = [];
+// Retiros, formações e espiritualidades a que um lançamento pode ser vinculado. Quem não tem a
+// permissão 'retiros' recebe a lista VAZIA do banco (RLS): então o campo de vínculo some, em vez
+// de aparecer vazio — e os lançamentos já vinculados continuam aparecendo sem o nome.
+let areas = [], filtroArea = '';
+const TIPO_AREA = { retiro:'Retiro', espiritualidade:'Espiritualidade', formacao:'Formação', outro:'Área' };
+const areaDe = id => areas.find(a => a.id === id) || null;
 
 async function init() {
   ctx = await initModulo(['coord_admin','subadmin','membro_equipe'], { perm: 'tesouraria' });
@@ -89,11 +95,13 @@ async function init() {
 }
 
 async function load() {
-  const [fin, lst] = await Promise.all([
+  const [fin, lst, ar] = await Promise.all([
     sb.from('acolitos_financeiro').select('*').order('data', { ascending: false }).order('created_at', { ascending: false }),
     sb.from('acolitos_listas').select('*').in('tipo', ['cat_entrada', 'cat_saida']).order('label'),
+    sb.from('acolitos_retiro_areas').select('id,nome,tipo,status').order('nome'),
   ]);
   lancamentos = fin.data || [];
+  areas = ar.error ? [] : (ar.data || []);
   customCats = { entrada: [], saida: [] };
   (lst.data || []).forEach(r => customCats[r.tipo === 'cat_entrada' ? 'entrada' : 'saida'].push([r.valor, r.label]));
   // DB é a fonte da verdade: se há categorias no banco, substituem os padrões do código (excluir gruda)
@@ -132,19 +140,30 @@ function render() {
   btnAdd.textContent = '+ Novo lançamento'; btnAdd.onclick = () => abrirLancamento(); main.appendChild(btnAdd);
 
   const h = document.createElement('div'); h.className = 'section-head'; h.textContent = 'Lançamentos'; main.appendChild(h);
-  if (!lancamentos.length) { const em = document.createElement('span'); em.className = 'empty'; em.textContent = 'Nenhum lançamento ainda.'; main.appendChild(em); return; }
-  lancamentos.forEach(l => {
+  if (areas.length) {            // filtro por retiro/formação/espiritualidade
+    const f = document.createElement('select'); f.className = 'form-select'; f.style.marginBottom = '10px';
+    [['', 'Todos os lançamentos'], ['__sem', 'Sem retiro vinculado'], ...areas.map(a => [a.id, (TIPO_AREA[a.tipo] || 'Área') + ': ' + a.nome])].forEach(([v, lab]) => { const o = document.createElement('option'); o.value = v; o.textContent = lab; f.appendChild(o); });
+    f.value = filtroArea; f.onchange = () => { filtroArea = f.value; render(); };
+    main.appendChild(f);
+  }
+  const visiveis = lancamentos.filter(l => !filtroArea || (filtroArea === '__sem' ? !l.retiro_area_id : l.retiro_area_id === filtroArea));
+  if (!visiveis.length) { const em = document.createElement('span'); em.className = 'empty'; em.textContent = lancamentos.length ? 'Nenhum lançamento neste filtro.' : 'Nenhum lançamento ainda.'; main.appendChild(em); return; }
+  visiveis.forEach(l => {
     const d = l.data ? new Date(l.data + 'T00:00:00') : null;
     const row = document.createElement('div'); row.className = 'lanc-row';
     const ico = document.createElement('div'); ico.className = 'lanc-ico ' + l.tipo; ico.textContent = l.tipo === 'entrada' ? '↑' : '↓';
     const info = document.createElement('div'); info.className = 'lanc-info';
     const desc = document.createElement('div'); desc.className = 'lanc-desc'; desc.textContent = l.descricao || CAT_LABEL[l.categoria] || l.categoria;
     const meta = document.createElement('div'); meta.className = 'lanc-meta';
-    meta.textContent = (CAT_LABEL[l.categoria] || l.categoria) + (d ? ' · ' + d.getDate() + ' ' + MES[d.getMonth()] : '');
+    const ar = areaDe(l.retiro_area_id);
+    meta.textContent = (CAT_LABEL[l.categoria] || l.categoria) + (d ? ' · ' + d.getDate() + ' ' + MES[d.getMonth()] : '')
+      + (ar ? ' · ' + (TIPO_AREA[ar.tipo] || 'Área') + ': ' + ar.nome : (l.retiro_area_id ? ' · vinculado a um retiro' : ''));
     info.append(desc, meta);
     const val = document.createElement('div'); val.className = 'lanc-val ' + l.tipo; val.textContent = (l.tipo === 'entrada' ? '+ ' : '− ') + brl(l.valor);
     const del = document.createElement('button'); del.className = 'lanc-del'; del.textContent = '🗑'; del.title = 'Excluir';
-    del.onclick = async (e) => { e.stopPropagation(); if (!await uiConfirm('Excluir este lançamento?')) return; await sb.from('acolitos_financeiro').delete().eq('id', l.id); load(); };
+    del.onclick = async (e) => { e.stopPropagation(); if (!await uiConfirm(l.retiro_compra_id
+      ? 'Este lançamento é de uma COMPRA da lista de um retiro. Excluir aqui deixa a compra sem lançamento (o retiro vai avisar). O certo é "Desfazer compra" na aba Retiros.\n\nExcluir mesmo assim?'
+      : 'Excluir este lançamento?')) return; await sb.from('acolitos_financeiro').delete().eq('id', l.id); load(); };
     row.style.cursor = 'pointer'; row.title = 'Editar lançamento';
     row.onclick = () => abrirLancamento(l);
     row.append(ico, info, val, del); main.appendChild(row);
@@ -212,6 +231,27 @@ function abrirLancamento(editar) {
   const inpDesc = document.createElement('input'); inpDesc.className = 'form-input'; inpDesc.placeholder = 'Ex: compra de turíbulo';
   g3.append(l3, inpDesc); modal.appendChild(g3);
 
+  // Vínculo com um retiro, formação ou espiritualidade (opcional). Aparece só se há alguma para
+  // vincular, ou se este lançamento já está vinculado (para não esconder um vínculo existente).
+  const selArea = document.createElement('select'); selArea.className = 'form-select';
+  const gA = document.createElement('div'); gA.className = 'form-group';
+  const noVinculo = !!(editar && editar.retiro_area_id);
+  if (areas.length || noVinculo) {
+    const lA = document.createElement('label'); lA.className = 'form-label'; lA.textContent = 'Vincular a um retiro, formação ou espiritualidade';
+    const o0 = document.createElement('option'); o0.value = ''; o0.textContent = '— nenhum —'; selArea.appendChild(o0);
+    areas.filter(a => a.status !== 'arquivada' || (editar && editar.retiro_area_id === a.id)).forEach(a => {
+      const o = document.createElement('option'); o.value = a.id; o.textContent = (TIPO_AREA[a.tipo] || 'Área') + ': ' + a.nome; selArea.appendChild(o);
+    });
+    selArea.value = (editar && editar.retiro_area_id) || '';
+    gA.append(lA, selArea);
+    if (editar && editar.retiro_compra_id) {      // lançamento de compra da lista: o vínculo é do retiro
+      selArea.disabled = true;
+      const dica = document.createElement('div'); dica.style.cssText = 'font-size:11.5px;color:var(--text-muted);margin-top:4px;';
+      dica.textContent = 'Este lançamento veio de uma compra da lista do retiro: o vínculo não muda aqui.'; gA.appendChild(dica);
+    }
+    modal.appendChild(gA);
+  }
+
   const g4 = document.createElement('div'); g4.className = 'form-group';
   const l4 = document.createElement('label'); l4.className = 'form-label'; l4.textContent = 'Data';
   const inpData = document.createElement('input'); inpData.className = 'form-input'; inpData.type = 'date'; inpData.value = hojeLocal();
@@ -234,6 +274,7 @@ function abrirLancamento(editar) {
     if (!(valor > 0)) { msg.className = 'msg error'; msg.textContent = 'Informe um valor válido.'; return; }
     conf.disabled = true; conf.textContent = 'Salvando...';
     const payload = { tipo, categoria: catSel.value, valor, descricao: inpDesc.value.trim() || null, data: inpData.value || hojeLocal() };
+    if (areas.length || noVinculo) payload.retiro_area_id = selArea.value || null;
     const { error } = editar
       ? await sb.from('acolitos_financeiro').update(payload).eq('id', editar.id)
       : await sb.from('acolitos_financeiro').insert({ ...payload, created_by: ctx.user.id });

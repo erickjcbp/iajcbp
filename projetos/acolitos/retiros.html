@@ -79,14 +79,14 @@ const STATUS_AREA = [['planejando','Planejando'],['em_andamento','Em andamento']
 const STATUS_ITEM = { a_fazer:'A fazer', andamento:'Em andamento', feito:'Feito' };
 const PROX_ITEM = { a_fazer:'andamento', andamento:'feito', feito:'a_fazer' };
 const STATUS_COMPRA = { pendente:'Pendente', cotando:'Cotando', aprovada:'Aprovada', comprada:'Comprada' };
-const ABAS = [...RetirosCore.SECOES, ['compras','Compras'], ['caixa','Caixa']];
+const ABAS = [...RetirosCore.SECOES, ['equipes','Equipes'], ['compras','Compras'], ['caixa','Caixa']];
 const MES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 const brl = v => Number(v || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
 const rotulo = (lista, k) => (lista.find(x => x[0] === k) || [k, k])[1];
 
 let ctx = null;
 let areas = [], resumos = {}, membros = [], fornecedores = [];
-let area = null, itens = [], compras = [], lancs = [];
+let area = null, itens = [], compras = [], lancs = [], equipes = [], pessoas = [];
 let aba = 'cronograma', mostrarArquivadas = false;
 
 // ── helpers de DOM ───────────────────────────────────────────────────────
@@ -182,6 +182,8 @@ function opcoesMembros(vazio) {
   const eq = membros.filter(m => m.eh_equipe), resto = membros.filter(m => !m.eh_equipe);
   return [['', vazio || '— ninguém —'], ...eq.map(m => [m.id, m.nome + ' (equipe)']), ...resto.map(m => [m.id, m.nome])];
 }
+function nomeEquipe(id) { const e = equipes.find(x => x.id === id); return e ? e.nome : null; }
+function opcoesEquipes() { return [['', '— nenhuma —'], ...equipes.map(e => [e.id, e.nome])]; }
 function opcoesFornecedores() { return [['', '— nenhum —'], ...fornecedores.map(f => [f.id, f.nome])]; }
 
 // ── carga ────────────────────────────────────────────────────────────────
@@ -226,19 +228,24 @@ async function carregarLista() {
 
 async function abrirArea(id) {
   const main = document.getElementById('main-content');
-  const [a, i, c, l] = await Promise.all([
+  const [a, i, c, l, eq, pe] = await Promise.all([
     sb.from('acolitos_retiro_areas').select('*').eq('id', id).maybeSingle(),
     sb.from('acolitos_retiro_itens').select('*').eq('area_id', id),
     sb.from('acolitos_retiro_compras').select('*, cotacoes:acolitos_retiro_cotacoes(*)').eq('area_id', id).order('criada_em'),
     sb.from('acolitos_financeiro').select('*').eq('retiro_area_id', id).order('data', { ascending: false }).order('created_at', { ascending: false }),
+    sb.from('acolitos_retiro_equipes').select('*').eq('area_id', id).order('nome'),
+    sb.from('acolitos_retiro_pessoas').select('*').order('nome'),
   ]);
-  if (a.error || i.error || c.error || l.error || !a.data) {
+  if (a.error || i.error || c.error || l.error || eq.error || pe.error || !a.data) {
     main.textContent = '';
     main.appendChild(h('div', 'rt-erro', a.data === null && !a.error ? 'Esta área não existe mais.' : 'Não foi possível carregar esta área.'));
     main.appendChild(botao('← Voltar aos retiros', 'gray', voltar));
     return;
   }
   area = a.data; itens = i.data || []; compras = c.data || []; lancs = l.data || [];
+  equipes = eq.data || [];
+  const idsEq = new Set(equipes.map(x => x.id));
+  pessoas = (pe.data || []).filter(x => idsEq.has(x.equipe_id));
   const u = new URL(location.href); u.searchParams.set('area', id); history.replaceState(null, '', u);
   renderArea();
 }
@@ -328,13 +335,14 @@ function renderArea() {
 
   const tabs = h('div', 'rt-tabs');
   ABAS.forEach(([k, l]) => {
-    const n = k === 'compras' ? compras.length : k === 'caixa' ? lancs.length : itens.filter(i => i.secao === k).length;
+    const n = k === 'compras' ? compras.length : k === 'caixa' ? lancs.length : k === 'equipes' ? equipes.length : itens.filter(i => i.secao === k).length;
     tabs.appendChild(botao(l + (n ? ' · ' + n : ''), '', () => { aba = k; renderArea(); }));
     tabs.lastChild.className = aba === k ? 'on' : '';
   });
   main.appendChild(tabs);
   const corpo = h('div'); main.appendChild(corpo);
-  if (aba === 'compras') renderCompras(corpo, r);
+  if (aba === 'equipes') renderEquipes(corpo);
+  else if (aba === 'compras') renderCompras(corpo, r);
   else if (aba === 'caixa') renderCaixa(corpo, r);
   else renderPlano(corpo, aba);
   const ativa = tabs.querySelector('.on'); if (ativa && ativa.scrollIntoView) ativa.scrollIntoView({ inline:'center', block:'nearest' });
@@ -364,6 +372,7 @@ function renderPlano(el, secao) {
     if (quando) corpo.appendChild(h('div', 'rt-meta', quando));
     const resp = nomeMembro(i.responsavel_id);
     const linhaR = [resp ? (secao === 'pregacao' ? 'Pregador: ' : 'Responsável: ') + resp : 'Sem responsável'];
+    if (i.equipe_id && nomeEquipe(i.equipe_id)) linhaR.push('Equipe ' + nomeEquipe(i.equipe_id));
     if (i.prazo) linhaR.push('prazo ' + dia(i.prazo));
     corpo.appendChild(h('div', 'rt-meta' + (atraso ? ' atraso' : ''), linhaR.join(' · ') + (atraso ? ' — VENCIDO' : '')));
     if (i.descricao) corpo.appendChild(h('div', 'rt-obs', i.descricao));
@@ -396,6 +405,7 @@ function editarItem(secao, i) {
       { k:'hora', label:'Hora', tipo:'time', metade:true },
       ...(secao === 'cronograma' || secao === 'dinamica' || secao === 'gincana' || secao === 'pregacao' ? [{ k:'duracao_min', label:'Duração (minutos)', tipo:'number', step:'5' }] : []),
       { k:'responsavel_id', label: secao === 'pregacao' ? 'Pregador' : 'Responsável', tipo:'select', opcoes:opcoesMembros() },
+      ...(equipes.length ? [{ k:'equipe_id', label:'Equipe', tipo:'select', opcoes:opcoesEquipes() }] : []),
       { k:'prazo', label:'Data máxima para ficar pronto', tipo:'date', dica:'Depois dessa data, sem estar feito, aparece como vencido.' },
       { k:'status', label:'Andamento', tipo:'select', opcoes:Object.entries(STATUS_ITEM), padrao:'a_fazer' },
       { k:'descricao', label: secao === 'refeicao' ? 'Observações (alergias, quantidade de pessoas...)' : 'Detalhes', tipo:'textarea' },
@@ -405,6 +415,101 @@ function editarItem(secao, i) {
       const { error } = i
         ? await sb.from('acolitos_retiro_itens').update(v).eq('id', i.id)
         : await sb.from('acolitos_retiro_itens').insert({ ...v, area_id: area.id, secao, criada_por: ctx.user.id });
+      return error ? true : null;
+    },
+    depois: recarregarArea,
+  });
+}
+
+// ── equipes do retiro (com WhatsApp) ────────────────────────────────────
+function linkBotao(texto, href, cor) {
+  const a = h('a', 'btn-sm ' + cor, texto, { href, target: '_blank', rel: 'noopener noreferrer' });
+  a.style.textDecoration = 'none'; a.style.display = 'inline-flex'; a.style.alignItems = 'center';
+  return a;
+}
+function renderEquipes(el) {
+  const add = botao('+ Equipe', 'gold', () => editarEquipe(null)); add.style.cssText = 'width:100%;min-height:42px;margin-bottom:10px;';
+  el.appendChild(add);
+  el.appendChild(h('div', 'rt-meta', 'Cozinha, liturgia, decoração... Cada equipe tem as suas pessoas e o WhatsApp para chamar.'));
+  if (!equipes.length) { el.appendChild(h('div', 'rt-vazio', 'Nenhuma equipe ainda. Crie a primeira — por exemplo "Cozinha".')); return; }
+  equipes.forEach(e => {
+    const card = h('div', 'rt-card');
+    const lin = h('div', 'rt-linha'); const corpo = h('div', 'rt-corpo');
+    corpo.appendChild(h('div', 'rt-tit', e.nome));
+    const doTime = pessoas.filter(p => p.equipe_id === e.id);
+    const tarefas = itens.filter(x => x.equipe_id === e.id).length + compras.filter(x => x.equipe_id === e.id).length;
+    corpo.appendChild(h('div', 'rt-meta', doTime.length + (doTime.length === 1 ? ' pessoa' : ' pessoas') + ' · ' + tarefas + (tarefas === 1 ? ' tarefa' : ' tarefas')));
+    if (e.descricao) corpo.appendChild(h('div', 'rt-obs', e.descricao));
+    lin.appendChild(corpo); card.appendChild(lin);
+    const ac = h('div', 'rt-acoes');
+    if (RetirosCore.grupoWhatsappValido(e.grupo_whatsapp)) ac.appendChild(linkBotao('Grupo no WhatsApp', e.grupo_whatsapp.trim(), 'green'));
+    ac.appendChild(botao('+ Pessoa', 'gold', () => editarPessoa(e, null)));
+    ac.appendChild(botao('Editar equipe', 'gray', () => editarEquipe(e)));
+    ac.appendChild(botao('Excluir', 'gray', async () => {
+      if (!await uiConfirm('Excluir a equipe "' + e.nome + '"?\nAs pessoas dela saem da lista. As tarefas continuam, sem equipe.')) return;
+      const { error } = await sb.from('acolitos_retiro_equipes').delete().eq('id', e.id);
+      if (!falhou(error, 'excluir a equipe')) recarregarArea();
+    }));
+    card.appendChild(ac);
+    doTime.slice().sort((a, b) => (b.lider - a.lider) || a.nome.localeCompare(b.nome, 'pt-BR')).forEach(p => {
+      const box = h('div', 'rt-cot'); const l2 = h('div', 'rt-linha'); const c2 = h('div', 'rt-corpo');
+      c2.appendChild(h('div', 'rt-tit', p.nome + (p.lider ? ' — líder' : '')));
+      const det = [p.funcao, p.whatsapp ? RetirosCore.mostrarWhatsapp(p.whatsapp) : 'sem WhatsApp'].filter(Boolean).join(' · ');
+      c2.appendChild(h('div', 'rt-meta', det));
+      l2.appendChild(c2); box.appendChild(l2);
+      const a2 = h('div', 'rt-acoes');
+      const lk = RetirosCore.linkWhatsapp(p.whatsapp);
+      if (lk) a2.appendChild(linkBotao('WhatsApp', lk, 'green'));
+      a2.appendChild(botao('Editar', 'gold', () => editarPessoa(e, p)));
+      a2.appendChild(botao('Remover', 'gray', async () => {
+        if (!await uiConfirm('Remover ' + p.nome + ' da equipe ' + e.nome + '?')) return;
+        const { error } = await sb.from('acolitos_retiro_pessoas').delete().eq('id', p.id);
+        if (!falhou(error, 'remover')) recarregarArea();
+      }));
+      box.appendChild(a2); card.appendChild(box);
+    });
+    el.appendChild(card);
+  });
+}
+function editarEquipe(e) {
+  formModal({
+    titulo: e ? 'Editar equipe' : 'Nova equipe',
+    valores: e || {},
+    campos: [
+      { k:'nome', label:'Nome da equipe', req:true, placeholder:'Ex: Cozinha, Liturgia, Decoração' },
+      { k:'descricao', label:'O que a equipe faz', tipo:'textarea', placeholder:'Responsabilidades, horários, observações' },
+      { k:'grupo_whatsapp', label:'Link do grupo do WhatsApp', placeholder:'https://chat.whatsapp.com/...', dica:'No WhatsApp: abra o grupo › Dados do grupo › Convidar via link › Copiar link.' },
+    ],
+    salvar: async v => {
+      if (v.grupo_whatsapp && !RetirosCore.grupoWhatsappValido(v.grupo_whatsapp)) return 'O link do grupo precisa começar com https://chat.whatsapp.com/';
+      const { error } = e
+        ? await sb.from('acolitos_retiro_equipes').update(v).eq('id', e.id)
+        : await sb.from('acolitos_retiro_equipes').insert({ ...v, area_id: area.id, criada_por: ctx.user.id });
+      return error ? true : null;
+    },
+    depois: recarregarArea,
+  });
+}
+function editarPessoa(eq, p) {
+  const valores = p ? { ...p, whatsapp: p.whatsapp ? RetirosCore.mostrarWhatsapp(p.whatsapp) : '', lider: p.lider ? 'sim' : 'nao' } : { lider: 'nao' };
+  formModal({
+    titulo: (p ? 'Editar pessoa' : 'Nova pessoa') + ' — ' + eq.nome,
+    valores,
+    campos: [
+      { k:'membro_id', label:'É da pastoral? (opcional)', tipo:'select', opcoes:opcoesMembros('— não / outra pessoa —'), dica:'Se escolher alguém da pastoral, o nome vem sozinho. Gente de fora (pais, voluntários) é só digitar.' },
+      { k:'nome', label:'Nome', placeholder:'Nome da pessoa' },
+      { k:'whatsapp', label:'WhatsApp', tipo:'tel', placeholder:'(19) 99999-9999', dica:'Com DDD. O botão "WhatsApp" abre a conversa.' },
+      { k:'funcao', label:'Função', placeholder:'Ex: coordenadora, apoio, motorista' },
+      { k:'lider', label:'É líder da equipe?', tipo:'select', opcoes:[['nao', 'Não'], ['sim', 'Sim']] },
+    ],
+    salvar: async v => {
+      if (!v.nome && v.membro_id) v.nome = (membros.find(m => m.id === v.membro_id) || {}).nome || null;
+      if (!v.nome) return 'Escreva o nome ou escolha alguém da pastoral.';
+      if (v.whatsapp && !RetirosCore.whatsappValido(v.whatsapp)) return 'WhatsApp inválido: escreva com DDD, por exemplo (19) 99999-9999.';
+      const row = { membro_id: v.membro_id, nome: v.nome, whatsapp: v.whatsapp ? RetirosCore.digitosWhatsapp(v.whatsapp) : null, funcao: v.funcao, lider: v.lider === 'sim' };
+      const { error } = p
+        ? await sb.from('acolitos_retiro_pessoas').update(row).eq('id', p.id)
+        : await sb.from('acolitos_retiro_pessoas').insert({ ...row, equipe_id: eq.id });
       return error ? true : null;
     },
     depois: recarregarArea,
@@ -441,6 +546,7 @@ function renderCompras(el, r) {
       if (forn) l2.push(forn);
       corpo.appendChild(h('div', 'rt-meta', l2.join(' · ')));
       const l3 = [resp ? 'Responsável: ' + resp : 'Sem responsável'];
+      if (c.equipe_id && nomeEquipe(c.equipe_id)) l3.push('Equipe ' + nomeEquipe(c.equipe_id));
       if (c.prazo) l3.push('prazo ' + dia(c.prazo));
       corpo.appendChild(h('div', 'rt-meta' + (atraso ? ' atraso' : ''), l3.join(' · ') + (atraso ? ' — VENCIDO' : '')));
       const cots = c.cotacoes || [];
@@ -488,6 +594,7 @@ function editarCompra(c) {
       { k:'unidade', label:'Unidade', placeholder:'kg, un, pacote', metade:true },
       { k:'valor_estimado', label:'Valor estimado total (R$)', tipo:'number', dica:'Se for cotar, deixe vazio: ao escolher uma cotação o valor entra sozinho.' },
       { k:'responsavel_id', label:'Quem compra', tipo:'select', opcoes:opcoesMembros() },
+      ...(equipes.length ? [{ k:'equipe_id', label:'Equipe', tipo:'select', opcoes:opcoesEquipes() }] : []),
       { k:'prazo', label:'Data máxima para comprar', tipo:'date' },
       { k:'observacao', label:'Observações', tipo:'textarea', placeholder:'Marca, onde achar, cuidados' },
     ],
@@ -686,7 +793,7 @@ function renderCaixa(el, r) {
   lancs.forEach(l => {
     const card = h('div', 'rt-card'); const lin = h('div', 'rt-linha'); const corpo = h('div', 'rt-corpo');
     corpo.appendChild(h('div', 'rt-tit', l.descricao || (l.tipo === 'entrada' ? 'Entrada' : 'Saída')));
-    corpo.appendChild(h('div', 'rt-meta', dia(l.data) + ' · ' + (l.retiro_compra_id ? 'compra da lista' : l.categoria === 'rifa' ? 'venda' : l.categoria === 'dizimo' ? 'doação' : l.tipo === 'entrada' ? 'entrada' : 'gasto avulso')));
+    corpo.appendChild(h('div', 'rt-meta', dia(l.data) + ' · ' + (l.retiro_compra_id ? 'compra da lista' : (l.categoria === 'venda_item' || l.categoria === 'rifa') ? 'venda' : (l.categoria === 'doacao' || l.categoria === 'dizimo') ? 'doação' : l.tipo === 'entrada' ? 'entrada' : 'gasto avulso')));
     lin.appendChild(corpo);
     lin.appendChild(h('div', 'rt-valor ' + (l.tipo === 'entrada' ? 'ent' : 'sai'), (l.tipo === 'entrada' ? '+ ' : '− ') + brl(l.valor)));
     card.appendChild(lin);
@@ -723,10 +830,10 @@ function lancarEntrada(modo) {
       let pay;
       if (venda) {
         if (!(v.qtd > 0) || !(v.preco >= 0)) return 'Informe quantidade e preço.';
-        pay = { tipo:'entrada', categoria:'rifa', valor: Math.round(v.qtd * v.preco * 100) / 100, descricao: (area.nome + ' · Venda: ' + v.qtd + ' × ' + v.item).slice(0, 200), data: v.data };
+        pay = { tipo:'entrada', categoria:'venda_item', valor: Math.round(v.qtd * v.preco * 100) / 100, descricao: (area.nome + ' · Venda: ' + v.qtd + ' × ' + v.item).slice(0, 200), data: v.data };
       } else {
         if (!(v.valor > 0)) return 'Informe um valor maior que zero.';
-        pay = { tipo:'entrada', categoria: modo === 'doacao' ? 'dizimo' : 'outro', valor: v.valor, descricao: (area.nome + ' · ' + (modo === 'doacao' ? 'Doação' + (v.descricao ? ': ' + v.descricao : '') : v.descricao)).slice(0, 200), data: v.data };
+        pay = { tipo:'entrada', categoria: modo === 'doacao' ? 'doacao' : 'outro', valor: v.valor, descricao: (area.nome + ' · ' + (modo === 'doacao' ? 'Doação' + (v.descricao ? ': ' + v.descricao : '') : v.descricao)).slice(0, 200), data: v.data };
       }
       const { error } = await gravarLancamento(pay); return error ? true : null;
     },

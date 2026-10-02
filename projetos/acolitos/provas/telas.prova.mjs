@@ -3287,12 +3287,118 @@ async function provaRetiros(provas) {
   exigir(/Não foi possível carregar/.test(e.texto) && !/Nenhuma área ainda/.test(e.texto), 'consulta recusada diz "não consegui", não "não há nada"', e.texto.slice(0, 300));
 }
 
+
+async function provaTesourariaVinculaARetiro(provas) {
+  console.log('\n\x1b[1mA Tesouraria vincula o lançamento a um retiro e usa os mesmos tipos de entrada\x1b[0m');
+  const areas = [{ id: 'a1', nome: 'Retiro de Advento 2026', tipo: 'retiro', status: 'planejando' },
+                 { id: 'a2', nome: 'Formação de coroinhas', tipo: 'formacao', status: 'planejando' }];
+  const fin = [
+    { id: 'l1', tipo: 'entrada', categoria: 'doacao', valor: 100, descricao: 'Doação: Família X', data: '2026-10-01', retiro_area_id: 'a1' },
+    { id: 'l2', tipo: 'entrada', categoria: 'mensalidade', valor: 50, descricao: 'Mensalidade', data: '2026-10-01' },
+  ];
+  const lerLista = `const sp = document.getElementById('splash'); if (sp) sp.remove(); return document.getElementById('main-content').innerText;`;
+
+  // 1) a lista mostra o vínculo e filtra
+  const a = await provas.abrir('tesouraria.html', { papel: PAPEIS.equipe, tabelas: { acolitos_financeiro: { data: fin }, acolitos_retiro_areas: { data: areas }, acolitos_listas: { data: [] } },
+    avaliar: lerLista });
+  exigir(/Retiro: Retiro de Advento 2026/.test(a.avaliado || ''), 'o lançamento vinculado mostra o retiro na linha', (a.avaliado || '').slice(0, 400));
+  exigir(/Sem retiro vinculado/.test(a.avaliado || '') && /Formação: Formação de coroinhas/.test(a.avaliado || ''), 'existe o filtro por retiro/formação', (a.avaliado || '').slice(0, 500));
+
+  // 2) o formulário tem o campo, com os tipos novos, e grava o vínculo
+  const b = await provas.abrir('tesouraria.html', { papel: PAPEIS.equipe, tabelas: { acolitos_financeiro: { data: fin }, acolitos_retiro_areas: { data: areas }, acolitos_listas: { data: [] } },
+    passos: [{ chamar: 'abrirLancamento' }],
+    avaliar: `const sp = document.getElementById('splash'); if (sp) sp.remove();
+      const m = document.querySelector('.modal');
+      const sels = [...m.querySelectorAll('select')];
+      const cat = sels[0], area = sels.find(x => [...x.options].some(o => /Retiro de Advento/.test(o.textContent)));
+      const cats = [...cat.options].map(o => o.textContent);
+      if (!area) return { cats, semCampo: true };
+      area.value = 'a1';
+      const valor = m.querySelector('input[type=number]'); valor.value = '45';
+      const salvar = [...m.querySelectorAll('button')].find(x => x.textContent.trim() === 'Salvar'); salvar.click();
+      await new Promise(r => setTimeout(r, 300));
+      return { cats, opcoesArea: [...area.options].map(o => o.textContent) };` });
+  const av = b.avaliado || {};
+  exigir(!b.erroAvaliar && !av.semCampo, 'o formulário tem o campo "vincular a um retiro/formação/espiritualidade"', JSON.stringify(av) + (b.erroAvaliar || ''));
+  exigir((av.cats || []).includes('Doação') && (av.cats || []).includes('Venda de item'), 'Doação e Venda de item são tipos de entrada na Tesouraria', JSON.stringify(av.cats));
+  exigir((av.opcoesArea || []).some(o => /Formação: Formação de coroinhas/.test(o)), 'as formações também aparecem para vincular', JSON.stringify(av.opcoesArea));
+  const ins = (b.gravacoes || []).find(x => x.tabela === 'acolitos_financeiro' && x.acao === 'insert');
+  exigir(ins && ins.dados && ins.dados.retiro_area_id === 'a1' && ins.dados.valor === 45, 'salvar grava o vínculo com o retiro', JSON.stringify(b.gravacoes));
+
+  // 3) sem retiros visíveis (permissão), o campo some em vez de aparecer vazio
+  const c = await provas.abrir('tesouraria.html', { papel: PAPEIS.equipe, tabelas: { acolitos_financeiro: { data: fin }, acolitos_retiro_areas: { data: [] }, acolitos_listas: { data: [] } },
+    passos: [{ chamar: 'abrirLancamento' }],
+    avaliar: `return /Vincular a um retiro/.test(document.querySelector('.modal').innerText);` });
+  exigir(c.avaliado === false, 'quem não enxerga retiros não vê um campo de vínculo vazio', String(c.avaliado));
+}
+
+
+async function provaEquipesDoRetiro(provas) {
+  console.log('\n\x1b[1mRetiros: equipes com WhatsApp (editar, adicionar pessoa, validar)\x1b[0m');
+  const tabelas = {
+    acolitos_membros: { data: [{ id: 'm1', nome: 'Daiane Silva', eh_equipe: true, status: 'ativo' }] },
+    acolitos_retiro_fornecedores: { data: [] },
+    acolitos_retiro_areas: { data: [{ id: 'a1', nome: 'Retiro de Advento 2026', tipo: 'retiro', status: 'planejando', data_inicio: null, data_fim: null }] },
+    acolitos_retiro_itens: { data: [{ id: 'i1', area_id: 'a1', secao: 'cronograma', titulo: 'Acolhida', status: 'a_fazer', equipe_id: 'e1' }] },
+    acolitos_retiro_compras: { data: [] },
+    acolitos_financeiro: { data: [] },
+    acolitos_retiro_equipes: { data: [
+      { id: 'e1', area_id: 'a1', nome: 'Cozinha', descricao: 'Preparo das refeições', grupo_whatsapp: 'https://chat.whatsapp.com/AbCdEf123456XYZ' },
+      { id: 'e2', area_id: 'a1', nome: 'Liturgia', descricao: null, grupo_whatsapp: 'javascript:alert(1)' },
+    ] },
+    acolitos_retiro_pessoas: { data: [
+      { id: 'p1', equipe_id: 'e1', nome: 'Rita Souza', whatsapp: '5519999071702', funcao: 'coordenadora', lider: true },
+      { id: 'p2', equipe_id: 'e1', nome: 'Paulo Lima', whatsapp: null, funcao: null, lider: false },
+    ] },
+  };
+  const abrirE = (passos, avaliar) => provas.abrir('retiros.html', { papel: PAPEIS.equipe, tabelas, passos: [{ chamar: 'abrirArea', args: ['a1'] }, { clicar: 'Equipes' }, ...passos],
+    avaliar: "const sp = document.getElementById('splash'); if (sp) sp.remove();" + avaliar });
+
+  // 1) a aba lista as equipes, o link do grupo e o WhatsApp de cada pessoa
+  const a = await abrirE([], `const links = [...document.querySelectorAll('#main-content a')].map(x => x.getAttribute('href'));
+    return { texto: document.getElementById('main-content').innerText, links };`);
+  const av = a.avaliado || { texto: '', links: [] };
+  exigir(a.passosFalhos.length === 0 && /Cozinha/.test(av.texto) && /Liturgia/.test(av.texto), 'a aba Equipes lista as equipes', a.passosFalhos.join('|') + av.texto.slice(0, 300));
+  exigir(/2 pessoas · 1 tarefa/.test(av.texto), 'mostra quantas pessoas e tarefas tem cada equipe', av.texto.slice(0, 400));
+  exigir(/\(19\) 99907-1702/.test(av.texto) && /sem WhatsApp/.test(av.texto), 'o número aparece formatado, e quem não tem diz "sem WhatsApp"', av.texto.slice(0, 500));
+  exigir(av.links.includes('https://wa.me/5519999071702'), 'o botão WhatsApp da pessoa abre a conversa (wa.me)', JSON.stringify(av.links));
+  exigir(av.links.includes('https://chat.whatsapp.com/AbCdEf123456XYZ'), 'o grupo da equipe vira botão', JSON.stringify(av.links));
+  exigir(!av.links.some(l => /^javascript:/i.test(l || '')), 'link de grupo que não é do WhatsApp NÃO vira botão (nada de javascript:)', JSON.stringify(av.links));
+
+  // 2) nova pessoa: valida o WhatsApp e grava só dígitos
+  const b = await abrirE([{ chamar: 'editarPessoa', args: [tabelas.acolitos_retiro_equipes.data[0], null] }],
+    `const m = document.querySelector('.modal');
+     const nome = [...m.querySelectorAll('input')].find(x => x.placeholder === 'Nome da pessoa');
+     const tel = m.querySelector('input[type=tel]');
+     const salvar = () => [...m.querySelectorAll('button')].find(x => x.textContent.trim() === 'Salvar').click();
+     nome.value = 'Ana Teste'; tel.value = '123'; salvar();
+     await new Promise(r => setTimeout(r, 200));
+     const erro = (m.querySelector('.msg') || {}).textContent || '';
+     tel.value = '(19) 98888-7777'; salvar();
+     await new Promise(r => setTimeout(r, 300));
+     return { erro };`);
+  exigir(/WhatsApp inválido/.test((b.avaliado || {}).erro || ''), 'número inválido é recusado com mensagem clara', JSON.stringify(b.avaliado) + (b.erroAvaliar || ''));
+  const ins = (b.gravacoes || []).find(x => x.tabela === 'acolitos_retiro_pessoas' && x.acao === 'insert');
+  exigir(ins && ins.dados.whatsapp === '5519988887777' && ins.dados.equipe_id === 'e1' && ins.dados.nome === 'Ana Teste', 'grava o número só com dígitos (com 55) na equipe certa', JSON.stringify(b.gravacoes));
+
+  // 3) equipe: link de grupo errado é recusado
+  const c = await abrirE([{ chamar: 'editarEquipe', args: [null] }],
+    `const m = document.querySelector('.modal');
+     const ins = [...m.querySelectorAll('input')];
+     ins[0].value = 'Decoração'; ins[1].value = 'https://exemplo.com/grupo';
+     [...m.querySelectorAll('button')].find(x => x.textContent.trim() === 'Salvar').click();
+     await new Promise(r => setTimeout(r, 200));
+     return (m.querySelector('.msg') || {}).textContent || '';`);
+  exigir(/chat\.whatsapp\.com/.test(c.avaliado || ''), 'link de grupo que não é do WhatsApp é recusado', String(c.avaliado));
+  exigir(!(c.gravacoes || []).some(x => x.tabela === 'acolitos_retiro_equipes' && x.acao === 'insert'), 'e nada é gravado quando recusa', JSON.stringify(c.gravacoes));
+}
+
 // ── Partida ──────────────────────────────────────────────────────────────────
 const filtro = process.argv[2] || null;
 const provas = await iniciarProvas();
 const comecou = Date.now();
 try {
-  if (filtro === '--retiros') await provaRetiros(provas);   // só a prova da aba Retiros
+  if (filtro === '--retiros') { await provaRetiros(provas); await provaTesourariaVinculaARetiro(provas); await provaEquipesDoRetiro(provas); }   // só a prova da aba Retiros
   else await provaFumaca(provas, filtro);
   if (!filtro) {
     await provaBarraAcendeSecao(provas);
@@ -3340,6 +3446,8 @@ try {
     await provaMarcaFrequenteNaFicha(provas);
     await provaArteEmDuasPartes(provas);
     await provaRetiros(provas);
+    await provaTesourariaVinculaARetiro(provas);
+    await provaEquipesDoRetiro(provas);
   }
 } finally {
   await provas.encerrar();

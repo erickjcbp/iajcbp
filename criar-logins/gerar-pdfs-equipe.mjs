@@ -82,7 +82,7 @@ T.push(pag('Antes de tudo', 'O que você vai poder fazer', 'Três coisas, num ap
 (como um aplicativo comum) e também no computador. Com o seu acesso você pode:</p>
 <div class="trilha">
 <div class="etapa"><div class="bolha">1</div><div><b>Cuidar do caixa — Tesouraria</b><span>Registrar o que entra (doações, mensalidades, vendas) e o que sai (compras, despesas), e ver o saldo da pastoral.</span></div></div>
-<div class="etapa"><div class="bolha">2</div><div><b>Planejar retiros, espiritualidade e formações — Retiros</b><span>Criar uma <b>área</b> para cada evento e organizar dentro dela o cronograma, as pregações, as dinâmicas, as gincanas e as refeições, cada item com responsável e data máxima.</span></div></div>
+<div class="etapa"><div class="bolha">2</div><div><b>Planejar retiros, espiritualidade e formações — Retiros</b><span>Criar uma <b>área</b> para cada evento e organizar dentro dela o cronograma, as pregações, as dinâmicas, as gincanas e as refeições, cada item com responsável e data máxima. Monte também as <b>equipes</b> (cozinha, liturgia...) com as pessoas e o WhatsApp de cada uma.</span></div></div>
 <div class="etapa"><div class="bolha">3</div><div><b>Controlar as compras e cotações</b><span>Montar a lista de compras (ingredientes, decoração, lembranças, papelaria, higiene, limpeza), comparar fornecedores e lançar a compra no caixa com um toque.</span></div></div>
 </div>
 ${caixa('A ideia é centralizar.', 'Tudo de um retiro fica num lugar só — o plano, quem faz o quê, quanto vai custar, quanto já foi gasto e quanto entrou. Assim a decisão é tomada olhando o quadro inteiro, e não várias conversas soltas.')}
@@ -91,9 +91,10 @@ ${caixa('A ideia é centralizar.', 'Tudo de um retiro fica num lugar só — o p
 <tr><td>3–5</td><td>Abrir o aplicativo, entrar, criar a sua senha e pôr o ícone na tela do celular</td></tr>
 <tr><td>6–7</td><td>Tesouraria: ver o saldo e registrar entradas e saídas</td></tr>
 <tr><td>8–11</td><td>Retiros: criar a área, montar o plano e dar responsável e prazo a cada item</td></tr>
-<tr><td>12–14</td><td>Compras: lista, cotações de fornecedores e lançamento no caixa</td></tr>
-<tr><td>15–16</td><td>Caixa do retiro: doações, vendas de itens da pastoral e conferência</td></tr>
-<tr><td>17</td><td>Quando algo dá errado</td></tr></table>`));
+<tr><td>12</td><td>Equipes do retiro, com as pessoas e o WhatsApp de cada uma</td></tr>
+<tr><td>13–15</td><td>Compras: lista, cotações de fornecedores e lançamento no caixa</td></tr>
+<tr><td>16–17</td><td>Caixa do retiro: doações, vendas de itens da pastoral e conferência</td></tr>
+<tr><td>18</td><td>Quando algo dá errado</td></tr></table>`));
 
 T.push(pag('Passo 1 de 3', 'Abrir o aplicativo e entrar', 'Com o usuário e a senha provisória da sua folha', duas(`
 <p>Você recebeu uma folha com o seu <b>usuário</b> e uma <b>senha provisória</b>.</p>
@@ -141,6 +142,10 @@ T.push(pag('Tesouraria · 2 de 2', 'Registrar uma entrada ou uma saída', 'Toque
 <li>Digite o <b>valor</b> em reais (ex.: 57,50).</li>
 <li>Escreva a <b>descrição</b> — o que foi, de quem veio ou para quem foi. Uma boa descrição poupa muita dúvida depois.</li>
 <li>Confira a <b>data</b> (já vem a de hoje) e toque em <b>Salvar</b>.</li></ol>
+<h3>Doação, venda de item e outros tipos</h3>
+<p>Nas <b>entradas</b> existem os tipos <b>Doação</b> e <b>Venda de item</b> (pingentes, terços...), os mesmos que a aba Retiros usa. Assim o caixa da pastoral e o caixa de cada retiro falam a mesma língua.</p>
+<h3>Vincular a um retiro</h3>
+<p>Se o lançamento é de um retiro, de uma formação ou de um momento de espiritualidade, escolha no campo <b>"Vincular a um retiro, formação ou espiritualidade"</b>. Ele passa a aparecer também na aba <b>Caixa</b> daquela área. Lá em cima da lista há um filtro para ver só os lançamentos de uma área (ou só os sem vínculo).</p>
 <h3>Categoria nova</h3>
 <p>Não achou a categoria? Toque em <b>+ nova</b> ao lado de "Categoria", escreva o nome e ela passa a existir para todos.</p>
 ${caixa('Dica de ouro:', 'lance no mesmo dia. Esperar juntar recibo para lançar tudo no fim do mês é como o saldo deixa de bater.')}`, '05-tesouraria-lancamento', 'A janela de novo lançamento')));
@@ -179,6 +184,16 @@ T.push(pag('Retiros · 4 de 4', 'Refeições: a mesa do retiro', 'Café, almoço
 ${caixa('As outras abas funcionam igual.', 'Pregações, dinâmicas e gincanas usam a mesma janela — a diferença é só o nome dos campos. Em <b>Pregações</b>, o responsável é o <b>pregador</b>.')}
 ${caixa('Quem vê tudo isto?', 'Todas as pessoas da equipe com acesso a Retiros. Por isso, se alguém mudar um item, os outros enxergam na hora.')}`, '10-refeicoes', 'A aba Refeições')));
 
+T.push(pag('Retiros · equipes', 'As equipes do retiro e o WhatsApp', 'Cozinha, liturgia, decoração... cada uma com as suas pessoas', duas(`
+<p>Na aba <b>Equipes</b> você organiza quem faz parte de cada frente do retiro. O card de cada equipe mostra quantas <b>pessoas</b> e quantas <b>tarefas</b> ela tem.</p>
+<h3>Criar e editar uma equipe</h3>
+<ol class="passos"><li>Toque em <b>+ Equipe</b> e escreva o nome (Cozinha, Liturgia...).</li><li>Conte o que a equipe faz.</li><li>Cole o <b>link do grupo do WhatsApp</b> (no WhatsApp: abra o grupo › Dados do grupo › Convidar via link › Copiar link). Só links de <b>chat.whatsapp.com</b> são aceitos.</li></ol>
+<p>Com o link salvo aparece o botão <b>Grupo no WhatsApp</b>, que abre o grupo direto. Para mudar qualquer coisa: <b>Editar equipe</b>.</p>
+<h3>Adicionar pessoas</h3>
+<p>Toque em <b>+ Pessoa</b>. Se for alguém da pastoral, escolha na lista e o nome vem sozinho; se for de fora (pais, voluntários), basta digitar. Informe o <b>WhatsApp com DDD</b> e a função. Marque <b>líder</b> para a pessoa aparecer primeiro.</p>
+<p>O botão <b>WhatsApp</b> de cada pessoa abre a conversa com ela. O aplicativo avisa se o número estiver errado.</p>
+${caixa('Equipe nas tarefas.', 'Ao criar um item do plano ou uma compra, escolha também a <b>Equipe</b>: o card mostra "Equipe Cozinha" e o contador da equipe sobe.')}`, '10b-equipes', 'A aba Equipes, com grupo<br>e WhatsApp de cada pessoa')));
+
 T.push(pag('Compras · 1 de 3', 'A lista de compras', 'Ingredientes, decoração, lembranças, papelaria, higiene e limpeza', duas(`
 <p>Na aba <b>Compras</b> ficam todos os itens a comprar, <b>agrupados por categoria</b>. Cada categoria mostra o total. No topo, o <b>orçamento</b> geral, quanto já foi <b>pago</b> e quantos itens ainda estão <b>sem valor</b>.</p>
 <h3>Adicionar um item</h3>
@@ -214,7 +229,7 @@ T.push(pag('Caixa do retiro · 1 de 2', 'Doações, vendas e gastos avulsos', 'T
 <li><b>+ Venda de item</b> — itens da pastoral vendidos (pingentes, terços...). Informe o item, a <b>quantidade</b> e o <b>preço de cada um</b>: o aplicativo multiplica.</li>
 <li><b>+ Outra entrada</b> — qualquer outro dinheiro que chegou para o retiro.</li>
 <li><b>+ Gasto avulso</b> — despesa que não estava na lista de compras (transporte, taxa do local).</li></ul>
-<p>Cada um deles vira um lançamento na <b>Tesouraria</b>, ligado a este retiro.</p>`, '17-venda', 'A janela de venda de item<br>da pastoral')));
+<p>Cada um deles vira um lançamento na <b>Tesouraria</b>, ligado a este retiro. E o caminho inverso também funciona: um lançamento feito direto na Tesouraria e vinculado a esta área aparece aqui.</p>`, '17-venda', 'A janela de venda de item<br>da pastoral')));
 
 T.push(pag('Caixa do retiro · 2 de 2', 'Conferir se o caixa bate', 'O aplicativo avisa quando algo está fora do lugar', duas(`
 <p>Embaixo dos números ficam os <b>lançamentos deste retiro</b>. As compras da lista aparecem como "compra da lista"; para tirá-las, use <b>Desfazer compra</b> na aba Compras. Os outros lançamentos têm o botão <b>Excluir</b>.</p>

@@ -63,9 +63,19 @@ const FINANC_TESOURARIA = [
   { id: 'l4', tipo: 'entrada', categoria: 'mensalidade', valor: 420, descricao: 'Mensalidades do mês', data: d(0) },
   { id: 'l5', tipo: 'saida', categoria: 'tunicas', valor: 180, descricao: 'Conserto de túnicas', data: d(0) },
 ];
+const EQUIPES = [
+  { id: 'e1', area_id: 'a1', nome: 'Cozinha', descricao: 'Preparo e servir das refeições', grupo_whatsapp: 'https://chat.whatsapp.com/ExemploGrupoCozinha1' },
+  { id: 'e2', area_id: 'a1', nome: 'Liturgia', descricao: 'Missa, adoração e orações', grupo_whatsapp: null },
+];
+const PESSOAS = [
+  { id: 'p1', equipe_id: 'e1', nome: 'Rita Exemplo', whatsapp: '5519999990001', funcao: 'coordenadora', lider: true },
+  { id: 'p2', equipe_id: 'e1', nome: 'Paulo Exemplo', whatsapp: '5519999990002', funcao: 'apoio', lider: false },
+  { id: 'p3', equipe_id: 'e2', nome: 'Carla Modelo', whatsapp: null, funcao: null, lider: false },
+];
 const LISTAS = [];   // categorias padrão do código
 const T = { acolitos_membros: MEMBROS, acolitos_retiro_fornecedores: FORNEC, acolitos_retiro_areas: AREAS,
-  acolitos_retiro_itens: ITENS, acolitos_retiro_compras: COMPRAS, acolitos_financeiro: FINANC_RETIRO, acolitos_listas: LISTAS };
+  acolitos_retiro_itens: ITENS, acolitos_retiro_compras: COMPRAS, acolitos_financeiro: FINANC_RETIRO, acolitos_listas: LISTAS,
+  acolitos_retiro_equipes: EQUIPES, acolitos_retiro_pessoas: PESSOAS };
 const base = { papel: PAPEL, membro: EU, tabelas: T };
 const abrir = (nome, passos, extra) => foto({ nome, arquivo: 'retiros.html', ...base, passos, ...(extra || {}) });
 const AREA = { chamar: 'abrirArea', args: ['a1'] };
@@ -81,6 +91,8 @@ f.push(await abrir('07-nova-area', [{ chamar: 'editarArea', args: [null] }]));
 f.push(await abrir('08-area-cronograma', [AREA]));
 f.push(await abrir('09-novo-item', [AREA, { chamar: 'editarItem', args: ['cronograma', null] }]));
 f.push(await abrir('10-refeicoes', [AREA, { clicar: 'Refeições' }]));
+f.push(await abrir('10b-equipes', [AREA, { clicar: 'Equipes' }]));
+f.push(await abrir('10c-pessoa', [AREA, { chamar: 'editarPessoa', args: [EQUIPES[0], null] }]));
 f.push(await abrir('11-compras', [AREA, { clicar: 'Compras' }]));
 f.push(await abrir('12-novo-item-compra', [AREA, { chamar: 'editarCompra', args: [null] }]));
 f.push(await abrir('13-cotacoes', [AREA, { chamar: 'abrirCotacoes', args: ['c1'] }]));

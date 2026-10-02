@@ -87,7 +87,10 @@
       var v = num(l.valor);
       if (l.tipo === 'entrada') {
         entradas += v;
-        if (l.categoria === 'rifa') vendas += v; else doacoes += v;
+        // 'venda_item'/'doacao' são as categorias da Tesouraria (087); 'rifa'/'dizimo' são as
+        // antigas e continuam valendo. O resto (mensalidade, evento...) é só entrada.
+        if (l.categoria === 'venda_item' || l.categoria === 'rifa') vendas += v;
+        else if (l.categoria === 'doacao' || l.categoria === 'dizimo') doacoes += v;
       } else saidas += v;
     });
     return {
@@ -125,7 +128,36 @@
     };
   }
 
+  // WhatsApp: só dígitos; 10-11 dígitos = número brasileiro sem país (entra o 55).
+  function soDigitos(v) { return String(v == null ? '' : v).replace(/\D/g, ''); }
+  function digitosWhatsapp(v) {
+    var d = soDigitos(v);
+    if (d.length === 10 || d.length === 11) return '55' + d;
+    return d;
+  }
+  // Número válido = 10 ou 11 dígitos (DDD + número), com ou sem o 55 na frente.
+  function whatsappValido(v) {
+    var d = soDigitos(v);
+    if (d.length === 12 || d.length === 13) return d.indexOf('55') === 0;
+    return d.length === 10 || d.length === 11;
+  }
+  function linkWhatsapp(v) { return whatsappValido(v) ? 'https://wa.me/' + digitosWhatsapp(v) : null; }
+  // Mostra (19) 99907-1702; o que não for número brasileiro conhecido volta como veio.
+  function mostrarWhatsapp(v) {
+    var d = soDigitos(v);
+    if (d.length === 12 || d.length === 13) { if (d.indexOf('55') === 0) d = d.slice(2); else return String(v); }
+    if (d.length === 11) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7);
+    if (d.length === 10) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6);
+    return String(v == null ? '' : v);
+  }
+  // Link de grupo: só os endereços do WhatsApp (nada de javascript:, nada de site qualquer).
+  function grupoWhatsappValido(u) {
+    return /^https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9_-]{8,}\/?(\?.*)?$/.test(String(u || '').trim());
+  }
+
   var api = {
+    soDigitos: soDigitos, digitosWhatsapp: digitosWhatsapp, whatsappValido: whatsappValido,
+    linkWhatsapp: linkWhatsapp, mostrarWhatsapp: mostrarWhatsapp, grupoWhatsappValido: grupoWhatsappValido,
     SECOES: SECOES, CATEGORIAS_COMPRA: CATEGORIAS_COMPRA, REFEICOES: REFEICOES,
     atrasado: atrasado, ordenarPlano: ordenarPlano, totalDaCotacao: totalDaCotacao,
     melhorCotacao: melhorCotacao, economia: economia, valorDaCompra: valorDaCompra,
