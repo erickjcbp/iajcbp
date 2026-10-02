@@ -232,11 +232,37 @@
     return Object.prototype.hasOwnProperty.call(MOTIVOS, k) ? MOTIVOS[k] : '—';
   }
 
+  // SUSPENSÃO (pedido do dono, 01/10/2026): quem tem muita falta fica fora da escala por 45
+  // dias. A pessoa segue ativa, com disponibilidade intacta; só some do gerador. O dia
+  // `suspenso_ate` já vale: a regra é "celebração com data ANTES dele fica sem ela".
+  var DIAS_SUSPENSAO = 45;
+
+  function suspensoAteDe(hojeISO, dias) {
+    var d = new Date(Date.parse(hojeISO + 'T00:00:00Z') + (dias == null ? DIAS_SUSPENSAO : dias) * 86400000);
+    return d.toISOString().slice(0, 10);
+  }
+
+  // Suspenso para uma celebração daquela data? Sem data de fim → nunca.
+  function suspensoNaData(membro, dataISO) {
+    var ate = membro && membro.suspenso_ate;
+    return !!(ate && dataISO && dataISO < ate);
+  }
+
+  // Os que mais faltaram, para a coordenação agir enquanto dá tempo. Só entra quem tem falta
+  // e NÃO está suspenso (suspender de novo quem já está fora seria ruído).
+  function maisFaltantes(linhas, hojeISO, limite) {
+    return (linhas || [])
+      .filter(function (l) { return l.faltas > 0 && !suspensoNaData(l.membro, hojeISO); })
+      .sort(function (a, b) { return b.faltas - a.faltas || (a.membro.nome || '').localeCompare(b.membro.nome || ''); })
+      .slice(0, limite == null ? 10 : limite);
+  }
+
   var api = { semanasSem: semanasSem, montarRodizio: montarRodizio,
                pisoDoGrupo: pisoDoGrupo, vagasPorFimDeSemana: vagasPorFimDeSemana, motivoDe: motivoDe, rotuloDoMotivo: rotuloDoMotivo,
                META_PADRAO: META_PADRAO, mesDe: mesDe,
                PESO_MES: PESO_MES, pesoRodizio: pesoRodizio, contarParaRodizio: contarParaRodizio,
-               fimDeSemanaRestantes: fimDeSemanaRestantes, resumoDaRegra: resumoDaRegra };
+               fimDeSemanaRestantes: fimDeSemanaRestantes, resumoDaRegra: resumoDaRegra,
+               DIAS_SUSPENSAO: DIAS_SUSPENSAO, suspensoAteDe: suspensoAteDe, suspensoNaData: suspensoNaData, maisFaltantes: maisFaltantes };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else { global.RodizioCore = api; }
 })(typeof globalThis !== 'undefined' ? globalThis : this);

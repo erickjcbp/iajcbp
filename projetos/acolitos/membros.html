@@ -126,6 +126,7 @@
 <script src="senha-nova-core.js"></script>
 <script src="telefones-core.js"></script>
 <script src="paginar-core.js"></script>
+<script src="rodizio-core.js"></script>
 <script src="shared.js"></script>
 <script src="planilha-xlsx.js"></script>
 <script>
@@ -621,6 +622,39 @@ async function abrirFicha(membro) {
   document.getElementById('modal-ficha').classList.add('open');
 }
 
+// Suspensão gravada na hora (não espera o "Salvar" da ficha): é uma ação, não um campo.
+function blocoSuspensao(m) {
+  const hoje = hojeLocal();
+  const box = document.createElement('div');
+  box.style.cssText = 'margin:16px 0 4px;padding:10px 12px;border:1px solid var(--border-wine);border-radius:6px;background:var(--surface2);';
+  const ativa = RodizioCore.suspensoNaData(m, hoje);
+  const t = document.createElement('div');
+  t.style.cssText = 'font-size:12px;line-height:1.5;margin-bottom:8px;color:var(--text);';
+  t.textContent = ativa
+    ? 'Suspenso até ' + formatDate(m.suspenso_ate).slice(0, 5) + ' — não entra em nenhuma escala até lá. Os horários acima ficam guardados.'
+    : 'Suspender tira a pessoa da escala por ' + RodizioCore.DIAS_SUSPENSAO + ' dias, sem mexer nos horários acima.';
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'btn-sm ' + (ativa ? 'gray' : 'wine');
+  b.textContent = ativa ? '▶ Reativar antes do prazo' : '⏸ Suspender por ' + RodizioCore.DIAS_SUSPENSAO + ' dias';
+  b.onclick = async () => {
+    const nome = m.apelido || m.nome;
+    const ate = RodizioCore.suspensoAteDe(hoje);
+    const ok = await uiConfirm(ativa
+      ? 'A suspensão de ' + nome + ' vai até ' + formatDate(m.suspenso_ate).slice(0, 5) + '. Reativar agora faz a pessoa voltar a ser escalada já na próxima escala. Reativar mesmo?'
+      : 'Suspender ' + nome + ' até ' + formatDate(ate).slice(0, 5) + '? Fica fora de todas as escalas nesse prazo.',
+      { ok: ativa ? 'Reativar agora' : 'Suspender', cancel: 'Cancelar' });
+    if (!ok) return;
+    const novo = ativa ? { suspenso_em: null, suspenso_ate: null } : { suspenso_em: hoje, suspenso_ate: ate };
+    const { error } = await sbAdmin.from('acolitos_membros').update(novo).eq('id', m.id);
+    if (error) { toast('Não consegui gravar: ' + error.message, 'error'); return; }
+    Object.assign(m, novo); if (membroAtual && membroAtual.id === m.id) Object.assign(membroAtual, novo);
+    toast(ativa ? nome + ' reativado' : nome + ' suspenso até ' + formatDate(ate).slice(0, 5));
+    const novoBloco = blocoSuspensao(m); box.replaceWith(novoBloco);
+  };
+  box.append(t, b);
+  return box;
+}
+
 // ── Campos editáveis (gravam em fichaEdits, que sobrevive à troca de aba) ──
 function fGroup(label) {
   const g = document.createElement('div'); g.className = 'form-group';
@@ -803,6 +837,11 @@ async function renderTab(tab) {
       chk.onchange = () => { if (chk.checked) fichaDisp.add(key); else fichaDisp.delete(key); setDirty(); };
       row.append(lbl, chk); el.appendChild(row);
     });
+
+    // ── Suspensão ────────────────────────────────────────────────────────────
+    // Sai da escala por 45 dias SEM apagar os horários acima. Reativar antes do prazo pede
+    // confirmação: é a trava contra tirar alguém da suspensão com um toque sem querer.
+    el.appendChild(blocoSuspensao(m));
 
     // ── Escalar com mais frequência ──────────────────────────────────────────
     // Pedido do dono (23/09/2026). Mora aqui, na aba que ele indicou, mas a coluna é de

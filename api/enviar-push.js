@@ -38,7 +38,7 @@ export default async function handler(req, res) {
   if (!URL || !ANON || !SRK) return res.status(500).json({ error: 'Server misconfigured' });
   if (!VPUB || !VPRIV || !VSUB) return res.status(500).json({ error: 'VAPID não configurado' });
 
-  const { tipo, texto, titulo, membros, alvo_membro_id, domingo, vazias, total, novos, parados } = req.body || {};
+  const { tipo, texto, titulo, membros, alvo_membro_id, domingo, vazias, total, novos, parados, turno } = req.body || {};
   // ⚠️ 'arte_faltando' FALTAVA nesta lista (achado em 18/09/2026): o vigia da arte mandava esse
   // tipo e levava 400 "Tipo inválido" — o alarme que existe para a falha não passar calada
   // estava, ele mesmo, calado. Quem mexer aqui: esta lista e TIPOS_CRON têm de andar juntas.
@@ -121,8 +121,15 @@ export default async function handler(req, res) {
       if (n > 0) pedacos.push(n === 1 ? '1 cadastro novo' : `${n} cadastros novos`);
       if (p > 0) pedacos.push(p === 1 ? '1 pessoa parada há mais de 7 dias' : `${p} pessoas paradas há mais de 7 dias`);
       if (!pedacos.length) return res.status(200).json({ ok: true, enviados: 0, nadaAFazer: true });
-      title = 'Integração de novos';
-      body = `${pedacos.join(' e ')}. Abra a CRM para dar o próximo passo.`.slice(0, 180);
+      // Segundo aviso do dia (18h): mesmo assunto, tom de "ainda está aí". Só o texto muda; o
+      // turno é uma lista fechada, nunca texto vindo de fora.
+      if (turno === 'tarde') {
+        title = 'Ainda pendente: integração de novos';
+        body = `Hoje ainda tem ${pedacos.join(' e ')}. Dê o próximo passo na CRM antes de fechar o dia.`.slice(0, 180);
+      } else {
+        title = 'Integração de novos';
+        body = `${pedacos.join(' e ')}. Abra a CRM para dar o próximo passo.`.slice(0, 180);
+      }
       const comCrm = await jget('acolitos_membros?permissoes=cs.%7Bcrm%7D&select=user_id') || [];
       alvoUserIds = [...new Set(comCrm.map((r) => r.user_id).filter(Boolean))];
       if (!alvoUserIds.length) return res.status(200).json({ ok: true, enviados: 0, semInscritos: true });

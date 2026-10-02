@@ -121,6 +121,16 @@
       background:color-mix(in srgb, var(--gold) 26%, transparent); color:var(--text);
     }
     .rodizio-motivo { font-size:9.5px; line-height:1.3; color:var(--text-muted); white-space:normal; max-width:150px; }
+    .rod-painel { background:var(--surface2); border:1px solid var(--border-wine); border-radius:6px; padding:10px 12px; margin:0 0 14px; }
+    .rod-painel h3 { margin:0 0 8px; font-family:'Sora',sans-serif; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--gold-light); }
+    .rod-painel-dica { margin:-4px 0 8px; font-size:11px; line-height:1.4; color:var(--text-muted); }
+    .rod-item { display:flex; align-items:center; gap:10px; padding:7px 0; border-top:1px solid var(--border); }
+    .rod-item:first-of-type { border-top:0; }
+    .rod-item-nome { flex:1; min-width:0; line-height:1.2; }
+    .rod-item-nome b { display:block; font-size:12.5px; }
+    .rod-item-nome span { font-size:10.5px; color:var(--text-muted); }
+    .rod-item .btn-sm { flex:none; white-space:nowrap; padding:6px 10px; font-size:11px; }
+    .rodizio-susp { display:inline-block; margin-top:3px; padding:1px 6px; border-radius:2px; font-size:9px; letter-spacing:.5px; text-transform:uppercase; background:color-mix(in srgb, var(--red-soft) 28%, transparent); color:var(--text); }
     .rodizio-acoes { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
     .rodizio-acoes .btn-sm { flex:1 1 auto; justify-content:center; white-space:nowrap; }
     .rodizio-contagem { font-size:11px; color:var(--text-muted); margin:10px 0 0; }
@@ -537,7 +547,7 @@ async function loadDados() {
       escalasMap[e.celebracao_id].push(e);
     });
     const [{ data: mems }, { data: habs }, { data: disps }, freqData, { data: auss }, { data: chs }] = await Promise.all([
-      sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,casa_id,escalar_frequente,pode_outras_comunidades,data_nascimento,foto_url,observacoes,necessidades_especiais,nome_pai,nome_mae,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro,grupo_irmaos,escalar_com_irmao').eq('status','ativo').order('nome'),
+      sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,casa_id,escalar_frequente,suspenso_ate,suspenso_em,pode_outras_comunidades,data_nascimento,foto_url,observacoes,necessidades_especiais,nome_pai,nome_mae,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro,grupo_irmaos,escalar_com_irmao').eq('status','ativo').order('nome'),
       // PAGINADAS: 839 e 686 linhas hoje, e o teto é mil. Ao passar dele, gente marcada
       // como apta SOME do campo de seleção — o mesmo sintoma da trava, sem trava nenhuma.
       lerTudo(() => sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia')),
@@ -564,6 +574,10 @@ async function loadDados() {
       const{data:ausData}=await sb.from('acolitos_ausencias').select('membro_id,data').is('celebracao_id',null).in('data',celDatas);
       (ausData||[]).forEach(a=>celebracoes.filter(c=>c.data===a.data).forEach(c=>{ if(!ausMap[c.id])ausMap[c.id]=new Set(); ausMap[c.id].add(a.membro_id); }));
     }
+    // SUSPENSÃO: quem está suspenso conta como ausente em toda celebração ANTES do fim da
+    // suspensão. Entrar no ausMap (e não numa lista nova) faz o gerador, a troca e o seletor
+    // manual respeitarem sem tocar nos cinco lugares que já leem o ausMap.
+    celebracoes.forEach(c=>{ membros.forEach(m=>{ if(RodizioCore.suspensoNaData(m, c.data)){ if(!ausMap[c.id])ausMap[c.id]=new Set(); ausMap[c.id].add(m.id); } }); });
     habMap = {}; (habs||[]).forEach(h=>{if(!habMap[h.membro_id])habMap[h.membro_id]={};habMap[h.membro_id][h.funcao]=h.proficiencia;});
     dispMap = {}; restricaoMap = {};
     (disps||[]).forEach(d=>{
@@ -888,6 +902,9 @@ async function carregarAusenciasFresh(celebs) {
   ]);
   (porCel.data || []).forEach(a => { (map[a.celebracao_id] = map[a.celebracao_id] || new Set()).add(a.membro_id); });
   (porData.data || []).forEach(a => celebs.filter(c => c.data === a.data).forEach(c => { (map[c.id] = map[c.id] || new Set()).add(a.membro_id); }));
+  // Suspensos contam como ausentes: esta função REFAZ o mapa do zero (é a leitura fresca do
+  // gerador), então sem este trecho a suspensão sumiria justo na hora de gerar a escala.
+  celebs.forEach(c => { membros.forEach(m => { if (RodizioCore.suspensoNaData(m, c.data)) (map[c.id] = map[c.id] || new Set()).add(m.id); }); });
   return map;
 }
 
@@ -1713,6 +1730,7 @@ async function freqCSV(){
 // de mostrar como sumido quem serviu.
 const RODIZIO_PROF_OK = ['apto','experiente','referencia'];
 let rodizioLinhas = null, rodizioPiso = null, rodizioVagas = null;
+let rodizioDetalhes = false, rodizioRepintar = null;
 let rodizioErro = null, rodizioCarregando = false, filtroRodizio = null, cfgRodizio = null;
 
 async function carregarRodizio(){
@@ -1722,7 +1740,7 @@ async function carregarRodizio(){
   // quando a pergunta dele ("quem está parado") é justamente a que não depende de ter missa.
   if (!membros.length) {
     const { data: ms } = await sb.from('acolitos_membros')
-      .select('id,nome,apelido,nivel,comunidade,casa_id,foto_url,escalar_frequente')
+      .select('id,nome,apelido,nivel,comunidade,casa_id,foto_url,escalar_frequente,suspenso_ate,suspenso_em')
       .eq('status','ativo').order('nome');
     membros = ms || [];
   }
@@ -1852,19 +1870,131 @@ function desenharRodizio(){
   }
   el.appendChild(regua);
 
+  const painel=document.createElement('div'); el.appendChild(painel);
   const alvo=document.createElement('div'); el.appendChild(alvo);
   const lista=document.createElement('div'); el.appendChild(lista);
+  rodizioRepintar=()=>{ pintarPainelRodizio(painel); pintarRodizio(lista); };
+  pintarPainelRodizio(painel);
 
   cfgRodizio = configFiltroRodizio();
-  filtroRodizio = montarFiltroLista(alvo, cfgRodizio, ()=>pintarRodizio(lista));
+  filtroRodizio = montarFiltroLista(alvo, cfgRodizio, ()=>rodizioRepintar());
 
   const acoes=document.createElement('div'); acoes.className='rodizio-acoes';
   const bPdf=document.createElement('button'); bPdf.className='btn-sm gold'; bPdf.textContent='🖨 Imprimir/PDF'; bPdf.onclick=rodizioPDF;
   const bCsv=document.createElement('button'); bCsv.className='btn-sm gray'; bCsv.textContent='⬇️ CSV'; bCsv.onclick=rodizioCSV;
   const bPer=document.createElement('button'); bPer.className='btn-sm gray'; bPer.textContent='📅 Frequência por período'; bPer.onclick=abrirRelatorioFrequencia;
-  acoes.append(bPdf,bCsv,bPer); el.appendChild(acoes);
+  const bDet=document.createElement('button'); bDet.className='btn-sm gray';
+  bDet.textContent = rodizioDetalhes ? '➖ Esconder detalhes' : '➕ Ver detalhes';
+  bDet.title='Mostra as colunas "Sem escalar" e "Sem servir"';
+  bDet.onclick=()=>{ rodizioDetalhes=!rodizioDetalhes; bDet.textContent = rodizioDetalhes ? '➖ Esconder detalhes' : '➕ Ver detalhes'; pintarRodizio(lista); };
+  acoes.append(bDet,bPdf,bCsv,bPer); el.appendChild(acoes);
 
   pintarRodizio(lista);
+}
+
+// ── Suspensão ─────────────────────────────────────────────────────────────────
+// O membro fica fora da escala por 45 dias SEM mexer na disponibilidade dele (o dono vinha
+// apagando horários para o mesmo efeito e perdia o registro de quando a pessoa podia servir).
+function botaoSuspensao(m){
+  const hoje=hojeLocal(), susp=RodizioCore.suspensoNaData(m, hoje);
+  const b=document.createElement('button'); b.className='btn-sm '+(susp?'gray':'wine');
+  b.textContent = susp ? '▶ Reativar' : '⏸ Suspender';
+  b.title = susp ? 'Tirar da suspensão antes do prazo' : 'Fica '+RodizioCore.DIAS_SUSPENSAO+' dias sem ser escalado';
+  b.style.cssText='padding:5px 9px;font-size:11px;white-space:nowrap;';
+  b.onclick=()=> susp ? reativarMembro(m) : suspenderMembro(m);
+  return b;
+}
+
+// Atualiza a pessoa em AMBAS as listas: loadDados troca o array `membros` por objetos novos,
+// e as linhas do rodízio ficam com os antigos — mexer só num dos lados desincroniza o outro.
+function _gravarSuspensaoLocal(id, em, ate){
+  const alvo=(x)=>{ if(x && x.id===id){ x.suspenso_em=em; x.suspenso_ate=ate; } };
+  membros.forEach(alvo); (rodizioLinhas||[]).forEach(l=>alvo(l.membro));
+}
+
+async function suspenderMembro(m){
+  const hoje=hojeLocal(), ate=RodizioCore.suspensoAteDe(hoje);
+  // Escalas JÁ montadas dela dentro do prazo não somem sozinhas — o gerador só preenche vaga
+  // vazia. Contar antes de confirmar, para a coordenação saber o que ainda precisa trocar.
+  let futuras=0;
+  try{
+    const { data } = await sb.from('acolitos_escalas').select('id,acolitos_celebracoes!inner(data)')
+      .eq('membro_id', m.id).eq('status','escalado')
+      .gte('acolitos_celebracoes.data', hoje).lt('acolitos_celebracoes.data', ate);
+    futuras=(data||[]).length;
+  }catch(e){ console.error('contar escalas futuras falhou', e); }
+  const nome=m.apelido||m.nome;
+  const ok=await uiConfirm('Suspender '+nome+' por '+RodizioCore.DIAS_SUSPENSAO+' dias (até '+formatDate(ate).slice(0,5)+')? '
+    +'Ela(e) não entra em nenhuma escala nesse prazo. A disponibilidade fica como está.'
+    +(futuras ? '\n\nAtenção: já há '+futuras+' escala(s) montada(s) nesse prazo. Elas continuam até você trocar.' : ''),
+    { ok:'Suspender', cancel:'Cancelar' });
+  if(!ok) return;
+  const { error } = await sb.from('acolitos_membros').update({ suspenso_em:hoje, suspenso_ate:ate }).eq('id', m.id);
+  if(error){ toast('Não consegui suspender: '+error.message,'error'); return; }
+  _gravarSuspensaoLocal(m.id, hoje, ate);
+  toast(nome+' suspenso até '+formatDate(ate).slice(0,5));
+  aplicarSuspensaoNoAusMap();
+  if(rodizioRepintar) rodizioRepintar();
+}
+
+async function reativarMembro(m){
+  const nome=m.apelido||m.nome;
+  // A trava: sair da suspensão antes do prazo é decisão consciente, não um toque sem querer.
+  const ok=await uiConfirm('A suspensão de '+nome+' vai até '+formatDate(m.suspenso_ate).slice(0,5)+'. Reativar agora faz o gerador voltar a escalar a pessoa já na próxima escala. Reativar mesmo?',
+    { ok:'Reativar agora', cancel:'Manter suspensão' });
+  if(!ok) return;
+  const { error } = await sb.from('acolitos_membros').update({ suspenso_em:null, suspenso_ate:null }).eq('id', m.id);
+  if(error){ toast('Não consegui reativar: '+error.message,'error'); return; }
+  _gravarSuspensaoLocal(m.id, null, null);
+  toast(nome+' reativado');
+  aplicarSuspensaoNoAusMap(true);
+  if(rodizioRepintar) rodizioRepintar();
+}
+
+// Reflete a mudança no ausMap já carregado, sem reler tudo do banco. Ao reativar, é preciso
+// TIRAR a pessoa do mapa — mas só se ela estava lá por suspensão, não por ausência declarada;
+// por isso o mapa é refeito a partir de ausências + suspensões (loadDados faz as duas).
+function aplicarSuspensaoNoAusMap(refazer){
+  if(refazer){ loadDados(); return; }
+  celebracoes.forEach(c=>{ membros.forEach(m=>{ if(RodizioCore.suspensoNaData(m, c.data)){ if(!ausMap[c.id])ausMap[c.id]=new Set(); ausMap[c.id].add(m.id); } }); });
+}
+
+// Painel acima da tabela: quem mais faltou (com o botão ao lado) e quem está suspenso.
+function pintarPainelRodizio(el){
+  el.textContent=''; el.className='';
+  const hoje=hojeLocal();
+  const faltantes=RodizioCore.maisFaltantes(rodizioLinhas, hoje, 8);
+  const suspensos=(rodizioLinhas||[]).filter(l=>RodizioCore.suspensoNaData(l.membro, hoje))
+    .sort((a,b)=> a.membro.suspenso_ate.localeCompare(b.membro.suspenso_ate));
+
+  const item=(l, linha2, btn)=>{
+    const d=document.createElement('div'); d.className='rod-item';
+    const n=document.createElement('div'); n.className='rod-item-nome';
+    const b=document.createElement('b'); b.textContent=l.membro.apelido||l.membro.nome;
+    const sp=document.createElement('span'); sp.textContent=linha2;
+    n.append(b,sp); d.append(n,btn); return d;
+  };
+
+  if(faltantes.length){
+    const box=document.createElement('div'); box.className='rod-painel';
+    const h=document.createElement('h3'); h.textContent='Quem mais faltou';
+    const dica=document.createElement('p'); dica.className='rod-painel-dica';
+    dica.textContent='Suspender tira a pessoa da escala por '+RodizioCore.DIAS_SUSPENSAO+' dias, sem mexer na disponibilidade dela.';
+    box.append(h,dica);
+    faltantes.forEach(l=>box.appendChild(item(l,
+      l.faltas+(l.faltas===1?' falta':' faltas')+' · '+l.vezesNoMes+' de '+RodizioCore.META_PADRAO+' este mês',
+      botaoSuspensao(l.membro))));
+    el.appendChild(box);
+  }
+  if(suspensos.length){
+    const box=document.createElement('div'); box.className='rod-painel';
+    const h=document.createElement('h3'); h.textContent='Suspensos agora ('+suspensos.length+')';
+    box.appendChild(h);
+    suspensos.forEach(l=>box.appendChild(item(l,
+      'volta a ser escalado em '+formatDate(l.membro.suspenso_ate).slice(0,5)+' · '+l.faltas+(l.faltas===1?' falta':' faltas'),
+      botaoSuspensao(l.membro))));
+    el.appendChild(box);
+  }
 }
 
 // O que está NA TELA agora — é isto que o PDF e o CSV levam, não a lista inteira.
@@ -1882,9 +2012,10 @@ function pintarRodizio(lista){
   const thead=document.createElement('thead'); const hr=document.createElement('tr');
   // O "por quê" era a 5ª coluna e, no telefone, só aparecia rolando a tabela de lado — logo
   // a parte que responde a pergunta do dono era a que ninguém via. Agora mora sob o nome.
-  ['Membro','Este mês','Sem escalar','Sem servir','Faltas','Última vez'].forEach((h,i)=>{
+  const cols = rodizioDetalhes ? ['Membro','Este mês','Sem escalar','Sem servir','Faltas','Última vez',''] : ['Membro','Este mês','Faltas','Última vez',''];
+  cols.forEach((h,i)=>{
     const th=document.createElement('th'); if(i===0) th.className='sticky-left';
-    if(i>0&&i<5) th.style.textAlign='center';
+    if(i>0) th.style.textAlign='center';
     th.textContent=h; hr.appendChild(th);
   });
   thead.appendChild(hr); table.appendChild(thead);
@@ -1906,6 +2037,7 @@ function pintarRodizio(lista){
     if(motivo!=='—'){ const n3=document.createElement('div'); n3.className='rodizio-motivo'; n3.textContent=motivo; nm.appendChild(n3); }
     // Sem o selo, um frequente servindo mais que os outros parece defeito do rodízio — e é
     // justamente o contrário: é alguém que o dono marcou de propósito.
+    if(RodizioCore.suspensoNaData(m, hojeLocal())){ const sp=document.createElement('div'); sp.className='rodizio-susp'; sp.textContent='suspenso até '+formatDate(m.suspenso_ate).slice(0,5); nm.appendChild(sp); }
     if(m.escalar_frequente){ const sf=document.createElement('div'); sf.className='rodizio-selo'; sf.textContent='frequente'; nm.appendChild(sf); }
     box.appendChild(nm); tdN.appendChild(box); tr.appendChild(tdN);
 
@@ -1920,12 +2052,14 @@ function pintarRodizio(lista){
     if(l.abaixoDaRegra) marca.className='rodizio-alerta'; else marca.style.fontWeight='700';
     tdR.appendChild(marca); tr.appendChild(tdR);
 
-    tr.appendChild(cel(_rodSemanas(l.semEscalar)));
-    tr.appendChild(cel(_rodSemanas(l.semServir)));
+    if(rodizioDetalhes){ tr.appendChild(cel(_rodSemanas(l.semEscalar))); tr.appendChild(cel(_rodSemanas(l.semServir))); }
     tr.appendChild(cel(l.faltas ? String(l.faltas) : '—'));
 
     const tdU=document.createElement('td'); tdU.style.cssText='text-align:center;font-size:11px;color:var(--text-muted);';
     tdU.textContent = l.ultimaServida ? formatDate(l.ultimaServida).slice(0,5) : '—'; tr.appendChild(tdU);
+
+    const tdA=document.createElement('td'); tdA.style.cssText='text-align:center;';
+    tdA.appendChild(botaoSuspensao(m)); tr.appendChild(tdA);
 
     tbody.appendChild(tr);
   });

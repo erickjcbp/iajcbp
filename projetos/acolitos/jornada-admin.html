@@ -60,6 +60,7 @@
 <script src="senha-nova-core.js"></script>
 <script src="telefones-core.js"></script>
 <script src="formacao-core.js"></script>
+<script src="atraso-funcao-core.js"></script>
 <script src="kits-core.js"></script>
 <script src="paginar-core.js"></script>
 <script src="shared.js"></script>
@@ -92,7 +93,6 @@ async function renderAll() {
   renderAbasDaJornada(box);
 
   if (abaJornada === 'evolucao') {
-    await renderSinalDaFormacao(box);
     // O painel da IA está PRONTO e DESLIGADO (18/09/2026, decisão do dono: "vamos deixar a
     // parte do uso da API de lado por enquanto"). Ele não aparece porque botão que não
     // funciona é pior do que botão nenhum — quem abre esta aba é o pessoal da Formação, e
@@ -100,7 +100,8 @@ async function renderAll() {
     // PARA LIGAR: escolher o provedor, pôr a chave nas variáveis do site, e devolver a linha
     // `await renderPlanoDaIA(box);` aqui. O resto — servidor, painel, "virar tarefa" e as
     // provas — já existe.
-    await renderDesenvolvimento(box);
+    // A matriz abre a aba; o acompanhamento da Formação vem logo depois dela.
+    await renderDesenvolvimento(box, renderSinalDaFormacao);
   } else {
     await renderFilas(box);
     await renderTemporadaAdmin(box);
@@ -565,8 +566,32 @@ function abrirCoberturaFuncao(funcao, label){
   const close=document.createElement('button'); close.className='btn-sm gray'; close.style.cssText='width:100%;margin-top:14px;'; close.textContent='Fechar'; close.onclick=()=>{ ov.remove(); if(_redrawMatriz) _redrawMatriz(); };
   md.appendChild(close); ov.appendChild(md); document.body.appendChild(ov);
 }
+// "?" no quadradinho de quem já devia ser apto aqui (regra em atraso-funcao-core.js). O mapa é
+// calculado uma vez por desenho da matriz e descartado ao editar uma célula, que pode mudar a conta.
+let atrasoMapa = null;
+function mapaDeAtrasos(){
+  if(!atrasoMapa) atrasoMapa = AtrasoFuncao.atrasos({ membros:_devMembros, hab:habAll, funcoes:_devFuncoes.map(f=>f[0]), hoje:hojeLocal() });
+  return atrasoMapa;
+}
+function pintarAtraso(cell, m, funcao, prof){
+  const at = (mapaDeAtrasos()[m.id]||{})[funcao];
+  const dentro = AtrasoFuncao.ehApto(prof);
+  if(at && !dentro){
+    cell.textContent='?';
+    cell.style.cssText += 'line-height:18px;text-align:center;font-weight:800;font-size:13px;color:'+(prof==='em_formacao'?'#1a0a00':'var(--text)')+';border:2px dashed var(--gold);';
+    cell.title=(m.apelido||m.nome)+' — '+PROF_LABEL[prof]+'. Já devia ser Apto: '+Math.round(at.pares*100)+'% do mesmo nível já é.';
+  } else { cell.textContent=''; cell.style.border='1px solid var(--border)'; }
+}
 function renderMatriz(container){
   container.textContent='';
+  atrasoMapa=null;
+  const resAt=AtrasoFuncao.resumo(mapaDeAtrasos());
+  const avisoAt=document.createElement('div');
+  avisoAt.style.cssText='font-size:11.5px;line-height:1.5;color:var(--text-muted);margin:0 0 8px;';
+  avisoAt.textContent = resAt.marcas
+    ? '? = já devia ser Apto nesta função (a maioria do mesmo nível já é). Hoje: '+resAt.marcas+' pontos em '+resAt.pessoas+' pessoas. Toque no quadradinho para ajustar.'
+    : 'Nenhum ? hoje: ninguém está atrás dos colegas do mesmo nível. Toque num quadradinho para ajustar.';
+  container.appendChild(avisoAt);
   const wrap=document.createElement('div'); wrap.style.cssText='overflow-x:auto;border:1px solid var(--border);border-radius:8px;';
   const tbl=document.createElement('table'); tbl.style.cssText='border-collapse:collapse;font-size:11px;min-width:100%;';
   const thead=document.createElement('thead'); const htr=document.createElement('tr');
@@ -592,6 +617,7 @@ function renderMatriz(container){
         const td=document.createElement('td'); td.style.cssText='text-align:center;border-bottom:1px solid var(--border);padding:0;';
         const cell=document.createElement('div'); cell.style.cssText='width:24px;height:22px;margin:2px auto;border-radius:4px;cursor:pointer;background:'+(PROF_COR[cur]==='transparent'?'transparent':PROF_COR[cur])+';border:1px solid var(--border);';
         cell.title=(m.apelido||m.nome)+' — '+PROF_LABEL[cur];
+        pintarAtraso(cell, m, val, cur);
         cell.onclick=()=>editarCelula(td, cell, m, val);
         td.appendChild(cell); tr.appendChild(td);
       });
@@ -614,6 +640,7 @@ function editarCelula(td, cell, m, funcao){
   cell.style.display='none'; td.appendChild(sel); sel.focus();
   const fechar=()=>{ if(sel.parentNode) sel.remove(); cell.style.display=''; };
   sel.onchange=async()=>{ const ok=await salvarProficiencia(m.id,funcao,sel.value); if(ok){ const c=PROF_COR[sel.value]; cell.style.background=(c==='transparent'?'transparent':c); cell.title=(m.apelido||m.nome)+' — '+PROF_LABEL[sel.value];
+    atrasoMapa=null; pintarAtraso(cell, m, funcao, sel.value);
     // Numa célula de tabela não há onde escrever o aviso, então ele vem por recado.
     const t=textoDaTrava(avisosDaTrava(m,funcao,sel.value)); if(t) toast(t,'error'); } fechar(); };
   sel.onblur=fechar;
@@ -621,7 +648,7 @@ function editarCelula(td, cell, m, funcao){
 let _devMembros = [], _devFuncoes = [], _devComps = [];
 async function carregarDev() {
   const [{ data: mems }, { data: listas }] = await Promise.all([
-    sb.from('acolitos_membros').select('id,nome,apelido,nivel,foto_url,comunidade,casa_id,data_nascimento,pode_outras_comunidades,competencias_desenvolvidas,desenvolvimento_competencias').eq('status', 'ativo').order('nome'),
+    sb.from('acolitos_membros').select('id,nome,apelido,nivel,created_at,foto_url,comunidade,casa_id,data_nascimento,pode_outras_comunidades,competencias_desenvolvidas,desenvolvimento_competencias').eq('status', 'ativo').order('nome'),
     sb.from('acolitos_listas').select('valor,label,tipo').in('tipo', ['funcao', 'competencia']),
   ]);
   _devMembros = mems || [];
@@ -629,7 +656,7 @@ async function carregarDev() {
   _devFuncoes = FUNCOES_DEFAULT_DEV.concat(fc);
   _devComps = (listas || []).filter(l => l.tipo === 'competencia').map(l => [l.valor, l.label || l.valor]);
 }
-async function renderDesenvolvimento(main) {
+async function renderDesenvolvimento(main, depoisDoMapa) {
   await carregarDev();
   const head = document.createElement('h2'); head.style.cssText = 'font-family:Sora,sans-serif;font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 4px;'; head.textContent = '📈 Desenvolvimento'; main.appendChild(head);
   const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0 0 12px;'; sub.textContent = 'Funções = proficiência real de cada um (a desenvolver = abaixo de Apto). Competências = plano de desenvolvimento.'; main.appendChild(sub);
@@ -640,16 +667,19 @@ async function renderDesenvolvimento(main) {
   const mhT = document.createElement('span'); mhT.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);flex:1;'; mhT.textContent = '🗺 Mapa de Cobertura';
   const btnRel = (txt, fn) => { const b=document.createElement('button'); b.type='button'; b.textContent=txt; b.style.cssText='font-family:Oxanium,sans-serif;font-weight:700;font-size:11px;padding:5px 10px;border-radius:6px;cursor:pointer;background:transparent;border:1px solid var(--gold-dim);color:var(--gold-light);'; b.onclick=fn; return b; };
   mh.append(mhT, btnRel('🖨 Imprimir/PDF', gerarRelatorioPDF), btnRel('⬇️ CSV', baixarRelatorioCSV)); mapaSec.appendChild(mh);
-  const resumoBox = document.createElement('div'); mapaSec.appendChild(resumoBox);
+  // A MATRIZ COMPLETA É A PRIMEIRA COISA (pedido do dono, 01/10/2026) e já vem aberta; o
+  // resumo por função desce para baixo dela, recolhível.
+  const matrizBox = document.createElement('div'); matrizBox.style.cssText = 'margin-top:4px;';
+  const resumoBox = document.createElement('div'); resumoBox.style.display = 'none';
   const toggle = document.createElement('div'); toggle.style.cssText = 'cursor:pointer;font-family:Sora,sans-serif;font-weight:700;font-size:12px;color:var(--gold-light);margin-top:12px;';
-  const matrizBox = document.createElement('div'); matrizBox.style.cssText = 'display:none;margin-top:10px;';
-  let matrizAberta = false, matrizDesenhada = false;
-  const setToggle = () => { toggle.textContent = (matrizAberta ? '▾' : '▸') + ' Matriz completa'; };
+  let resumoAberto = false;
+  const setToggle = () => { toggle.textContent = (resumoAberto ? '▾' : '▸') + ' Cobertura por função (onde faltam pessoas)'; };
   _redrawCobertura = () => renderCobertura(resumoBox, abrirCoberturaFuncao);
-  _redrawMatriz = () => { if (matrizDesenhada) renderMatriz(matrizBox); };
-  toggle.onclick = () => { matrizAberta = !matrizAberta; matrizBox.style.display = matrizAberta ? '' : 'none'; if (matrizAberta && !matrizDesenhada) { renderMatriz(matrizBox); matrizDesenhada = true; } setToggle(); };
-  setToggle(); _redrawCobertura();
-  mapaSec.append(toggle, matrizBox); main.appendChild(mapaSec);
+  _redrawMatriz = () => renderMatriz(matrizBox);
+  toggle.onclick = () => { resumoAberto = !resumoAberto; resumoBox.style.display = resumoAberto ? '' : 'none'; setToggle(); };
+  setToggle(); _redrawCobertura(); renderMatriz(matrizBox);
+  mapaSec.append(matrizBox, toggle, resumoBox); main.appendChild(mapaSec);
+  if (depoisDoMapa) await depoisDoMapa(main);
   const card = document.createElement('div'); card.className = 'mx-card';
   const filtros = document.createElement('div'); filtros.style.cssText = 'display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;';
   const busca = document.createElement('input'); busca.className = 'form-input'; busca.placeholder = 'buscar membro…'; busca.style.cssText = 'flex:2;min-width:140px;';

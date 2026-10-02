@@ -1,4 +1,9 @@
-// api/cron-crm.js — o lembrete diário da integração de novos (CRM).
+// api/cron-crm.js — o lembrete da integração de novos (CRM), 2× por dia: 8h e 18h (Brasília).
+//
+// 01/10/2026: o dono achou o aviso fraco e pediu "umas 2× no dia". O plano gratuito da Vercel só
+// aceita robô que roda UMA vez por dia — então são DOIS robôs (`?turno=manha` e `?turno=tarde`),
+// cada um diário. Os dois gastam as 2 vagas do plano, que a arte da escala já não usa mais.
+// A tarde fala mais forte: é o segundo aviso do dia sobre a mesma pendência.
 //
 // PEDIDO DO DONO (18/09/2026): avisar quando chega gente nova na CRM e lembrar todo dia de
 // acompanhar o funil, para quem tem acesso à CRM (hoje 4 pessoas).
@@ -46,6 +51,7 @@ export default async function handler(req, res) {
     } catch (_) { return null; }
   };
 
+  const turno = req.query && req.query.turno === 'tarde' ? 'tarde' : 'manha';
   const agora = new Date();
   const ontem = new Date(agora.getTime() - 24 * 60 * 60 * 1000).toISOString();
   const limiteParado = new Date(agora.getTime() - PARADO_DIAS * 24 * 60 * 60 * 1000).toISOString();
@@ -76,7 +82,7 @@ export default async function handler(req, res) {
   const r = await fetch(`${base}/api/enviar-push`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-cron-secret': CRON_SECRET },
-    body: JSON.stringify({ tipo: 'crm', novos: quantosNovos, parados: quantosParados }),
+    body: JSON.stringify({ tipo: 'crm', novos: quantosNovos, parados: quantosParados, turno }),
   });
   const saida = await r.json().catch(() => null);
   if (!r.ok) {

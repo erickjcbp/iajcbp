@@ -52,6 +52,7 @@
     var pool = roster.filter(function(m){
       return m.id !== ctx.membroAusenteId
         && !usadosNaMissa.has(m.id)
+        && !(ctx.data && m.suspenso_ate && ctx.data < m.suspenso_ate)   // suspenso até depois desta missa
         && disp(m.id)
         && elegivelFuncao(m, funcao, comKey, habMap, config);
     });
@@ -104,6 +105,7 @@
     (ausCel||[]).forEach(a => usadosNaMissa.add(a.membro_id));
     (ausData||[]).forEach(a => usadosNaMissa.add(a.membro_id));
     const ctx = await ctxBuilder(alvo.funcao, usadosNaMissa, new Set());
+    ctx.data = arg.data;   // a suspensão se mede contra a data da missa
     const r = escolherSubstituto(ctx);
     const novoId = r.membroId || null;
     // grava atômico via RPC (SECURITY DEFINER; funciona p/ coord E cerimonário)

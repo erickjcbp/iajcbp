@@ -463,3 +463,24 @@ test('contarParaRodizio aplica a marca a partir da lista de frequentes', () => {
   assert.ok(p.m2 < p.m1, 'os dois fizeram 2; o frequente vai primeiro');
   assert.strictEqual(p.m1 - p.m2, PESO_MES / 2);
 });
+
+const RC = require('./rodizio-core.js');
+
+test('suspensão: 45 dias a partir de hoje, e o dia do fim já vale', () => {
+  assert.strictEqual(RC.suspensoAteDe('2026-10-01'), '2026-11-15');
+  assert.strictEqual(RC.suspensoNaData({ suspenso_ate: '2026-11-15' }, '2026-11-14'), true);
+  assert.strictEqual(RC.suspensoNaData({ suspenso_ate: '2026-11-15' }, '2026-11-15'), false);
+});
+
+test('suspensão: sem data de fim ninguém é suspenso', () => {
+  assert.strictEqual(RC.suspensoNaData({ suspenso_ate: null }, '2026-10-05'), false);
+  assert.strictEqual(RC.suspensoNaData({}, '2026-10-05'), false);
+  assert.strictEqual(RC.suspensoNaData({ suspenso_ate: '2026-11-15' }, ''), false);
+});
+
+test('mais faltantes: ordem por faltas, sem quem não faltou e sem quem já está suspenso', () => {
+  const l = (nome, faltas, ate) => ({ faltas, membro: { nome, suspenso_ate: ate || null } });
+  const r = RC.maisFaltantes([l('A', 2), l('B', 6), l('C', 0), l('D', 9, '2026-11-15'), l('E', 6)], '2026-10-01', 10);
+  assert.deepStrictEqual(r.map(x => x.membro.nome), ['B', 'E', 'A']);
+  assert.strictEqual(RC.maisFaltantes([l('A', 1), l('B', 2)], '2026-10-01', 1).length, 1);
+});

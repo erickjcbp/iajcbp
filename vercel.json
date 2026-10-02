@@ -1,6 +1,7 @@
 {
   "crons": [
-    { "path": "/api/cron-crm", "schedule": "0 11 * * *" }
+    { "path": "/api/cron-crm?turno=manha", "schedule": "0 11 * * *" },
+    { "path": "/api/cron-crm?turno=tarde", "schedule": "0 21 * * *" }
   ],
   "redirects": [
     { "source": "/", "has": [{ "type": "host", "value": "coroinhas.jcbplimeira.com.br" }], "destination": "/projetos/acolitos/login.html", "permanent": false },
