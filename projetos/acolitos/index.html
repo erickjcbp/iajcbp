@@ -171,7 +171,7 @@ function renderContinuar(ctx){
   let u; try{ u = JSON.parse(localStorage.getItem('ultima-tela')||'null'); }catch(e){ u=null; }
   if(!u || !u.href || !u.label) return;
   const caps = (typeof navCaps==='function') ? navCaps(ctx) : null;
-  const COORD = { 'membros.html':'membros','escala.html':'escala','crm.html':'crm','tesouraria.html':'tesouraria','casas.html':'casas','tarefas.html':'tarefas' };
+  const COORD = { 'membros.html':'membros','escala.html':'escala','crm.html':'crm','tesouraria.html':'tesouraria','casas.html':'casas','tarefas.html':'tarefas','retiros.html':'retiros' };
   const permKey = COORD[u.href];
   if(permKey){                              // tela de coordenação: exige permissão
     if(!caps || !caps.perms || caps.perms.indexOf(permKey)===-1) return;
@@ -678,14 +678,14 @@ async function renderDashboardEquipe(ctx) {
   const seis = new Date(); seis.setMonth(seis.getMonth()-5); seis.setDate(1); const seisStr = seis.toISOString().slice(0,10);
 
   const [ativosR, crmR, freqMap, mesR, escSeisR, membrosR, pmR, cobR] = await Promise.all([
-    sb.from('acolitos_membros').select('*',{count:'exact',head:true}).eq('status','ativo'),
+    sb.from('acolitos_membros').select('*',{count:'exact',head:true}).eq('status','ativo').eq('serve',true),
     sb.from('acolitos_crm').select('*',{count:'exact',head:true}).neq('etapa','integrado'),
     fetchFrequencia(),
     sb.from('acolitos_celebracoes').select('*',{count:'exact',head:true}).gte('data',iniMes).lte('data',fimMes),
     // PAGINADO: são ~1300 escalas em 6 meses e o banco corta em mil, comendo justamente
     // os meses mais recentes — o gráfico mostrava o mês corrente despencando sem ter caído.
     lerTudo(() => sb.from('acolitos_escalas').select('status, acolitos_celebracoes!inner(data)').gte('acolitos_celebracoes.data', seisStr)),
-    sb.from('acolitos_membros').select('id,user_id,nivel,nome,apelido,foto_url,comunidade,casa_id').eq('status','ativo'),
+    sb.from('acolitos_membros').select('id,user_id,nivel,nome,apelido,foto_url,comunidade,casa_id').eq('status','ativo').eq('serve',true),
     moduloId ? sb.from('pastoral_members').select('user_id,role').eq('module_id',moduloId) : Promise.resolve({data:[]}),
     sb.from('acolitos_celebracoes').select('id,data,horario,minutos,comunidade,tipo, acolitos_escalas(id)').gte('data',hoje).lte('data', new Date(Date.now()+28*86400000).toISOString().slice(0,10)).order('data').order('minutos'),
   ]);

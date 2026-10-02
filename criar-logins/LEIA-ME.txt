@@ -111,3 +111,16 @@ E as fotos já corrigiram o guia duas vezes: a tela de escalas não tem abas
 "Próximas/Histórico" (tem ESCALA EU!, Minhas missas, Meus pedidos e Todas as missas),
 e na barra o item chama QUESTS, não "Jornada". Se alguma tela mudar, tire as fotos de
 novo ANTES de reescrever o texto.
+
+
+ACESSO DA EQUIPE QUE NÃO SERVE (equipe.mjs, 02/10/2026)
+  node criar-logins/equipe.mjs                  modo seco
+  node criar-logins/equipe.mjs --valendo --saida entregas/APOIO-nao-precisa-abrir/arquivo.json
+
+Cria ficha + conta + vínculo de gente que NUNCA esteve no cadastro de quem serve (serve=false,
+eh_equipe=true, papel membro_equipe). A senha é UMA POR PESSOA, aleatória, e a ficha nasce com
+senha_provisoria de pé (o app obriga a trocar no 1º acesso). Recusa criar se já existe ficha com
+o mesmo nome. A lista de pessoas e as permissões estão no topo do arquivo.
+Feito em 02/10/2026: Daiane Silva, Leticia Aranda, Luana Tank, Michelly Keller, Sandra Mello e
+Edilaine Nunes — permissões retiros + tesouraria. As senhas ficam em entregas/ (ignorado pelo git).
+serve=false tira a pessoa da Escala, do Rodízio e dos números do Início (escala.html, index.html).

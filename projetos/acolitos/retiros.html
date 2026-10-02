@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Retiros — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#150a0d">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <script>window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__bip=e;});</script>
+  <style>
+    .rt-tabs { display:flex; gap:4px; background:var(--surface2); border:1px solid var(--border-wine); border-radius:11px; padding:3px; margin:0 0 14px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+    .rt-tabs::-webkit-scrollbar { display:none; }
+    .rt-tabs button { flex:0 0 auto; padding:8px 12px; border:none; background:transparent; color:var(--text-muted); font-family:'Sora',sans-serif; font-weight:700; font-size:12px; letter-spacing:.4px; border-radius:8px; cursor:pointer; white-space:nowrap; }
+    .rt-tabs button.on { background:linear-gradient(165deg, rgba(232,185,74,.18), var(--surface)); color:var(--gold-light); box-shadow:0 0 0 1px var(--gold-dim) inset; }
+    .rt-card { background:var(--surface); border:1px solid var(--border-wine); border-radius:12px; padding:13px 14px; margin-bottom:10px; }
+    .rt-card.clic { cursor:pointer; }
+    .rt-card.atraso { border-color:var(--danger); }
+    .rt-tit { font-family:'Sora',sans-serif; font-weight:700; font-size:15px; color:var(--text); }
+    .rt-meta { font-size:12px; color:var(--text-muted); margin-top:3px; line-height:1.45; }
+    .rt-meta.atraso { color:var(--danger-text); font-weight:700; }
+    .rt-obs { font-size:12px; color:var(--text-muted); font-style:italic; margin-top:4px; white-space:pre-wrap; }
+    .rt-barra { height:6px; background:var(--surface3); border-radius:4px; overflow:hidden; margin-top:9px; }
+    .rt-barra > i { display:block; height:100%; background:var(--gold); }
+    .rt-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+    .rt-mini { background:var(--surface); border:1px solid var(--border-wine); border-radius:8px; padding:10px 12px; }
+    .rt-mini .l { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+    .rt-mini .v { font-family:'Oxanium',sans-serif; font-size:18px; font-weight:700; margin-top:3px; }
+    .rt-mini .v.pos { color:var(--success-text); } .rt-mini .v.neg { color:var(--danger-text); }
+    .rt-linha { display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; }
+    .rt-corpo { flex:1; min-width:170px; }
+    .rt-acoes { display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; width:100%; }
+    .rt-grupo { font-family:'Sora',sans-serif; font-weight:800; font-size:12px; color:var(--gold-light); letter-spacing:.6px; margin:16px 0 8px; text-transform:uppercase; }
+    .rt-tag { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.4px; padding:2px 8px; border-radius:999px; border:1px solid var(--border); color:var(--text-muted); margin-right:6px; }
+    .rt-tag.feito, .rt-tag.comprada { color:var(--success-text); border-color:var(--success); }
+    .rt-tag.andamento, .rt-tag.cotando { color:var(--warn-text); border-color:var(--warn); }
+    .rt-tag.aprovada { color:var(--gold-light); border-color:var(--gold-dim); }
+    .rt-tag.menor { color:var(--success-text); border-color:var(--success); }
+    .rt-aviso { border:1px solid var(--warn); background:rgba(176,125,22,.14); color:var(--warn-text); border-radius:10px; padding:10px 12px; font-size:12.5px; line-height:1.45; margin-bottom:12px; }
+    .rt-aviso.ruim { border-color:var(--danger); background:rgba(200,20,31,.14); color:var(--danger-text); }
+    .rt-topo { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .rt-voltar { background:none; border:none; color:var(--gold-light); font-family:'Sora',sans-serif; font-weight:700; font-size:13px; cursor:pointer; padding:6px 0; }
+    .rt-vazio { color:var(--text-muted); font-size:13px; padding:14px 0; }
+    .rt-erro { color:var(--danger-text); font-weight:600; font-size:13px; padding:14px 0; }
+    .rt-form-linha { display:flex; gap:8px; } .rt-form-linha > * { flex:1; min-width:0; }
+    .rt-dica { font-size:11.5px; color:var(--text-muted); margin-top:4px; line-height:1.4; }
+    .rt-cot { border-top:1px solid var(--border); padding:10px 0; }
+    .rt-cot:first-child { border-top:none; }
+    .rt-valor { font-family:'Oxanium',sans-serif; font-weight:700; font-size:15px; white-space:nowrap; }
+    .rt-valor.ent { color:var(--success-text); } .rt-valor.sai { color:var(--danger-text); }
+    .rt-modal-tall { max-height:88vh; overflow-y:auto; }
+  </style>
+  <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
+</head>
+<body>
+<div id="app-header"></div>
+<div id="app-nav"></div>
+<div class="main" id="main-content">
+  <span class="loading">Carregando...</span>
+</div>
+
+<script src="navegacao-core.js"></script>
+<script src="portao-notificacoes-core.js"></script>
+<script src="boas-vindas-core.js"></script>
+<script src="foto-recado-core.js"></script>
+<script src="horario-core.js"></script>
+<script src="filtro-lista-core.js"></script>
+<script src="senha-nova-core.js"></script>
+<script src="telefones-core.js"></script>
+<script src="retiros-core.js"></script>
+<script src="shared.js"></script>
+<script>
+const TIPOS_AREA = [['retiro','Retiro'],['espiritualidade','Espiritualidade'],['formacao','Formação'],['outro','Outro']];
+const STATUS_AREA = [['planejando','Planejando'],['em_andamento','Em andamento'],['concluida','Concluída'],['arquivada','Arquivada']];
+const STATUS_ITEM = { a_fazer:'A fazer', andamento:'Em andamento', feito:'Feito' };
+const PROX_ITEM = { a_fazer:'andamento', andamento:'feito', feito:'a_fazer' };
+const STATUS_COMPRA = { pendente:'Pendente', cotando:'Cotando', aprovada:'Aprovada', comprada:'Comprada' };
+const ABAS = [...RetirosCore.SECOES, ['compras','Compras'], ['caixa','Caixa']];
+const MES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const brl = v => Number(v || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+const rotulo = (lista, k) => (lista.find(x => x[0] === k) || [k, k])[1];
+
+let ctx = null;
+let areas = [], resumos = {}, membros = [], fornecedores = [];
+let area = null, itens = [], compras = [], lancs = [];
+let aba = 'cronograma', mostrarArquivadas = false;
+
+// ── helpers de DOM ───────────────────────────────────────────────────────
+function h(tag, cls, texto, attrs) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (texto != null) e.textContent = texto;
+  if (attrs) Object.keys(attrs).forEach(k => { if (k === 'onclick') e.onclick = attrs[k]; else e.setAttribute(k, attrs[k]); });
+  return e;
+}
+function botao(texto, cor, fn) { const b = h('button', 'btn-sm ' + (cor || 'gray'), texto, { type:'button' }); b.onclick = fn; return b; }
+function dia(iso) { if (!iso) return ''; const d = new Date(iso + 'T00:00:00'); return d.getDate() + ' ' + MES[d.getMonth()]; }
+function diaCompleto(iso) { if (!iso) return ''; const d = new Date(iso + 'T00:00:00'); return d.getDate() + ' ' + MES[d.getMonth()] + ' ' + d.getFullYear(); }
+function hhmm(t) { return t ? String(t).slice(0, 5) : ''; }
+function nomeMembro(id) { const m = membros.find(x => x.id === id); return m ? m.nome.split(' ').slice(0, 2).join(' ') : null; }
+function nomeFornecedor(id) { const f = fornecedores.find(x => x.id === id); return f ? f.nome : null; }
+function falhou(error, onde) {
+  if (!error) return false;
+  console.error(onde, error);
+  toast('Não foi possível ' + onde + '. Tente de novo.', 'error');
+  return true;
+}
+// lê tabelas grandes de mil em mil (o banco corta em 1000 linhas sem avisar)
+async function pegarTudo(montar) {
+  const todas = [];
+  for (let de = 0; de < 20000; de += 1000) {
+    const { data, error } = await montar().range(de, de + 999);
+    if (error) return { data: null, error };
+    todas.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return { data: todas, error: null };
+}
+
+// ── formulário genérico em janela ───────────────────────────────────────
+// campos: { k, label, tipo: text|textarea|date|time|number|select, opcoes, req, dica, placeholder, step }
+function formModal(o) {
+  const ov = h('div', 'modal-overlay open');
+  ov.onclick = e => { if (e.target === ov) ov.remove(); };
+  const modal = h('div', 'modal rt-modal-tall');
+  modal.append(h('div', 'modal-handle'), h('div', 'modal-title', o.titulo));
+  const inputs = {};
+  const v0 = o.valores || {};
+  let linha = null;
+  o.campos.forEach(c => {
+    const g = h('div', 'form-group');
+    g.append(h('label', 'form-label', c.label + (c.req ? ' *' : '')));
+    let inp;
+    if (c.tipo === 'textarea') { inp = h('textarea', 'form-input'); inp.rows = 3; }
+    else if (c.tipo === 'select') {
+      inp = h('select', 'form-select');
+      (c.opcoes || []).forEach(([v, l]) => { const op = h('option', null, l); op.value = v; inp.appendChild(op); });
+    } else {
+      inp = h('input', 'form-input'); inp.type = c.tipo || 'text';
+      if (c.tipo === 'number') { inp.step = c.step || '0.01'; inp.min = '0'; inp.inputMode = 'decimal'; }
+    }
+    if (c.placeholder) inp.placeholder = c.placeholder;
+    const ini = v0[c.k] != null ? v0[c.k] : (c.padrao != null ? c.padrao : '');
+    inp.value = c.tipo === 'time' ? hhmm(ini) : ini;
+    inputs[c.k] = inp;
+    g.appendChild(inp);
+    if (c.dica) g.appendChild(h('div', 'rt-dica', c.dica));
+    if (c.metade) {                       // dois campos curtos lado a lado
+      if (!linha) { linha = h('div', 'rt-form-linha'); modal.appendChild(linha); }
+      linha.appendChild(g);
+      if (linha.children.length === 2) linha = null;
+    } else { linha = null; modal.appendChild(g); }
+  });
+  const msg = h('div', 'msg'); modal.appendChild(msg);
+  const acts = h('div', 'modal-actions');
+  const cancel = botao('Cancelar', 'gray', () => ov.remove());
+  const salvar = botao(o.botao || 'Salvar', 'gold', async () => {
+    const vals = {};
+    for (const c of o.campos) {
+      let v = inputs[c.k].value.trim();
+      if (c.req && !v) { msg.className = 'msg error'; msg.textContent = 'Preencha: ' + c.label + '.'; return; }
+      if (c.tipo === 'number') v = v === '' ? null : parseFloat(String(v).replace(',', '.'));
+      else if (v === '') v = null;
+      vals[c.k] = v;
+    }
+    salvar.disabled = true; salvar.textContent = 'Salvando...';
+    const erro = await o.salvar(vals);
+    if (erro) { msg.className = 'msg error'; msg.textContent = typeof erro === 'string' ? erro : 'Não foi possível salvar. Tente de novo.'; salvar.disabled = false; salvar.textContent = o.botao || 'Salvar'; return; }
+    ov.remove();
+    if (o.depois) o.depois();
+  });
+  acts.append(cancel, salvar); modal.appendChild(acts);
+  ov.appendChild(modal); document.body.appendChild(ov);
+  const primeiro = Object.values(inputs)[0]; if (primeiro && primeiro.tagName === 'INPUT' && !primeiro.value) setTimeout(() => primeiro.focus(), 50);
+  return ov;
+}
+function opcoesMembros(vazio) {
+  const eq = membros.filter(m => m.eh_equipe), resto = membros.filter(m => !m.eh_equipe);
+  return [['', vazio || '— ninguém —'], ...eq.map(m => [m.id, m.nome + ' (equipe)']), ...resto.map(m => [m.id, m.nome])];
+}
+function opcoesFornecedores() { return [['', '— nenhum —'], ...fornecedores.map(f => [f.id, f.nome])]; }
+
+// ── carga ────────────────────────────────────────────────────────────────
+async function init() {
+  ctx = await initModulo(['coord_admin','subadmin','membro_equipe'], { perm: 'retiros' });
+  if (!ctx) return;
+  renderHeader(ctx, 'retiros');
+  renderBottomNav(ctx, 'retiros');
+  const [m, f] = await Promise.all([
+    pegarTudo(() => sb.from('acolitos_membros').select('id,nome,eh_equipe,status').neq('status', 'desligado').order('nome')),
+    sb.from('acolitos_retiro_fornecedores').select('*').order('nome'),
+  ]);
+  membros = m.data || []; fornecedores = f.data || [];
+  const id = new URLSearchParams(location.search).get('area');
+  if (id) { await abrirArea(id); } else { await carregarLista(); }
+}
+
+async function carregarLista() {
+  area = null;
+  const main = document.getElementById('main-content');
+  const [a, i, c, l] = await Promise.all([
+    sb.from('acolitos_retiro_areas').select('*').order('data_inicio', { ascending: true, nullsFirst: false }).order('criada_em', { ascending: false }),
+    pegarTudo(() => sb.from('acolitos_retiro_itens').select('id,area_id,status,prazo')),
+    pegarTudo(() => sb.from('acolitos_retiro_compras').select('id,area_id,status,prazo,valor_estimado,valor_pago')),
+    pegarTudo(() => sb.from('acolitos_financeiro').select('retiro_area_id,retiro_compra_id,tipo,categoria,valor').not('retiro_area_id', 'is', null)),
+  ]);
+  if (a.error || i.error || c.error || l.error) {
+    main.textContent = ''; main.appendChild(h('div', 'rt-erro', 'Não foi possível carregar os retiros. Atualize a página e tente de novo.')); return;
+  }
+  areas = a.data || [];
+  const hoje = hojeLocal();
+  resumos = {};
+  areas.forEach(x => {
+    resumos[x.id] = RetirosCore.resumoDaArea({
+      itens: i.data.filter(y => y.area_id === x.id),
+      compras: c.data.filter(y => y.area_id === x.id),
+      lancamentos: l.data.filter(y => y.retiro_area_id === x.id),
+    }, hoje);
+  });
+  renderLista();
+}
+
+async function abrirArea(id) {
+  const main = document.getElementById('main-content');
+  const [a, i, c, l] = await Promise.all([
+    sb.from('acolitos_retiro_areas').select('*').eq('id', id).maybeSingle(),
+    sb.from('acolitos_retiro_itens').select('*').eq('area_id', id),
+    sb.from('acolitos_retiro_compras').select('*, cotacoes:acolitos_retiro_cotacoes(*)').eq('area_id', id).order('criada_em'),
+    sb.from('acolitos_financeiro').select('*').eq('retiro_area_id', id).order('data', { ascending: false }).order('created_at', { ascending: false }),
+  ]);
+  if (a.error || i.error || c.error || l.error || !a.data) {
+    main.textContent = '';
+    main.appendChild(h('div', 'rt-erro', a.data === null && !a.error ? 'Esta área não existe mais.' : 'Não foi possível carregar esta área.'));
+    main.appendChild(botao('← Voltar aos retiros', 'gray', voltar));
+    return;
+  }
+  area = a.data; itens = i.data || []; compras = c.data || []; lancs = l.data || [];
+  const u = new URL(location.href); u.searchParams.set('area', id); history.replaceState(null, '', u);
+  renderArea();
+}
+function voltar() { const u = new URL(location.href); u.searchParams.delete('area'); history.replaceState(null, '', u); carregarLista(); }
+const recarregarArea = () => abrirArea(area.id);
+
+// ── lista de áreas ───────────────────────────────────────────────────────
+function renderLista() {
+  const main = document.getElementById('main-content'); main.textContent = '';
+  main.appendChild(h('h1', 'page-title', 'Retiros'));
+  main.appendChild(h('div', 'rt-meta', 'Planejamento de retiros, espiritualidade e formações — cronograma, pregações, dinâmicas, refeições, compras e caixa num lugar só.'));
+  const add = botao('+ Nova área', 'gold', () => editarArea(null)); add.style.cssText = 'margin:14px 0 6px;width:100%;min-height:44px;';
+  main.appendChild(add);
+  const visiveis = areas.filter(x => mostrarArquivadas || x.status !== 'arquivada');
+  if (!visiveis.length) main.appendChild(h('div', 'rt-vazio', areas.length ? 'Só há áreas arquivadas.' : 'Nenhuma área ainda. Crie a primeira — por exemplo "Retiro de Advento 2026".'));
+  visiveis.forEach(x => {
+    const r = resumos[x.id] || RetirosCore.resumoDaArea({}, hojeLocal());
+    const card = h('div', 'rt-card clic' + (r.atrasados ? ' atraso' : ''));
+    card.onclick = () => { aba = 'cronograma'; abrirArea(x.id); };
+    const topo = h('div', 'rt-linha');
+    const corpo = h('div', 'rt-corpo');
+    corpo.append(h('div', 'rt-tit', x.nome));
+    const quando = x.data_inicio ? (diaCompleto(x.data_inicio) + (x.data_fim && x.data_fim !== x.data_inicio ? ' a ' + diaCompleto(x.data_fim) : '')) : 'Sem data';
+    corpo.append(h('div', 'rt-meta', rotulo(TIPOS_AREA, x.tipo) + ' · ' + quando + (x.local ? ' · ' + x.local : '')));
+    topo.appendChild(corpo);
+    topo.appendChild(h('span', 'rt-tag ' + (x.status === 'concluida' ? 'feito' : x.status === 'em_andamento' ? 'andamento' : ''), rotulo(STATUS_AREA, x.status)));
+    card.appendChild(topo);
+    const barra = h('div', 'rt-barra'); const fill = h('i'); fill.style.width = (r.percentual || 0) + '%'; barra.appendChild(fill); card.appendChild(barra);
+    const linhas = [r.percentual == null ? 'Plano vazio' : r.percentual + '% pronto (' + (r.feitos + r.comprasFeitas) + ' de ' + (r.itens + r.compras) + ')'];
+    if (r.compras) linhas.push('Compras: ' + brl(r.orcamento));
+    if (r.caixa.entradas || r.caixa.saidas) linhas.push('Caixa: ' + brl(r.caixa.saldo));
+    card.appendChild(h('div', 'rt-meta', linhas.join(' · ')));
+    if (r.atrasados) card.appendChild(h('div', 'rt-meta atraso', r.atrasados + (r.atrasados === 1 ? ' coisa com prazo vencido' : ' coisas com prazo vencido')));
+    main.appendChild(card);
+  });
+  if (areas.some(x => x.status === 'arquivada')) {
+    const t = botao(mostrarArquivadas ? 'Esconder arquivadas' : 'Mostrar arquivadas', 'gray', () => { mostrarArquivadas = !mostrarArquivadas; renderLista(); });
+    t.style.marginTop = '8px'; main.appendChild(t);
+  }
+}
+
+function editarArea(a) {
+  formModal({
+    titulo: a ? 'Editar área' : 'Nova área',
+    valores: a || {},
+    campos: [
+      { k:'nome', label:'Nome', req:true, placeholder:'Ex: Retiro de Advento 2026' },
+      { k:'tipo', label:'Tipo', tipo:'select', opcoes:TIPOS_AREA, padrao:'retiro' },
+      { k:'local', label:'Local', placeholder:'Onde vai ser' },
+      { k:'data_inicio', label:'Início', tipo:'date', metade:true },
+      { k:'data_fim', label:'Fim', tipo:'date', metade:true },
+      ...(a ? [{ k:'status', label:'Situação', tipo:'select', opcoes:STATUS_AREA }] : []),
+      { k:'descricao', label:'Sobre', tipo:'textarea', placeholder:'Objetivo, público, observações' },
+    ],
+    salvar: async v => {
+      if (v.data_inicio && v.data_fim && v.data_fim < v.data_inicio) return 'O fim não pode ser antes do início.';
+      const { error } = a
+        ? await sb.from('acolitos_retiro_areas').update(v).eq('id', a.id)
+        : await sb.from('acolitos_retiro_areas').insert({ ...v, criada_por: ctx.user.id });
+      return error ? true : null;
+    },
+    depois: () => (a ? recarregarArea() : carregarLista()),
+  });
+}
+
+// ── dentro da área ──────────────────────────────────────────────────────
+function renderArea() {
+  const main = document.getElementById('main-content'); main.textContent = '';
+  const topo = h('div', 'rt-topo');
+  topo.appendChild(botao('← Retiros', 'gray', voltar));
+  topo.appendChild(botao('Editar', 'gold', () => editarArea(area)));
+  main.appendChild(topo);
+  main.appendChild(h('h1', 'page-title', area.nome));
+  const quando = area.data_inicio ? (diaCompleto(area.data_inicio) + (area.data_fim && area.data_fim !== area.data_inicio ? ' a ' + diaCompleto(area.data_fim) : '')) : 'Sem data definida';
+  main.appendChild(h('div', 'rt-meta', rotulo(TIPOS_AREA, area.tipo) + ' · ' + quando + (area.local ? ' · ' + area.local : '') + ' · ' + rotulo(STATUS_AREA, area.status)));
+  if (area.descricao) main.appendChild(h('div', 'rt-obs', area.descricao));
+
+  const r = RetirosCore.resumoDaArea({ itens, compras, lancamentos: lancs }, hojeLocal());
+  const grid = h('div', 'rt-grid'); grid.style.marginTop = '12px';
+  [
+    ['Pronto', r.percentual == null ? '—' : r.percentual + '%', ''],
+    ['Atrasados', String(r.atrasados), r.atrasados ? 'neg' : ''],
+    ['Compras (orçamento)', brl(r.orcamento), ''],
+    ['Saldo da área', brl(r.caixa.saldo), r.caixa.saldo < 0 ? 'neg' : r.caixa.saldo > 0 ? 'pos' : ''],
+  ].forEach(([l, v, cls]) => { const c = h('div', 'rt-mini'); c.append(h('div', 'l', l), h('div', 'v ' + cls, v)); grid.appendChild(c); });
+  main.appendChild(grid);
+
+  const tabs = h('div', 'rt-tabs');
+  ABAS.forEach(([k, l]) => {
+    const n = k === 'compras' ? compras.length : k === 'caixa' ? lancs.length : itens.filter(i => i.secao === k).length;
+    tabs.appendChild(botao(l + (n ? ' · ' + n : ''), '', () => { aba = k; renderArea(); }));
+    tabs.lastChild.className = aba === k ? 'on' : '';
+  });
+  main.appendChild(tabs);
+  const corpo = h('div'); main.appendChild(corpo);
+  if (aba === 'compras') renderCompras(corpo, r);
+  else if (aba === 'caixa') renderCaixa(corpo, r);
+  else renderPlano(corpo, aba);
+  const ativa = tabs.querySelector('.on'); if (ativa && ativa.scrollIntoView) ativa.scrollIntoView({ inline:'center', block:'nearest' });
+}
+
+// ── plano: cronograma, pregações, dinâmicas, gincanas, refeições ────────
+const TEXTOS = {
+  cronograma: { add:'+ Atividade', vazio:'Nenhuma atividade no cronograma ainda.', titulo:'Atividade', ex:'Ex: Acolhida e café' },
+  pregacao:   { add:'+ Pregação', vazio:'Nenhuma pregação planejada ainda.', titulo:'Tema da pregação', ex:'Ex: A fé de Maria' },
+  dinamica:   { add:'+ Dinâmica', vazio:'Nenhuma dinâmica planejada ainda.', titulo:'Nome da dinâmica', ex:'Ex: Quebra-gelo' },
+  gincana:    { add:'+ Gincana', vazio:'Nenhuma gincana planejada ainda.', titulo:'Nome da gincana', ex:'Ex: Caça ao tesouro' },
+  refeicao:   { add:'+ Refeição', vazio:'Nenhuma refeição planejada ainda.', titulo:'Cardápio', ex:'Ex: Arroz, feijão, frango assado' },
+};
+function renderPlano(el, secao) {
+  const t = TEXTOS[secao];
+  const add = botao(t.add, 'gold', () => editarItem(secao, null)); add.style.cssText = 'width:100%;min-height:42px;margin-bottom:10px;';
+  el.appendChild(add);
+  const lista = RetirosCore.ordenarPlano(itens.filter(i => i.secao === secao));
+  if (!lista.length) { el.appendChild(h('div', 'rt-vazio', t.vazio)); return; }
+  const hoje = hojeLocal();
+  lista.forEach(i => {
+    const atraso = RetirosCore.atrasado(i, hoje);
+    const card = h('div', 'rt-card' + (atraso ? ' atraso' : ''));
+    const lin = h('div', 'rt-linha'); const corpo = h('div', 'rt-corpo');
+    const quando = [i.data ? dia(i.data) : null, hhmm(i.hora) || null, i.duracao_min ? i.duracao_min + ' min' : null].filter(Boolean).join(' · ');
+    corpo.appendChild(h('div', 'rt-tit', (secao === 'refeicao' && i.subtipo ? rotulo(RetirosCore.REFEICOES, i.subtipo) + ' — ' : '') + i.titulo));
+    if (quando) corpo.appendChild(h('div', 'rt-meta', quando));
+    const resp = nomeMembro(i.responsavel_id);
+    const linhaR = [resp ? (secao === 'pregacao' ? 'Pregador: ' : 'Responsável: ') + resp : 'Sem responsável'];
+    if (i.prazo) linhaR.push('prazo ' + dia(i.prazo));
+    corpo.appendChild(h('div', 'rt-meta' + (atraso ? ' atraso' : ''), linhaR.join(' · ') + (atraso ? ' — VENCIDO' : '')));
+    if (i.descricao) corpo.appendChild(h('div', 'rt-obs', i.descricao));
+    lin.appendChild(corpo);
+    lin.appendChild(h('span', 'rt-tag ' + i.status, STATUS_ITEM[i.status]));
+    card.appendChild(lin);
+    const ac = h('div', 'rt-acoes');
+    ac.appendChild(botao(i.status === 'feito' ? 'Reabrir' : i.status === 'a_fazer' ? 'Começar' : 'Concluir', i.status === 'feito' ? 'gray' : 'green', async () => {
+      const { error } = await sb.from('acolitos_retiro_itens').update({ status: PROX_ITEM[i.status] }).eq('id', i.id);
+      if (!falhou(error, 'mudar o andamento')) recarregarArea();
+    }));
+    ac.appendChild(botao('Editar', 'gold', () => editarItem(secao, i)));
+    ac.appendChild(botao('Excluir', 'gray', async () => {
+      if (!await uiConfirm('Excluir "' + i.titulo + '"?')) return;
+      const { error } = await sb.from('acolitos_retiro_itens').delete().eq('id', i.id);
+      if (!falhou(error, 'excluir')) recarregarArea();
+    }));
+    card.appendChild(ac); el.appendChild(card);
+  });
+}
+function editarItem(secao, i) {
+  const t = TEXTOS[secao];
+  formModal({
+    titulo: (i ? 'Editar' : 'Novo') + ' — ' + rotulo(RetirosCore.SECOES, secao).replace(/s$/, ''),
+    valores: i || {},
+    campos: [
+      ...(secao === 'refeicao' ? [{ k:'subtipo', label:'Refeição', tipo:'select', opcoes:RetirosCore.REFEICOES, padrao:'almoco' }] : []),
+      { k:'titulo', label:t.titulo, req:true, placeholder:t.ex },
+      { k:'data', label:'Dia', tipo:'date', metade:true, padrao: area.data_inicio || '' },
+      { k:'hora', label:'Hora', tipo:'time', metade:true },
+      ...(secao === 'cronograma' || secao === 'dinamica' || secao === 'gincana' || secao === 'pregacao' ? [{ k:'duracao_min', label:'Duração (minutos)', tipo:'number', step:'5' }] : []),
+      { k:'responsavel_id', label: secao === 'pregacao' ? 'Pregador' : 'Responsável', tipo:'select', opcoes:opcoesMembros() },
+      { k:'prazo', label:'Data máxima para ficar pronto', tipo:'date', dica:'Depois dessa data, sem estar feito, aparece como vencido.' },
+      { k:'status', label:'Andamento', tipo:'select', opcoes:Object.entries(STATUS_ITEM), padrao:'a_fazer' },
+      { k:'descricao', label: secao === 'refeicao' ? 'Observações (alergias, quantidade de pessoas...)' : 'Detalhes', tipo:'textarea' },
+    ],
+    salvar: async v => {
+      if (v.duracao_min != null) v.duracao_min = Math.round(v.duracao_min);
+      const { error } = i
+        ? await sb.from('acolitos_retiro_itens').update(v).eq('id', i.id)
+        : await sb.from('acolitos_retiro_itens').insert({ ...v, area_id: area.id, secao, criada_por: ctx.user.id });
+      return error ? true : null;
+    },
+    depois: recarregarArea,
+  });
+}
+
+// ── compras e cotações ──────────────────────────────────────────────────
+function renderCompras(el, r) {
+  const barra = h('div', 'rt-acoes'); barra.style.marginTop = '0';
+  barra.appendChild(botao('+ Item', 'gold', () => editarCompra(null)));
+  barra.appendChild(botao('Fornecedores', 'gray', gerirFornecedores));
+  el.appendChild(barra);
+  const sem = compras.filter(c => c.status !== 'comprada' && c.valor_estimado == null).length;
+  const resumo = h('div', 'rt-meta', 'Orçamento: ' + brl(r.orcamento) + ' · Já pago: ' + brl(r.pago) + (sem ? ' · ' + sem + (sem === 1 ? ' item sem valor' : ' itens sem valor') : ''));
+  resumo.style.margin = '10px 0';
+  el.appendChild(resumo);
+  if (!compras.length) { el.appendChild(h('div', 'rt-vazio', 'A lista de compras está vazia. Adicione ingredientes, decoração, lembranças, papelaria, higiene, limpeza...')); return; }
+  const hoje = hojeLocal();
+  RetirosCore.CATEGORIAS_COMPRA.forEach(([cat, nomeCat]) => {
+    const lista = compras.filter(c => c.categoria === cat); if (!lista.length) return;
+    const total = lista.reduce((s, c) => s + RetirosCore.valorDaCompra(c), 0);
+    el.appendChild(h('div', 'rt-grupo', nomeCat + ' · ' + brl(total)));
+    lista.forEach(c => {
+      const atraso = RetirosCore.atrasado(c, hoje);
+      const card = h('div', 'rt-card' + (atraso ? ' atraso' : ''));
+      const lin = h('div', 'rt-linha'); const corpo = h('div', 'rt-corpo');
+      const qtd = Number(c.quantidade).toLocaleString('pt-BR') + (c.unidade ? ' ' + c.unidade : '');
+      corpo.appendChild(h('div', 'rt-tit', c.item + ' — ' + qtd));
+      const forn = nomeFornecedor(c.fornecedor_id);
+      const resp = nomeMembro(c.responsavel_id);
+      const l2 = [];
+      if (c.status === 'comprada') l2.push('Pago ' + brl(c.valor_pago) + (c.comprada_em ? ' em ' + dia(c.comprada_em) : ''));
+      else l2.push(c.valor_estimado != null ? 'Estimado ' + brl(c.valor_estimado) : 'Sem valor');
+      if (forn) l2.push(forn);
+      corpo.appendChild(h('div', 'rt-meta', l2.join(' · ')));
+      const l3 = [resp ? 'Responsável: ' + resp : 'Sem responsável'];
+      if (c.prazo) l3.push('prazo ' + dia(c.prazo));
+      corpo.appendChild(h('div', 'rt-meta' + (atraso ? ' atraso' : ''), l3.join(' · ') + (atraso ? ' — VENCIDO' : '')));
+      const cots = c.cotacoes || [];
+      if (cots.length) {
+        const m = RetirosCore.melhorCotacao(cots, hoje);
+        corpo.appendChild(h('div', 'rt-meta', cots.length + (cots.length === 1 ? ' cotação' : ' cotações') + (m ? ' · menor: ' + brl(m.valor_unitario) + ' cada' : '')));
+      }
+      if (c.observacao) corpo.appendChild(h('div', 'rt-obs', c.observacao));
+      lin.appendChild(corpo);
+      lin.appendChild(h('span', 'rt-tag ' + c.status, STATUS_COMPRA[c.status]));
+      card.appendChild(lin);
+      const ac = h('div', 'rt-acoes');
+      if (c.status !== 'comprada') {
+        ac.appendChild(botao('Cotações' + (cots.length ? ' (' + cots.length + ')' : ''), 'gold', () => abrirCotacoes(c.id)));
+        if (c.status === 'pendente' || c.status === 'cotando') ac.appendChild(botao('Aprovar', 'gray', async () => {
+          const { error } = await sb.from('acolitos_retiro_compras').update({ status: 'aprovada' }).eq('id', c.id);
+          if (!falhou(error, 'aprovar')) recarregarArea();
+        }));
+        ac.appendChild(botao('Comprei', 'green', () => comprar(c)));
+      } else {
+        ac.appendChild(botao('Desfazer compra', 'gray', async () => {
+          if (!await uiConfirm('Desfazer a compra de "' + c.item + '"?\nO lançamento de saída dela some da Tesouraria.')) return;
+          const { error } = await sb.rpc('acolitos_retiro_desfazer_compra', { p_compra: c.id });
+          if (!falhou(error, 'desfazer a compra')) { toast('Compra desfeita e lançamento removido da Tesouraria.'); recarregarArea(); }
+        }));
+      }
+      ac.appendChild(botao('Editar', 'gold', () => editarCompra(c)));
+      ac.appendChild(botao('Excluir', 'gray', async () => {
+        if (!await uiConfirm('Excluir "' + c.item + '" da lista?' + (c.status === 'comprada' ? '\nO lançamento na Tesouraria continua lá — remova-o por "Desfazer compra" antes, se quiser tirá-lo.' : ''))) return;
+        const { error } = await sb.from('acolitos_retiro_compras').delete().eq('id', c.id);
+        if (!falhou(error, 'excluir')) recarregarArea();
+      }));
+      card.appendChild(ac); el.appendChild(card);
+    });
+  });
+}
+function editarCompra(c) {
+  formModal({
+    titulo: c ? 'Editar item' : 'Novo item de compra',
+    valores: c || {},
+    campos: [
+      { k:'item', label:'Item', req:true, placeholder:'Ex: Arroz 5 kg' },
+      { k:'categoria', label:'Categoria', tipo:'select', opcoes:RetirosCore.CATEGORIAS_COMPRA, padrao:'ingredientes' },
+      { k:'quantidade', label:'Quantidade', tipo:'number', step:'0.001', padrao:1, req:true, metade:true },
+      { k:'unidade', label:'Unidade', placeholder:'kg, un, pacote', metade:true },
+      { k:'valor_estimado', label:'Valor estimado total (R$)', tipo:'number', dica:'Se for cotar, deixe vazio: ao escolher uma cotação o valor entra sozinho.' },
+      { k:'responsavel_id', label:'Quem compra', tipo:'select', opcoes:opcoesMembros() },
+      { k:'prazo', label:'Data máxima para comprar', tipo:'date' },
+      { k:'observacao', label:'Observações', tipo:'textarea', placeholder:'Marca, onde achar, cuidados' },
+    ],
+    salvar: async v => {
+      if (!(v.quantidade > 0)) return 'A quantidade precisa ser maior que zero.';
+      const { error } = c
+        ? await sb.from('acolitos_retiro_compras').update(v).eq('id', c.id)
+        : await sb.from('acolitos_retiro_compras').insert({ ...v, area_id: area.id, criada_por: ctx.user.id });
+      return error ? true : null;
+    },
+    depois: recarregarArea,
+  });
+}
+
+function comprar(c) {
+  formModal({
+    titulo: 'Registrar compra — ' + c.item,
+    botao: 'Registrar e lançar no caixa',
+    valores: { valor: c.valor_estimado, data: hojeLocal(), fornecedor: c.fornecedor_id },
+    campos: [
+      { k:'valor', label:'Valor pago, total (R$)', tipo:'number', req:true, dica:'Vira uma SAÍDA na Tesouraria, ligada a este retiro.' },
+      { k:'data', label:'Data da compra', tipo:'date', req:true },
+      { k:'fornecedor', label:'Onde comprou', tipo:'select', opcoes:opcoesFornecedores() },
+    ],
+    salvar: async v => {
+      if (!(v.valor >= 0)) return 'Informe o valor pago.';
+      const { error } = await sb.rpc('acolitos_retiro_comprar', { p_compra: c.id, p_valor: v.valor, p_data: v.data, p_fornecedor: v.fornecedor });
+      return error ? (/ja_comprada/.test(error.message) ? 'Esta compra já foi registrada.' : true) : null;
+    },
+    depois: () => { toast('Compra registrada e lançada na Tesouraria.'); recarregarArea(); },
+  });
+}
+
+function abrirCotacoes(compraId) {
+  const c = compras.find(x => x.id === compraId); if (!c) return;
+  const ov = h('div', 'modal-overlay open');
+  ov.onclick = e => { if (e.target === ov) { ov.remove(); recarregarArea(); } };
+  const modal = h('div', 'modal rt-modal-tall');
+  ov.appendChild(modal);
+  const fechar = () => { ov.remove(); recarregarArea(); };
+  async function recarregar() {
+    const { data, error } = await sb.from('acolitos_retiro_cotacoes').select('*').eq('compra_id', c.id).order('valor_unitario');
+    if (falhou(error, 'carregar as cotações')) return;
+    c.cotacoes = data || []; desenhar();
+  }
+  function desenhar() {
+    modal.textContent = '';
+    modal.append(h('div', 'modal-handle'), h('div', 'modal-title', 'Cotações — ' + c.item));
+    modal.appendChild(h('div', 'rt-meta', 'Quantidade: ' + Number(c.quantidade).toLocaleString('pt-BR') + (c.unidade ? ' ' + c.unidade : '') + '. Compare os fornecedores e escolha um: o valor entra no orçamento.'));
+    const cots = c.cotacoes || [];
+    const melhor = RetirosCore.melhorCotacao(cots, hojeLocal());
+    const eco = RetirosCore.economia(cots, c.quantidade);
+    if (eco) modal.appendChild(h('div', 'rt-aviso', 'Diferença entre a mais cara e a mais barata: ' + brl(eco) + '.'));
+    if (!cots.length) modal.appendChild(h('div', 'rt-vazio', 'Nenhuma cotação ainda.'));
+    cots.slice().sort((a, b) => a.valor_unitario - b.valor_unitario).forEach(k => {
+      const box = h('div', 'rt-cot'); const lin = h('div', 'rt-linha'); const corpo = h('div', 'rt-corpo');
+      corpo.appendChild(h('div', 'rt-tit', nomeFornecedor(k.fornecedor_id) || k.fornecedor_nome || 'Fornecedor'));
+      const venc = k.validade && k.validade < hojeLocal();
+      corpo.appendChild(h('div', 'rt-meta', brl(k.valor_unitario) + ' cada · total ' + brl(RetirosCore.totalDaCotacao(k, c.quantidade)) + (k.validade ? ' · válida até ' + dia(k.validade) + (venc ? ' (VENCIDA)' : '') : '')));
+      if (k.observacao) corpo.appendChild(h('div', 'rt-obs', k.observacao));
+      lin.appendChild(corpo);
+      const tags = h('div');
+      if (melhor && melhor.id === k.id && cots.length > 1) tags.appendChild(h('span', 'rt-tag menor', 'Menor preço'));
+      if (k.escolhida) tags.appendChild(h('span', 'rt-tag comprada', 'Escolhida'));
+      lin.appendChild(tags); box.appendChild(lin);
+      const ac = h('div', 'rt-acoes');
+      if (!k.escolhida) ac.appendChild(botao('Escolher esta', 'green', async () => {
+        const a1 = await sb.from('acolitos_retiro_cotacoes').update({ escolhida: false }).eq('compra_id', c.id);
+        if (falhou(a1.error, 'escolher a cotação')) return;
+        const a2 = await sb.from('acolitos_retiro_cotacoes').update({ escolhida: true }).eq('id', k.id);
+        if (falhou(a2.error, 'escolher a cotação')) return;
+        const a3 = await sb.from('acolitos_retiro_compras').update({
+          valor_estimado: RetirosCore.totalDaCotacao(k, c.quantidade), fornecedor_id: k.fornecedor_id,
+          status: c.status === 'comprada' ? 'comprada' : 'aprovada',
+        }).eq('id', c.id);
+        if (falhou(a3.error, 'atualizar a compra')) return;
+        c.valor_estimado = RetirosCore.totalDaCotacao(k, c.quantidade); c.fornecedor_id = k.fornecedor_id; if (c.status !== 'comprada') c.status = 'aprovada';
+        toast('Cotação escolhida — orçamento atualizado.'); recarregar();
+      }));
+      ac.appendChild(botao('Excluir', 'gray', async () => {
+        const { error } = await sb.from('acolitos_retiro_cotacoes').delete().eq('id', k.id);
+        if (!falhou(error, 'excluir a cotação')) recarregar();
+      }));
+      box.appendChild(ac); modal.appendChild(box);
+    });
+    modal.appendChild(h('div', 'rt-grupo', 'Nova cotação'));
+    const inp = {};
+    const campo = (rot, el) => { const g = h('div', 'form-group'); g.append(h('label', 'form-label', rot), el); return g; };
+    const sel = h('select', 'form-select');
+    [['', '— escolha um fornecedor —'], ...fornecedores.map(f => [f.id, f.nome]), ['__outro', 'Outro (digitar o nome)']].forEach(([v, l]) => { const o = h('option', null, l); o.value = v; sel.appendChild(o); });
+    const nome = h('input', 'form-input'); nome.placeholder = 'Nome do fornecedor'; nome.style.display = 'none';
+    sel.onchange = () => { nome.style.display = sel.value === '__outro' ? '' : 'none'; };
+    const valor = h('input', 'form-input'); valor.type = 'number'; valor.step = '0.01'; valor.min = '0'; valor.inputMode = 'decimal'; valor.placeholder = '0,00';
+    const val = h('input', 'form-input'); val.type = 'date';
+    const obs = h('input', 'form-input'); obs.placeholder = 'Prazo de entrega, frete, forma de pagamento...';
+    modal.append(campo('Fornecedor', sel), nome, campo('Preço por unidade (R$)', valor), campo('Válida até', val), campo('Observações', obs));
+    const msg = h('div', 'msg'); modal.appendChild(msg);
+    const acts = h('div', 'modal-actions');
+    acts.appendChild(botao('Fechar', 'gray', fechar));
+    acts.appendChild(botao('Adicionar cotação', 'gold', async () => {
+      const preco = parseFloat(valor.value);
+      const forn = sel.value && sel.value !== '__outro' ? sel.value : null;
+      const livre = sel.value === '__outro' ? nome.value.trim() : '';
+      if (!forn && !livre) { msg.className = 'msg error'; msg.textContent = 'Escolha ou digite o fornecedor.'; return; }
+      if (!(preco >= 0)) { msg.className = 'msg error'; msg.textContent = 'Informe o preço por unidade.'; return; }
+      const { error } = await sb.from('acolitos_retiro_cotacoes').insert({ compra_id: c.id, fornecedor_id: forn, fornecedor_nome: livre || null, valor_unitario: preco, validade: val.value || null, observacao: obs.value.trim() || null });
+      if (falhou(error, 'salvar a cotação')) return;
+      if (c.status === 'pendente') { await sb.from('acolitos_retiro_compras').update({ status: 'cotando' }).eq('id', c.id); c.status = 'cotando'; }
+      recarregar();
+    }));
+    modal.appendChild(acts);
+  }
+  document.body.appendChild(ov); desenhar();
+}
+
+function gerirFornecedores() {
+  const ov = h('div', 'modal-overlay open');
+  ov.onclick = e => { if (e.target === ov) { ov.remove(); recarregarArea(); } };
+  const modal = h('div', 'modal rt-modal-tall'); ov.appendChild(modal);
+  function desenhar() {
+    modal.textContent = '';
+    modal.append(h('div', 'modal-handle'), h('div', 'modal-title', 'Fornecedores'));
+    if (!fornecedores.length) modal.appendChild(h('div', 'rt-vazio', 'Nenhum fornecedor cadastrado.'));
+    fornecedores.forEach(f => {
+      const box = h('div', 'rt-cot'); const lin = h('div', 'rt-linha'); const corpo = h('div', 'rt-corpo');
+      corpo.appendChild(h('div', 'rt-tit', f.nome));
+      const det = [f.contato, f.telefone].filter(Boolean).join(' · ');
+      if (det) corpo.appendChild(h('div', 'rt-meta', det));
+      if (f.observacao) corpo.appendChild(h('div', 'rt-obs', f.observacao));
+      lin.appendChild(corpo);
+      lin.appendChild(botao('Excluir', 'gray', async () => {
+        if (!await uiConfirm('Excluir o fornecedor "' + f.nome + '"?\nAs cotações dele ficam, sem o vínculo.')) return;
+        const { error } = await sb.from('acolitos_retiro_fornecedores').delete().eq('id', f.id);
+        if (falhou(error, 'excluir o fornecedor')) return;
+        fornecedores = fornecedores.filter(x => x.id !== f.id); desenhar();
+      }));
+      box.appendChild(lin); modal.appendChild(box);
+    });
+    const acts = h('div', 'modal-actions');
+    acts.appendChild(botao('Fechar', 'gray', () => { ov.remove(); recarregarArea(); }));
+    acts.appendChild(botao('+ Novo fornecedor', 'gold', () => formModal({
+      titulo: 'Novo fornecedor',
+      campos: [
+        { k:'nome', label:'Nome', req:true, placeholder:'Ex: Atacadão, Papelaria Central' },
+        { k:'contato', label:'Contato (pessoa)' },
+        { k:'telefone', label:'Telefone / WhatsApp' },
+        { k:'observacao', label:'Observações', tipo:'textarea', placeholder:'Endereço, prazos, formas de pagamento' },
+      ],
+      salvar: async v => {
+        const { data, error } = await sb.from('acolitos_retiro_fornecedores').insert(v).select().single();
+        if (error) return true;
+        fornecedores.push(data); fornecedores.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')); return null;
+      },
+      depois: desenhar,
+    })));
+    modal.appendChild(acts);
+  }
+  document.body.appendChild(ov); desenhar();
+}
+
+// ── caixa da área (concilia com a Tesouraria) ───────────────────────────
+function renderCaixa(el, r) {
+  const c = r.caixa;
+  const barra = h('div', 'rt-acoes'); barra.style.marginTop = '0';
+  barra.appendChild(botao('+ Doação', 'green', () => lancarEntrada('doacao')));
+  barra.appendChild(botao('+ Venda de item', 'green', () => lancarEntrada('venda')));
+  barra.appendChild(botao('+ Outra entrada', 'gray', () => lancarEntrada('outra')));
+  barra.appendChild(botao('+ Gasto avulso', 'red', lancarGasto));
+  el.appendChild(barra);
+  el.appendChild(h('div', 'rt-meta', 'Tudo aqui é gravado na Tesouraria da pastoral, ligado a este retiro — o saldo geral continua um só.')).style.margin = '10px 0';
+  const grid = h('div', 'rt-grid');
+  [['Entradas', brl(c.entradas), 'pos'], ['Saídas', brl(c.saidas), c.saidas ? 'neg' : ''],
+   ['Doações', brl(c.doacoes), ''], ['Vendas', brl(c.vendas), '']].forEach(([l, v, cls]) => {
+    const m = h('div', 'rt-mini'); m.append(h('div', 'l', l), h('div', 'v ' + cls, v)); grid.appendChild(m);
+  });
+  el.appendChild(grid);
+  const saldo = h('div', 'rt-mini'); saldo.style.marginBottom = '12px';
+  saldo.append(h('div', 'l', 'Resultado do retiro (entradas − saídas)'), h('div', 'v ' + (c.saldo < 0 ? 'neg' : c.saldo > 0 ? 'pos' : ''), brl(c.saldo)));
+  el.appendChild(saldo);
+
+  if (c.semLancamento.length) {
+    const av = h('div', 'rt-aviso ruim');
+    av.appendChild(h('div', null, c.semLancamento.length + (c.semLancamento.length === 1 ? ' compra marcada como comprada está SEM lançamento na Tesouraria' : ' compras marcadas como compradas estão SEM lançamento na Tesouraria') + ' (alguém apagou lá?). O resultado acima está mais bonito do que a realidade.'));
+    c.semLancamento.forEach(k => {
+      const b = botao('Lançar de novo: ' + k.item + ' (' + brl(k.valor_pago) + ')', 'gold', async () => {
+        const { error } = await sb.from('acolitos_financeiro').insert({ tipo:'saida', categoria:'compras', valor:k.valor_pago, descricao:(area.nome + ' · ' + k.item).slice(0, 200), data:k.comprada_em || hojeLocal(), created_by:ctx.user.id, retiro_area_id:area.id, retiro_compra_id:k.id });
+        if (!falhou(error, 'lançar de novo')) recarregarArea();
+      }); b.style.marginTop = '8px'; b.style.display = 'block'; av.appendChild(b);
+    });
+    el.appendChild(av);
+  }
+  c.divergentes.forEach(d => el.appendChild(h('div', 'rt-aviso', '"' + d.compra.item + '": a compra diz ' + brl(d.compra.valor_pago) + ', mas o lançamento na Tesouraria diz ' + brl(d.lancamento.valor) + '. Confira com quem mexeu.')));
+
+  el.appendChild(h('div', 'rt-grupo', 'Lançamentos deste retiro'));
+  if (!lancs.length) { el.appendChild(h('div', 'rt-vazio', 'Nenhum lançamento ainda.')); return; }
+  lancs.forEach(l => {
+    const card = h('div', 'rt-card'); const lin = h('div', 'rt-linha'); const corpo = h('div', 'rt-corpo');
+    corpo.appendChild(h('div', 'rt-tit', l.descricao || (l.tipo === 'entrada' ? 'Entrada' : 'Saída')));
+    corpo.appendChild(h('div', 'rt-meta', dia(l.data) + ' · ' + (l.retiro_compra_id ? 'compra da lista' : l.categoria === 'rifa' ? 'venda' : l.categoria === 'dizimo' ? 'doação' : l.tipo === 'entrada' ? 'entrada' : 'gasto avulso')));
+    lin.appendChild(corpo);
+    lin.appendChild(h('div', 'rt-valor ' + (l.tipo === 'entrada' ? 'ent' : 'sai'), (l.tipo === 'entrada' ? '+ ' : '− ') + brl(l.valor)));
+    card.appendChild(lin);
+    if (!l.retiro_compra_id) {
+      const ac = h('div', 'rt-acoes');
+      ac.appendChild(botao('Excluir', 'gray', async () => {
+        if (!await uiConfirm('Excluir este lançamento? Ele também some da Tesouraria.')) return;
+        const { error } = await sb.from('acolitos_financeiro').delete().eq('id', l.id);
+        if (!falhou(error, 'excluir')) recarregarArea();
+      }));
+      card.appendChild(ac);
+    } else card.appendChild(h('div', 'rt-dica', 'Para tirar este, use "Desfazer compra" na aba Compras.'));
+    el.appendChild(card);
+  });
+}
+function gravarLancamento(v) {
+  return sb.from('acolitos_financeiro').insert({ ...v, data: v.data || hojeLocal(), created_by: ctx.user.id, retiro_area_id: area.id });
+}
+function lancarEntrada(modo) {
+  const venda = modo === 'venda';
+  formModal({
+    titulo: venda ? 'Venda de item da pastoral' : modo === 'doacao' ? 'Doação recebida' : 'Outra entrada',
+    campos: venda ? [
+      { k:'item', label:'Item vendido', req:true, placeholder:'Ex: pingente de São Tarcísio' },
+      { k:'qtd', label:'Quantidade', tipo:'number', step:'1', padrao:1, req:true, metade:true },
+      { k:'preco', label:'Preço unitário (R$)', tipo:'number', req:true, metade:true },
+      { k:'data', label:'Data', tipo:'date', padrao:hojeLocal() },
+    ] : [
+      { k:'valor', label:'Valor (R$)', tipo:'number', req:true },
+      { k:'descricao', label:modo === 'doacao' ? 'De quem / observação' : 'Descrição', req:modo !== 'doacao', placeholder:modo === 'doacao' ? 'Ex: Família Silva' : '' },
+      { k:'data', label:'Data', tipo:'date', padrao:hojeLocal() },
+    ],
+    salvar: async v => {
+      let pay;
+      if (venda) {
+        if (!(v.qtd > 0) || !(v.preco >= 0)) return 'Informe quantidade e preço.';
+        pay = { tipo:'entrada', categoria:'rifa', valor: Math.round(v.qtd * v.preco * 100) / 100, descricao: (area.nome + ' · Venda: ' + v.qtd + ' × ' + v.item).slice(0, 200), data: v.data };
+      } else {
+        if (!(v.valor > 0)) return 'Informe um valor maior que zero.';
+        pay = { tipo:'entrada', categoria: modo === 'doacao' ? 'dizimo' : 'outro', valor: v.valor, descricao: (area.nome + ' · ' + (modo === 'doacao' ? 'Doação' + (v.descricao ? ': ' + v.descricao : '') : v.descricao)).slice(0, 200), data: v.data };
+      }
+      const { error } = await gravarLancamento(pay); return error ? true : null;
+    },
+    depois: recarregarArea,
+  });
+}
+function lancarGasto() {
+  formModal({
+    titulo: 'Gasto avulso',
+    campos: [
+      { k:'valor', label:'Valor (R$)', tipo:'number', req:true },
+      { k:'descricao', label:'Descrição', req:true, placeholder:'Ex: transporte, taxa do local' },
+      { k:'data', label:'Data', tipo:'date', padrao:hojeLocal() },
+    ],
+    salvar: async v => {
+      if (!(v.valor > 0)) return 'Informe um valor maior que zero.';
+      const { error } = await gravarLancamento({ tipo:'saida', categoria:'outro', valor:v.valor, descricao:(area.nome + ' · ' + v.descricao).slice(0, 200), data:v.data });
+      return error ? true : null;
+    },
+    depois: recarregarArea,
+  });
+}
+
+init();
+</script>
+</body>
+</html>

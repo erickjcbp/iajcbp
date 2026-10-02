@@ -547,7 +547,7 @@ async function loadDados() {
       escalasMap[e.celebracao_id].push(e);
     });
     const [{ data: mems }, { data: habs }, { data: disps }, freqData, { data: auss }, { data: chs }] = await Promise.all([
-      sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,casa_id,escalar_frequente,suspenso_ate,suspenso_em,pode_outras_comunidades,data_nascimento,foto_url,observacoes,necessidades_especiais,nome_pai,nome_mae,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro,grupo_irmaos,escalar_com_irmao').eq('status','ativo').order('nome'),
+      sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,casa_id,escalar_frequente,suspenso_ate,suspenso_em,pode_outras_comunidades,data_nascimento,foto_url,observacoes,necessidades_especiais,nome_pai,nome_mae,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro,grupo_irmaos,escalar_com_irmao').eq('status','ativo').eq('serve',true).order('nome'),
       // PAGINADAS: 839 e 686 linhas hoje, e o teto é mil. Ao passar dele, gente marcada
       // como apta SOME do campo de seleção — o mesmo sintoma da trava, sem trava nenhuma.
       lerTudo(() => sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia')),
@@ -1741,7 +1741,7 @@ async function carregarRodizio(){
   if (!membros.length) {
     const { data: ms } = await sb.from('acolitos_membros')
       .select('id,nome,apelido,nivel,comunidade,casa_id,foto_url,escalar_frequente,suspenso_ate,suspenso_em')
-      .eq('status','ativo').order('nome');
+      .eq('status','ativo').eq('serve',true).order('nome');
     membros = ms || [];
   }
   const de = new Date(hoje+'T00:00:00'); de.setDate(de.getDate()-365);

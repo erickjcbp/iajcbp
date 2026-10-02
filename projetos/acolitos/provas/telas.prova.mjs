@@ -20,7 +20,7 @@ const TELAS = [
   'index.html', 'agenda.html', 'ausencias.html', 'caixa.html', 'casas.html', 'chamada.html',
   'config.html', 'conquistas.html', 'crm.html', 'destaques.html', 'escala.html',
   'escalas-membro.html', 'jornada-admin.html', 'membros.html', 'minha-casa.html',
-  'missoes.html', 'missoes-lab.html', 'tarefas.html', 'tesouraria.html',
+  'missoes.html', 'missoes-lab.html', 'retiros.html', 'tarefas.html', 'tesouraria.html',
 ];
 
 // Telas que TRANCAM a porta por conta própria, e para quem elas abrem. Quem não está na
@@ -3203,12 +3203,97 @@ async function provaRecadoDaFotoAparece(provas) {
     'os outros avisos seguem a regra normal da fila');
 }
 
+
+async function provaRetiros(provas) {
+  console.log('\n\x1b[1mA aba Retiros: lista, plano, compras com cotações e caixa conciliado\x1b[0m');
+  const dia = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+  const tabelas = {
+    acolitos_membros: { data: [
+      { id: 'm1', nome: 'Daiane Silva', eh_equipe: true, status: 'ativo' },
+      { id: 'm2', nome: 'Sandra Mello', eh_equipe: true, status: 'ativo' },
+      { id: 'm3', nome: 'Pedro Prova', eh_equipe: false, status: 'ativo' },
+    ] },
+    acolitos_retiro_fornecedores: { data: [
+      { id: 'f1', nome: 'Atacadão', contato: null, telefone: '(19) 3000-0000', observacao: null },
+      { id: 'f2', nome: 'Papelaria Central' },
+    ] },
+    acolitos_retiro_areas: { data: [
+      { id: 'a1', nome: 'Retiro de Advento 2026', tipo: 'retiro', local: 'Casa de Retiros', data_inicio: dia(40), data_fim: dia(41), status: 'planejando', descricao: 'Dois dias para os acólitos.' },
+    ] },
+    acolitos_retiro_itens: { data: [
+      { id: 'i2', area_id: 'a1', secao: 'cronograma', titulo: 'Missa de abertura', data: dia(40), hora: '19:00:00', status: 'a_fazer', responsavel_id: 'm1', prazo: dia(-3) },
+      { id: 'i1', area_id: 'a1', secao: 'cronograma', titulo: 'Acolhida e café', data: dia(40), hora: '08:00:00', status: 'feito', responsavel_id: 'm2', prazo: dia(20) },
+      { id: 'i3', area_id: 'a1', secao: 'pregacao', titulo: 'A fé de Maria', status: 'andamento', responsavel_id: 'm3' },
+      { id: 'i4', area_id: 'a1', secao: 'refeicao', subtipo: 'almoco', titulo: 'Arroz, feijão e frango', data: dia(41), status: 'a_fazer' },
+    ] },
+    acolitos_retiro_compras: { data: [
+      { id: 'c1', area_id: 'a1', categoria: 'ingredientes', item: 'Arroz 5 kg', quantidade: 4, unidade: 'pacotes', valor_estimado: 120, status: 'aprovada', fornecedor_id: 'f1', responsavel_id: 'm1', prazo: dia(10),
+        cotacoes: [{ id: 'k1', compra_id: 'c1', fornecedor_id: 'f1', valor_unitario: 30, escolhida: true }, { id: 'k2', compra_id: 'c1', fornecedor_nome: 'Mercadinho', valor_unitario: 34.5 }] },
+      { id: 'c2', area_id: 'a1', categoria: 'papelaria', item: 'Cartolinas', quantidade: 20, unidade: 'un', valor_estimado: null, status: 'pendente', prazo: dia(-2), cotacoes: [] },
+      { id: 'c3', area_id: 'a1', categoria: 'decoracao', item: 'Velas', quantidade: 10, valor_estimado: 50, status: 'comprada', valor_pago: 48, comprada_em: dia(-1), cotacoes: [] },
+    ] },
+    acolitos_financeiro: { data: [
+      { id: 'l1', tipo: 'entrada', categoria: 'dizimo', valor: 200, descricao: 'Retiro · Doação: Família Silva', data: dia(-5), retiro_area_id: 'a1' },
+      { id: 'l2', tipo: 'entrada', categoria: 'rifa', valor: 90, descricao: 'Retiro · Venda: 6 × pingente', data: dia(-4), retiro_area_id: 'a1' },
+    ] },
+  };
+  const base = { papel: PAPEIS.equipe, tabelas };
+  // a tela de abertura tapa a foto (ela só some depois de um tempo mínimo): tira-se à mão
+  const abrir = (t, o) => provas.abrir(t, { ...o, avaliar: "const sp = document.getElementById('splash'); if (sp) sp.remove();" + (o.avaliar || '') });
+
+  // 1) A LISTA
+  const l = await abrir('retiros.html', { ...base, foto: '/tmp/retiros-1-lista.png' });
+  exigir(l.erros.length === 0, 'a lista abre sem erro de JavaScript', l.erros.join(' | '));
+  exigir(/Retiro de Advento 2026/.test(l.texto) && /pronto/.test(l.texto), 'a lista mostra a área e o andamento', l.texto.slice(0, 300));
+  exigir(/prazo vencido/.test(l.texto), 'a lista avisa que há coisa com prazo vencido', l.texto.slice(0, 400));
+
+  // 2) DENTRO DA ÁREA: cronograma ordenado por hora, vencido marcado
+  const a = await abrir('retiros.html', { ...base, passos: [{ chamar: 'abrirArea', args: ['a1'] }], foto: '/tmp/retiros-2-area.png',
+    avaliar: `const t = [...document.querySelectorAll('.rt-card .rt-tit')].map(e => e.textContent);
+      return { titulos: t, texto: document.getElementById('main-content').innerText };` });
+  exigir(!a.erroAvaliar && a.passosFalhos.length === 0, 'a área abre', (a.erroAvaliar || '') + a.passosFalhos.join('|'));
+  const av = a.avaliado || { titulos: [], texto: '' };
+  exigir(av.titulos[0] === 'Acolhida e café' && av.titulos[1] === 'Missa de abertura', 'o cronograma sai em ordem de hora', JSON.stringify(av.titulos));
+  exigir(/VENCIDO/.test(av.texto), 'item com prazo vencido e não feito aparece como VENCIDO', av.texto.slice(0, 500));
+  exigir(/Responsável: Daiane Silva/.test(av.texto), 'o responsável aparece pelo nome', av.texto.slice(0, 500));
+
+  // 3) COMPRAS: totais por categoria, cotações, menor preço
+  const c = await abrir('retiros.html', { ...base, passos: [{ chamar: 'abrirArea', args: ['a1'] }, { clicar: 'Compras' }], foto: '/tmp/retiros-3-compras.png',
+    avaliar: `return document.getElementById('main-content').innerText;` });
+  const ct = c.avaliado || '';
+  exigir(/Arroz 5 kg/.test(ct) && /2 cotações/.test(ct), 'a compra mostra quantas cotações tem', ct.slice(0, 600));
+  exigir(/menor:\s*R\$\s*30,00/.test(ct), 'e qual é o menor preço', ct.slice(0, 600));
+  exigir(/1 item sem valor/.test(ct), 'item sem valor é contado em vez de virar R$ 0 calado', ct.slice(0, 600));
+  exigir(/Pago R\$\s*48,00/.test(ct), 'compra feita mostra o valor PAGO, não o estimado', ct.slice(0, 600));
+
+  // 4) CAIXA: a compra marcada como comprada sem lançamento na Tesouraria é denunciada
+  const k = await abrir('retiros.html', { ...base, passos: [{ chamar: 'abrirArea', args: ['a1'] }, { clicar: 'Caixa' }], foto: '/tmp/retiros-4-caixa.png',
+    avaliar: `return document.getElementById('main-content').innerText;` });
+  const kt = k.avaliado || '';
+  exigir(/SEM lançamento na Tesouraria/.test(kt), 'compra "comprada" sem lançamento na Tesouraria é denunciada', kt.slice(0, 700));
+  exigir(/Doações\s*R\$\s*200,00/i.test(kt.replace(/\n/g, ' ')) && /Vendas\s*R\$\s*90,00/i.test(kt.replace(/\n/g, ' ')), 'doações e vendas aparecem separadas', kt.slice(0, 700));
+
+  // 5) COMPREI grava pela função atômica, com o valor digitado
+  const g = await abrir('retiros.html', { ...base, passos: [{ chamar: 'abrirArea', args: ['a1'] }, { clicar: 'Compras' }, { clicar: 'Comprei' }],
+    avaliar: `const b = [...document.querySelectorAll('.modal button')].find(x => x.textContent.includes('Registrar e lançar'));
+      if (!b) return 'sem botão'; b.click(); await new Promise(r => setTimeout(r, 300)); return 'ok';` });
+  exigir(g.avaliado === 'ok', 'o botão de registrar a compra existe na janela', String(g.avaliado));
+  const rpc = (g.gravacoes || []).find((x) => x.tabela === 'rpc:acolitos_retiro_comprar');
+  exigir(rpc && rpc.dados && rpc.dados.p_valor === 120 && /^[a-z0-9]+$/.test(rpc.dados.p_compra),
+    'registrar a compra chama a função atômica com o valor estimado como sugestão', JSON.stringify(g.gravacoes));
+
+  // 6) Banco recusando NÃO vira "nenhuma área"
+  const e = await abrir('retiros.html', { papel: PAPEIS.equipe, tabelas: { ...tabelas, acolitos_retiro_areas: { error: { message: 'permission denied' } } } });
+  exigir(/Não foi possível carregar/.test(e.texto) && !/Nenhuma área ainda/.test(e.texto), 'consulta recusada diz "não consegui", não "não há nada"', e.texto.slice(0, 300));
+}
+
 // ── Partida ──────────────────────────────────────────────────────────────────
 const filtro = process.argv[2] || null;
 const provas = await iniciarProvas();
 const comecou = Date.now();
 try {
-  await provaFumaca(provas, filtro);
+  if (filtro === '--retiros') await provaRetiros(provas);   // só a prova da aba Retiros
+  else await provaFumaca(provas, filtro);
   if (!filtro) {
     await provaBarraAcendeSecao(provas);
     await provaConfigBateComABarra(provas);
@@ -3254,6 +3339,7 @@ try {
     await provaGeradorPerseguueARegraDoMes(provas);
     await provaMarcaFrequenteNaFicha(provas);
     await provaArteEmDuasPartes(provas);
+    await provaRetiros(provas);
   }
 } finally {
   await provas.encerrar();

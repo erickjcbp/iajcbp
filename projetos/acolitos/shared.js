@@ -2353,6 +2353,7 @@ const MODULOS_LIBERAVEIS = [
   ['crm','Integração (CRM)','crm.html'],
   ['tesouraria','Tesouraria','tesouraria.html'], ['casas','Casas','casas.html'],
   ['tarefas','Tarefas dos times','tarefas.html'],
+  ['retiros','Retiros (planejamento e compras)','retiros.html'],
 ]; // 'chamada' foi fundida na Escala (botão por card) — não é mais um módulo de nav separado,
    // então a Chamada é gateada pela permissão 'escala' (ver chamada.html)
 
@@ -2369,6 +2370,7 @@ const NAV_COORD_MODULOS = {
   tesouraria: { label:'Tesouraria', href:'tesouraria.html', icon:'dollar' },
   casas:      { label:'Casas',      href:'casas.html',      icon:'shield' },
   tarefas:    { label:'Tarefas',    href:'tarefas.html',    icon:'tarefas' },
+  retiros:    { label:'Retiros',    href:'retiros.html',    icon:'retiros' },
 };
 // 'jornada' vem primeiro pra manter o lugar que ela já ocupava na barra (logo após Agenda).
 // Ela saiu dos itens fixos: aprovar XP e promover não é pra qualquer um da equipe.
@@ -2376,13 +2378,13 @@ const NAV_COORD_MODULOS = {
 // trocas, cadastros e ausências — o que mais se acessa depois da Jornada.
 // 'tarefas' entra no FIM: id novo pode entrar, mas mexer na posição das outras mudaria
 // a barra de todo mundo (contrato com acolitos_config.nav_ordem_coord).
-const ORDEM_MODULOS = ['jornada','caixa','membros','escala','crm','tesouraria','casas','tarefas'];
+const ORDEM_MODULOS = ['jornada','caixa','membros','escala','crm','tesouraria','casas','tarefas','retiros'];
 
 // Rótulos amigáveis por arquivo, p/ o chip "Continuar" da Home (Fase 4).
 // Cobre telas de coordenação (NAV_COORD_MODULOS) e de jornada.
 const TELA_LABEL = {
   'membros.html':'Membros', 'escala.html':'Escala', 'crm.html':'CRM',
-  'tesouraria.html':'Tesouraria', 'casas.html':'Casas', 'tarefas.html':'Tarefas',
+  'tesouraria.html':'Tesouraria', 'casas.html':'Casas', 'tarefas.html':'Tarefas', 'retiros.html':'Retiros',
   'missoes.html':'Quests', 'escalas-membro.html':'Minhas Escalas', 'agenda.html':'Agenda',
   'destaques.html':'Destaques', 'minha-casa.html':'Minha Casa', 'ausencias.html':'Ausências',
   'jornada-admin.html':'Jornada', 'conquistas.html':'Conquistas'
@@ -2449,6 +2451,8 @@ function _svgIcon(name) {
     // ícone de Alerta: triângulo com exclamação — usado nos alertas de frequência do Início
     alerta:         'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z M12 9v4 M12 17h.01',
     // ícone de Tarefas: prancheta com um "visto" — a lista de afazeres de cada time
+    // ícone de Retiros: uma tenda — o acampamento do retiro
+    retiros:        'M3 20L12 4l9 16H3z M12 4v16 M8 20l4-7 4 7',
     tarefas:        'M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1z M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2 M9 14l2 2 4-4',
     // lapis e lixeira: a Agenda usava emoji nesses dois botoes, contra a convencao do app
     editar:         'M12 20h9 M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z',
