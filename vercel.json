@@ -16,7 +16,10 @@
       "destination": "/projetos/acolitos/ausencias-publica.html" },
     { "source": "/pastoral",
       "has": [{ "type": "host", "value": "coroinhas.jcbplimeira.com.br" }],
-      "destination": "/projetos/acolitos/pastoral.html" }
+      "destination": "/projetos/acolitos/pastoral.html" },
+    { "source": "/novena",
+      "has": [{ "type": "host", "value": "coroinhas.jcbplimeira.com.br" }],
+      "destination": "/projetos/acolitos/novena-publica.html" }
   ],
   "headers": [
     {
@@ -26,7 +29,7 @@
       ]
     },
     {
-      "source": "/(ausencias|pastoral)",
+      "source": "/(ausencias|pastoral|novena)",
       "headers": [
         { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }
       ]

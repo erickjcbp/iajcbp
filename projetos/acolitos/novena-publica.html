@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Novena de N. Sra. Aparecida — Acólitos JCBP</title>
+  <link rel="icon" href="../../midia/logos/brasao-pastoral.png">
+  <link rel="apple-touch-icon" href="../../midia/logos/brasao-pastoral.png">
+  <link rel="preconnect" href="https://fttjgsotuosjfrasttds.supabase.co">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --wine:#1a0a0e; --wine2:#26101a; --surface:#2b1620; --surface2:#34192360;
+      --gold:#8a6a24; --gold-dim:#7a5a1a; --gold-light:#ffd97a;
+      --text:#f7ebe7; --muted:#c79aa0; --border:#5a3a3f; --border-soft:#43282e;
+      --danger:#e0607a; --ok:#7ad48a;
+    }
+    *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    body{ margin:0; font-family:'Inter',system-ui,-apple-system,sans-serif;
+      background:radial-gradient(1200px 600px at 50% -10%, #3a1320 0%, var(--wine) 55%), var(--wine);
+      color:var(--text); min-height:100vh; padding:0 16px 40px; }
+    .wrap{ max-width:540px; margin:0 auto; }
+
+    /* Header com brasão */
+    .top{ text-align:center; padding:26px 0 18px; }
+    .top .crest{ width:78px; height:78px; object-fit:contain; filter:drop-shadow(0 4px 14px rgba(0,0,0,.5)); }
+    h1{ font-family:'Sora',sans-serif; font-weight:800; font-size:21px; margin:12px 0 4px; letter-spacing:.2px; }
+    .sub{ font-size:13px; color:var(--muted); margin:0 auto; max-width:400px; line-height:1.5; }
+
+    /* Card */
+    .card{ background:linear-gradient(180deg,var(--surface),#241019);
+      border:1px solid var(--border-soft); border-radius:18px; padding:18px 16px 20px;
+      box-shadow:0 18px 50px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,217,122,.06); }
+
+    label{ display:block; font-family:'Sora',sans-serif; font-size:12.5px; color:var(--gold-light);
+      margin:18px 0 7px; font-weight:700; letter-spacing:.3px; }
+    label:first-of-type{ margin-top:2px; }
+    label .req{ color:var(--danger); font-weight:800; }
+    .help{ font-size:11.5px; color:var(--muted); margin:-4px 0 7px; }
+
+    input{ width:100%; padding:12px 13px; border-radius:11px; border:1px solid var(--border);
+      background:var(--wine2); color:var(--text); font-size:15px; font-family:inherit; transition:border-color .15s; }
+    input:focus{ outline:none; border-color:var(--gold); }
+    input::placeholder{ color:#92666c; }
+
+    /* Resultados da busca */
+    .results{ margin-top:7px; border:1px solid var(--border); border-radius:11px; overflow:hidden; display:none; }
+    .results.show{ display:block; }
+    .results button{ width:100%; text-align:left; padding:11px 13px; background:var(--wine2); color:var(--text);
+      border:none; border-bottom:1px solid var(--border-soft); font-size:14px; cursor:pointer; font-family:inherit;
+      display:flex; align-items:center; gap:10px; }
+    .results button:last-child{ border-bottom:none; }
+    .results button:active{ background:#3a1c24; }
+
+    /* Afordância de toque nos resultados */
+    .results .rhint{ font-size:11px; color:var(--gold-light); padding:8px 13px 6px; background:#2a1520;
+      border-bottom:1px solid var(--border-soft); font-family:'Sora',sans-serif; letter-spacing:.2px; }
+    .results .ini{ width:26px; height:26px; border-radius:50%; flex:none; display:flex; align-items:center;
+      justify-content:center; font-size:12px; font-weight:700; color:#2a1500;
+      background:linear-gradient(160deg,var(--gold-light),var(--gold)); }
+    .results .rn{ flex:1; min-width:0; }
+    .results .plus{ flex:none; width:22px; height:22px; border-radius:50%; background:#00000030;
+      color:var(--gold-light); font-weight:800; display:flex; align-items:center; justify-content:center; font-size:16px; }
+
+    /* Indicador que aponta pro campo de nome (some após 1ª pessoa) */
+    .point{ position:relative; margin:8px 0 0; padding:10px 12px; border-radius:11px;
+      background:#3a1c24; border:1px dashed var(--gold-dim); color:var(--gold-light);
+      font-size:12.5px; display:flex; align-items:center; gap:8px; animation:pointPulse 1.6s ease-in-out infinite; }
+    .point::before{ content:''; position:absolute; top:-7px; left:22px; width:12px; height:12px;
+      background:#3a1c24; border-left:1px dashed var(--gold-dim); border-top:1px dashed var(--gold-dim);
+      transform:rotate(45deg); }
+    .point.hide{ display:none; }
+    @keyframes pointPulse{ 0%,100%{ opacity:.85 } 50%{ opacity:1 } }
+
+    /* Toast "adicionou" */
+    .flash{ position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(10px);
+      background:#1f3a24; color:#c9f5d3; border:1px solid var(--ok); border-radius:12px;
+      padding:10px 16px; font-size:13px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,.5);
+      opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:60; }
+    .flash.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+    /* Chips de pessoas */
+    .chips{ display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
+    .chip{ display:inline-flex; align-items:center; gap:7px; background:#3a1c24;
+      border:1px solid var(--gold-dim); border-radius:20px; padding:6px 7px 6px 12px; font-size:13px; }
+    .chip b{ color:var(--gold-light); font-weight:600; }
+    .chip .cini{ width:22px; height:22px; border-radius:50%; flex:none; display:flex; align-items:center;
+      justify-content:center; font-size:11px; font-weight:700; color:#2a1500;
+      background:linear-gradient(160deg,var(--gold-light),var(--gold)); margin-left:-4px; }
+    .chip .x{ cursor:pointer; color:var(--muted); font-weight:800; width:18px; height:18px; line-height:16px;
+      text-align:center; border-radius:50%; background:#00000030; }
+    .chip .x:active{ color:var(--danger); }
+
+    /* Seletor de celebrações */
+    .cels{ margin-top:8px; border:1px solid var(--border); border-radius:12px; max-height:280px; overflow-y:auto; background:var(--wine2); }
+    .cel{ display:flex; align-items:center; gap:11px; padding:11px 13px; padding-left:16px; border-bottom:1px solid var(--border-soft); cursor:pointer; }
+    .cel:last-child{ border-bottom:none; }
+    .cel:active{ background:#3a1c24; }
+    .cel .box{ width:20px; height:20px; border-radius:6px; border:1.5px solid var(--gold-dim); flex:none;
+      display:flex; align-items:center; justify-content:center; font-size:13px; color:#2a1500; }
+    .cel.on .box{ background:linear-gradient(160deg,var(--gold-light),var(--gold)); border-color:var(--gold-light); }
+    .cel.on{ background:#3a1c2480; }
+    .cel .lab{ flex:1; min-width:0; }
+    .cel .d1{ font-size:13.5px; font-weight:600; }
+    .cel .d2{ font-size:11.5px; color:var(--muted); margin-top:1px; }
+    .cels-meta{ font-size:11.5px; color:var(--muted); margin-top:6px; }
+    .cels-meta b{ color:var(--gold-light); }
+    .cels-empty{ padding:16px 13px; font-size:13px; color:var(--muted); }
+    .cel-mes{ display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:10px 13px; background:#2a1520; border-bottom:1px solid var(--border-soft);
+      position:sticky; top:0; z-index:2; }
+    .cel-mes .mtit{ font-family:'Sora',sans-serif; font-weight:800; font-size:13px; color:var(--gold-light); letter-spacing:.3px; }
+    .cel-sem{ display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:7px 13px 7px 16px; background:#241019; border-bottom:1px solid var(--border-soft); }
+    .cel-sem .stit{ font-size:11.5px; color:var(--muted); font-weight:600; }
+    .mark-btn{ flex:none; border:1px solid var(--gold-dim); background:#3a1c24; color:var(--gold-light);
+      border-radius:20px; padding:5px 11px; font-size:11.5px; font-weight:700; cursor:pointer; font-family:'Sora',sans-serif; }
+    .mark-btn:active{ background:#4a2430; }
+    .mark-btn.on{ background:linear-gradient(160deg,var(--gold-light),var(--gold)); color:#2a1500; border-color:var(--gold-light); }
+
+    .btn{ width:100%; margin-top:22px; padding:14px; border-radius:13px; border:none;
+      background:linear-gradient(160deg,var(--gold-light),var(--gold)); color:#2a1500;
+      font-family:'Sora',sans-serif; font-weight:800; font-size:15.5px; cursor:pointer;
+      box-shadow:0 8px 22px rgba(138,106,36,.35); }
+    .btn:disabled{ opacity:.55; cursor:default; box-shadow:none; }
+
+    .msg{ margin-top:13px; font-size:13px; padding:11px 13px; border-radius:11px; display:none; }
+    .msg.err{ display:block; background:#3a1018; color:#ffb3c2; border:1px solid var(--danger); }
+
+    .footer{ text-align:center; font-size:11px; color:var(--muted); margin-top:22px; }
+
+    /* Tela de sucesso */
+    .ok-screen{ text-align:center; padding:48px 16px; }
+    .ok-screen .crest{ width:70px; height:70px; object-fit:contain; opacity:.95; }
+    .ok-screen .big{ font-size:46px; margin:6px 0; }
+  
+    .me{ display:flex; align-items:center; gap:10px; margin-top:9px; padding:10px 12px; border-radius:12px;
+      background:#3a1c24; border:1px solid var(--gold-dim); }
+    .me b{ flex:1; font-size:14px; color:var(--gold-light); }
+    .me button{ background:none; border:none; color:var(--muted); font-size:12.5px; text-decoration:underline; cursor:pointer; font-family:inherit; }
+    .cel.off{ opacity:.55; cursor:default; }
+    .cel .tag{ flex:none; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; background:#00000030; color:var(--muted); }
+    .cel .tag.ok{ color:#c9f5d3; background:#1f3a24; border:1px solid var(--ok); }
+    .cels{ max-height:none; }
+    .lista{ text-align:left; margin:18px auto 0; max-width:340px; }
+    .lista div{ display:flex; justify-content:space-between; gap:10px; padding:10px 13px; margin-top:7px;
+      background:var(--surface); border:1px solid var(--border-soft); border-radius:11px; font-size:14px; }
+    .lista b{ color:var(--gold-light); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="form-screen">
+      <div class="top">
+        <img class="crest" src="../../midia/logos/brasao-pastoral.png" alt="Brasão da Pastoral" onerror="this.style.display='none'">
+        <h1>Novena de Nossa Senhora Aparecida</h1>
+        <p class="sub">Missas às 19h30, na Matriz. Marque em quais você pode servir — a sua função entra na escala na hora.</p>
+      </div>
+
+      <div class="card">
+        <div id="passo1">
+          <label>Quem é você? <span class="req">*</span></label>
+          <input id="busca" type="text" placeholder="digite seu nome (mín. 2 letras)…" autocomplete="off">
+          <div id="results" class="results"></div>
+        </div>
+        <div id="passo2" style="display:none;">
+          <div class="me"><b id="meNome"></b><button id="trocar" type="button">trocar</button></div>
+          <label>Em quais missas você pode servir? <span class="req">*</span></label>
+          <div class="help">Toque para marcar. A função é definida automaticamente pelo que você já sabe fazer.</div>
+          <div id="cels" class="cels"><div class="cels-empty">Carregando missas…</div></div>
+          <div id="cels-meta" class="cels-meta"></div>
+          <div id="msg" class="msg"></div>
+          <button id="enviar" class="btn">Confirmar minha escala</button>
+        </div>
+      </div>
+      <div class="footer">Paróquia Jesus Cristo Bom Pastor — Limeira/SP</div>
+    </div>
+
+    <div id="ok-screen" class="ok-screen" style="display:none;">
+      <img class="crest" src="../../midia/logos/brasao-pastoral.png" alt="" onerror="this.style.display='none'">
+      <div class="big">✅</div>
+      <h1>Você está na escala!</h1>
+      <p class="sub" id="ok-txt"></p>
+      <div id="ok-lista" class="lista"></div>
+      <button class="btn" style="max-width:280px;margin:22px auto 0;" onclick="location.reload()">Voltar</button>
+    </div>
+  </div>
+
+  <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js" onerror="window.__sbLoadFail=true"></script>
+  <script>
+    const SUPABASE_URL='https://fttjgsotuosjfrasttds.supabase.co';
+    const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGpnc290dW9zamZyYXN0dGRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MzU3NjUsImV4cCI6MjA5NTExMTc2NX0.BvofcR2cIXP7Bc3r2V0VOgc-JXPefX7JGGwtzv0d_eA';
+    const $ = id => document.getElementById(id);
+    if (window.__sbLoadFail || !window.supabase || !window.supabase.createClient) {
+      $('passo1').innerHTML = '<div class="cels-empty">Não foi possível carregar. Verifique sua conexão e <a href="" onclick="location.reload();return false;" style="color:var(--gold);text-decoration:underline;">toque para tentar de novo</a>.</div>';
+      throw new Error('supabase-js não carregou');
+    }
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+    const FUNCOES={ cred_altar:'Cerimoniário de Altar', cred_credencia:'Cerimoniário de Credência', missal:'Missal',
+      altar:'Altar', turibulo:'Turíbulo', naveta:'Naveta', cruz:'Cruz', vela:'Velas', sineta:'Sineta', sinao:'Sinão', apoio:'Apoio' };
+    const selCels = new Set();
+    let membro = null;   // {id, nome}
+    let missas = [];
+
+    function showErr(t){ const m=$('msg'); m.textContent=t; m.className='msg err'; m.scrollIntoView({block:'nearest'}); }
+    function clearErr(){ const m=$('msg'); m.className='msg'; m.textContent=''; }
+    function diaCerto(c){ const d=new Date(c.data+'T00:00:00'), n=DIAS[d.getDay()];
+      return (d.getDay()>0&&d.getDay()<6 ? n+'-feira' : n)+', '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long'}); }
+
+    // ── BUSCA ──
+    let buscaT=null;
+    $('busca').addEventListener('input', e=>{
+      clearTimeout(buscaT);
+      const q=e.target.value.trim();
+      if(q.length<2){ $('results').classList.remove('show'); $('results').innerHTML=''; return; }
+      buscaT=setTimeout(()=>buscar(q), 250);
+    });
+    async function buscar(q){
+      const { data, error } = await sb.rpc('acolitos_ausencia_publica_buscar', { p_q:q });
+      const box=$('results'); box.innerHTML='';
+      if(error || !Array.isArray(data) || !data.length){ box.classList.remove('show'); return; }
+      const hint=document.createElement('div'); hint.className='rhint'; hint.textContent='toque no seu nome';
+      box.appendChild(hint);
+      data.forEach(m=>{
+        const b=document.createElement('button');
+        const ini=document.createElement('span'); ini.className='ini'; ini.textContent=(m.nome||'?').trim().charAt(0).toUpperCase();
+        const nm=document.createElement('span'); nm.className='rn'; nm.textContent=m.nome;
+        b.append(ini,nm);
+        b.onclick=()=>escolher(m);
+        box.appendChild(b);
+      });
+      box.classList.add('show');
+    }
+    function escolher(m){
+      membro=m; selCels.clear(); clearErr();
+      $('meNome').textContent=m.nome;
+      $('passo1').style.display='none'; $('passo2').style.display='block';
+      $('results').classList.remove('show'); $('busca').value='';
+      carregar();
+    }
+    $('trocar').onclick=()=>{ membro=null; $('passo2').style.display='none'; $('passo1').style.display='block'; };
+
+    // ── MISSAS ──
+    async function carregar(){
+      const box=$('cels'); box.innerHTML='<div class="cels-empty">Carregando missas…</div>';
+      let data, error;
+      try {
+        const resp = await Promise.race([
+          sb.rpc('acolitos_novena_publica_missas', { p_membro_id: membro.id }),
+          new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')), 12000))
+        ]);
+        data=resp.data; error=resp.error;
+      } catch(e){ error=e; }
+      box.innerHTML='';
+      if(error){
+        const w=document.createElement('div'); w.className='cels-empty';
+        w.appendChild(document.createTextNode('Falha de conexão. '));
+        const a=document.createElement('a'); a.href=''; a.textContent='Tentar de novo'; a.style.cssText='color:var(--gold);text-decoration:underline;';
+        a.onclick=ev=>{ ev.preventDefault(); carregar(); };
+        w.appendChild(a); box.appendChild(w); return;
+      }
+      missas = Array.isArray(data)?data:[];
+      if(!missas.length){ box.innerHTML='<div class="cels-empty">Nenhuma missa da novena aberta no momento.</div>'; return; }
+      missas.forEach(c=>{
+        const row=document.createElement('div'); row.className='cel'; row.dataset.id=c.id;
+        row.innerHTML='<div class="box"></div><div class="lab"><div class="d1"></div><div class="d2"></div></div>';
+        row.querySelector('.d1').textContent=diaCerto(c);
+        row.querySelector('.d2').textContent=c.horario+' · Matriz';
+        if(c.minha_funcao){
+          row.classList.add('off'); row.querySelector('.box').textContent='✓';
+          const t=document.createElement('span'); t.className='tag ok'; t.textContent='Você: '+(FUNCOES[c.minha_funcao]||c.minha_funcao); row.appendChild(t);
+        } else if(c.lotada){
+          row.classList.add('off');
+          const t=document.createElement('span'); t.className='tag'; t.textContent='Lotada'; row.appendChild(t);
+        } else {
+          row.onclick=()=>{
+            if(selCels.has(c.id)){ selCels.delete(c.id); row.classList.remove('on'); row.querySelector('.box').textContent=''; }
+            else { selCels.add(c.id); row.classList.add('on'); row.querySelector('.box').textContent='✓'; }
+            const n=selCels.size; $('cels-meta').innerHTML = n ? '<b>'+n+'</b> missa(s) marcada(s)' : '';
+          };
+        }
+        box.appendChild(row);
+      });
+      $('cels-meta').innerHTML='';
+    }
+
+    // ── ENVIO ──
+    $('enviar').onclick=async ()=>{
+      clearErr();
+      if(!membro){ showErr('Escolha seu nome.'); return; }
+      if(!selCels.size){ showErr('Marque ao menos uma missa.'); return; }
+      const btn=$('enviar'); btn.disabled=true; btn.textContent='Enviando...';
+      const { data, error } = await sb.rpc('acolitos_novena_publica_enviar', {
+        p_membro_id: membro.id, p_celebracoes: Array.from(selCels) });
+      btn.disabled=false; btn.textContent='Confirmar minha escala';
+      if(error || (data && data.erro)){
+        const MSG={ sem_itens_validos:'Essas missas não têm mais vaga para você. Atualizando a lista…',
+                    membro_invalido:'Seu cadastro não está disponível para servir. Fale com a coordenação.',
+                    muitos_itens:'Marcou missas demais de uma vez.' };
+        showErr((data && MSG[data.erro]) || 'Não foi possível enviar. Tente de novo.');
+        if(data && data.erro==='sem_itens_validos'){ selCels.clear(); carregar(); }
+        return;
+      }
+      const postos=data.postos||[], pul=(data.pulados||[]).length;
+      $('ok-txt').textContent = pul ? pul+' missa(s) ficaram sem vaga e não entraram.' : 'Sua função já aparece na escala. Até lá!';
+      const L=$('ok-lista'); L.innerHTML='';
+      postos.sort((a,b)=>a.data<b.data?-1:1).forEach(p=>{
+        const d=document.createElement('div'); const s=document.createElement('span'); const b=document.createElement('b');
+        s.textContent=diaCerto({data:p.data})+' · '+p.horario; b.textContent=FUNCOES[p.funcao]||p.funcao;
+        d.append(s,b); L.appendChild(d);
+      });
+      $('form-screen').style.display='none'; $('ok-screen').style.display='block'; window.scrollTo(0,0);
+    };
+  </script>
+</body>
+</html>
