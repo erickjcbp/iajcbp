@@ -5,7 +5,7 @@
 -- A função é ESCOLHIDA pela pessoa (entre as habilitadas com vaga); sem escolha, o banco decide: entre as habilitações do membro com vaga aberta, a mais
 -- específica primeiro (cerimoniais > altar > cruz > sineta > sinão > vela > apoio), para o
 -- 'apoio' (genérico) não consumir quem serve em função mais escassa.
--- Cerimoniário (cred_altar / cred_credencia / missal) NUNCA cai em 'apoio' — mesma regra do gerador.
+-- Cerimoniário só cai em 'apoio' se a PESSOA escolher (colocação manual é livre, como na Escala); na escolha automática, nunca — mesma regra do gerador.
 
 -- 1) Missas da novena, com o estado deste membro
 create or replace function public.acolitos_novena_publica_missas(p_membro_id uuid)
@@ -30,8 +30,6 @@ begin
              where mo.tipo = c.tipo and mo.comunidade = c.comunidade
                and mo.quantidade > (select count(*) from public.acolitos_escalas e4
                                     where e4.celebracao_id = c.id and e4.funcao = mo.funcao and e4.status = 'escalado')
-               and not (mo.funcao = 'apoio' and exists (select 1 from public.acolitos_habilitacoes hc
-                         where hc.membro_id = p_membro_id and hc.funcao in ('cred_altar','cred_credencia','missal')))
            ), '[]'::jsonb),
            'lotada', not exists (
              select 1 from public.acolitos_modelos mo
@@ -82,7 +80,7 @@ begin
     where mo.tipo = c.tipo and mo.comunidade = c.comunidade
       and mo.quantidade > (select count(*) from public.acolitos_escalas e
                            where e.celebracao_id = c.id and e.funcao = mo.funcao and e.status = 'escalado')
-      and not (v_cerimo and mo.funcao = 'apoio')
+      and (v_pedida is not null or not (v_cerimo and mo.funcao = 'apoio'))
       and (v_pedida is null or mo.funcao = v_pedida)
     order by coalesce(array_position(v_ordem, mo.funcao), 99)
     limit 1;
