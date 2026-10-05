@@ -144,6 +144,16 @@
     .cel .tag{ flex:none; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; background:#00000030; color:var(--muted); }
     .cel .tag.ok{ color:#c9f5d3; background:#1f3a24; border:1px solid var(--ok); }
     .cels{ max-height:none; }
+    .cel-wrap{ border-bottom:1px solid var(--border-soft); }
+    .cel-wrap:last-child{ border-bottom:none; }
+    .cel-wrap .cel{ border-bottom:none; }
+    .fns{ display:none; flex-wrap:wrap; gap:7px; padding:0 13px 13px 49px; }
+    .cel-wrap.on .fns{ display:flex; }
+    .fn{ border:1px solid var(--gold-dim); background:#3a1c24; color:var(--text); border-radius:20px; padding:7px 13px;
+      font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer; }
+    .fn small{ color:var(--muted); font-weight:500; margin-left:3px; }
+    .fn.sel{ background:linear-gradient(160deg,var(--gold-light),var(--gold)); color:#2a1500; border-color:var(--gold-light); }
+    .fn.sel small{ color:#2a1500; }
     .lista{ text-align:left; margin:18px auto 0; max-width:340px; }
     .lista div{ display:flex; justify-content:space-between; gap:10px; padding:10px 13px; margin-top:7px;
       background:var(--surface); border:1px solid var(--border-soft); border-radius:11px; font-size:14px; }
@@ -156,7 +166,7 @@
       <div class="top">
         <img class="crest" src="../../midia/logos/brasao-pastoral.png" alt="Brasão da Pastoral" onerror="this.style.display='none'">
         <h1>Novena de Nossa Senhora Aparecida</h1>
-        <p class="sub">Missas às 19h30, na Matriz. Marque em quais você pode servir — a sua função entra na escala na hora.</p>
+        <p class="sub">Missas às 19h30, na Matriz. Marque em quais você pode servir — escolha a função e ela entra na escala na hora.</p>
       </div>
 
       <div class="card">
@@ -168,7 +178,7 @@
         <div id="passo2" style="display:none;">
           <div class="me"><b id="meNome"></b><button id="trocar" type="button">trocar</button></div>
           <label>Em quais missas você pode servir? <span class="req">*</span></label>
-          <div class="help">Toque para marcar. A função é definida automaticamente pelo que você já sabe fazer.</div>
+          <div class="help">Toque para marcar. Depois escolha a função — só aparecem as que você sabe fazer e ainda têm vaga.</div>
           <div id="cels" class="cels"><div class="cels-empty">Carregando missas…</div></div>
           <div id="cels-meta" class="cels-meta"></div>
           <div id="msg" class="msg"></div>
@@ -202,7 +212,7 @@
     const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
     const FUNCOES={ cred_altar:'Cerimoniário de Altar', cred_credencia:'Cerimoniário de Credência', missal:'Missal',
       altar:'Altar', turibulo:'Turíbulo', naveta:'Naveta', cruz:'Cruz', vela:'Velas', sineta:'Sineta', sinao:'Sinão', apoio:'Apoio' };
-    const selCels = new Set();
+    const selCels = new Map();  // celebracao_id -> funcao escolhida
     let membro = null;   // {id, nome}
     let missas = [];
 
@@ -266,24 +276,37 @@
       missas = Array.isArray(data)?data:[];
       if(!missas.length){ box.innerHTML='<div class="cels-empty">Nenhuma missa da novena aberta no momento.</div>'; return; }
       missas.forEach(c=>{
+        const wrap=document.createElement('div'); wrap.className='cel-wrap';
         const row=document.createElement('div'); row.className='cel'; row.dataset.id=c.id;
         row.innerHTML='<div class="box"></div><div class="lab"><div class="d1"></div><div class="d2"></div></div>';
         row.querySelector('.d1').textContent=diaCerto(c);
         row.querySelector('.d2').textContent=c.horario+' · Matriz';
+        wrap.appendChild(row);
+        const fns = c.funcoes||[];
         if(c.minha_funcao){
           row.classList.add('off'); row.querySelector('.box').textContent='✓';
           const t=document.createElement('span'); t.className='tag ok'; t.textContent='Você: '+(FUNCOES[c.minha_funcao]||c.minha_funcao); row.appendChild(t);
-        } else if(c.lotada){
+        } else if(c.lotada || !fns.length){
           row.classList.add('off');
-          const t=document.createElement('span'); t.className='tag'; t.textContent='Lotada'; row.appendChild(t);
+          const t=document.createElement('span'); t.className='tag'; t.textContent=c.lotada?'Lotada':'Sem função p/ você'; row.appendChild(t);
         } else {
+          const box=document.createElement('div'); box.className='fns';
+          fns.forEach(f=>{
+            const b=document.createElement('button'); b.type='button'; b.className='fn'; b.dataset.f=f.funcao;
+            b.innerHTML='<span></span><small></small>';
+            b.firstChild.textContent=FUNCOES[f.funcao]||f.funcao;
+            b.lastChild.textContent=f.restantes+(f.restantes===1?' vaga':' vagas');
+            b.onclick=()=>{ selCels.set(c.id,f.funcao); box.querySelectorAll('.fn').forEach(x=>x.classList.toggle('sel',x===b)); };
+            box.appendChild(b);
+          });
+          wrap.appendChild(box);
           row.onclick=()=>{
-            if(selCels.has(c.id)){ selCels.delete(c.id); row.classList.remove('on'); row.querySelector('.box').textContent=''; }
-            else { selCels.add(c.id); row.classList.add('on'); row.querySelector('.box').textContent='✓'; }
+            if(selCels.has(c.id)){ selCels.delete(c.id); wrap.classList.remove('on'); row.classList.remove('on'); row.querySelector('.box').textContent=''; box.querySelectorAll('.fn').forEach(x=>x.classList.remove('sel')); }
+            else { selCels.set(c.id,fns[0].funcao); wrap.classList.add('on'); row.classList.add('on'); row.querySelector('.box').textContent='✓'; box.querySelector('.fn').classList.add('sel'); }
             const n=selCels.size; $('cels-meta').innerHTML = n ? '<b>'+n+'</b> missa(s) marcada(s)' : '';
           };
         }
-        box.appendChild(row);
+        $('cels').appendChild(wrap);
       });
       $('cels-meta').innerHTML='';
     }
@@ -295,7 +318,8 @@
       if(!selCels.size){ showErr('Marque ao menos uma missa.'); return; }
       const btn=$('enviar'); btn.disabled=true; btn.textContent='Enviando...';
       const { data, error } = await sb.rpc('acolitos_novena_publica_enviar', {
-        p_membro_id: membro.id, p_celebracoes: Array.from(selCels) });
+        p_membro_id: membro.id,
+        p_itens: Array.from(selCels, ([id,f])=>({celebracao_id:id, funcao:f})) });
       btn.disabled=false; btn.textContent='Confirmar minha escala';
       if(error || (data && data.erro)){
         const MSG={ sem_itens_validos:'Essas missas não têm mais vaga para você. Atualizando a lista…',
