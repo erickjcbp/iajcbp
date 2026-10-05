@@ -158,6 +158,17 @@
     .lista div{ display:flex; justify-content:space-between; gap:10px; padding:10px 13px; margin-top:7px;
       background:var(--surface); border:1px solid var(--border-soft); border-radius:11px; font-size:14px; }
     .lista b{ color:var(--gold-light); }
+    .ov{ position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:90; display:none; align-items:center; justify-content:center; padding:16px; }
+    .ov.show{ display:flex; }
+    .dlg{ width:100%; max-width:400px; background:linear-gradient(180deg,var(--surface),#241019); border:1px solid var(--gold-dim);
+      border-radius:18px; padding:20px 16px; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+    .dlg h2{ font-family:'Sora',sans-serif; font-size:17px; margin:0 0 4px; }
+    .dlg .lista{ margin:12px 0 0; max-width:none; }
+    .dlg .row{ display:flex; gap:10px; margin-top:18px; }
+    .dlg .row button{ flex:1; padding:13px; border-radius:12px; font-family:'Sora',sans-serif; font-weight:800; font-size:14px; cursor:pointer; }
+    .dlg .voltar{ background:#3a1c24; color:var(--text); border:1px solid var(--border); }
+    .dlg .ir{ border:none; color:#2a1500; background:linear-gradient(160deg,var(--gold-light),var(--gold)); }
+    .dlg button:disabled{ opacity:.55; }
   </style>
 </head>
 <body>
@@ -197,6 +208,14 @@
       <button class="btn" style="max-width:280px;margin:22px auto 0;" onclick="location.reload()">Voltar</button>
     </div>
   </div>
+
+  <div id="ov" class="ov"><div class="dlg">
+    <h2>Confirma sua escala?</h2>
+    <p class="sub" id="dlgNome" style="margin:0;"></p>
+    <div id="dlgLista" class="lista"></div>
+    <p class="sub" style="margin:12px 0 0;">Ao confirmar, você entra na escala dessas missas. Para sair depois, só falando com a coordenação.</p>
+    <div class="row"><button class="voltar" id="dlgVoltar" type="button">Voltar</button><button class="ir" id="dlgIr" type="button">Sim, confirmar</button></div>
+  </div></div>
 
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js" onerror="window.__sbLoadFail=true"></script>
   <script>
@@ -312,15 +331,26 @@
     }
 
     // ── ENVIO ──
-    $('enviar').onclick=async ()=>{
+    // 1ª confirmação: o botão abre o resumo; só o "Sim, confirmar" grava
+    $('enviar').onclick=()=>{
       clearErr();
       if(!membro){ showErr('Escolha seu nome.'); return; }
       if(!selCels.size){ showErr('Marque ao menos uma missa.'); return; }
-      const btn=$('enviar'); btn.disabled=true; btn.textContent='Enviando...';
+      $('dlgNome').textContent=membro.nome;
+      const L=$('dlgLista'); L.innerHTML='';
+      missas.filter(c=>selCels.has(c.id)).forEach(c=>{
+        const d=document.createElement('div'), a=document.createElement('span'), b=document.createElement('b');
+        a.textContent=diaCerto(c); b.textContent=FUNCOES[selCels.get(c.id)]||selCels.get(c.id); d.append(a,b); L.appendChild(d);
+      });
+      $('ov').classList.add('show');
+    };
+    $('dlgVoltar').onclick=()=>$('ov').classList.remove('show');
+    $('dlgIr').onclick=async ()=>{
+      const btn=$('enviar'); const ir=$('dlgIr'); ir.disabled=true; ir.textContent='Enviando...';
       const { data, error } = await sb.rpc('acolitos_novena_publica_enviar', {
         p_membro_id: membro.id,
         p_itens: Array.from(selCels, ([id,f])=>({celebracao_id:id, funcao:f})) });
-      btn.disabled=false; btn.textContent='Confirmar minha escala';
+      ir.disabled=false; ir.textContent='Sim, confirmar'; $('ov').classList.remove('show');
       if(error || (data && data.erro)){
         const MSG={ sem_itens_validos:'Essas missas não têm mais vaga para você. Atualizando a lista…',
                     membro_invalido:'Seu cadastro não está disponível para servir. Fale com a coordenação.',
