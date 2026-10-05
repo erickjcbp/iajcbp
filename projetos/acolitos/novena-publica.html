@@ -341,12 +341,13 @@
           row.onclick=()=>{
             if(selCels.has(c.id)){ selCels.delete(c.id); wrap.classList.remove('on'); row.classList.remove('on'); row.querySelector('.box').textContent=''; box.querySelectorAll('.fn').forEach(x=>x.classList.remove('sel')); }
             else { selCels.set(c.id,fns[0].funcao); wrap.classList.add('on'); row.classList.add('on'); row.querySelector('.box').textContent='✓'; box.querySelector('.fn').classList.add('sel'); }
-            const n=selCels.size; $('cels-meta').innerHTML = n ? '<b>'+n+'</b> missa(s) marcada(s)' : '';
+            const n=selCels.size, ja=missas.filter(x=>x.minha_funcao).length; $('cels-meta').innerHTML = n ? '<b>'+n+'</b> missa(s) marcada(s)' : (ja ? '✓ Você já está em <b>'+ja+'</b> '+(ja===1?'missa':'missas')+'. Toque nas outras para entrar.' : '');
           };
         }
         $('cels').appendChild(wrap);
       });
-      $('cels-meta').innerHTML='';
+      const ja=missas.filter(c=>c.minha_funcao).length;
+      $('cels-meta').innerHTML = ja ? '✓ Você já está em <b>'+ja+'</b> '+(ja===1?'missa':'missas')+'. Toque nas outras para entrar.' : '';
     }
 
     // ── ALTERAR / SAIR (missa em que a pessoa já está) ──
@@ -368,7 +369,11 @@
     $('enviar').onclick=()=>{
       clearErr();
       if(!membro){ showErr('Escolha seu nome.'); return; }
-      if(!selCels.size){ showErr('Marque ao menos uma missa.'); return; }
+      if(!selCels.size){
+        const ja=missas.filter(c=>c.minha_funcao).length;
+        showErr(ja ? 'Você já está na escala de '+ja+(ja===1?' missa':' missas')+' (as com ✓). Para entrar em outra, toque nela. Para mudar a função ou sair, use "Alterar".' : 'Marque ao menos uma missa.');
+        return;
+      }
       $('dlgNome').textContent=membro.nome;
       const L=$('dlgLista'); L.innerHTML='';
       missas.filter(c=>selCels.has(c.id)).forEach(c=>{
