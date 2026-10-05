@@ -127,6 +127,7 @@
     .btn:disabled{ opacity:.55; cursor:default; box-shadow:none; }
 
     .msg{ margin-top:13px; font-size:13px; padding:11px 13px; border-radius:11px; display:none; }
+    .msg.ok{ display:block; background:#12301f; color:#b6f0cc; border:1px solid #2f7a52; }
     .msg.err{ display:block; background:#3a1018; color:#ffb3c2; border:1px solid var(--danger); }
 
     .footer{ text-align:center; font-size:11px; color:var(--muted); margin-top:22px; }
@@ -141,6 +142,7 @@
     .me b{ flex:1; font-size:14px; color:var(--gold-light); }
     .me button{ background:none; border:none; color:var(--muted); font-size:12.5px; text-decoration:underline; cursor:pointer; font-family:inherit; }
     .cel.off{ opacity:.55; cursor:default; }
+    .cel.mine{ cursor:default; }
     .cel .tag{ flex:none; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; background:#00000030; color:var(--muted); }
     .cel .tag.ok{ color:#c9f5d3; background:#1f3a24; border:1px solid var(--ok); }
     .cels{ max-height:none; }
@@ -151,6 +153,9 @@
     .cel-wrap.on .fns{ display:flex; }
     .fn{ border:1px solid var(--gold-dim); background:#3a1c24; color:var(--text); border-radius:20px; padding:7px 13px;
       font-size:12.5px; font-weight:600; font-family:inherit; cursor:pointer; }
+    .alt{ margin-left:8px; border:1px solid var(--gold-dim); background:transparent; color:var(--gold-light); border-radius:14px;
+      padding:5px 11px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; }
+    .fn.sair{ border-color:#a33; color:#f3b4b4; }
     .fn small{ color:var(--muted); font-weight:500; margin-left:3px; }
     .fn.sel{ background:linear-gradient(160deg,var(--gold-light),var(--gold)); color:#2a1500; border-color:var(--gold-light); }
     .fn.sel small{ color:#2a1500; }
@@ -213,7 +218,7 @@
     <h2>Confirma sua escala?</h2>
     <p class="sub" id="dlgNome" style="margin:0;"></p>
     <div id="dlgLista" class="lista"></div>
-    <p class="sub" style="margin:12px 0 0;">Ao confirmar, você entra na escala dessas missas. Para sair depois, só falando com a coordenação.</p>
+    <p class="sub" style="margin:12px 0 0;">Ao confirmar, você entra na escala dessas missas. Depois você pode trocar a função ou sair por este mesmo link.</p>
     <div class="row"><button class="voltar" id="dlgVoltar" type="button">Voltar</button><button class="ir" id="dlgIr" type="button">Sim, confirmar</button></div>
   </div></div>
 
@@ -303,8 +308,22 @@
         wrap.appendChild(row);
         const fns = c.funcoes||[];
         if(c.minha_funcao){
-          row.classList.add('off'); row.querySelector('.box').textContent='✓';
+          row.classList.add('mine'); row.querySelector('.box').textContent='✓';
           const t=document.createElement('span'); t.className='tag ok'; t.textContent='Você: '+(FUNCOES[c.minha_funcao]||c.minha_funcao); row.appendChild(t);
+          const alt=document.createElement('button'); alt.type='button'; alt.className='alt'; alt.textContent='Alterar'; row.appendChild(alt);
+          const pn=document.createElement('div'); pn.className='fns alt-fns';
+          (fns.filter(f=>f.funcao!==c.minha_funcao)).forEach(f=>{
+            const b=document.createElement('button'); b.type='button'; b.className='fn';
+            b.innerHTML='<span></span><small></small>';
+            b.firstChild.textContent='Trocar p/ '+(FUNCOES[f.funcao]||f.funcao);
+            b.lastChild.textContent=f.restantes+(f.restantes===1?' vaga':' vagas');
+            b.onclick=()=>alterar(c,'trocar',f.funcao);
+            pn.appendChild(b);
+          });
+          const sair=document.createElement('button'); sair.type='button'; sair.className='fn sair'; sair.textContent='Sair desta missa';
+          sair.onclick=()=>{ if(window.confirm('Sair da escala de '+diaCerto(c)+'?')) alterar(c,'sair',null); };
+          pn.appendChild(sair); wrap.appendChild(pn);
+          alt.onclick=ev=>{ ev.stopPropagation(); wrap.classList.toggle('on'); };
         } else if(c.lotada || !fns.length){
           row.classList.add('off');
           const t=document.createElement('span'); t.className='tag'; t.textContent=c.lotada?'Lotada':'Sem função p/ você'; row.appendChild(t);
@@ -328,6 +347,20 @@
         $('cels').appendChild(wrap);
       });
       $('cels-meta').innerHTML='';
+    }
+
+    // ── ALTERAR / SAIR (missa em que a pessoa já está) ──
+    async function alterar(c,acao,funcao){
+      clearErr();
+      const { data, error } = await sb.rpc('acolitos_novena_publica_alterar', { p_membro_id: membro.id, p_celebracao_id: c.id, p_acao: acao, p_funcao: funcao });
+      if(error || !data || data.erro){
+        const MSG={ sem_vaga:'Essa função acabou de lotar. Atualizando a lista…', nao_escalado:'Você não está mais nessa missa. Atualizando…',
+                    invalida:'Essa missa não está mais aberta.', membro_invalido:'Seu cadastro não está disponível. Fale com a coordenação.' };
+        showErr((data && MSG[data.erro]) || 'Não foi possível alterar. Tente de novo.');
+        selCels.clear(); carregar(); return;
+      }
+      selCels.clear(); await carregar();
+      const m=$('msg'); m.textContent = acao==='sair' ? 'Pronto, você saiu dessa missa.' : 'Função alterada para '+(FUNCOES[funcao]||funcao)+'.'; m.className='msg ok';
     }
 
     // ── ENVIO ──
