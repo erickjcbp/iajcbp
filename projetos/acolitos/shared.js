@@ -1700,6 +1700,10 @@ function montarFiltroLista(alvo, config, aoMudar) {
         const tocar = (op) => () => { rascunho = F.alternar(rascunho, config, f.id, op.id); desenharCorpo(); atualizarVer(); };
         if (!f.busca) {
           f.opcoes.forEach((op) => opcao(gf, op.nome, F.estaLigado(rascunho, f.id, op.id), papel, tocar(op)));
+          // Ponto de extensão: um filtro pode somar um controle próprio (ex.: faixa numérica
+          // "de/até") dentro da MESMA seção, depois dos botões fixos. A tela decide o que
+          // desenhar; aqui só repassa onde encostar e como avisar que o "Ver resultado" mudou.
+          if (f.extra) { try { f.extra(gf, atualizarVer); } catch (e) { console.error(e); } }
           return;
         }
         // Lista longa (ex.: 177 pessoas): campo de busca dentro do painel. As já escolhidas

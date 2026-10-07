@@ -91,13 +91,6 @@
   </div>
 
   <div id="filtro-membros"></div>
-  <div id="faixa-idade" style="display:flex;align-items:center;gap:8px;margin:-4px 0 10px;flex-wrap:wrap;">
-    <span style="font-size:12px;color:var(--text-muted);">Idade entre</span>
-    <input type="number" min="0" max="120" class="form-input" id="idade-de" style="width:64px;" placeholder="de">
-    <span style="font-size:12px;color:var(--text-muted);">e</span>
-    <input type="number" min="0" max="120" class="form-input" id="idade-ate" style="width:64px;" placeholder="até">
-    <button class="btn-sm gray" id="idade-limpar" style="display:none;" onclick="limparFaixaIdade()">Limpar</button>
-  </div>
 
   <div class="cards-grid" id="grid">
     <span class="loading">Carregando...</span>
@@ -195,24 +188,10 @@ function _faixaIdadeLer() {
   catch (e) { return { de: null, ate: null }; }
 }
 let faixaIdade = _faixaIdadeLer();
-function limparFaixaIdade() {
-  faixaIdade = { de: null, ate: null };
-  document.getElementById('idade-de').value = '';
-  document.getElementById('idade-ate').value = '';
-  _faixaIdadeSalvar(); renderGrid();
-}
+// O desenho dos campos de/até vive dentro do painel "Filtrar" (ver `extra` no filtro
+// 'idade' de configFiltroMembros) — aqui só persiste o valor.
 function _faixaIdadeSalvar() {
   try { localStorage.setItem('membros-faixa-idade', JSON.stringify(faixaIdade)); } catch (e) {}
-  const btn = document.getElementById('idade-limpar');
-  if (btn) btn.style.display = (faixaIdade.de != null || faixaIdade.ate != null) ? '' : 'none';
-}
-function iniciarFaixaIdade() {
-  const iDe = document.getElementById('idade-de'), iAte = document.getElementById('idade-ate');
-  iDe.value = faixaIdade.de == null ? '' : faixaIdade.de;
-  iAte.value = faixaIdade.ate == null ? '' : faixaIdade.ate;
-  iDe.oninput = () => { faixaIdade.de = iDe.value === '' ? null : Number(iDe.value); _faixaIdadeSalvar(); renderGrid(); };
-  iAte.oninput = () => { faixaIdade.ate = iAte.value === '' ? null : Number(iAte.value); _faixaIdadeSalvar(); renderGrid(); };
-  _faixaIdadeSalvar();
 }
 function passaFaixaIdade(m) {
   if (faixaIdade.de == null && faixaIdade.ate == null) return true;
@@ -283,8 +262,31 @@ function configFiltroMembros() {
       { id: '14_17', nome: '14 a 17', testa: m => { const a = idadeAnos(m.data_nascimento); return a != null && a >= 14 && a <= 17; } },
       { id: '18_mais', nome: '18+', testa: m => { const a = idadeAnos(m.data_nascimento); return a != null && a >= 18; } },
       { id: 'sem_data', nome: 'Sem data cadastrada', testa: m => idadeAnos(m.data_nascimento) == null },
-    ] },
-  ];
+    ],
+    // Faixa livre "idade de __ a __", além dos baldes fixos acima — mesma seção, dentro do
+    // painel de Filtrar (pedido do dono, 07/10/2026: "não fora, dentro do botão filtro").
+    extra: (grupo, atualizarVer) => {
+      const linha = document.createElement('div');
+      linha.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;';
+      const lbl = document.createElement('span'); lbl.style.cssText = 'font-size:12px;color:var(--text-muted);'; lbl.textContent = 'Faixa livre:';
+      const iDe = document.createElement('input'); iDe.type = 'number'; iDe.min = '0'; iDe.max = '120';
+      iDe.className = 'form-input'; iDe.style.width = '64px'; iDe.placeholder = 'de'; iDe.value = faixaIdade.de == null ? '' : faixaIdade.de;
+      const eE = document.createElement('span'); eE.style.cssText = 'font-size:12px;color:var(--text-muted);'; eE.textContent = 'a';
+      const iAte = document.createElement('input'); iAte.type = 'number'; iAte.min = '0'; iAte.max = '120';
+      iAte.className = 'form-input'; iAte.style.width = '64px'; iAte.placeholder = 'até'; iAte.value = faixaIdade.ate == null ? '' : faixaIdade.ate;
+      const bLimpar = document.createElement('button'); bLimpar.type = 'button'; bLimpar.className = 'btn-sm gray'; bLimpar.textContent = 'Limpar';
+      bLimpar.style.display = (faixaIdade.de != null || faixaIdade.ate != null) ? '' : 'none';
+      const aplicar = () => {
+        bLimpar.style.display = (faixaIdade.de != null || faixaIdade.ate != null) ? '' : 'none';
+        _faixaIdadeSalvar(); renderGrid(); atualizarVer();
+      };
+      iDe.oninput = () => { faixaIdade.de = iDe.value === '' ? null : Number(iDe.value); aplicar(); };
+      iAte.oninput = () => { faixaIdade.ate = iAte.value === '' ? null : Number(iAte.value); aplicar(); };
+      bLimpar.onclick = () => { faixaIdade = { de: null, ate: null }; iDe.value = ''; iAte.value = ''; aplicar(); };
+      linha.append(lbl, iDe, eE, iAte, bLimpar);
+      grupo.parentNode.appendChild(linha);
+    },
+  } ];
   // Só oferece o filtro App se o banco respondeu. Sem resposta, esconder é honesto;
   // mostrar todo mundo como "nunca entrou" seria falha virando número.
   if (jaEntraram) filtros.push({ id: 'app', nome: 'App', opcoes: [
@@ -314,7 +316,7 @@ function configFiltroMembros() {
     filtros,
     busca: { placeholder: 'Buscar nome...', campos: m => [m.nome, m.apelido] },
   };
-  cfg.contar = (e) => FiltroLista.aplicar(todos, e, cfg).length;
+  cfg.contar = (e) => FiltroLista.aplicar(todos, e, cfg).filter(passaFaixaIdade).length;
   return cfg;
 }
 function montarFiltroMembros() {
@@ -339,7 +341,6 @@ async function init() {
   renderBottomNav(ctx, 'membros');
   document.getElementById('vt-cards').classList.toggle('active', vista === 'cards');
   document.getElementById('vt-lista').classList.toggle('active', vista === 'lista');
-  iniciarFaixaIdade();
   restaurarEstadoMembros();
   await loadMembros();
   abrirFichaPorLink();
