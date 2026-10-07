@@ -484,3 +484,36 @@ test('mais faltantes: ordem por faltas, sem quem não faltou e sem quem já est�
   assert.deepStrictEqual(r.map(x => x.membro.nome), ['B', 'E', 'A']);
   assert.strictEqual(RC.maisFaltantes([l('A', 1), l('B', 2)], '2026-10-01', 1).length, 1);
 });
+
+// ── historicoSemanal: a bolinha por semana do modal de histórico ───────────
+test('historicoSemanal: marca verde quem serviu, cinza quem não teve escala', () => {
+  const sem = RC.historicoSemanal({
+    membroId: 'm1', hoje: '2026-10-07', semanas: 3,
+    escalas: [
+      { membro_id: 'm1', status: 'presente', data: '2026-09-27', horario: '09:00' }, // semana -1
+      { membro_id: 'm1', status: 'ausente',  data: '2026-10-04', horario: '19:00' }, // semana 0 (atual)
+    ],
+  });
+  assert.strictEqual(sem.length, 3);
+  assert.strictEqual(sem[0].serviu, true);   // fim 27/09: presente
+  assert.strictEqual(sem[1].serviu, false);  // fim 04/10: ausente, não conta como serviu
+  assert.strictEqual(sem[1].eventos[0].status, 'ausente');
+  assert.strictEqual(sem[2].serviu, false);  // fim 11/10: sem nenhuma escala
+  assert.strictEqual(sem[2].eventos.length, 0);
+});
+
+test('historicoSemanal: substituto credita a semana como serviu, titular não', () => {
+  // hoje=04/10 (o próprio domingo da missa) pra cair na única semana da janela (semanas:1).
+  const sem = RC.historicoSemanal({
+    membroId: 'sub1', hoje: '2026-10-04', semanas: 1,
+    escalas: [ { membro_id: 'titular1', substituto_id: 'sub1', status: 'substituido', data: '2026-10-04', horario: '17:00' } ],
+  });
+  assert.strictEqual(sem[0].serviu, true);
+  assert.strictEqual(sem[0].eventos[0].comoSubstituto, true);
+
+  const semTitular = RC.historicoSemanal({
+    membroId: 'titular1', hoje: '2026-10-04', semanas: 1,
+    escalas: [ { membro_id: 'titular1', substituto_id: 'sub1', status: 'substituido', data: '2026-10-04', horario: '17:00' } ],
+  });
+  assert.strictEqual(semTitular[0].serviu, false);
+});

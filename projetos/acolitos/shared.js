@@ -1738,6 +1738,9 @@ function montarFiltroLista(alvo, config, aoMudar) {
     estado: () => estado,
     aplicar: (lista) => F.aplicar(lista, estado, config),
     legenda: (item) => F.legenda(item, estado, config),
+    // Pra quando a própria tela tem um jeito de escolher ordem além da barra (ex.: clicar no
+    // cabeçalho da coluna numa tabela) — reaproveita o mesmo guardar/redesenhar da barra.
+    definirOrdem: (ordemId) => { estado = F.escolherOrdem(estado, config, ordemId); mudou(); },
   };
 }
 

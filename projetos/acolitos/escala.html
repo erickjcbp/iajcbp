@@ -1775,7 +1775,7 @@ async function freqCSV(){
 // discordam quando a chamada de um domingo não foi fechada — e aí a tela diz isso, em vez
 // de mostrar como sumido quem serviu.
 const RODIZIO_PROF_OK = ['apto','experiente','referencia'];
-let rodizioLinhas = null, rodizioPiso = null, rodizioVagas = null;
+let rodizioLinhas = null, rodizioPiso = null, rodizioVagas = null, rodizioEscalasBrutas = null;
 let rodizioDetalhes = false, rodizioRepintar = null;
 let rodizioErro = null, rodizioCarregando = false, filtroRodizio = null, cfgRodizio = null;
 
@@ -1786,7 +1786,7 @@ async function carregarRodizio(){
   // quando a pergunta dele ("quem está parado") é justamente a que não depende de ter missa.
   if (!membros.length) {
     const { data: ms } = await sb.from('acolitos_membros')
-      .select('id,nome,apelido,nivel,comunidade,casa_id,foto_url,escalar_frequente,suspenso_ate,suspenso_em')
+      .select('id,nome,apelido,nivel,comunidade,casa_id,foto_url,escalar_frequente,suspenso_ate,suspenso_em,data_nascimento')
       .eq('status','ativo').eq('serve',true).order('nome');
     membros = ms || [];
   }
@@ -1794,12 +1794,13 @@ async function carregarRodizio(){
   // PAGINADO: um ano passa de mil escalas com folga, e o banco corta calado — a lista sairia
   // dizendo "nunca escalado" para gente que serve todo mês.
   const { data, error } = await lerTudo(() => sb.from('acolitos_escalas')
-    .select('membro_id,substituto_id,status,acolitos_celebracoes!inner(data)')
+    .select('membro_id,substituto_id,status,acolitos_celebracoes!inner(data,horario)')
     .gte('acolitos_celebracoes.data', de.toISOString().slice(0,10)));
   if (error) throw error;   // lista curta virando diagnóstico é pior que a aba falhar
   const escalas = (data||[]).map(e => ({
     membro_id: e.membro_id, substituto_id: e.substituto_id, status: e.status,
     data: e.acolitos_celebracoes && e.acolitos_celebracoes.data,
+    horario: e.acolitos_celebracoes && e.acolitos_celebracoes.horario,
   }));
 
   // O piso do grupo: vagas medidas nas 6 semanas JÁ ACONTECIDAS (escala futura ainda pode mudar).
@@ -1819,6 +1820,7 @@ async function carregarRodizio(){
       : 'no_piso';   // em dia com a regra do mês: não há o que explicar
   });
   rodizioLinhas = linhas;
+  rodizioEscalasBrutas = escalas;
 }
 
 // null = "nunca". Mostrar 0 diria "serviu esta semana" de quem nunca serviu.
@@ -1838,8 +1840,14 @@ function configFiltroRodizio(){
       { id:'parado',     nome:'Mais tempo sem escalar',  desc:true, valor: l => _rodOrd(l.semEscalar),
         legenda: l => RodizioCore.rotuloDoMotivo(l.motivo) === '—' ? '' : RodizioCore.rotuloDoMotivo(l.motivo) },
       { id:'recente',    nome:'Menos tempo sem escalar',            valor: l => _rodOrd(l.semEscalar) },
+      { id:'mes_desc',   nome:'Mais vezes este mês',     desc:true, valor: l => l.vezesNoMes,
+        legenda: l => RodizioCore.rotuloDoMotivo(l.motivo) === '—' ? '' : RodizioCore.rotuloDoMotivo(l.motivo) },
       { id:'sem_servir', nome:'Mais tempo sem servir',   desc:true, valor: l => _rodOrd(l.semServir) },
+      { id:'sem_servir_asc', nome:'Menos tempo sem servir',         valor: l => _rodOrd(l.semServir) },
       { id:'faltas',     nome:'Mais faltas',             desc:true, valor: l => l.faltas },
+      { id:'faltas_asc', nome:'Menos faltas',                       valor: l => l.faltas },
+      { id:'ultima_desc', nome:'Última vez mais recente', desc:true, valor: l => l.ultimaServida },
+      { id:'ultima_asc',  nome:'Última vez mais antiga',             valor: l => l.ultimaServida },
       { id:'nome',       nome:'Nome A–Z',                           valor: l => l.membro.nome },
     ],
     filtros: [
@@ -1853,6 +1861,13 @@ function configFiltroRodizio(){
         { id:'matriz',        nome:'Matriz',        testa: l => l.membro.comunidade === 'matriz' },
         { id:'santo_antonio', nome:'Santo Antônio', testa: l => l.membro.comunidade === 'santo_antonio' },
         { id:'outra',         nome:'Outra',         testa: l => l.membro.comunidade !== 'matriz' && l.membro.comunidade !== 'santo_antonio' },
+      ] },
+      { id:'idade', nome:'Idade', opcoes: [
+        { id:'ate_9',   nome:'Até 9 anos', testa: l => { const a = idadeAnos(l.membro.data_nascimento); return a != null && a <= 9; } },
+        { id:'10_13',   nome:'10 a 13',    testa: l => { const a = idadeAnos(l.membro.data_nascimento); return a != null && a >= 10 && a <= 13; } },
+        { id:'14_17',   nome:'14 a 17',    testa: l => { const a = idadeAnos(l.membro.data_nascimento); return a != null && a >= 14 && a <= 17; } },
+        { id:'18_mais', nome:'18+',        testa: l => { const a = idadeAnos(l.membro.data_nascimento); return a != null && a >= 18; } },
+        { id:'sem_data',nome:'Sem data cadastrada', testa: l => idadeAnos(l.membro.data_nascimento) == null },
       ] },
       // Escolha ÚNICA: ligar "8+" com "4+" ligado daria a lista do 4+, e o número mentiria.
       { id:'frequente', nome:'Frequência', opcoes: [
@@ -1936,6 +1951,59 @@ function desenharRodizio(){
   acoes.append(bDet,bPdf,bCsv,bPer); el.appendChild(acoes);
 
   pintarRodizio(lista);
+}
+
+// ── Histórico semanal (bolinhas) ────────────────────────────────────────────
+// Pedido do dono (07/10/2026): ver de longe o padrão de presença de alguém — uma bolinha por
+// semana, verde quem serviu, cinza quem não teve escala/faltou, com a data e o horário ao
+// passar o mouse ou tocar. A conta mora em RodizioCore.historicoSemanal; aqui só desenha.
+const RODIZIO_SEMANAS_HISTORICO = 16;
+function _horLabel(ev){
+  var d = formatDate(ev.data).slice(0,5);
+  var h = ev.horario ? ' às ' + ev.horario : '';
+  var st = ev.comoSubstituto ? 'substituiu — serviu'
+    : ev.status==='presente' ? 'serviu'
+    : ev.status==='atrasado' ? 'serviu (atrasado)'
+    : ev.status==='ausente' ? 'faltou'
+    : ev.status==='ausente_justificado' ? 'faltou (justificada)'
+    : ev.status==='substituido' ? 'foi substituído'
+    : ev.status==='escalado' ? 'escalado, chamada não fechada'
+    : ev.status;
+  return d + h + ' — ' + st;
+}
+function abrirHistoricoSemanal(m){
+  if (!rodizioEscalasBrutas) return;
+  const semanas = RodizioCore.historicoSemanal({
+    membroId: m.id, hoje: hojeLocal(), semanas: RODIZIO_SEMANAS_HISTORICO, escalas: rodizioEscalasBrutas,
+  });
+  const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
+  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='380px';
+  md.innerHTML='<div class="modal-title">📅 Últimas '+RODIZIO_SEMANAS_HISTORICO+' semanas — '+(m.apelido||m.nome)+'</div>';
+  const grid=document.createElement('div'); grid.style.cssText='display:flex;flex-wrap:wrap;margin:6px -2px 4px;';
+  const detalhe=document.createElement('p'); detalhe.style.cssText='font-size:12px;color:var(--text-muted);min-height:16px;margin:4px 0 2px;';
+  detalhe.textContent='Toque ou passe o mouse numa bolinha pra ver a data.';
+  semanas.forEach(s=>{
+    // Pedido do dono (07/10/2026): juntas, quase em linha — mesmo que o alvo de toque
+    // fique maior que a bolinha visual pra não perder o clique fácil.
+    const dot=document.createElement('button'); dot.type='button';
+    dot.style.cssText='width:32px;height:32px;border:none;background:none;cursor:pointer;padding:0;'
+      + 'display:flex;align-items:center;justify-content:center;';
+    const bolinha=document.createElement('span');
+    bolinha.style.cssText='width:24px;height:24px;border-radius:50%;display:block;'
+      + 'background:'+(s.serviu?'var(--success)':'var(--border)')+';';
+    dot.appendChild(bolinha);
+    const texto = s.eventos.length ? s.eventos.map(_horLabel).join(' · ') : ('semana de '+formatDate(s.fimSemana).slice(0,5)+' — sem escala');
+    dot.title = texto;
+    dot.setAttribute('aria-label', texto);
+    dot.onclick = () => { detalhe.textContent = texto; };
+    grid.appendChild(dot);
+  });
+  const legenda=document.createElement('div'); legenda.style.cssText='display:flex;gap:14px;font-size:11px;color:var(--text-muted);margin-top:6px;';
+  legenda.innerHTML='<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--success);margin-right:4px;"></span>serviu</span>'
+    + '<span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--border);margin-right:4px;"></span>não serviu / sem escala</span>';
+  const bX=document.createElement('button'); bX.className='btn-sm gray'; bX.style.cssText='width:100%;margin-top:14px;'; bX.textContent='Fechar'; bX.onclick=()=>ov.remove();
+  md.append(grid, detalhe, legenda, bX);
+  ov.appendChild(md); document.body.appendChild(ov);
 }
 
 // ── Suspensão ─────────────────────────────────────────────────────────────────
@@ -2059,10 +2127,30 @@ function pintarRodizio(lista){
   // O "por quê" era a 5ª coluna e, no telefone, só aparecia rolando a tabela de lado — logo
   // a parte que responde a pergunta do dono era a que ninguém via. Agora mora sob o nome.
   const cols = rodizioDetalhes ? ['Membro','Este mês','Sem escalar','Sem servir','Faltas','Última vez',''] : ['Membro','Este mês','Faltas','Última vez',''];
+  // Clicar no cabeçalho ordena por aquela coluna — cada uma tem um par de ordens (crescente/
+  // decrescente) já definido em cfgRodizio.ordens; clicar de novo alterna o sentido.
+  const COL_ORDEM = {
+    'Este mês':     { asc:'regra',          desc:'mes_desc' },
+    'Sem escalar':  { asc:'recente',        desc:'parado' },
+    'Sem servir':   { asc:'sem_servir_asc', desc:'sem_servir' },
+    'Faltas':       { asc:'faltas_asc',     desc:'faltas' },
+    'Última vez':   { asc:'ultima_asc',     desc:'ultima_desc' },
+  };
+  const ordemAtual = filtroRodizio ? filtroRodizio.estado().ordem : null;
   cols.forEach((h,i)=>{
     const th=document.createElement('th'); if(i===0) th.className='sticky-left';
     if(i>0) th.style.textAlign='center';
-    th.textContent=h; hr.appendChild(th);
+    const par = COL_ORDEM[h];
+    if (par && filtroRodizio) {
+      th.style.cursor='pointer'; th.style.userSelect='none';
+      const seta = ordemAtual===par.asc ? ' ▲' : ordemAtual===par.desc ? ' ▼' : '';
+      th.textContent = h + seta;
+      th.title = 'Ordenar por ' + h;
+      th.onclick = () => { filtroRodizio.definirOrdem(ordemAtual===par.desc ? par.asc : par.desc); };
+    } else {
+      th.textContent=h;
+    }
+    hr.appendChild(th);
   });
   thead.appendChild(hr); table.appendChild(thead);
 
@@ -2102,7 +2190,11 @@ function pintarRodizio(lista){
     tr.appendChild(cel(l.faltas ? String(l.faltas) : '—'));
 
     const tdU=document.createElement('td'); tdU.style.cssText='text-align:center;font-size:11px;color:var(--text-muted);';
-    tdU.textContent = l.ultimaServida ? formatDate(l.ultimaServida).slice(0,5) : '—'; tr.appendChild(tdU);
+    tdU.appendChild(document.createTextNode(l.ultimaServida ? formatDate(l.ultimaServida).slice(0,5) : '—'));
+    const bHist=document.createElement('button'); bHist.type='button'; bHist.title='Ver histórico das últimas semanas';
+    bHist.style.cssText='margin-left:5px;border:none;background:none;cursor:pointer;font-size:12px;vertical-align:middle;';
+    bHist.textContent='🔵'; bHist.onclick=()=>abrirHistoricoSemanal(m);
+    tdU.appendChild(bHist); tr.appendChild(tdU);
 
     const tdA=document.createElement('td'); tdA.style.cssText='text-align:center;';
     tdA.appendChild(botaoSuspensao(m)); tr.appendChild(tdA);

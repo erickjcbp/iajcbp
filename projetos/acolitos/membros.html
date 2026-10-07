@@ -91,6 +91,13 @@
   </div>
 
   <div id="filtro-membros"></div>
+  <div id="faixa-idade" style="display:flex;align-items:center;gap:8px;margin:-4px 0 10px;flex-wrap:wrap;">
+    <span style="font-size:12px;color:var(--text-muted);">Idade entre</span>
+    <input type="number" min="0" max="120" class="form-input" id="idade-de" style="width:64px;" placeholder="de">
+    <span style="font-size:12px;color:var(--text-muted);">e</span>
+    <input type="number" min="0" max="120" class="form-input" id="idade-ate" style="width:64px;" placeholder="até">
+    <button class="btn-sm gray" id="idade-limpar" style="display:none;" onclick="limparFaixaIdade()">Limpar</button>
+  </div>
 
   <div class="cards-grid" id="grid">
     <span class="loading">Carregando...</span>
@@ -180,6 +187,41 @@ let fichaDirty = false; // há alterações não salvas?
 let fichaDisp = null;   // estado da disponibilidade (Set 'dia_horario') enquanto a ficha está aberta
 let listasCustom = { habilidade: [], competencia: [], funcao: [] }; // listas criadas pela equipe (p/ botão remover)
 let vista = localStorage.getItem('membros-vista') || 'cards'; // 'cards' | 'lista'
+
+// Faixa de idade personalizada ("idade X a Z"), além dos baldes fixos do filtro de Idade —
+// persiste entre sessões igual ao resto da barra. null = sem limite daquele lado.
+function _faixaIdadeLer() {
+  try { const s = JSON.parse(localStorage.getItem('membros-faixa-idade') || 'null'); return (s && typeof s === 'object') ? s : { de: null, ate: null }; }
+  catch (e) { return { de: null, ate: null }; }
+}
+let faixaIdade = _faixaIdadeLer();
+function limparFaixaIdade() {
+  faixaIdade = { de: null, ate: null };
+  document.getElementById('idade-de').value = '';
+  document.getElementById('idade-ate').value = '';
+  _faixaIdadeSalvar(); renderGrid();
+}
+function _faixaIdadeSalvar() {
+  try { localStorage.setItem('membros-faixa-idade', JSON.stringify(faixaIdade)); } catch (e) {}
+  const btn = document.getElementById('idade-limpar');
+  if (btn) btn.style.display = (faixaIdade.de != null || faixaIdade.ate != null) ? '' : 'none';
+}
+function iniciarFaixaIdade() {
+  const iDe = document.getElementById('idade-de'), iAte = document.getElementById('idade-ate');
+  iDe.value = faixaIdade.de == null ? '' : faixaIdade.de;
+  iAte.value = faixaIdade.ate == null ? '' : faixaIdade.ate;
+  iDe.oninput = () => { faixaIdade.de = iDe.value === '' ? null : Number(iDe.value); _faixaIdadeSalvar(); renderGrid(); };
+  iAte.oninput = () => { faixaIdade.ate = iAte.value === '' ? null : Number(iAte.value); _faixaIdadeSalvar(); renderGrid(); };
+  _faixaIdadeSalvar();
+}
+function passaFaixaIdade(m) {
+  if (faixaIdade.de == null && faixaIdade.ate == null) return true;
+  const a = idadeAnos(m.data_nascimento);
+  if (a == null) return false;
+  if (faixaIdade.de != null && a < faixaIdade.de) return false;
+  if (faixaIdade.ate != null && a > faixaIdade.ate) return false;
+  return true;
+}
 
 // ── Lembrar a rolagem ao reabrir. Busca, ordem e filtros agora moram na barra
 // (localStorage 'filtro-lista:membros'); 'membros-vista' continua separado. ──
@@ -297,6 +339,7 @@ async function init() {
   renderBottomNav(ctx, 'membros');
   document.getElementById('vt-cards').classList.toggle('active', vista === 'cards');
   document.getElementById('vt-lista').classList.toggle('active', vista === 'lista');
+  iniciarFaixaIdade();
   restaurarEstadoMembros();
   await loadMembros();
   abrirFichaPorLink();
@@ -456,7 +499,7 @@ function renderGrid() {
     const banner = document.createElement('div'); banner.style.cssText = 'grid-column:1/-1;font-size:12px;font-weight:700;color:var(--gold);background:rgba(232,185,74,.1);border:1px solid var(--gold-dim);border-radius:8px;padding:8px 12px;margin-bottom:4px;';
     banner.textContent = '🗄 Vendo membros arquivados — abra um e use "Restaurar" para reativar.'; grid.appendChild(banner);
   }
-  const lista = filtroMembros ? filtroMembros.aplicar(todos) : todos;
+  const lista = (filtroMembros ? filtroMembros.aplicar(todos) : todos).filter(passaFaixaIdade);
   const legendaDe = (m) => (filtroMembros ? filtroMembros.legenda(m) : '');
   if (!lista.length) {
     const em = document.createElement('span'); em.className = 'empty';

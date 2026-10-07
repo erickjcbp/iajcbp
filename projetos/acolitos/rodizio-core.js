@@ -177,6 +177,36 @@
     return new Date(t + ((7 - dow) % 7) * 86400000).toISOString().slice(0, 10);
   }
 
+  // Uma bolinha por semana, das últimas `semanas` até hoje: serviu (titular presente/atrasado,
+  // ou substituto de alguém) ou não. Pedido do dono (07/10/2026): ver de longe o padrão de
+  // presença de alguém sem abrir relatório. Semana sem nenhuma escala dessa pessoa some com
+  // "sem escala" (não é falta — ninguém chamou); só falta quem foi chamado e não veio.
+  function historicoSemanal(opts) {
+    opts = opts || {};
+    var membroId = opts.membroId;
+    var n = opts.semanas == null ? 16 : opts.semanas;
+    var hojeFim = _fimDeSemanaDe(opts.hoje);
+    var semanas = [];
+    for (var i = n - 1; i >= 0; i--) {
+      var fim = new Date(Date.parse(hojeFim + 'T00:00:00Z') - i * 7 * 86400000).toISOString().slice(0, 10);
+      semanas.push({ fimSemana: fim, eventos: [], serviu: false });
+    }
+    var porFim = {};
+    semanas.forEach(function (s) { porFim[s.fimSemana] = s; });
+    (opts.escalas || []).forEach(function (e) {
+      if (!e || !e.data) return;
+      var souTitular = e.membro_id === membroId;
+      var souSubstituto = e.status === 'substituido' && e.substituto_id === membroId;
+      if (!souTitular && !souSubstituto) return;
+      var s = porFim[_fimDeSemanaDe(e.data)];
+      if (!s) return;   // fora da janela mostrada
+      var serviuEsta = souSubstituto || SERVIU.indexOf(e.status) >= 0;
+      s.eventos.push({ data: e.data, horario: e.horario || null, status: e.status, comoSubstituto: souSubstituto });
+      if (serviuEsta) s.serviu = true;
+    });
+    return semanas;
+  }
+
   // Média de vagas preenchidas por fim de semana COM celebração. Semana sem missa não entra
   // na conta: ela diluiria a média e faria o grupo parecer menor do que é.
   function vagasPorFimDeSemana(escalas) {
@@ -257,7 +287,7 @@
       .slice(0, limite == null ? 10 : limite);
   }
 
-  var api = { semanasSem: semanasSem, montarRodizio: montarRodizio,
+  var api = { semanasSem: semanasSem, montarRodizio: montarRodizio, historicoSemanal: historicoSemanal,
                pisoDoGrupo: pisoDoGrupo, vagasPorFimDeSemana: vagasPorFimDeSemana, motivoDe: motivoDe, rotuloDoMotivo: rotuloDoMotivo,
                META_PADRAO: META_PADRAO, mesDe: mesDe,
                PESO_MES: PESO_MES, pesoRodizio: pesoRodizio, contarParaRodizio: contarParaRodizio,
