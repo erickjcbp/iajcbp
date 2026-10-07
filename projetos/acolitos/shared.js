@@ -1601,7 +1601,7 @@ function montarFiltroLista(alvo, config, aoMudar) {
     inp.className = 'search-input'; inp.type = 'search';
     inp.placeholder = config.busca.placeholder || 'Buscar...';
     inp.value = estado.busca;
-    inp.oninput = () => { estado = F.definirBusca(estado, inp.value); guardar(); aoMudar(estado); };
+    inp.oninput = () => { estado = F.definirBusca(estado, inp.value); mudou(); };
     barra.appendChild(inp);
   }
   // Só mostra o que a tela oferece: "Ordenar por" com uma opção só, ou um botão "Filtrar"
@@ -1644,7 +1644,41 @@ function montarFiltroLista(alvo, config, aoMudar) {
       linha.appendChild(lp);
     }
   }
-  function mudou() { guardar(); desenharLinha(); aoMudar(estado); }
+  // Filtrar/buscar costuma ENCOLHER a lista — e aí o navegador trava o scroll no novo fim
+  // sozinho, sem nenhum scrollTo nosso. Provado: 40 cartões (3660px) → 1 resultado (800px)
+  // jogou o scroll de 600 pra 0 na hora, e isso PARECE a página tendo recarregado. Com
+  // `config.suavizarAltura` (id do elemento que contém a lista), prende a altura ANTIGA
+  // antes de repintar e anima até a NOVA — o corte vira deslize.
+  function mudou() {
+    guardar(); desenharLinha();
+    const elLista = config.suavizarAltura ? document.getElementById(config.suavizarAltura) : null;
+    const hAntes = elLista ? elLista.offsetHeight : 0;
+    if (!elLista || !hAntes) { aoMudar(estado); return; }
+    // A TRAVA tem de vir ANTES de trocar o conteúdo — nunca depois. `scrollHeight` não serve
+    // pra medir "quanto encolheu": com overflow:hidden e altura presa MAIOR que o conteúdo,
+    // ele devolve a altura da CAIXA, não a do conteúdo (não há o que rolar lá dentro) — e o
+    // early-return achava "não encolheu" e soltava a trava na hora, voltando ao estouro.
+    // Por isso a altura nova é medida numa CÓPIA fora da tela (mesma largura, sem afetar a
+    // rolagem real), nunca lendo o elemento verdadeiro no tamanho curto.
+    elLista.style.overflow = 'hidden';
+    elLista.style.height = hAntes + 'px';
+    void elLista.offsetHeight;   // comita a trava (mesma altura — não move o scroll)
+    aoMudar(estado);
+    const largura = elLista.getBoundingClientRect().width;
+    const clone = elLista.cloneNode(true);
+    clone.style.cssText = 'position:absolute;visibility:hidden;left:-9999px;top:0;height:auto;width:' + largura + 'px;';
+    document.body.appendChild(clone);
+    const hDepois = clone.offsetHeight;
+    clone.remove();
+    const limpar = () => { elLista.style.transition = ''; elLista.style.height = ''; elLista.style.overflow = ''; };
+    if (hDepois >= hAntes) { limpar(); return; }
+    elLista.addEventListener('transitionend', limpar, { once: true });
+    requestAnimationFrame(() => {
+      elLista.style.transition = 'height .22s ease';
+      elLista.style.height = hDepois + 'px';
+    });
+    setTimeout(limpar, 500);   // rede de segurança: se o navegador não disparar transitionend
+  }
 
   btn.onclick = () => {
     let rascunho = estado;

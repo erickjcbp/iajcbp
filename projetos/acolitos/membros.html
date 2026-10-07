@@ -311,6 +311,7 @@ function configFiltroMembros() {
     busca: { placeholder: 'Buscar nome...', campos: m => [m.nome, m.apelido] },
   };
   cfg.contar = (e) => FiltroLista.aplicar(todos, e, cfg).filter(passaFaixaIdade).length;
+  cfg.suavizarAltura = 'grid';
   return cfg;
 }
 function montarFiltroMembros() {

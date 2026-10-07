@@ -1904,6 +1904,7 @@ function configFiltroRodizio(){
     desempate: l => l.membro.nome,   // o padrão procura item.nome, e aqui o nome mora um andar abaixo
   };
   cfg.contar = (e) => FiltroLista.aplicar(rodizioLinhas||[], e, cfg).length;
+  cfg.suavizarAltura = 'view-rodizio';
   return cfg;
 }
 
