@@ -38,8 +38,10 @@ export function montarMissas(celebracoes, escalasMap, funcExtra) {
 }
 
 export async function carregarDados(sb, { sabado, domingo }, override) {
+  // `incluir_na_arte=false`: a coordenação tirou essa missa do PNG no modal "Arte da
+  // semana" (migration 090) — a missa e a escala dela continuam normais na aba Escala.
   const { data: celebracoes, error: ce } = await sb
-    .from('acolitos_celebracoes').select('*').in('data', [sabado, domingo])
+    .from('acolitos_celebracoes').select('*').in('data', [sabado, domingo]).eq('incluir_na_arte', true)
   if (ce) throw ce
   const ids = celebracoes.map(c => c.id)
   const { data: esc, error: ee } = await sb

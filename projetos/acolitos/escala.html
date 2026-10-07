@@ -1330,10 +1330,13 @@ async function arteSemana(){
 }
 async function arteRender(md, domISO, isAdmin){
   const body=md.querySelector('#arte-body');
-  const [ra, ro] = await Promise.all([
+  const sabISO=(()=>{ const d=new Date(domISO+'T00:00:00'); d.setDate(d.getDate()-1); const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); })();
+  const [ra, ro, rc] = await Promise.all([
     sb.from('acolitos_escala_artes').select('*').eq('domingo_data',domISO).maybeSingle(),
     isAdmin ? sb.from('acolitos_liturgia_override').select('*').eq('domingo_data',domISO).maybeSingle() : Promise.resolve({data:null}),
+    isAdmin ? sb.from('acolitos_celebracoes').select('id,data,horario,comunidade,incluir_na_arte').in('data',[sabISO,domISO]).order('data').order('minutos') : Promise.resolve({data:null}),
   ]);
+  const celebsFds=rc.data||[];
   const arte=ra.data, ovr=ro.data;
   const dataLbl = (typeof dataCurta==='function') ? dataCurta(domISO) : domISO;
   let html='<p style="font-size:12px;color:var(--text-muted);margin:-4px 0 12px;">Fim de semana do domingo <b>'+relEsc(dataLbl)+'</b></p>';
@@ -1357,8 +1360,20 @@ async function arteRender(md, domISO, isAdmin){
   }
   if(isAdmin){
     const cores=['','verde','vermelho','branco','rosa','roxo'];
-    html+='<hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">'
-      +'<div style="text-align:left;font-size:12px;color:var(--text-muted);font-weight:700;margin-bottom:8px;">Ajuste litúrgico (opcional — sobrepõe o cálculo automático)</div>'
+    html+='<hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">';
+    if(celebsFds.length){
+      html+='<div style="text-align:left;font-size:12px;color:var(--text-muted);font-weight:700;margin-bottom:8px;">Missas deste fim de semana — desmarque pra tirar da arte (continua normal na Escala)</div>'
+        +'<div style="text-align:left;margin-bottom:12px;">'
+        +celebsFds.map(c=>{
+            const d=new Date(c.data+'T00:00:00');
+            const lbl=DIAS[d.getDay()]+' '+c.horario+' · '+(c.comunidade==='matriz'?'Matriz':'Sto. Antônio');
+            return '<label style="display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0;cursor:pointer;">'
+              +'<input type="checkbox" class="arte-inc-chk" data-id="'+c.id+'" style="width:16px;height:16px;accent-color:var(--gold);cursor:pointer;" '+(c.incluir_na_arte?'checked':'')+'>'
+              +relEsc(lbl)+'</label>';
+          }).join('')
+        +'</div>';
+    }
+    html+='<div style="text-align:left;font-size:12px;color:var(--text-muted);font-weight:700;margin-bottom:8px;">Ajuste litúrgico (opcional — sobrepõe o cálculo automático)</div>'
       +'<label style="display:block;text-align:left;font-size:12px;color:var(--text-muted);">Tempo litúrgico<input id="ov-tempo" class="form-input" style="width:100%;" placeholder="ex.: TEMPO COMUM" value="'+(ovr?_arteEscAttr(ovr.tempo):'')+'"></label>'
       +'<label style="display:block;text-align:left;font-size:12px;color:var(--text-muted);margin-top:6px;">Descrição<input id="ov-desc" class="form-input" style="width:100%;" placeholder="ex.: 16º Domingo do Tempo Comum, Ano A" value="'+(ovr?_arteEscAttr(ovr.descricao):'')+'"></label>'
       +'<label style="display:block;text-align:left;font-size:12px;color:var(--text-muted);margin-top:6px;">Cor litúrgica<select id="ov-cor" class="form-select" style="width:100%;">'+cores.map(c=>'<option value="'+c+'"'+(ovr&&ovr.cor===c?' selected':'')+'>'+(c||'(automática)')+'</option>').join('')+'</select></label>'
@@ -1368,6 +1383,16 @@ async function arteRender(md, domISO, isAdmin){
   body.innerHTML=html;
   const bb=body.querySelector('#arte-baixar'); if(bb) bb.onclick=()=>baixarArte(md._artePartes, domISO);
   if(isAdmin){
+    body.querySelectorAll('.arte-inc-chk').forEach(chk=>{
+      chk.onchange=async()=>{
+        const id=chk.dataset.id, val=chk.checked;
+        chk.disabled=true;
+        const{error}=await sb.from('acolitos_celebracoes').update({incluir_na_arte:val}).eq('id',id);
+        chk.disabled=false;
+        if(error){ chk.checked=!val; toast('Erro ao salvar: '+error.message,'error'); return; }
+        toast(val?'✓ Volta a entrar na arte.':'✓ Fica de fora da arte.');
+      };
+    });
     body.querySelector('#arte-ov-save').onclick=()=>salvarAjusteArte(md,domISO);
     body.querySelector('#arte-regen').onclick=()=>regenerarArte(md,domISO);
   }
