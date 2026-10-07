@@ -175,6 +175,17 @@
       .pos-label { flex:1 1 100%; font-size:11px; line-height:1.3; }
       .pos-select { flex:1 1 auto; min-width:0; max-width:none; font-size:11px; }
       .cat-titulo { font-size:10px; }
+      /* Coluna de nome congelada media o conteúdo (nome mais longo) em vez de largura fixa —
+         no celular isso come quase tudo e não sobra espaço pras colunas seguintes. */
+      .planilha-table td.sticky-left, .planilha-table th.sticky-left { max-width:118px; }
+      /* Rodízio: poucas colunas de número, cabem empilhadas — sem scroll lateral nenhum. */
+      #view-rodizio .planilha-wrap { overflow-x:visible; border:none; }
+      #view-rodizio .planilha-table thead { display:none; }
+      #view-rodizio .planilha-table, #view-rodizio .planilha-table tbody, #view-rodizio .planilha-table tr { display:block; width:100%; }
+      #view-rodizio .planilha-table tr { border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:10px; background:var(--surface); }
+      #view-rodizio .planilha-table td { display:block; position:static !important; max-width:none; padding:3px 0; border:none; text-align:left; }
+      #view-rodizio .planilha-table td.sticky-left { padding-bottom:6px; margin-bottom:4px; border-bottom:1px solid var(--border-wine); background:none; }
+      #view-rodizio .planilha-table td[data-label]:not(.sticky-left)::before { content: attr(data-label) ': '; color:var(--text-muted); font-size:9px; text-transform:uppercase; letter-spacing:.5px; }
     }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
@@ -1610,8 +1621,8 @@ function renderPlanilha() {
     wrapN.appendChild(bFicha);
     wrapN.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30, { nivelSlug: m.nivel || nivelFromRole(patchRoleFromHabs(habs)), casaSlug: casaSlugDe(m) }));
     const nm=document.createElement('div'); nm.style.cssText='min-width:0;line-height:1.15;';
-    if((m.apelido||'').trim()){ const a=document.createElement('div'); a.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;'; a.textContent=m.apelido; const n=document.createElement('div'); n.style.cssText='font-size:9.5px;color:var(--text-muted);white-space:nowrap;'; n.textContent=m.nome; nm.append(a,n); }
-    else { nm.style.fontSize='12px'; nm.style.whiteSpace='nowrap'; nm.textContent=m.nome; }
+    if((m.apelido||'').trim()){ const a=document.createElement('div'); a.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; a.textContent=m.apelido; const n=document.createElement('div'); n.style.cssText='font-size:9.5px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; n.textContent=m.nome; nm.append(a,n); }
+    else { nm.style.cssText='font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; nm.textContent=m.nome; }
     wrapN.appendChild(nm);tdN.appendChild(wrapN);tr.appendChild(tdN);
 
     // Idade
@@ -2190,8 +2201,8 @@ function pintarRodizio(lista){
     box.appendChild(bFichaRod);
     box.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30, { nivelSlug: m.nivel || nivelFromRole(patchRoleFromHabs(habs)), casaSlug: casaSlugDe(m) }));
     const nm=document.createElement('div'); nm.style.cssText='min-width:0;line-height:1.15;';
-    const n1=document.createElement('div'); n1.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;'; n1.textContent=m.apelido||m.nome;
-    const n2=document.createElement('div'); n2.style.cssText='font-size:9.5px;color:var(--text-muted);white-space:nowrap;';
+    const n1=document.createElement('div'); n1.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; n1.textContent=m.apelido||m.nome;
+    const n2=document.createElement('div'); n2.style.cssText='font-size:9.5px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
     n2.textContent=nivelInfo(m.nivel||'aspirante').label+' · '+_freqComLabel(m.comunidade);
     nm.append(n1,n2);
     const motivo=RodizioCore.rotuloDoMotivo(l.motivo);
@@ -2202,21 +2213,21 @@ function pintarRodizio(lista){
     if(m.escalar_frequente){ const sf=document.createElement('div'); sf.className='rodizio-selo'; sf.textContent='frequente'; nm.appendChild(sf); }
     box.appendChild(nm); tdN.appendChild(box); tr.appendChild(tdN);
 
-    const cel=(txt)=>{ const td=document.createElement('td'); td.style.cssText='text-align:center;font-size:11px;'; td.textContent=txt; return td; };
+    const cel=(txt,label)=>{ const td=document.createElement('td'); td.style.cssText='text-align:center;font-size:11px;'; td.textContent=txt; if(label) td.setAttribute('data-label',label); return td; };
 
     // "Este mês" é a coluna da REGRA, e por isso vem logo depois do nome. Quem está abaixo
     // destaca por FUNDO, com o texto na cor normal: texto pequeno pintado de âmbar mede
     // 1,4:1 no tema claro — sumiria justamente em quem importa.
-    const tdR=document.createElement('td'); tdR.style.cssText='text-align:center;font-size:11px;';
+    const tdR=document.createElement('td'); tdR.style.cssText='text-align:center;font-size:11px;'; tdR.setAttribute('data-label','Este mês');
     const marca=document.createElement('span');
     marca.textContent=l.vezesNoMes+' / '+RodizioCore.META_PADRAO;
     if(l.abaixoDaRegra) marca.className='rodizio-alerta'; else marca.style.fontWeight='700';
     tdR.appendChild(marca); tr.appendChild(tdR);
 
-    if(rodizioDetalhes){ tr.appendChild(cel(_rodSemanas(l.semEscalar))); tr.appendChild(cel(_rodSemanas(l.semServir))); }
-    tr.appendChild(cel(l.faltas ? String(l.faltas) : '—'));
+    if(rodizioDetalhes){ tr.appendChild(cel(_rodSemanas(l.semEscalar),'Sem escalar')); tr.appendChild(cel(_rodSemanas(l.semServir),'Sem servir')); }
+    tr.appendChild(cel(l.faltas ? String(l.faltas) : '—','Faltas'));
 
-    const tdU=document.createElement('td'); tdU.style.cssText='text-align:center;font-size:11px;color:var(--text-muted);';
+    const tdU=document.createElement('td'); tdU.style.cssText='text-align:center;font-size:11px;color:var(--text-muted);'; tdU.setAttribute('data-label','Última vez');
     tdU.appendChild(document.createTextNode(l.ultimaServida ? formatDate(l.ultimaServida).slice(0,5) : '—'));
     const bHist=document.createElement('button'); bHist.type='button'; bHist.title='Ver histórico das últimas semanas';
     bHist.style.cssText='margin-left:5px;border:none;background:none;cursor:pointer;font-size:12px;vertical-align:middle;';
