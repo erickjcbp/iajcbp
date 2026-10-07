@@ -235,6 +235,13 @@ function configFiltroMembros() {
       { id: 'santo_antonio', nome: 'Santo Antônio', testa: m => m.comunidade === 'santo_antonio' },
       { id: 'outra', nome: 'Outra', testa: m => m.comunidade !== 'matriz' && m.comunidade !== 'santo_antonio' },
     ] },
+    { id: 'idade', nome: 'Idade', opcoes: [
+      { id: 'ate_9', nome: 'Até 9 anos', testa: m => { const a = idadeAnos(m.data_nascimento); return a != null && a <= 9; } },
+      { id: '10_13', nome: '10 a 13', testa: m => { const a = idadeAnos(m.data_nascimento); return a != null && a >= 10 && a <= 13; } },
+      { id: '14_17', nome: '14 a 17', testa: m => { const a = idadeAnos(m.data_nascimento); return a != null && a >= 14 && a <= 17; } },
+      { id: '18_mais', nome: '18+', testa: m => { const a = idadeAnos(m.data_nascimento); return a != null && a >= 18; } },
+      { id: 'sem_data', nome: 'Sem data cadastrada', testa: m => idadeAnos(m.data_nascimento) == null },
+    ] },
   ];
   // Só oferece o filtro App se o banco respondeu. Sem resposta, esconder é honesto;
   // mostrar todo mundo como "nunca entrou" seria falha virando número.
