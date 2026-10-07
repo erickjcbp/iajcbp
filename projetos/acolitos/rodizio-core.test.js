@@ -517,3 +517,22 @@ test('historicoSemanal: substituto credita a semana como serviu, titular não', 
   });
   assert.strictEqual(semTitular[0].serviu, false);
 });
+
+test('historicoSemanal: faltou marca vermelho, mas serviu em OUTRA missa na mesma semana vence', () => {
+  const sem = RC.historicoSemanal({
+    membroId: 'm1', hoje: '2026-10-04', semanas: 1,
+    escalas: [ { membro_id: 'm1', status: 'ausente', data: '2026-10-04', horario: '9:00' } ],
+  });
+  assert.strictEqual(sem[0].serviu, false);
+  assert.strictEqual(sem[0].faltou, true);
+
+  const semDuas = RC.historicoSemanal({
+    membroId: 'm1', hoje: '2026-10-04', semanas: 1,
+    escalas: [
+      { membro_id: 'm1', status: 'ausente',  data: '2026-10-03', horario: '19:00' },
+      { membro_id: 'm1', status: 'presente', data: '2026-10-04', horario: '9:00' },
+    ],
+  });
+  assert.strictEqual(semDuas[0].serviu, true);
+  assert.strictEqual(semDuas[0].faltou, true);
+});

@@ -189,7 +189,7 @@
     var semanas = [];
     for (var i = n - 1; i >= 0; i--) {
       var fim = new Date(Date.parse(hojeFim + 'T00:00:00Z') - i * 7 * 86400000).toISOString().slice(0, 10);
-      semanas.push({ fimSemana: fim, eventos: [], serviu: false });
+      semanas.push({ fimSemana: fim, eventos: [], serviu: false, faltou: false });
     }
     var porFim = {};
     semanas.forEach(function (s) { porFim[s.fimSemana] = s; });
@@ -203,6 +203,9 @@
       var serviuEsta = souSubstituto || SERVIU.indexOf(e.status) >= 0;
       s.eventos.push({ data: e.data, horario: e.horario || null, status: e.status, comoSubstituto: souSubstituto });
       if (serviuEsta) s.serviu = true;
+      // Falta é SÓ quem foi chamado e não veio — não confundir com "sem escala" (ninguém
+      // chamou). Vermelho (falta) nunca apaga um verde (serviu) de outra missa na mesma semana.
+      if (souTitular && FALTOU.indexOf(e.status) >= 0) s.faltou = true;
     });
     return semanas;
   }
