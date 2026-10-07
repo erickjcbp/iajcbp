@@ -1978,7 +1978,9 @@ function abrirHistoricoSemanal(m){
   });
   const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
   const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='380px';
-  md.innerHTML='<div class="modal-title">📅 Últimas '+RODIZIO_SEMANAS_HISTORICO+' semanas — '+(m.apelido||m.nome)+'</div>';
+  const titulo=document.createElement('div'); titulo.className='modal-title';
+  titulo.textContent='📅 Últimas '+RODIZIO_SEMANAS_HISTORICO+' semanas — '+(m.apelido||m.nome);
+  md.appendChild(titulo);
   const grid=document.createElement('div'); grid.style.cssText='display:flex;flex-wrap:wrap;margin:6px -2px 4px;';
   const detalhe=document.createElement('p'); detalhe.style.cssText='font-size:12px;color:var(--text-muted);min-height:16px;margin:4px 0 2px;';
   detalhe.textContent='Toque ou passe o mouse numa bolinha pra ver a data.';
