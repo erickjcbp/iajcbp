@@ -68,6 +68,8 @@
     .celeb-card.status-critica::before  { background:var(--danger-text); }
     .celeb-card.status-vazia::before    { background:var(--border-wine); }
     .celeb-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; gap:8px; }
+    .celeb-chk { flex-shrink:0; width:16px; height:16px; margin-top:2px; accent-color:var(--gold); cursor:pointer; }
+    .celeb-header-l { display:flex; gap:8px; align-items:flex-start; }
     .celeb-data { font-family:'Sora',sans-serif; font-size:13px; color:var(--text); font-weight:600; }
     .celeb-sub  { font-size:11px; color:var(--text-muted); margin-top:2px; }
     .status-pill {
@@ -654,7 +656,16 @@ function renderCards() {
     const head=document.createElement('div');head.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap;';
     const tit=document.createElement('div');tit.className='semana-titulo';tit.style.margin='0';tit.textContent=sem.label;
     const acoesSem=document.createElement('div');acoesSem.style.cssText='display:flex;gap:6px;flex-wrap:wrap;';
-    const bGer=document.createElement('button');bGer.className='btn-sm wine';bGer.style.flexShrink='0';bGer.textContent='⚡ Gerar escala da semana';bGer.onclick=()=>gerarEscalaSemana(sem.items,bGer);
+    // Seleção de quais missas da semana entram no "Gerar": todas marcadas por padrão
+    // (um clique continua gerando a semana inteira), e quem quiser deixa alguma de fora.
+    const selSemana=new Set(sem.items.map(c=>c.id));
+    const atualizaTextoGer=()=>{ bGer.textContent='⚡ Gerar escala ('+selSemana.size+'/'+sem.items.length+')'; };
+    const bGer=document.createElement('button');bGer.className='btn-sm wine';bGer.style.flexShrink='0';bGer.onclick=()=>{
+      const sel=sem.items.filter(c=>selSemana.has(c.id));
+      if(!sel.length){ uiAlert('Marque ao menos uma missa para gerar.'); return; }
+      gerarEscalaSemana(sel,bGer,sem.items);
+    };
+    atualizaTextoGer();
     const bLimp=document.createElement('button');bLimp.className='btn-sm gray';bLimp.style.flexShrink='0';bLimp.textContent='🧹 Limpar semana';bLimp.onclick=()=>limparEscalaSemana(sem.items,bLimp);
     const bExp=document.createElement('button');bExp.className='btn-sm';bExp.style.cssText='flex-shrink:0;background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2));border:1px solid var(--gold-dim);color:var(--gold-light);';bExp.textContent='📤 Exportar';bExp.onclick=()=>exportarSemana(sem.items,sem.label);
     const bConf=document.createElement('button');bConf.className='btn-sm';bConf.style.cssText='flex-shrink:0;background:linear-gradient(165deg,rgba(46,139,87,.20),var(--surface2));border:1px solid rgba(46,139,87,.55);color:#8fdCa8;';
@@ -667,15 +678,19 @@ function renderCards() {
       const d=new Date(c.data+'T00:00:00');
       const card=document.createElement('div');card.className='celeb-card status-'+cob.status;
       const hdr=document.createElement('div');hdr.className='celeb-header';
+      const left=document.createElement('div');left.className='celeb-header-l';
+      const chk=document.createElement('input');chk.type='checkbox';chk.className='celeb-chk';
+      chk.title='Incluir esta missa no "Gerar escala" da semana';chk.checked=selSemana.has(c.id);
+      chk.onchange=()=>{ if(chk.checked)selSemana.add(c.id); else selSemana.delete(c.id); atualizaTextoGer(); };
       const info=document.createElement('div');
       const dataEl=document.createElement('div');dataEl.className='celeb-data';
       dataEl.textContent=DIAS[d.getDay()]+' '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' · '+c.horario;
       const subEl=document.createElement('div');subEl.className='celeb-sub';
       subEl.textContent=(c.comunidade==='matriz'?'Matriz':'Sto. Antônio')+' · '+(TIPO_LABEL[c.tipo]||c.tipo);
-      info.append(dataEl,subEl);
+      info.append(dataEl,subEl);left.append(chk,info);
       const pill=document.createElement('span');pill.className='status-pill '+cob.status;
       pill.textContent=cob.status.charAt(0).toUpperCase()+cob.status.slice(1);
-      hdr.append(info,pill);card.appendChild(hdr);
+      hdr.append(left,pill);card.appendChild(hdr);
       Object.entries(cob.cats).forEach(([cat,v])=>{
         const row=document.createElement('div');row.className='cobertura-row';
         const lbl=document.createElement('span');lbl.className='cobertura-label';lbl.textContent=cat;
@@ -1161,16 +1176,21 @@ async function confirmarEscalaSemana(celebs, chaveSemana, btnEl) {
 }
 
 
-async function gerarEscalaSemana(celebs, btnEl) {
+// `todosDaSemana`: as missas do fim de semana INTEIRO, mesmo as não selecionadas para
+// gerar agora — a regra "ninguém repete no fim de semana" precisa delas para não escalar
+// em dobro quem já está numa missa que ficou de fora da seleção. Sem isso, selecionar só
+// parte da semana furava a trava de dupla escala. Default = celebs (compatibilidade).
+async function gerarEscalaSemana(celebs, btnEl, todosDaSemana) {
   if (!celebs || !celebs.length) return;
   if (!await uiConfirm('Gerar a escala de ' + celebs.length + ' missa(s) deste fim de semana?\n(Preenche as vagas ainda vazias, mantendo o que já estiver montado.)')) return;
   const txt0 = btnEl ? btnEl.textContent : '';
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Gerando...'; }
   const ordc = celebs.slice().sort((a,b) => a.data.localeCompare(b.data) || compararHorario(a.horario, b.horario));
+  const todosFds = (todosDaSemana && todosDaSemana.length) ? todosDaSemana : celebs;
   const carga = await carregarPesoRodizio(ordc[0] ? ordc[0].data : ''); // rodízio: histórico real (banco) — ref = data mais antiga
   const ausFresh = await carregarAusenciasFresh(ordc);
   const usadoFds = new Set();                // ninguém repete no fim de semana
-  ordc.forEach(c => (escalasMap[c.id]||[]).forEach(e => usadoFds.add(e.membro_id))); // já escalados contam
+  todosFds.forEach(c => (escalasMap[c.id]||[]).forEach(e => usadoFds.add(e.membro_id))); // já escalados contam
   const nint = {}; membros.forEach(m => { nint[m.id] = nivelInfo(m.nivel||'aspirante').int; });
   const ehCerimo = m => nint[m.id] >= 6;
 

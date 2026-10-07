@@ -8,6 +8,10 @@
 // PEDIDO DO DONO (18/09/2026): avisar quando chega gente nova na CRM e lembrar todo dia de
 // acompanhar o funil, para quem tem acesso à CRM (hoje 4 pessoas).
 //
+// 06/10/2026: ganhou uma SEGUNDA tarefa, sem relação com a CRM — manter a grade fixa de
+// missas cadastrada 8 semanas à frente (ver api/_celebracoes-recorrentes.js). Mesmo motivo:
+// não tem robô sobrando, então pega carona neste.
+//
 // POR QUE ELE EXISTE NO LUGAR DOS OUTROS DOIS: o plano da Vercel é o gratuito, que dá 2
 // robôs agendados — e os dois estavam ocupados com a arte da escala (gerar e vigiar). O dono
 // decidiu, com o custo na mesa, trocar os dois por este. Consequência registrada: **a arte do
@@ -18,6 +22,7 @@
 // se cala. Aviso diário que chega vazio ensina a ignorar aviso — e aí o dia em que importa
 // passa batido também.
 import crypto from 'node:crypto';
+import { garantirCelebracoesRecorrentes } from './_celebracoes-recorrentes.js';
 
 // Compara segredos sem vazar tempo. Falso se qualquer um estiver vazio.
 function segredoConfere(recebido, esperado) {
@@ -50,6 +55,17 @@ export default async function handler(req, res) {
       return await r.json();
     } catch (_) { return null; }
   };
+
+  // Pega carona neste robô para manter a grade fixa de missas cadastrada 8 semanas à
+  // frente (pedido do dono, 06/10/2026) — não tem vaga de cron sobrando pra um robô só
+  // disso. Ver api/_celebracoes-recorrentes.js. Erro aqui NÃO pode calar o lembrete da
+  // CRM abaixo, por isso fica isolado num try/catch que só loga.
+  try {
+    const resultado = await garantirCelebracoesRecorrentes({ url: URL, serviceKey: SRK });
+    if (resultado.inseridas) console.log('cron-crm: celebrações recorrentes — inseridas', resultado.inseridas, 'até', resultado.ate);
+  } catch (e) {
+    console.error('cron-crm: celebrações recorrentes falhou —', String(e));
+  }
 
   const turno = req.query && req.query.turno === 'tarde' ? 'tarde' : 'manha';
   const agora = new Date();
