@@ -491,7 +491,7 @@ async function abrirInformarAusencia() {
   // Vem de ausencias.html, onde ocupava a tela toda. Aqui abre por cima das Escalas.
   const ov = document.createElement('div'); ov.className = 'modal-overlay open';
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '460px';
+  const md = document.createElement('div'); md.className = 'modal'; md.style.setProperty('--modal-max', '460px');
   ov.appendChild(md); document.body.appendChild(ov);
   const main = md;
 

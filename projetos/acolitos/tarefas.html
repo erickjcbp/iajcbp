@@ -909,7 +909,7 @@ async function abrirFormTarefa(tarefa, timePadrao, tipoPadrao) {
   const falhouMembros = !!membrosR.error;
   const ov = document.createElement('div'); ov.className = 'modal-overlay open';
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const m = document.createElement('div'); m.className = 'modal tf-form'; m.style.maxWidth = '440px';
+  const m = document.createElement('div'); m.className = 'modal tf-form'; m.style.setProperty('--modal-max', '440px');
   const h = document.createElement('h2'); h.style.cssText = 'font-family:Sora,sans-serif;font-size:18px;margin:0 0 4px;color:var(--text);';
   h.textContent = editando ? 'Editar tarefa' : 'Nova tarefa'; m.appendChild(h);
 
@@ -1269,7 +1269,7 @@ function guardarRotinas(r) {
 function abrirFormRotina(timeSlug) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open';
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '420px';
+  const md = document.createElement('div'); md.className = 'modal'; md.style.setProperty('--modal-max', '420px');
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Nova rotina';
   md.appendChild(tt);
   const dica = document.createElement('p'); dica.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;';
@@ -1516,7 +1516,7 @@ async function apagarPasso(p) {
 function abrirFormPasso(t) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open';
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '420px';
+  const md = document.createElement('div'); md.className = 'modal'; md.style.setProperty('--modal-max', '420px');
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Novo passo';
   md.appendChild(tt);
   const dica = document.createElement('p'); dica.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;';

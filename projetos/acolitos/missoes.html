@@ -106,7 +106,7 @@ function subDe(q) {
 // "Já faço" numa função pendente → modal pedindo explicação detalhada (igual aptidão)
 function pedirHab(f) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '440px';
+  const md = document.createElement('div'); md.className = 'modal'; md.style.setProperty('--modal-max', '440px');
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Já faço: ' + f.label; md.appendChild(tt);
   const d = document.createElement('p'); d.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;'; d.textContent = 'Reivindique que já sabe servir nesta função. A coordenação vai avaliar pela sua explicação e, se aprovar, você fica Apto.'; md.appendChild(d);
   if (revHabMap[f.funcao] != null) {
@@ -298,7 +298,7 @@ async function abrirClaimModal(q) {
   }
   const selecionados = []; // {id,nome}
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '440px';
+  const md = document.createElement('div'); md.className = 'modal'; md.style.setProperty('--modal-max', '440px');
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = q.titulo; md.appendChild(tt);
   if (q.descricao) { const d = document.createElement('p'); d.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;'; d.textContent = q.descricao; md.appendChild(d); }
   if (q.status === 'revisao' && revisoesMap[q.id] != null) {

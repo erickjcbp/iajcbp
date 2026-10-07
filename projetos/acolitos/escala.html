@@ -1323,7 +1323,7 @@ async function arteSemana(){
   const domISO=proxDomingoISO();
   const isAdmin = !!(ctx && navCaps(ctx).isAdmin);
   const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
-  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='460px';
+  const md=document.createElement('div'); md.className='modal'; md.style.setProperty('--modal-max', '460px');
   md.innerHTML='<div class="modal-title">🎨 Arte da semana</div><div id="arte-body" style="text-align:center;"><span class="loading">Carregando...</span></div>';
   ov.appendChild(md); document.body.appendChild(ov);
   await arteRender(md, domISO, isAdmin);
@@ -1354,7 +1354,7 @@ async function arteRender(md, domISO, isAdmin){
       +'<div style="font-size:11px;color:var(--text-muted);margin:6px 0 12px;">'+relEsc(arte.descricao||'')+' · '+(arte.gerado_por==='cron'?'gerada automaticamente':'gerada manualmente')+'</div>'
       +'<button class="btn-sm gold" style="width:100%;" id="arte-baixar">⬇️ Baixar'+(partes.length>1?' as 2 artes':' PNG')+'</button>';
     md._artePartes=partes;
-    if(partes.length>1) md.style.maxWidth='620px';   // as duas lado a lado, mesmo que menores
+    if(partes.length>1) md.style.setProperty('--modal-max', '620px');   // as duas lado a lado, mesmo que menores
   } else {
     html+='<p class="empty" style="margin:16px 0;">Ainda não gerada para este fim de semana.'+(isAdmin?' Use "Gerar/Atualizar" abaixo.':'')+'</p>';
   }
@@ -1459,7 +1459,7 @@ function exportarSemana(celebs, label) {
   });
 
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target===ov) ov.remove(); };
-  const m = document.createElement('div'); m.className = 'modal'; m.style.maxWidth = '460px';
+  const m = document.createElement('div'); m.className = 'modal'; m.style.setProperty('--modal-max', '460px');
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Exportar escala';
   const ta = document.createElement('textarea'); ta.readOnly = true; ta.value = txt.trim();
   ta.style.cssText = 'width:100%;height:46vh;background:var(--surface2);border:1px solid var(--border-wine);border-radius:8px;color:var(--text);font-family:monospace;font-size:12px;line-height:1.5;padding:10px;white-space:pre;overflow:auto;';
@@ -1977,7 +1977,7 @@ function abrirHistoricoSemanal(m){
     membroId: m.id, hoje: hojeLocal(), semanas: RODIZIO_SEMANAS_HISTORICO, escalas: rodizioEscalasBrutas,
   });
   const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
-  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='380px';
+  const md=document.createElement('div'); md.className='modal'; md.style.setProperty('--modal-max', '380px');
   const titulo=document.createElement('div'); titulo.className='modal-title';
   titulo.textContent='📅 Últimas '+RODIZIO_SEMANAS_HISTORICO+' semanas — '+(m.apelido||m.nome);
   md.appendChild(titulo);
@@ -2196,7 +2196,7 @@ function pintarRodizio(lista){
     tdU.appendChild(document.createTextNode(l.ultimaServida ? formatDate(l.ultimaServida).slice(0,5) : '—'));
     const bHist=document.createElement('button'); bHist.type='button'; bHist.title='Ver histórico das últimas semanas';
     bHist.style.cssText='margin-left:5px;border:none;background:none;cursor:pointer;font-size:12px;vertical-align:middle;';
-    bHist.textContent='🔵'; bHist.onclick=()=>abrirHistoricoSemanal(m);
+    bHist.textContent='📅'; bHist.onclick=()=>abrirHistoricoSemanal(m);
     tdU.appendChild(bHist); tr.appendChild(tdU);
 
     const tdA=document.createElement('td'); tdA.style.cssText='text-align:center;';
@@ -2232,7 +2232,7 @@ function rodizioCSV(){
 
 function abrirRelatorioFrequencia(){
   const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
-  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='420px';
+  const md=document.createElement('div'); md.className='modal'; md.style.setProperty('--modal-max', '420px');
   md.innerHTML='<div class="modal-title">📊 Relatório de Frequência</div>'
     +'<p style="font-size:12px;color:var(--text-muted);margin:-4px 0 12px;">Deixe as datas em branco para o acumulado (histórico total).</p>'
     +'<div style="display:flex;gap:10px;"><label style="flex:1;font-size:12px;color:var(--text-muted);">De<input type="date" id="freq-de" class="form-input" style="width:100%;"></label>'

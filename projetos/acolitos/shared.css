@@ -360,33 +360,42 @@ body.has-switch { padding-top: calc(var(--header-h) + 46px + env(safe-area-inset
 .toggle-row label { font-size: 14px; color: var(--text); flex: 1; font-weight: 600; }
 .toggle-checkbox { width: 22px; height: 22px; accent-color: var(--red-soft); cursor: pointer; flex-shrink: 0; }
 
-/* ── MODAL (centralizado em todos os tamanhos, sem corte) ──────── */
+/* ── MODAL (celular: tela cheia de verdade; desktop: cartão centralizado) ──
+   Pedido do dono (07/10/2026), comparando com o padrão visto no CRM SATOR:
+   diálogo "pega a maior parte da tela" no celular — não um cartão de 90vh com
+   cantos arredondados flutuando no meio. Casa com a pedra de responsividade
+   (~/.claude/CLAUDE.md): "diálogos em tela cheia" no celular, SEM exceção. */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.88);
   -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
   display: none; align-items: center; justify-content: center;
   z-index: 200; overflow-y: auto;
-  /* O respiro do topo tem de contar o entalhe/ilha do celular, senão um modal alto
-     nasce embaixo da câmera e o título fica ilegível. Em aparelho sem entalhe,
-     env(safe-area-inset-top) é 0 e nada muda. */
-  padding: calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));
+  /* Sem respiro lateral no celular — o modal encosta nas bordas. O respiro do
+     topo/baixo ainda reserva o entalhe/ilha e a barra de gestos. */
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
 }
 .modal-overlay.open { display: flex; }
 .modal {
   background: linear-gradient(165deg, var(--surface2), var(--surface));
   border: 1px solid var(--border-wine);
   border-top: 2px solid var(--gold);
-  border-radius: 12px;
   padding: 16px 16px calc(18px + env(safe-area-inset-bottom));
-  width: 100%; max-width: 480px; margin: auto;
-  max-height: 90vh; max-height: 90dvh;
+  width: 100%; max-width: none; margin: 0;
+  height: 100%; max-height: none; border-radius: 0;
   overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
   position: relative; will-change: transform;
   box-shadow: 0 12px 50px rgba(0,0,0,.7), 0 0 40px var(--red-glow);
 }
 @media (min-width: 640px) {
+  .modal-overlay { padding: calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom)); }
   .modal {
     padding: 26px 24px; border-top: none; border-radius: 4px;
+    /* --modal-max: uma tela pede um cartão mais estreito que o padrão de 480px
+       seta `md.style.setProperty('--modal-max','380px')` — nunca `maxWidth`
+       direto, que também prenderia a largura no celular (CSS de elemento vence
+       a classe) e voltaria a encolher o modal bem onde ele devia ser cheio. */
+    width: 100%; max-width: var(--modal-max, 480px); margin: auto;
+    height: auto; max-height: 90vh; max-height: 90dvh;
     clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
   }
 }

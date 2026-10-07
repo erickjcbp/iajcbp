@@ -200,7 +200,7 @@ async function addMembroSetor(m, slug) {
 
 function abrirAddSetor(slug, label) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.maxWidth = '400px';
+  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.setProperty('--modal-max', '400px');
   modal.innerHTML = '<div class="modal-handle"></div>';
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Adicionar a ' + label; modal.appendChild(tt);
   const busca = document.createElement('input'); busca.className = 'form-input'; busca.placeholder = 'Buscar nome...'; busca.style.marginBottom = '10px'; modal.appendChild(busca);
@@ -242,7 +242,7 @@ async function moverMembro(m, casaId) {
 
 function abrirAddMembro(casa) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.maxWidth = '400px';
+  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.setProperty('--modal-max', '400px');
   modal.innerHTML = '<div class="modal-handle"></div>';
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Adicionar à ' + casa.nome; modal.appendChild(tt);
   const busca = document.createElement('input'); busca.className = 'form-input'; busca.placeholder = '🔍 Buscar nome...'; busca.style.marginBottom = '10px'; modal.appendChild(busca);
@@ -269,7 +269,7 @@ function abrirAddMembro(casa) {
 
 function abrirEditarCasa(casa) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.maxWidth = '440px';
+  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.setProperty('--modal-max', '440px');
   modal.innerHTML = '<div class="modal-handle"></div>';
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Editar ' + casa.nome; modal.appendChild(tt);
   const grupo = (lbl, el) => { const g = document.createElement('div'); g.className = 'form-group'; const l = document.createElement('label'); l.className = 'form-label'; l.textContent = lbl; g.append(l, el); return g; };

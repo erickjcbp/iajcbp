@@ -1113,7 +1113,7 @@ async function renderEquipe(b){
 // gravava `setores` na mão: era um terceiro caminho, com lista fixa e sem a boas-vinda.
 function abrirFichaPessoa(m, role, times, onSaved){
   const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=(e)=>{ if(e.target===ov) ov.remove(); };
-  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='440px';
+  const md=document.createElement('div'); md.className='modal'; md.style.setProperty('--modal-max', '440px');
   const tt=document.createElement('div'); tt.className='modal-title'; tt.textContent=m.nome; md.appendChild(tt);
   const ehAdmin=['coord_admin','subadmin'].includes(role);
   if(ehAdmin){ const w=document.createElement('div'); w.style.cssText='font-size:12px;color:var(--gold);margin:-6px 0 8px;'; w.textContent='É admin ('+(role==='coord_admin'?'Coord. Admin':'Subadmin')+') — o papel não muda por aqui.'; md.appendChild(w); }
@@ -1250,7 +1250,7 @@ function _specPadraoNivel(slug){
 function abrirGeradorPatch(slug, specIni, onSave){
   const spec=Object.assign({esquema:'ouro',forma:'arredondada',anel:true,simbolos:['cruz'],pips:0,glow:0}, specIni||{}); spec.simbolos=(spec.simbolos||[]).slice();
   const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=(e)=>{ if(e.target===ov) ov.remove(); };
-  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='460px';
+  const md=document.createElement('div'); md.className='modal'; md.style.setProperty('--modal-max', '460px');
   const tt=document.createElement('div'); tt.className='modal-title'; tt.textContent='Gerador de patch'; md.appendChild(tt);
   const prev=document.createElement('div'); prev.style.cssText='display:flex;justify-content:center;padding:14px;background:var(--surface);border:1px solid var(--gold-dim);border-radius:10px;margin-bottom:12px;box-shadow:0 0 16px var(--red-glow);';
   const repaint=()=>{ prev.textContent=''; if(typeof buildRankEmblem==='function') prev.appendChild(buildRankEmblem(slug,96,spec)); };
@@ -1327,7 +1327,7 @@ function abrirEditorMissao(m, onSave){
   const spec = Object.assign({ titulo:'', descricao:'', validacao:'reivindicada', xp:10, nivel_alvo:null, capitulo:null, obrigatoria:true, recorrente:false, aplica_de:null, aplica_ate:null, seriedade:'seria', criterio:null, concede_badge:false, badge_label:'' }, m||{});
   const cr0 = spec.criterio || {};
   const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=(e)=>{if(e.target===ov)ov.remove();};
-  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='460px';
+  const md=document.createElement('div'); md.className='modal'; md.style.setProperty('--modal-max', '460px');
   const tt=document.createElement('div'); tt.className='modal-title'; tt.textContent=(m&&m.id)?'Editar missão':'Nova missão'; md.appendChild(tt);
   const lab=(t)=>{ const l=document.createElement('div'); l.style.cssText='font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px;'; l.textContent=t; md.appendChild(l); };
   const inp=(val,ph,tipo)=>{ const e=document.createElement(tipo==='area'?'textarea':'input'); e.className='form-input'; if(tipo==='area')e.rows=2; if(tipo==='number')e.type='number'; e.value=(val==null?'':val); if(ph)e.placeholder=ph; return e; };
@@ -1599,7 +1599,7 @@ async function tirarDoTime(m, slug, roleMap, aoTerminar) {
 function abrirEscolherPessoaTime(membros, time, roleMap, aoTerminar) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open';
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.maxWidth = '400px';
+  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.setProperty('--modal-max', '400px');
   const tt = document.createElement('div'); tt.className = 'modal-title';
   tt.textContent = 'Adicionar a ' + (time.label || time.valor); modal.appendChild(tt);
   const busca = document.createElement('input'); busca.className = 'form-input';

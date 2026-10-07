@@ -384,7 +384,7 @@ function _idadeRel(dn){ if(!dn) return ''; const d=new Date(dn+'T00:00:00'); if(
 function _nivelLabel(m){ return (typeof nivelInfo==='function' ? nivelInfo(m.nivel||m.role||'aspirante').label : (m.nivel||'')) || '—'; }
 function abrirRelatorioMembros(){
   const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
-  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='420px';
+  const md=document.createElement('div'); md.className='modal'; md.style.setProperty('--modal-max', '420px');
   md.innerHTML='<div class="modal-title">📄 Relatório de Membros</div>'
     +'<p style="font-size:12px;color:var(--text-muted);margin:-4px 0 12px;">PDF = resumo legível. Planilha = a ficha de todo mundo, pronta pro Excel. CSV = backup cru (todos os campos + funções + frequência).</p>'
     +'<div style="display:flex;flex-direction:column;gap:8px;">'

@@ -453,7 +453,7 @@ function eventoCard(e, withDate) {
 function abrirEvento(e) {
   const info = evtInfo(e.tipo);
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (ev) => { if (ev.target === ov) ov.remove(); };
-  const m = document.createElement('div'); m.className = 'modal'; m.style.maxWidth = '440px';
+  const m = document.createElement('div'); m.className = 'modal'; m.style.setProperty('--modal-max', '440px');
 
   const head = document.createElement('div'); head.style.cssText = 'display:flex;align-items:flex-start;gap:10px;';
   const tg = document.createElement('span'); tg.className = 'ag-tag'; tg.style.background = info.cor; tg.textContent = info.label;
@@ -536,7 +536,7 @@ async function setRSVP(e, status, ov) {
 function abrirFormEvento(ev) {
   const editando = !!ev;
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const m = document.createElement('div'); m.className = 'modal evt-form'; m.style.maxWidth = '440px';
+  const m = document.createElement('div'); m.className = 'modal evt-form'; m.style.setProperty('--modal-max', '440px');
   const h = document.createElement('h2'); h.style.cssText = 'font-family:Sora,sans-serif;font-size:18px;margin:0 0 4px;color:var(--text);'; h.textContent = editando ? 'Editar evento' : 'Novo evento';
   m.appendChild(h);
 
@@ -704,7 +704,7 @@ async function abrirChamadaEnsaio(e) {
   if (!lista.length) { toast('Ninguém convocado (edite o evento e convoque por nível ou por time).', 'error'); return; }
   const presentes = new Set(lista.filter(x => x.presente).map(x => x.id));
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e2) => { if (e2.target === ov) ov.remove(); };
-  const m = document.createElement('div'); m.className = 'modal'; m.style.maxWidth = '440px';
+  const m = document.createElement('div'); m.className = 'modal'; m.style.setProperty('--modal-max', '440px');
   const h = document.createElement('h2'); h.style.cssText = 'font-family:Sora,sans-serif;font-size:18px;margin:0 0 2px;color:var(--text);'; h.textContent = 'Chamada — ' + e.titulo; m.appendChild(h);
   const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0 0 10px;'; sub.textContent = lista.length + ' convocados · toque pra marcar presença'; m.appendChild(sub);
   const box = document.createElement('div'); box.style.cssText = 'max-height:55vh;overflow-y:auto;'; m.appendChild(box);

@@ -546,7 +546,7 @@ function renderCobertura(container, onClickFuncao){
 }
 function abrirCoberturaFuncao(funcao, label){
   const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov){ ov.remove(); if(_redrawMatriz) _redrawMatriz(); } };
-  const md=document.createElement('div'); md.className='modal'; md.style.maxWidth='460px';
+  const md=document.createElement('div'); md.className='modal'; md.style.setProperty('--modal-max', '460px');
   const tt=document.createElement('div'); tt.className='modal-title'; tt.textContent='Cobertura — '+label; md.appendChild(tt);
   const sub=document.createElement('p'); sub.style.cssText='font-size:12px;color:var(--text-muted);margin:-6px 0 10px;'; sub.textContent='Ajuste a proficiência. Apto ou mais = pronto para a função.'; md.appendChild(sub);
   const box=document.createElement('div'); box.style.cssText='max-height:60vh;overflow-y:auto;'; md.appendChild(box);
@@ -759,7 +759,7 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
 // [Panorama] = visão geral da jornada do membro (nível, XP, estrelas, quests, pendências)
 async function abrirPanorama(m) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '520px';
+  const md = document.createElement('div'); md.className = 'modal'; md.style.setProperty('--modal-max', '520px');
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = '📊 Panorama — ' + (m.apelido || m.nome); md.appendChild(tt);
   const body = document.createElement('div'); body.innerHTML = '<span class="loading">Carregando...</span>'; md.appendChild(body);
   const close = document.createElement('button'); close.className = 'btn-sm gray'; close.style.cssText = 'width:100%;margin-top:14px;'; close.textContent = 'Fechar'; close.onclick = () => ov.remove(); md.appendChild(close);
@@ -917,7 +917,7 @@ function textoDaTrava(avisos) {
 // [Funções] = grade de proficiência por função (acolitos_habilitacoes) — a fonte real do desenvolvimento
 async function abrirFuncoesEditor(m) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '480px';
+  const md = document.createElement('div'); md.className = 'modal'; md.style.setProperty('--modal-max', '480px');
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Funções de ' + m.nome; md.appendChild(tt);
   const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 10px;'; sub.textContent = 'Proficiência por função. Apto ou mais = função desenvolvida.'; md.appendChild(sub);
   const body = document.createElement('div'); body.innerHTML = '<span class="loading">Carregando...</span>'; md.appendChild(body);
@@ -961,7 +961,7 @@ async function abrirFuncoesEditor(m) {
 async function abrirCompetenciasEditor(m, onSaved) {
   const feitas = new Set(m.competencias_desenvolvidas || []);
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '460px';
+  const md = document.createElement('div'); md.className = 'modal'; md.style.setProperty('--modal-max', '460px');
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Virtudes de ' + m.nome; md.appendChild(tt);
   const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 10px;'; sub.textContent = 'O progresso vem das quests. Você também pode conceder manualmente uma virtude que já reconhece no membro.'; md.appendChild(sub);
   const box = document.createElement('div'); box.style.cssText = 'max-height:55vh;overflow-y:auto;'; box.innerHTML = '<span class="loading">Carregando...</span>'; md.appendChild(box);
@@ -1049,7 +1049,7 @@ async function decidirHab(pedido, decisao, obs) {
 // Modal pra devolver uma reivindicação pro membro com uma pergunta/observação
 function abrirRevisar(titulo, onSend) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '420px';
+  const md = document.createElement('div'); md.className = 'modal'; md.style.setProperty('--modal-max', '420px');
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Devolver pra revisão'; md.appendChild(tt);
   const d = document.createElement('p'); d.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;'; d.textContent = 'Sobre "' + titulo + '". Escreva o que o membro precisa corrigir ou responder de novo — ele recebe como aviso e a tarefa volta pra ele reenviar.'; md.appendChild(d);
   const ta = document.createElement('textarea'); ta.className = 'form-input'; ta.rows = 3; ta.placeholder = 'Ex.: Explique melhor em que momentos da missa você usa essa função.'; md.appendChild(ta);
@@ -1317,7 +1317,7 @@ function linhaDoAcompanhamento(p) {
 function abrirFichaDoAcompanhamento(p) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open';
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '420px';
+  const md = document.createElement('div'); md.className = 'modal'; md.style.setProperty('--modal-max', '420px');
 
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = p.nome;
   md.appendChild(tt);
