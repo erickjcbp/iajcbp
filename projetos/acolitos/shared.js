@@ -2780,6 +2780,15 @@ function getRoleForPatch(role) {
 
 // ── JORNADA: 10 NÍVEIS (rank) ────────────────────────────────
 // base = forma do patch; int = intensidade da animação (0..9); pips = divisões.
+// Grade fixa de missas (dia+horário) — disponibilidade do membro é um subconjunto disto.
+// Morava só em membros.html; ficha-rapida.js (chamada da Escala) também precisa.
+const HORARIOS = [
+  {dia:'sabado',  horario:'17h',   label:'Sábado 17h'},
+  {dia:'sabado',  horario:'18h30', label:'Sáb. 18h30 (Sto. Antônio)'},
+  {dia:'domingo', horario:'7h',    label:'Domingo 7h'},
+  {dia:'domingo', horario:'9h',    label:'Domingo 9h'},
+  {dia:'domingo', horario:'19h',   label:'Domingo 19h'},
+];
 const NIVEIS = [
   { slug:'aspirante', label:'Aspirante', base:'aspirante', int:0, pips:0, emoji:'🌱', titulo:'Aprendiz do Altar',
     intro:'Você acaba de ingressar na jornada. Ainda está conhecendo o caminho, aprendendo os primeiros ensinamentos e descobrindo o significado do serviço ao altar.',

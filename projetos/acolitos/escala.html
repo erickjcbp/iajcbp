@@ -316,6 +316,7 @@
 <script src="rodizio-core.js"></script>
 <script src="identidade-core.js"></script>
 <script src="shared.js"></script>
+<script src="ficha-rapida.js"></script>
 <script src="gerador-substituto.js"></script>
 <script>
 const MOTIVO_LABEL = { doenca:'🤒 Doença', viagem:'✈️ Viagem', familia:'👨‍👩‍👧 Família', outro:'📌 Outro' };
@@ -613,6 +614,13 @@ function desenharAba(a){
   if(a==='planilha') return renderPlanilha();
   return renderRodizio();
 }
+// Chamado pela ficha rápida (ficha-rapida.js) depois de salvar/suspender/arquivar alguém —
+// loadDados() já zera rodizioLinhas sozinho, então a aba atual (seja qual for) relê os
+// dados certos na hora de repintar.
+async function aoFichaRapidaMudou(){
+  await loadDados();
+  await desenharAba(abaAtual);
+}
 async function setAba(a) {
   abaAtual = ABAS.indexOf(a)>=0 ? a : 'cards';   // aba inventada cai no operacional, não em tela branca
   pintarAba(abaAtual);
@@ -808,7 +816,14 @@ function abrirMontagem(celeb) {
       clr.onclick=()=>{sel.value='';sel.classList.remove('filled');refreshDuplicatasMissa();};
     }
     sel.onchange=()=>{sel.classList.toggle('filled',!!sel.value);refreshDuplicatasMissa();checarIrmao(pe);};
-    row.append(lbl,sel,trc,clr);container.appendChild(row);container.appendChild(dm);container.appendChild(dp);container.appendChild(sp);
+    const bFichaPos=document.createElement('button');bFichaPos.type='button';bFichaPos.className='mini-del';bFichaPos.title='Editar ficha de quem está selecionado';
+    bFichaPos.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';bFichaPos.textContent='✏️';
+    bFichaPos.onclick=()=>{
+      const alvo=membros.find(x=>x.id===sel.value);
+      if(!alvo){ toast('Escolha alguém nesta função primeiro'); return; }
+      abrirFichaRapida(alvo,{aoMudar:aoFichaRapidaMudou});
+    };
+    row.append(lbl,sel,bFichaPos,trc,clr);container.appendChild(row);container.appendChild(dm);container.appendChild(dp);container.appendChild(sp);
     pe.atualizarAvisos();
     return pe;
   }
@@ -1589,6 +1604,10 @@ function renderPlanilha() {
     // Membro (sticky): avatar + patch + nome
     const tdN=document.createElement('td');tdN.className='sticky-left';
     const wrapN=document.createElement('div');wrapN.style.cssText='display:flex;align-items:center;gap:8px;';
+    const bFicha=document.createElement('button');bFicha.type='button';bFicha.title='Editar ficha';
+    bFicha.style.cssText='border:none;background:none;cursor:pointer;font-size:13px;padding:2px;flex:none;';
+    bFicha.textContent='✏️';bFicha.onclick=()=>abrirFichaRapida(m,{aoMudar:aoFichaRapidaMudou});
+    wrapN.appendChild(bFicha);
     wrapN.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30, { nivelSlug: m.nivel || nivelFromRole(patchRoleFromHabs(habs)), casaSlug: casaSlugDe(m) }));
     const nm=document.createElement('div'); nm.style.cssText='min-width:0;line-height:1.15;';
     if((m.apelido||'').trim()){ const a=document.createElement('div'); a.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;'; a.textContent=m.apelido; const n=document.createElement('div'); n.style.cssText='font-size:9.5px;color:var(--text-muted);white-space:nowrap;'; n.textContent=m.nome; nm.append(a,n); }
@@ -2164,6 +2183,10 @@ function pintarRodizio(lista){
 
     const tdN=document.createElement('td'); tdN.className='sticky-left';
     const box=document.createElement('div'); box.style.cssText='display:flex;align-items:center;gap:8px;';
+    const bFichaRod=document.createElement('button');bFichaRod.type='button';bFichaRod.title='Editar ficha';
+    bFichaRod.style.cssText='border:none;background:none;cursor:pointer;font-size:13px;padding:2px;flex:none;';
+    bFichaRod.textContent='✏️';bFichaRod.onclick=()=>abrirFichaRapida(m,{aoMudar:aoFichaRapidaMudou});
+    box.appendChild(bFichaRod);
     box.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30, { nivelSlug: m.nivel || nivelFromRole(patchRoleFromHabs(habs)), casaSlug: casaSlugDe(m) }));
     const nm=document.createElement('div'); nm.style.cssText='min-width:0;line-height:1.15;';
     const n1=document.createElement('div'); n1.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;'; n1.textContent=m.apelido||m.nome;
