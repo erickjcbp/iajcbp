@@ -261,6 +261,7 @@
       <select class="form-select" id="nc-com">
         <option value="matriz">Matriz</option>
         <option value="santo_antonio">Santo Antônio</option>
+        <option value="outras_comunidades">Outras comunidades</option>
       </select>
     </div>
     <div class="form-group">
@@ -301,6 +302,7 @@
       <select id="md-com" class="form-select" style="flex:1;" onchange="renderModeloEditor()">
         <option value="matriz">Matriz</option>
         <option value="santo_antonio">Santo Antônio</option>
+        <option value="outras_comunidades">Outras comunidades</option>
       </select>
     </div>
     <div id="md-body"></div>
@@ -410,7 +412,7 @@ async function salvarModelo() {
   const msg = document.getElementById('md-msg');
   const payload = Object.keys(FUNCAO_META).map(f => ({ tipo, comunidade: com, funcao: f, quantidade: mdQty[f] || 0, ordem: FUNCAO_META[f].ordem }));
   const { error } = await sb.from('acolitos_modelos').upsert(payload, { onConflict: 'tipo,comunidade,funcao' });
-  if (error) { msg.className = 'msg error'; msg.textContent = 'Erro ao salvar.'; return; }
+  if (error) { msg.className = 'msg error'; msg.textContent = 'Erro ao salvar: '+error.message; return; }
   msg.className = 'msg success'; msg.textContent = '✓ Modelo salvo.';
   await loadModelos();
   desenharAba(abaAtual);
@@ -497,12 +499,15 @@ function mergeFuncoesConfig() {
 
 // Preenche o select de comunidade a partir do Config (fallback: mantém os defaults do HTML)
 function popularComunidades() {
-  const sel = document.getElementById('nc-com'); if (!sel) return;
   const coms = (typeof cfg === 'function') ? cfg('comunidades', null) : null;
   if (!Array.isArray(coms) || !coms.length) return;
-  const atual = sel.value; sel.textContent = '';
-  coms.forEach(c => { const o = document.createElement('option'); o.value = c.slug; o.textContent = c.label || c.slug; sel.appendChild(o); });
-  if (atual) sel.value = atual;
+  const opcoes = coms.some(c => c.slug === 'outras_comunidades') ? coms : coms.concat({slug:'outras_comunidades',label:'Outras comunidades'});
+  ['nc-com','md-com'].forEach(id => {
+    const sel = document.getElementById(id); if (!sel) return;
+    const atual = sel.value; sel.textContent = '';
+    opcoes.forEach(c => { const o = document.createElement('option'); o.value = c.slug; o.textContent = c.label || c.slug; sel.appendChild(o); });
+    if (opcoes.some(c => c.slug === atual)) sel.value = atual;
+  });
 }
 
 // Preenche o select de tipo de celebração a partir de TIPO_LABEL (defaults + tipos do Config)

@@ -186,7 +186,7 @@
       <div class="top">
         <img class="crest" src="../../midia/logos/brasao-pastoral.png" alt="Brasão da Pastoral" onerror="this.style.display='none'">
         <h1>Novena de Nossa Senhora Aparecida</h1>
-        <p class="sub">Missas às 19h30, na Matriz. Marque em quais você pode servir — escolha a função e ela entra na escala na hora.</p>
+        <p class="sub">Confira o dia, horário e local de cada missa. Marque em quais você pode servir — escolha a função e ela entra na escala na hora.</p>
       </div>
 
       <div class="card">
@@ -308,7 +308,8 @@
         const row=document.createElement('div'); row.className='cel'; row.dataset.id=c.id;
         row.innerHTML='<div class="box"></div><div class="lab"><div class="d1"></div><div class="d2"></div></div>';
         row.querySelector('.d1').textContent=diaCerto(c);
-        row.querySelector('.d2').textContent=c.horario+' · Matriz';
+        const local=c.local_nome || ({matriz:'Matriz',santo_antonio:'Santo Antônio',outra:'Outras comunidades',outras_comunidades:'Outras comunidades'}[c.comunidade]) || c.comunidade || 'Local não informado';
+        row.querySelector('.d2').textContent=c.horario+' · '+local;
         wrap.appendChild(row);
         const fns = c.funcoes||[];
         if(c.minha_funcao){
