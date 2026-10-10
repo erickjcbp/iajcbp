@@ -69,7 +69,7 @@ async function provaRodizioMostraAsDuasContasSeparadas(provas) {
         esc('m4', 'presente', 0), esc('m4', 'presente', 0),   // hoje, duas vezes: cumpriu a regra do mês
       ] },
     },
-    passos: [{ chamar: 'setAba', args: ['rodizio'] }],
+    passos: [{ chamar: 'setAba', args: ['rodizio'] }, { clicar: '➕ Ver detalhes' }],
     // Ler a TABELA célula a célula, não o texto da página: um "2 sem" solto passaria mesmo
     // se estivesse na linha errada, na coluna errada ou fora da tabela.
     avaliar: `
@@ -80,7 +80,7 @@ async function provaRodizioMostraAsDuasContasSeparadas(provas) {
         temAlerta: !!tr.querySelector('.rodizio-alerta'),
       }));
       return {
-        cabecalho: [...document.querySelectorAll('#view-rodizio thead th')].map((t) => t.textContent.trim()),
+        cabecalho: [...document.querySelectorAll('#view-rodizio thead th')].map((t) => t.textContent.trim().replace(/ [▲▼]$/, '')),
         linhas,
         regua: (document.querySelector('#view-rodizio .rodizio-regua') || {}).textContent || '',
         visivel: document.getElementById('view-rodizio').style.display !== 'none',
@@ -1567,8 +1567,8 @@ async function provaMembrosMostraQuemEntrouPorUltimo(provas) {
   exigir(a.botoesVelhos === 0, 'os botões de nível antigos saíram (viraram filtro no painel)');
   exigir(JSON.stringify(a.padrao) === JSON.stringify(['Ana Lote', 'Bruno Lote', 'Carla Nova', 'Davi Recente', 'Elisa Madrugada']),
     'abre em ordem alfabética, como antes', 'saiu: ' + JSON.stringify(a.padrao));
-  exigir(JSON.stringify(a.filtrosNoPainel) === JSON.stringify(['Ordenar por', 'Nível', 'Comunidade', 'App', 'Foto']),
-    'o painel oferece nível, comunidade, app e foto', 'saiu: ' + JSON.stringify(a.filtrosNoPainel));
+  exigir(JSON.stringify(a.filtrosNoPainel) === JSON.stringify(['Ordenar por', 'Nível', 'Comunidade', 'Idade', 'App', 'Foto']),
+    'o painel oferece nível, comunidade, idade, app e foto', 'saiu: ' + JSON.stringify(a.filtrosNoPainel));
   exigir((a.rotulosCortados || []).length === 0,
     'nenhuma opção do painel corta o texto em largura de celular', 'cortadas: ' + JSON.stringify(a.rotulosCortados));
   exigir(a.ver === 'Ver 1 membro', '"já entrou no app" conta pelo banco', 'mostrou: ' + JSON.stringify(a.ver));
@@ -1597,7 +1597,7 @@ async function provaMembrosMostraQuemEntrouPorUltimo(provas) {
   });
   const b = r2.avaliado || {};
   exigir(!r2.erroAvaliar, 'com a função recusando, Membros abre mesmo assim', r2.erroAvaliar);
-  exigir(JSON.stringify(b.filtrosNoPainel) === JSON.stringify(['Ordenar por', 'Nível', 'Comunidade', 'Foto']),
+  exigir(JSON.stringify(b.filtrosNoPainel) === JSON.stringify(['Ordenar por', 'Nível', 'Comunidade', 'Idade', 'Foto']),
     'sem resposta do banco, o filtro App não aparece (em vez de mentir)', 'saiu: ' + JSON.stringify(b.filtrosNoPainel));
   exigir((b.rotulosCortados || []).length === 0,
     'sem o filtro App, as opções restantes também não cortam o texto', 'cortadas: ' + JSON.stringify(b.rotulosCortados));

@@ -7,9 +7,10 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "npm run provar-regras && npm run provar-telas",
+    "test": "npm run provar-regras && npm run provar-telas && npm run provar-estabilidade",
     "provar-regras": "node --test projetos/acolitos/*.test.js",
-    "provar-telas": "node projetos/acolitos/provas/telas.prova.mjs"
+    "provar-telas": "node projetos/acolitos/provas/telas.prova.mjs",
+    "provar-estabilidade": "node projetos/acolitos/provas/escala-estabilidade.prova.mjs"
   },
   "repository": {
     "type": "git",

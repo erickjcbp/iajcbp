@@ -25,14 +25,12 @@ const sbAdmin = sb; // alias — todas as operações elevadas são via RLS com 
     addMeta('apple-mobile-web-app-status-bar-style', 'black-translucent'); addMeta('apple-mobile-web-app-title', 'Acólitos JCBP');
     if (!document.querySelector('link[rel="apple-touch-icon"]')) { const a = document.createElement('link'); a.rel = 'apple-touch-icon'; a.href = 'icon-192.png'; head.appendChild(a); }
     if ('serviceWorker' in navigator) {
-      // Auto-atualização: ao detectar nova versão (SW), recarrega sozinho. Guard evita reload no 1º registro.
-      const hadController = !!navigator.serviceWorker.controller;
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => { if (refreshing || !hadController) return; refreshing = true; window.location.reload(); });
+      // O SW usa network-first: a próxima navegação já recebe a versão nova.
+      // Nunca recarregar a tela em controllerchange: isso descarta modais e edições.
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').then((reg) => {
           reg.update().catch(() => {});
-          // checa por nova versão sempre que o app volta ao foco (momento seguro p/ atualizar)
+          // Busca atualização ao voltar ao foco, preservando a tela em uso.
           document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
         }).catch(() => {});
       });

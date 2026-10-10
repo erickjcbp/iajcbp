@@ -173,7 +173,7 @@
       .montagem-cols > div { min-width:0; }
       .pos-item { flex-wrap:wrap; gap:6px; padding:7px 0; }
       .pos-label { flex:1 1 100%; font-size:11px; line-height:1.3; }
-      .pos-select { flex:1 1 auto; min-width:0; max-width:none; font-size:11px; }
+      .pos-select { flex:1 1 auto; min-width:0; max-width:none; font-size:16px; min-height:44px; }
       .cat-titulo { font-size:10px; }
       /* Coluna de nome congelada media o conteúdo (nome mais longo) em vez de largura fixa —
          no celular isso come quase tudo e não sobra espaço pras colunas seguintes. */
@@ -228,7 +228,7 @@
 
 <!-- Modal montagem -->
 <div class="modal-overlay" id="modal-montagem">
-  <div class="modal" style="max-width:min(1040px,96vw);">
+  <div class="modal" style="--modal-max:1040px;">
     <div class="modal-handle"></div>
     <div class="modal-title" id="mt-titulo">Montar Escala</div>
     <p id="mt-sub" style="color:var(--text-muted);font-size:11px;margin-bottom:14px;"></p>
@@ -753,6 +753,8 @@ async function excluirCelebracao(c) {
 }
 
 function abrirMontagem(celeb) {
+  // X, Esc, gesto e Voltar passam pelo mesmo fechamento do botão Fechar.
+  document.getElementById('modal-montagem')._acResolveClose = fecharMontagem;
   montagemDirty=false;
   const _mtSt=document.getElementById('montagem-status'); if(_mtSt) _mtSt.textContent='';
   pendingCelebId=celeb.id; celAtual=celeb;

@@ -1,6 +1,6 @@
 // Service worker do app Acólitos — network-first (sempre o conteúdo mais novo), cache só p/ fallback offline.
 // O fetch handler "de verdade" é o que torna o app instalável no Chrome.
-const BUILD = '20261010044947'; // carimbado a cada deploy p/ disparar a auto-atualização nos apps abertos
+const BUILD = '20261010233904'; // versão do cache offline; atualiza sem interromper telas abertas
 const CACHE = 'acolitos-' + BUILD;
 const SHELL = ['./login.html', './index.html', './shared.css', './navegacao-core.js', './shared.js', './manifest.json', './icon-192.png', './icon-512.png'];
 
@@ -12,7 +12,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+    await Promise.all(keys.filter((k) => k.startsWith('acolitos-') && k !== CACHE).map((k) => caches.delete(k)));
     await self.clients.claim();
   })());
 });
