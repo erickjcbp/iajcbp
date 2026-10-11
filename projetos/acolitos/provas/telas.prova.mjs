@@ -48,7 +48,8 @@ async function provaRodizioMostraAsDuasContasSeparadas(provas) {
   // Medindo o banco na mesma conversa: 25 pessoas com 3-4 semanas, 44 dos 45 parados COM
   // disponibilidade e habilitação. A aba só ajuda se as duas contas aparecerem SEPARADAS —
   // juntas, quem serviu num domingo sem chamada vira "sumido" e a coordenação liga à toa.
-  const dia = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
+  // Datas de celebração são locais. Depois das 21h, UTC já está no dia seguinte.
+  const dia = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-'); };
   const esc = (membro, status, n, extra) => Object.assign(
     { membro_id: membro, substituto_id: null, status, acolitos_celebracoes: { data: dia(n) } }, extra || {});
 

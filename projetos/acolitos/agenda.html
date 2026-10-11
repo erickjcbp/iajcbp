@@ -28,10 +28,10 @@
     .cal-nav button { width:34px; height:34px; border-radius:9px; border:1px solid var(--border-wine); background:var(--surface2); color:var(--gold); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
     .cal-nav button:hover { border-color:var(--gold); }
     .cal-hoje { font-size:11px !important; width:auto !important; padding:0 10px; font-family:'Sora',sans-serif; font-weight:700; letter-spacing:.5px; text-transform:uppercase; }
-    .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+    .cal-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; }
     .cal-dow { text-align:center; font-family:'Sora',sans-serif; font-size:10px; font-weight:700; color:var(--text-muted); letter-spacing:1px; text-transform:uppercase; padding:2px 0 6px; }
-    .cal-cell { position:relative; aspect-ratio:1/1; border:1px solid var(--border); border-radius:9px; background:var(--surface); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition:border-color .12s, background .12s; min-height:42px; }
-    .cal-cell.empty { border:none; background:transparent; cursor:default; }
+    .cal-cell { position:relative; min-width:0; height:clamp(48px,8vw,112px); border:1px solid var(--border); border-radius:9px; background:var(--surface); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition:border-color .12s, background .12s; }
+    .cal-cell.empty { border:none; background:transparent; cursor:default; padding:0; }
     .cal-cell:not(.empty):hover { border-color:var(--gold-dim); }
     .cal-cell .dnum { font-family:'Oxanium','Sora',sans-serif; font-size:14px; font-weight:600; color:var(--text); }
     .cal-cell.today { border-color:var(--gold); }
@@ -305,7 +305,8 @@ function render() {
     const fab = document.createElement('button'); fab.className = 'fab';
     fab.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 5v14 M5 12h14"/></svg><span>Novo evento</span>'; // SVG hardcoded — seguro
     fab.onclick = () => abrirFormEvento(null);
-    document.body.appendChild(fab);
+    fab.style.position = 'static'; fab.style.marginBottom = '16px';
+    main.insertBefore(fab, alvoFiltro);
   }
 }
 

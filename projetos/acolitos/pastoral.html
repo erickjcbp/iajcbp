@@ -44,7 +44,7 @@
       background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
     body::after{ content:''; position:fixed; inset:0; z-index:1; pointer-events:none; background:radial-gradient(120% 90% at 50% 6%, transparent 42%, rgba(8,4,6,.5) 100%); }
 
-    .wrap{ max-width:1100px; margin:0 auto; padding:0 26px; position:relative; z-index:2; }
+    .wrap{ margin:0; padding:0 clamp(14px,2.4vw,44px); position:relative; z-index:2; }
     .narrow{ max-width:760px; }
     section{ padding:clamp(70px,11vw,140px) 0; position:relative; z-index:2; }
 
@@ -104,7 +104,7 @@
 
     /* ====== HERO ====== */
     .hero{ position:relative; min-height:112svh; display:flex; align-items:flex-end; overflow:hidden; }
-    .hero-inner{ position:relative; z-index:2; width:100%; max-width:1100px; margin:0 auto; padding:0 26px clamp(46px,6vw,76px); }
+    .hero-inner{ position:relative; z-index:2; width:100%; margin:0; padding:0 clamp(14px,2.4vw,44px) clamp(46px,6vw,76px); }
     .hero .crest{ width:86px; height:86px; object-fit:contain; margin-bottom:22px; filter:drop-shadow(0 8px 22px rgba(0,0,0,.7)); opacity:0; animation:rise 1s ease .15s forwards; }
     .hero h1{ font-family:var(--title); font-weight:600; font-size:clamp(3.2rem,15vw,8rem); line-height:.92; letter-spacing:1px; margin:0; color:transparent; background:linear-gradient(176deg,#fff 8%, var(--gold-bright) 42%, var(--gold) 72%, var(--gold-deep) 100%); -webkit-background-clip:text; background-clip:text; filter:drop-shadow(0 3px 18px rgba(0,0,0,.85)) drop-shadow(0 1px 2px rgba(0,0,0,.6)); opacity:0; animation:rise 1.2s cubic-bezier(.2,.7,.2,1) .45s forwards; }
     .hero .motto{ font-family:var(--title); font-style:italic; font-weight:500; font-size:clamp(1.45rem,3.6vw,2.15rem); line-height:1.18; color:var(--gold-light); margin:.22em 0 .12em; text-shadow:0 2px 5px rgba(0,0,0,.85), 0 2px 22px rgba(0,0,0,.6); opacity:0; animation:rise 1s ease .75s forwards; }
@@ -273,6 +273,7 @@
     .lb .x:hover, .lb .nav:hover{ background:rgba(200,162,74,.22); }
     .lb .x{ top:20px; right:20px; } .lb .nav.prev{ left:16px; top:50%; transform:translateY(-50%); } .lb .nav.next{ right:16px; top:50%; transform:translateY(-50%); }
   </style>
+  <link rel="stylesheet" href="publico-acessibilidade.css">
 </head>
 <body>
 

@@ -35,7 +35,7 @@
   --warn: #b07d16; --warn-text: #ffcb63;
   --focus-bg: #2a0c11;
   /* layout */
-  --header-h: 44px;
+  --header-h: 56px;
   --nav-h: 66px;
   --cut: 11px;                  /* tamanho do canto cortado angular */
   --edge: linear-gradient(135deg, var(--gold-light), var(--gold-dim) 45%, var(--wine) 100%);
@@ -81,8 +81,8 @@ body {
   height: calc(var(--header-h) + env(safe-area-inset-top));
   background: linear-gradient(180deg, var(--surface2), var(--surface));
   border-bottom: 1px solid var(--border-wine);
-  display: flex; align-items: flex-end; justify-content: space-between;
-  padding: env(safe-area-inset-top) 16px 8px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: env(safe-area-inset-top) 16px 0;
   box-shadow: 0 2px 0 rgba(232,185,74,.12), 0 6px 24px rgba(0,0,0,.6), 0 0 26px rgba(224,18,40,.12) inset;
 }
 .app-header::after {
@@ -110,6 +110,7 @@ body.has-switch { padding-top: calc(var(--header-h) + 46px + env(safe-area-inset
 }
 .header-logo img { height: 30px; width: auto; filter: drop-shadow(0 0 8px rgba(224,18,40,.5)); }
 .header-logo .gold { color: var(--gold); text-shadow: 0 0 10px rgba(232,185,74,.5); }
+.header-brand { display: inline-flex; gap: 6px; }
 .header-actions { display: flex; align-items: center; gap: 8px; }
 .btn-icon {
   background: var(--surface2); border: 1px solid var(--border-wine);
@@ -120,9 +121,16 @@ body.has-switch { padding-top: calc(var(--header-h) + 46px + env(safe-area-inset
   -webkit-tap-highlight-color: transparent;
 }
 .btn-icon:hover { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 14px var(--red-glow); }
+button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--gold-light); outline-offset: 3px;
+  box-shadow: inset 0 0 0 2px var(--gold-light);
+}
 /* Top bar no celular: títulos e botões menores p/ não se cobrirem */
 @media (max-width: 520px) {
-  .app-header { padding: 0 10px; }
+  .app-header { padding: env(safe-area-inset-top) 10px 0; gap: 8px; }
+  .header-left { flex: 1; }
+  .header-actions { flex: none; }
+  .header-brand { display: block; white-space: normal; line-height: 1.35; text-wrap: balance; }
   .header-logo { font-size: 11px; letter-spacing: .5px; gap: 6px; overflow: hidden; white-space: nowrap; }
   .header-logo img { height: 22px; }
   .header-back { font-size: 18px; }
@@ -334,7 +342,7 @@ body.has-switch { padding-top: calc(var(--header-h) + 46px + env(safe-area-inset
   font-family: 'Sora', sans-serif; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
 }
 .form-input, .form-select, .form-textarea {
-  width: 100%; padding: 12px 14px; min-height: 48px;
+  width: 100%; min-width: 0; padding: 12px 14px; min-height: 48px;
   background: var(--surface2); border: 1px solid var(--border-wine);
   border-radius: 2px; color: var(--text); font-size: 16px; font-weight: 500;
   font-family: 'Sora', sans-serif; outline: none; transition: all .2s;
@@ -409,10 +417,13 @@ body.has-switch { padding-top: calc(var(--header-h) + 46px + env(safe-area-inset
 }
 .modal-close:hover { color: var(--gold); border-color: var(--gold-dim); }
 @media (max-width: 639px) {
-  .btn-icon, .modal-close { min-width: 44px; min-height: 44px; }
-  button, .btn-sm, .btn-icon { min-height: 44px; }
-  .modal button { min-width: 44px; }
-  .modal-title { padding-right: 44px; }
+  button, .btn-sm, .btn-icon, .header-logo, .nav-arrow {
+    min-width: 44px !important; min-height: 44px !important;
+  }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]), select, textarea {
+    font-size: 16px !important; min-height: 44px;
+  }
+  .modal { max-width: none !important; }
 }
 .modal-title {
   font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700;

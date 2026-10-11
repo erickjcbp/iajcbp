@@ -15,7 +15,10 @@
   <style>
     /* menu lateral esquerdo (seções) + conteúdo à direita */
     .cfg-wrap { display:flex; gap:14px; align-items:flex-start; }
-    .cfg-side { flex:0 0 174px; display:flex; flex-direction:column; gap:6px; position:sticky; top:8px; }
+    .cfg-side { flex:0 0 174px; display:flex; flex-direction:column; gap:6px; position:sticky;
+      top:calc(var(--header-h) + 46px + env(safe-area-inset-top) + 14px);
+      max-height:calc(100dvh - var(--header-h) - 46px - var(--nav-h) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 28px);
+      overflow-y:auto; }
     .cfg-item { position:relative; text-align:left; padding:11px 12px 11px 15px; background:linear-gradient(165deg, var(--surface2), var(--surface)); border:1px solid var(--border-wine); color:var(--text-muted); font-family:'Sora',sans-serif; font-weight:700; font-size:12.5px; letter-spacing:.4px; cursor:pointer; line-height:1.2; clip-path:polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px); transition:border-color .15s, color .15s, box-shadow .15s; }
     .cfg-item::before { content:''; position:absolute; left:0; top:3px; bottom:3px; width:3px; background:transparent; }
     .cfg-item:hover { border-color:var(--gold-dim); color:var(--text); }
@@ -29,7 +32,7 @@
        conteúdo, que estourava pela direita. */
     @media(max-width:560px){
       .cfg-wrap { flex-direction:column; gap:0; }
-      .cfg-side { flex:1 1 auto; width:100%; position:static; }
+      .cfg-side { flex:1 1 auto; width:100%; position:static; max-height:none; overflow:visible; }
       .cfg-item { font-size:13px; padding:13px 30px 13px 15px; }
       .cfg-item::after { content:'\203A'; position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--gold-dim); font-size:16px; }
       .cfg-body { width:100%; }

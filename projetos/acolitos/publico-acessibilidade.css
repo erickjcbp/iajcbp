@@ -1,0 +1,20 @@
+/* Ajustes comuns das portas públicas: formulário legível e controles acessíveis. */
+body { min-height: 100dvh; }
+button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--gold-light, #ffd97a); outline-offset: 3px;
+  box-shadow: inset 0 0 0 2px var(--gold-light, #ffd97a);
+}
+@media (max-width: 639px) {
+  button, a { min-height: 44px; min-width: 44px; }
+  a { display: inline-flex; align-items: center; justify-content: center; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]), select, textarea {
+    font-size: 16px !important; min-height: 44px;
+  }
+  .card, .wrap { min-width: 0; }
+  .ov { padding: 0; }
+  .ov .dlg {
+    width: 100%; max-width: none; height: 100%; border-radius: 0;
+    overflow-y: auto; overscroll-behavior: contain;
+    padding: calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
+  }
+}

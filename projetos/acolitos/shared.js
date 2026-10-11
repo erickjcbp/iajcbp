@@ -1291,7 +1291,9 @@ function renderHeader(ctx, activePage) {
   goldSpan.textContent = '&';
   const logoText2 = document.createElement('span');
   logoText2.textContent = ' Coroinhas';
-  logo.append(logoImg, logoText, goldSpan, logoText2);
+  const brand = document.createElement('span'); brand.className = 'header-brand';
+  brand.append(logoText, goldSpan, logoText2);
+  logo.append(logoImg, brand);
 
   // Grupo esquerdo: botão Voltar (telas internas) + logo
   const left = document.createElement('div'); left.className = 'header-left';

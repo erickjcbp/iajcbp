@@ -10,7 +10,8 @@
     "test": "npm run provar-regras && npm run provar-telas && npm run provar-estabilidade",
     "provar-regras": "node --test projetos/acolitos/*.test.js",
     "provar-telas": "node projetos/acolitos/provas/telas.prova.mjs",
-    "provar-estabilidade": "node projetos/acolitos/provas/escala-estabilidade.prova.mjs"
+    "provar-estabilidade": "node projetos/acolitos/provas/escala-estabilidade.prova.mjs",
+    "auditar-visual": "EXIGIR_VISUAL=1 node projetos/acolitos/provas/visual.prova.mjs && EXIGIR_VISUAL=1 node projetos/acolitos/provas/visual-publico.prova.mjs"
   },
   "repository": {
     "type": "git",

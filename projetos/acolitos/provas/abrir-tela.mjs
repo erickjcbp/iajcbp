@@ -182,10 +182,14 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
   });
   await pagina.setRequestInterception(true);
   pagina.on('request', (r) => {
+    const api = opcoes.apis && opcoes.apis[new URL(r.url()).pathname];
+    if (api) return r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify(api) });
     if (r.url().split('?')[0] === url) {
       return r.respond({ status: 200, contentType: 'text/html; charset=utf-8', body: html });
     }
     // Nada sai para a internet: a prova não pode depender de rede, nem tocar no banco real.
+    // A revisão visual pode carregar só as fontes originais; APIs continuam bloqueadas.
+    if (opcoes.fontesReais && /^https:\/\/fonts\.(googleapis|gstatic)\.com\//.test(r.url())) return r.continue();
     if (!r.url().startsWith('http://127.0.0.1:')) return r.abort();
     r.continue();
   });
@@ -283,6 +287,7 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
     };
 
     if (opcoes.config) _APP_CONFIG = opcoes.config;
+    if (opcoes.sessao) sb.auth.getSession = async () => ({ data: { session: opcoes.sessao }, error: null });
 
     await init();
     await new Promise((s) => setTimeout(s, 350));
@@ -383,7 +388,7 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
     try {
       const el = alvo.seletor ? await pagina.$(alvo.seletor) : null;
       if (alvo.seletor && !el) throw new Error('não achei ' + alvo.seletor + ' para fotografar');
-      await (el || pagina).screenshot({ path: alvo.caminho, fullPage: el ? undefined : true });
+      await (el || pagina).screenshot({ path: alvo.caminho, fullPage: el ? undefined : !alvo.viewport });
     } catch (e) { erros.push('foto: ' + e.message); }
   }
   await pagina.close();
