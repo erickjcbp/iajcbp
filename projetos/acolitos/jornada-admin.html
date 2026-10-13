@@ -64,7 +64,10 @@
 <script src="kits-core.js"></script>
 <script src="paginar-core.js"></script>
 <script src="identidade-core.js"></script>
+<script src="rodizio-core.js"></script>
 <script src="shared.js"></script>
+<script src="ficha-rapida.js"></script>
+<script src="historico-membro.js"></script>
 <script>
 const NIVEIS_SLUGS = () => NIVEIS.map(n => n.slug);
 let ctx = null;
@@ -617,7 +620,12 @@ function renderMatriz(container){
     sep.appendChild(sc); tbody.appendChild(sep);
     membros.forEach(m=>{
       const tr=document.createElement('tr');
-      const nmtd=document.createElement('td'); nmtd.textContent=m.apelido||m.nome;
+      const nmtd=document.createElement('td'); const nome=document.createElement('span'); nome.textContent=m.apelido||m.nome;
+      const acoes=document.createElement('div');acoes.style.cssText='display:flex;gap:4px;';
+      const editar=document.createElement('button');editar.type='button';editar.className='btn-sm gray';editar.textContent='✏️';editar.title='Editar ficha de '+(m.apelido||m.nome);editar.setAttribute('aria-label',editar.title);editar.style.cssText='min-width:44px;min-height:44px;';
+      editar.onclick=()=>abrirFichaRapida(m,{aoMudar:()=>renderAll()});
+      const calendario=document.createElement('button');calendario.type='button';calendario.className='btn-sm gray';calendario.textContent='📅';calendario.title='Ver últimas missas de '+(m.apelido||m.nome);calendario.setAttribute('aria-label',calendario.title);calendario.style.cssText='min-width:44px;min-height:44px;';calendario.onclick=async()=>{calendario.disabled=true;try{await abrirHistoricoMembro(m)}finally{calendario.disabled=false}};
+      acoes.append(editar,calendario);nmtd.append(nome,acoes);
       nmtd.style.cssText='position:sticky;left:0;z-index:1;background:var(--surface2);color:var(--text);padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;';
       tr.appendChild(nmtd);
       const age=document.createElement('td'); const anos=_idadeDe(m.data_nascimento); age.textContent=anos?anos+' anos':'—'; age.style.cssText='padding:8px;white-space:nowrap;text-align:center;border-bottom:1px solid var(--border);'; tr.appendChild(age);
@@ -657,7 +665,7 @@ function editarCelula(td, cell, m, funcao){
 let _devMembros = [], _devFuncoes = [], _devComps = [];
 async function carregarDev() {
   const [{ data: mems }, { data: listas }] = await Promise.all([
-    sb.from('acolitos_membros').select('id,nome,apelido,nivel,created_at,foto_url,comunidade,casa_id,data_nascimento,pode_outras_comunidades,competencias_desenvolvidas,desenvolvimento_competencias').eq('status', 'ativo').order('nome'),
+    sb.from('acolitos_membros').select('id,nome,apelido,nivel,role,status,telefone,created_at,foto_url,comunidade,casa_id,data_nascimento,pode_outras_comunidades,suspenso_em,suspenso_ate,escalar_frequente,competencias_desenvolvidas,desenvolvimento_competencias').eq('status', 'ativo').order('nome'),
     sb.from('acolitos_listas').select('valor,label,tipo').in('tipo', ['funcao', 'competencia']),
   ]);
   _devMembros = mems || [];
