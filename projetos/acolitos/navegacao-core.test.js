@@ -238,3 +238,14 @@ test('modo ausente ou torto não acende a barra da coordenação por engano', ()
   assert.strictEqual(idNaBarra('ausencias', undefined), 'escalas-membro');
   assert.strictEqual(idNaBarra('ausencias', 'coisa-torta'), 'escalas-membro');
 });
+
+const { podeAbrirPaginaServico } = require('./navegacao-core.js');
+test('quem não serve não abre páginas pessoais de serviço, mas mantém coordenação', () => {
+  for(const tela of ['missoes','escalas-membro','conquistas','destaques','minha-casa'])assert.strictEqual(podeAbrirPaginaServico('/projetos/acolitos/'+tela+'.html',false),false);
+  for(const tela of ['index','jornada-admin','tarefas','membros','escala','casas','config'])assert.strictEqual(podeAbrirPaginaServico(tela+'.html',false),true);
+  assert.strictEqual(modoDaBarra({ehEquipe:true,serve:false,salvo:'jornada'}),'coordenacao');
+});
+test('quem serve mantém a Jornada e contas sem ficha continuam no cadastro', () => {
+  assert.strictEqual(podeAbrirPaginaServico('missoes.html?capitulo=1',true),true);
+  assert.strictEqual(podeAbrirPaginaServico('novos.html',undefined),true);
+});

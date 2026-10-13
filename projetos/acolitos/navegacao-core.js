@@ -82,6 +82,12 @@
     return opts.salvo === 'coordenacao' ? 'coordenacao' : 'jornada';
   }
 
+  // Conta que não serve usa os módulos da coordenação, sem páginas pessoais de serviço.
+  function podeAbrirPaginaServico(caminho, serve) {
+    var tela=String(caminho||'').split('?')[0].split('/').pop();
+    return serve !== false || ['missoes.html','escalas-membro.html','conquistas.html','destaques.html','minha-casa.html'].indexOf(tela)===-1;
+  }
+
   // ── Qual botão acende numa tela que não tem botão próprio ──────────────────
   // Ausências e Chamada não estão na barra: abrem por dentro de outra seção (o menu
   // "⋯ Mais" da Escala, ou o botão nas Escalas do membro). A Ausências acendia o id
@@ -121,7 +127,7 @@
     }).filter(Boolean);
   }
 
-  var api = { montarItensNav: montarItensNav, modoDaBarra: modoDaBarra, temAcessoCoordenacao: temAcessoCoordenacao, idNaBarra: idNaBarra };
+  var api = { podeAbrirPaginaServico:podeAbrirPaginaServico, montarItensNav: montarItensNav, modoDaBarra: modoDaBarra, temAcessoCoordenacao: temAcessoCoordenacao, idNaBarra: idNaBarra };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  else { global.montarItensNav = montarItensNav; global.modoDaBarra = modoDaBarra; global.temAcessoCoordenacao = temAcessoCoordenacao; global.idNaBarra = idNaBarra; }
+  else { global.podeAbrirPaginaServico=podeAbrirPaginaServico; global.montarItensNav = montarItensNav; global.modoDaBarra = modoDaBarra; global.temAcessoCoordenacao = temAcessoCoordenacao; global.idNaBarra = idNaBarra; }
 })(typeof globalThis !== 'undefined' ? globalThis : this);

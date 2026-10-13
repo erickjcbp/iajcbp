@@ -387,20 +387,24 @@ async function carregarHabAll(){
   const { data:habs } = await lerTudo(() => sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia'));
   habAll = {}; (habs||[]).forEach(h=>{ (habAll[h.membro_id]=habAll[h.membro_id]||{})[h.funcao]=h.proficiencia; });
 }
+function membrosDevVisiveis(){
+  const q=semAcento(estadoJornada.busca||''), nf=estadoJornada.nivel||'';
+  return _devMembros.filter(m=>(!q||semAcento(m.nome).includes(q)||semAcento(m.apelido).includes(q))&&(!nf||(m.nivel||'aspirante')===nf));
+}
 function bucketsFuncao(funcao){
   let prontos=0,form=0;
-  _devMembros.forEach(m=>{ const p=(habAll[m.id]||{})[funcao];
+  membrosDevVisiveis().forEach(m=>{ const p=(habAll[m.id]||{})[funcao];
     if(p==='apto'||p==='experiente'||p==='referencia') prontos++;
     else if(p==='em_formacao') form++; });
-  return { prontos, form, zero:_devMembros.length-prontos-form };
+  return { prontos, form, zero:membrosDevVisiveis().length-prontos-form };
 }
 // ── Relatório de Desenvolvimento (PDF + CSV) ──
 const PROF_ABREV = { nao_treinado:'NT', em_formacao:'F', apto:'A', experiente:'E', referencia:'R' };
 const PROF_COR_PRINT = { nao_treinado:'#ffffff', em_formacao:'#f6e3c4', apto:'#c9ecd5', experiente:'#cfe2f3', referencia:'#e4d2f3' };
 function _escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function _profDe(mId, funcao){ return (habAll[mId]||{})[funcao] || 'nao_treinado'; }
-function _membrosComProf(funcao, profs){ return _devMembros.filter(m => profs.includes(_profDe(m.id,funcao))); }
-function _membrosDaLiga(slugs){ return _devMembros.filter(m => slugs.includes(m.nivel||'aspirante')); }
+function _membrosComProf(funcao, profs){ return membrosDevVisiveis().filter(m => profs.includes(_profDe(m.id,funcao))); }
+function _membrosDaLiga(slugs){ return membrosDevVisiveis().filter(m => slugs.includes(m.nivel||'aspirante')); }
 function _compLabelMap(){ const o={}; _devComps.forEach(([v,l])=>{o[v]=l;}); return o; }
 function _nome(m){ return m.apelido || m.nome || '—'; }
 function gerarRelatorioPDF(){
@@ -416,8 +420,8 @@ function gerarRelatorioPDF(){
   }).join('') || '<p class="muted">Nenhuma função escassa. 🎉</p>';
   const matriz = gruposPorNivel().map(([lglabel,slugs])=>{
     const mem=_membrosDaLiga(slugs); if(!mem.length) return '';
-    const head='<th>Membro</th><th>Idade</th>'+_devFuncoes.map(([,l])=>'<th title="'+_escHtml(l)+'">'+_escHtml(l.length>4?l.slice(0,4):l)+'</th>').join('');
-    const rows=mem.map(m=>'<tr><td class="nm">'+_escHtml(_nome(m))+'</td><td>'+(_idadeDe(m.data_nascimento)||'—')+'</td>'+_devFuncoes.map(([v])=>{const p=_profDe(m.id,v);return '<td style="background:'+PROF_COR_PRINT[p]+'">'+PROF_ABREV[p]+'</td>';}).join('')+'</tr>').join('');
+    const head='<th>Membro</th><th>Idade</th><th>Tempo na pastoral*</th>'+_devFuncoes.map(([,l])=>'<th title="'+_escHtml(l)+'">'+_escHtml(l.length>4?l.slice(0,4):l)+'</th>').join('');
+    const rows=mem.map(m=>'<tr><td class="nm">'+_escHtml(_nome(m))+'</td><td>'+(_idadeDe(m.data_nascimento)||'—')+'</td><td>'+_escHtml(tempoRegistradoPastoral(m.created_at))+'</td>'+_devFuncoes.map(([v])=>{const p=_profDe(m.id,v);return '<td style="background:'+PROF_COR_PRINT[p]+'">'+PROF_ABREV[p]+'</td>';}).join('')+'</tr>').join('');
     return '<h3>'+_escHtml(lglabel)+' · '+mem.length+'</h3><table class="mtz"><thead><tr>'+head+'</tr></thead><tbody>'+rows+'</tbody></table>';
   }).join('');
   const legenda='<p class="leg">'+PROF_NIVEIS.map(p=>'<span style="background:'+PROF_COR_PRINT[p]+'">'+PROF_ABREV[p]+'</span> '+_escHtml(PROF_LABEL[p])).join(' &nbsp; ')+'</p>';
@@ -432,16 +436,16 @@ function gerarRelatorioPDF(){
     + ' table.virt td{text-align:left}';
   const corpo = '<h2>1. Cobertura por função</h2><table class="cob"><thead><tr><th>Função</th><th>Prontos</th><th>Em formação</th><th>Zero</th></tr></thead><tbody>'+linhasCob+'</tbody></table>'
     + '<h2>2. A desenvolver (funções escassas)</h2>'+blocosDev
-    + '<h2>3. Matriz de proficiência</h2>'+legenda+matriz
+    + '<h2>3. Matriz de proficiência</h2>'+legenda+matriz+'<p class="muted">* Tempo contado desde o cadastro no app.</p>'
     + '<h2>4. Virtudes formadas</h2>'+virtudes;
-  abrirRelatorio({ titulo:'Relatório de Desenvolvimento', subtitulo:'Acólitos · '+_devMembros.length+' membros ativos', corpo, css: extraCss });
+  abrirRelatorio({ titulo:'Relatório de Desenvolvimento', subtitulo:'Acólitos · '+membrosDevVisiveis().length+' membros no relatório', corpo, css: extraCss });
 }
 function baixarRelatorioCSV(){
-  const head=['Nível','Membro','Idade'].concat(_devFuncoes.map(([,l])=>l));
+  const head=['Nível','Membro','Idade','Tempo na pastoral (desde cadastro)'].concat(_devFuncoes.map(([,l])=>l));
   const linhas=[head];
   gruposPorNivel().forEach(([lglabel,slugs])=>{
     _membrosDaLiga(slugs).forEach(m=>{
-      linhas.push([lglabel.replace(/^[^\w]+\s*/,''), _nome(m), _idadeDe(m.data_nascimento)].concat(_devFuncoes.map(([v])=>PROF_LABEL[_profDe(m.id,v)])));
+      linhas.push([lglabel.replace(/^[^\w]+\s*/,''), _nome(m), _idadeDe(m.data_nascimento), tempoRegistradoPastoral(m.created_at)].concat(_devFuncoes.map(([v])=>PROF_LABEL[_profDe(m.id,v)])));
     });
   });
   baixarCSV('desenvolvimento', linhas);
@@ -510,7 +514,7 @@ function gerarPanoramasLote(){
       });
     });
     if(!corpo) corpo='<p class="muted">Nenhum membro.</p>';
-    abrirRelatorio({ titulo:'Boletins de Desenvolvimento', subtitulo:'Acólitos · '+_devMembros.length+' membros', corpo, css:'.pg{page-break-after:always} .pg:last-child{page-break-after:auto} h2{border:none;margin-top:0}' });
+    abrirRelatorio({ titulo:'Boletins de Desenvolvimento', subtitulo:'Acólitos · '+membrosDevVisiveis().length+' membros', corpo, css:'.pg{page-break-after:always} .pg:last-child{page-break-after:auto} h2{border:none;margin-top:0}' });
   });
 }
 async function salvarProficiencia(membroId, funcao, nivel){
@@ -558,7 +562,7 @@ function abrirCoberturaFuncao(funcao, label){
   const sub=document.createElement('p'); sub.style.cssText='font-size:12px;color:var(--text-muted);margin:-6px 0 10px;'; sub.textContent='Ajuste a proficiência. Apto ou mais = pronto para a função.'; md.appendChild(sub);
   const box=document.createElement('div'); box.style.cssText='max-height:60vh;overflow-y:auto;'; md.appendChild(box);
   const rank=p=>({nao_treinado:0,em_formacao:1,apto:2,experiente:3,referencia:4})[p||'nao_treinado'];
-  const ordenados=_devMembros.slice().sort((a,b)=> rank((habAll[a.id]||{})[funcao]) - rank((habAll[b.id]||{})[funcao]));
+  const ordenados=membrosDevVisiveis().slice().sort((a,b)=> rank((habAll[a.id]||{})[funcao]) - rank((habAll[b.id]||{})[funcao]));
   ordenados.forEach(m=>{
     const cur=(habAll[m.id]||{})[funcao]||'nao_treinado';
     const r=document.createElement('div'); r.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--border);';
@@ -610,17 +614,18 @@ function renderMatriz(container){
   const wrap=document.createElement('div'); wrap.className='matriz-scroll';wrap.style.cssText='overflow:auto;max-height:65vh;border:1px solid var(--border);border-radius:8px;';
   const tbl=document.createElement('table');tbl.className='matriz-table';tbl.style.cssText='border-collapse:collapse;font-size:11px;min-width:100%;';
   const thead=document.createElement('thead'); const htr=document.createElement('tr');
-  const corner=document.createElement('th'); corner.append(checkboxMatriz('Selecionar todos os membros',_devMembros.map(m=>m.id)),document.createTextNode('Membro'));
+  const corner=document.createElement('th'); corner.append(checkboxMatriz('Selecionar todos os membros visíveis',membrosDevVisiveis().map(m=>m.id)),document.createTextNode('Membro'));
   corner.style.cssText='position:sticky;left:0;top:0;z-index:3;background:var(--surface2);color:var(--gold);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);min-width:120px;';
   htr.appendChild(corner);
   const ageHead=document.createElement('th'); ageHead.textContent='Idade'; ageHead.style.cssText='position:sticky;top:0;background:var(--surface2);padding:8px;z-index:2;'; htr.appendChild(ageHead);
+  const tempoHead=document.createElement('th');tempoHead.textContent='Tempo na pastoral';tempoHead.title='Tempo contado desde o cadastro no app';tempoHead.style.cssText='position:sticky;top:0;z-index:2;background:var(--surface2);padding:6px 8px;white-space:nowrap;';htr.appendChild(tempoHead);
   _devFuncoes.forEach(([val,label])=>{ const th=document.createElement('th'); th.textContent=label.length>4?label.slice(0,4):label; th.title=label; th.style.cssText='position:sticky;top:0;z-index:2;background:var(--surface2);padding:6px 4px;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap;'; htr.appendChild(th); });
   thead.appendChild(htr); tbl.appendChild(thead);
   const tbody=document.createElement('tbody');
   gruposPorNivel().forEach(([lglabel,slugs])=>{
-    const membros=_devMembros.filter(m=>slugs.includes(m.nivel||'aspirante'));
+    const membros=membrosDevVisiveis().filter(m=>slugs.includes(m.nivel||'aspirante'));
     if(!membros.length) return;
-    const sep=document.createElement('tr'); const sc=document.createElement('td'); sc.colSpan=_devFuncoes.length+2;
+    const sep=document.createElement('tr'); const sc=document.createElement('td'); sc.colSpan=_devFuncoes.length+3;
     sc.append(checkboxMatriz('Selecionar '+lglabel,membros.map(m=>m.id)),document.createTextNode(lglabel+' · '+membros.length)); sc.style.cssText='position:sticky;left:0;background:var(--surface);color:var(--gold);font-family:Sora,sans-serif;font-weight:700;padding:6px 8px;border-bottom:1px solid var(--border-wine);';
     sep.appendChild(sc); tbody.appendChild(sep);
     membros.forEach(m=>{
@@ -634,6 +639,7 @@ function renderMatriz(container){
       nmtd.style.cssText='position:sticky;left:0;z-index:1;background:var(--surface2);color:var(--text);padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;';
       tr.appendChild(nmtd);
       const age=document.createElement('td'); const anos=_idadeDe(m.data_nascimento); age.textContent=anos?anos+' anos':'—'; age.style.cssText='padding:8px;white-space:nowrap;text-align:center;border-bottom:1px solid var(--border);'; tr.appendChild(age);
+      const tempo=document.createElement('td');tempo.className='matriz-tempo';tempo.textContent=tempoRegistradoPastoral(m.created_at);tempo.title=m.created_at?'Cadastro no app: '+formatDate(m.created_at):'Data de cadastro não registrada';tempo.style.cssText='padding:6px 8px;white-space:nowrap;text-align:center;border-bottom:1px solid var(--border);';tr.appendChild(tempo);
       _devFuncoes.forEach(([val])=>{
         const cur=(habAll[m.id]||{})[val]||'nao_treinado';
         const td=document.createElement('td'); td.style.cssText='text-align:center;border-bottom:1px solid var(--border);padding:0;';
@@ -651,7 +657,7 @@ function renderMatriz(container){
   // ficam adivinhação — e quem lê a matriz é justamente quem vai decidir quem formar.
   const legenda=document.createElement('div');
   legenda.style.cssText='font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.5;';
-  legenda.textContent='Colunas: '+_devFuncoes.map(f=>f[1]).join(' · ');
+  legenda.textContent='Tempo na pastoral: contado desde o cadastro no app. Colunas: '+_devFuncoes.map(f=>f[1]).join(' · ');
   container.appendChild(legenda);
 }
 function editarCelula(td, cell, m, funcao){
@@ -670,12 +676,12 @@ function editarCelula(td, cell, m, funcao){
 let _devMembros = [], _devFuncoes = [], _devComps = [];
 async function carregarDev() {
   const [membrosRes, listasRes] = await Promise.all([
-    sb.from('acolitos_membros').select('id,nome,apelido,nivel,status,telefone,created_at,foto_url,comunidade,casa_id,data_nascimento,pode_outras_comunidades,suspenso_em,suspenso_ate,escalar_frequente,competencias_desenvolvidas,desenvolvimento_competencias').eq('status', 'ativo').order('nome'),
+    sb.from('acolitos_membros').select('id,nome,apelido,nivel,status,serve,telefone,created_at,foto_url,comunidade,casa_id,data_nascimento,pode_outras_comunidades,suspenso_em,suspenso_ate,escalar_frequente,competencias_desenvolvidas,desenvolvimento_competencias').eq('status', 'ativo').eq('serve',true).order('nome'),
     sb.from('acolitos_listas').select('valor,label,tipo').in('tipo', ['funcao', 'competencia']),
   ]);
   if (membrosRes.error || listasRes.error) throw membrosRes.error || listasRes.error;
   const mems=membrosRes.data, listas=listasRes.data;
-  _devMembros = mems || [];
+  _devMembros = (mems || []).filter(m=>m.serve!==false);
   const fc = (listas || []).filter(l => l.tipo === 'funcao').map(l => [l.valor, l.label || l.valor]);
   _devFuncoes = FUNCOES_DEFAULT_DEV.concat(fc);
   _devComps = (listas || []).filter(l => l.tipo === 'competencia').map(l => [l.valor, l.label || l.valor]);
@@ -720,7 +726,7 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
   btnLote.title='Imprimir 1 boletim por membro (leve, sem quests)';
   btnLote.style.cssText='flex:none;font-family:Oxanium,sans-serif;font-weight:700;font-size:11px;padding:0 10px;border-radius:8px;cursor:pointer;background:transparent;border:1px solid var(--gold-dim);color:var(--gold-light);';
   btnLote.onclick = gerarPanoramasLote;
-  filtros.append(busca, selNivel, btnLote); card.appendChild(filtros);
+  filtros.append(busca, selNivel, btnLote);mapaSec.insertBefore(filtros,matrizBox);
   const list = document.createElement('div'); card.appendChild(list);
   const LIGAS = LIGAS_DEV;
   const mk = (txt, primary, onClick) => {
@@ -763,10 +769,7 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
     row.append(top, btns); return row;
   }
   function desenha() {
-    list.textContent = ''; const q = busca.value.trim().toLowerCase(); const nf = selNivel.value;
-    const filtrados = _devMembros.filter(m =>
-      (!q || semAcento(m.nome).includes(semAcento(q)) || semAcento(m.apelido).includes(semAcento(q))) &&
-      (!nf || (m.nivel || 'aspirante') === nf));
+    list.textContent='';const filtrados=membrosDevVisiveis();
     let algum = false;
     LIGAS.forEach(([label, niveis]) => {
       const membros = filtrados.filter(m => niveis.includes(m.nivel || 'aspirante'));
@@ -777,7 +780,7 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
     });
     if (!algum) { const e = document.createElement('div'); e.style.cssText = 'color:var(--text-muted);font-size:13px;font-style:italic;padding:10px 0;'; e.textContent = 'Nenhum membro encontrado.'; list.appendChild(e); }
   }
-  busca.oninput = ()=>{estadoJornada.busca=busca.value;desenha()};selNivel.onchange=()=>{estadoJornada.nivel=selNivel.value;desenha()}; desenha();
+  busca.oninput = ()=>{estadoJornada.busca=busca.value;desenha();_redrawMatriz();_redrawCobertura()};selNivel.onchange=()=>{estadoJornada.nivel=selNivel.value;desenha();_redrawMatriz();_redrawCobertura()}; desenha();
   main.appendChild(card);
   // gerir a LISTA de competências (movida do Config)
   const hr = document.createElement('div'); hr.style.cssText = 'border-top:1px solid var(--border-wine);margin:14px 0 10px;'; main.appendChild(hr);

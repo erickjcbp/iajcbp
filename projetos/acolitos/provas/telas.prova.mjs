@@ -1764,7 +1764,7 @@ async function provaAvisaQuandoATravaAnulaAMarcacao(provas) {
     await abrirFuncoesEditor(gente.find(m => m.id === 'm-nova')); await esperar(150);
     const cardDe = (rotulo) => [...document.querySelectorAll('.hab-card')]
       .find(c => (c.querySelector('.hab-nome') || {}).textContent === rotulo);
-    const selVela = cardDe('Vela').querySelector('.hab-sel');
+    const selVela = cardDe('Vela').querySelector('select.hab-sel');
     selVela.value = 'nao_treinado'; selVela.onchange();
     out.depoisDeDesmarcar = getComputedStyle(avisoDoCard('vela')).display !== 'none';
     selVela.value = 'apto'; selVela.onchange();
@@ -1780,7 +1780,7 @@ async function provaAvisaQuandoATravaAnulaAMarcacao(provas) {
     const modalCob = [...document.querySelectorAll('.modal-overlay.open')].pop();
     out.cobertura = [...modalCob.querySelectorAll('.hab-aviso')]
       .filter(e => getComputedStyle(e).display !== 'none').map(e => e.textContent.trim());
-    out.coberturaPessoas = modalCob.querySelectorAll('.hab-sel').length;
+    out.coberturaPessoas = modalCob.querySelectorAll('select.hab-sel').length;
     fechar(); await esperar(40);
 
     // (3) Matriz completa → a célula da tabela. Não há onde escrever, então avisa por recado.
@@ -2164,8 +2164,12 @@ async function provaChamadaFiltra(provas) {
 
       // Fix3: o substituto escolhido tem de sobreviver a uma troca de filtro — é a razão
       // dada para o filtro ESCONDER linhas em vez de redesenhar a tela.
-      const subSel = document.querySelector('[data-escala-id="es1"] .sub-sel');
-      subSel.value = 'm4'; subSel.dispatchEvent(new Event('change')); await esperar(30);
+      const subSel = document.querySelector('[data-escala-id="es1"] select.sub-sel');
+      subSel.previousElementSibling.querySelector('.app-select-trigger').click();
+      await esperar(30);
+      const reserva = [...document.querySelectorAll('.app-select-option')].find(b => b.textContent === 'Duda Reserva');
+      if (!reserva) throw new Error('substituto elegível não está no menu do app');
+      reserva.click(); await esperar(30);
       out.substitutoEscolhido = substitutos['es1'];
       await escolher('#filtro-chamada', 'Presentes');
       out.presentes = visiveis();
@@ -2174,9 +2178,9 @@ async function provaChamadaFiltra(provas) {
       out.botoesVisiveisComFiltro = [...document.querySelectorAll('[data-escala-id]')]
         .filter(b => b.style.display !== 'none')
         .reduce((n, b) => n + b.querySelectorAll('.r-btn').length, 0);
-      out.substitutoSelectDepoisDoFiltro = document.querySelector('[data-escala-id="es1"] .sub-sel').value;
+      out.substitutoSelectDepoisDoFiltro = document.querySelector('[data-escala-id="es1"] select.sub-sel').value;
       await tirar('#filtro-chamada');
-      out.substitutoSelectDepoisDeLimpar = document.querySelector('[data-escala-id="es1"] .sub-sel').value;
+      out.substitutoSelectDepoisDeLimpar = document.querySelector('[data-escala-id="es1"] select.sub-sel').value;
       out.substitutoObjetoDepoisDeLimpar = substitutos['es1'];
 
       // Fix1: a "Situação" descreve UMA missa, não uma preferência. Deixamos o filtro
@@ -3301,7 +3305,9 @@ async function provaTesourariaVinculaARetiro(provas) {
 
   // 1) a lista mostra o vínculo e filtra
   const a = await provas.abrir('tesouraria.html', { papel: PAPEIS.equipe, tabelas: { acolitos_financeiro: { data: fin }, acolitos_retiro_areas: { data: areas }, acolitos_listas: { data: [] } },
-    avaliar: lerLista });
+    avaliar: `const sp = document.getElementById('splash'); if (sp) sp.remove();
+      document.querySelector('#main-content .app-select-trigger').click();
+      return document.getElementById('main-content').innerText + '\\n' + document.querySelector('.app-select-menu').innerText;` });
   exigir(/Retiro: Retiro de Advento 2026/.test(a.avaliado || ''), 'o lançamento vinculado mostra o retiro na linha', (a.avaliado || '').slice(0, 400));
   exigir(/Sem retiro vinculado/.test(a.avaliado || '') && /Formação: Formação de coroinhas/.test(a.avaliado || ''), 'existe o filtro por retiro/formação', (a.avaliado || '').slice(0, 500));
 
@@ -3441,7 +3447,8 @@ const filtro = process.argv[2] || null;
 const provas = await iniciarProvas();
 const comecou = Date.now();
 try {
-  if (filtro === '--retiros') { await provaRetiros(provas); await provaTesourariaVinculaARetiro(provas); await provaEquipesDoRetiro(provas); await provaIdentidadeUploadEFonte(provas); }   // só a prova da aba Retiros
+  if (filtro === '--seletores') { await provaChamadaFiltra(provas); await provaTesourariaVinculaARetiro(provas); await provaAvisaQuandoATravaAnulaAMarcacao(provas); }
+  else if (filtro === '--retiros') { await provaRetiros(provas); await provaTesourariaVinculaARetiro(provas); await provaEquipesDoRetiro(provas); await provaIdentidadeUploadEFonte(provas); }   // só a prova da aba Retiros
   else await provaFumaca(provas, filtro);
   if (!filtro) {
     await provaBarraAcendeSecao(provas);

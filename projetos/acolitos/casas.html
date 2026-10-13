@@ -65,7 +65,7 @@ async function init() {
 async function load() {
   const [cs, ms] = await Promise.all([
     sb.from('acolitos_casas').select('*').order('ordem'),
-    sb.from('acolitos_membros').select('id,nome,apelido,foto_url,nivel,casa_id,eh_equipe,setores,user_id').eq('status','ativo').order('nome'),
+    sb.from('acolitos_membros').select('id,nome,apelido,foto_url,nivel,casa_id,eh_equipe,setores,user_id,serve').eq('status','ativo').order('nome'),
   ]);
   casas = cs.data || []; membros = ms.data || [];
   const { data: mod } = await sb.from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
@@ -85,7 +85,7 @@ function render() {
   const subt = document.createElement('div'); subt.style.cssText = 'font-family:Sora,sans-serif;font-size:12px;color:var(--gold-light);letter-spacing:1px;text-transform:uppercase;margin:22px 0 10px;'; subt.textContent = 'Casas dos membros'; main.appendChild(subt);
 
   casas.filter(c => c.tipo !== 'equipe').forEach(casa => {
-    const doCasa = membros.filter(m => m.casa_id === casa.id);
+    const doCasa = membros.filter(m => m.casa_id === casa.id && m.serve!==false);
     const box = document.createElement('div'); box.className = 'casa-box'; box.style.setProperty('--c', casa.cor || '#8a6a24');
     const hd = document.createElement('div'); hd.className = 'casa-hd';
     hd.appendChild(brasaoEl(casa.slug, 52));
@@ -111,7 +111,7 @@ function render() {
     main.appendChild(box);
   });
 
-  const semCasa = membros.filter(m => !m.casa_id).length;
+  const semCasa = membros.filter(m => !m.casa_id && m.serve!==false).length;
   const nota = document.createElement('p'); nota.style.cssText = 'font-size:12px;color:var(--text-muted);text-align:center;margin-top:6px;'; nota.textContent = semCasa + ' membro(s) ainda sem casa.'; main.appendChild(nota);
 }
 
@@ -250,7 +250,7 @@ function abrirAddMembro(casa) {
   function popList() {
     const q = busca.value.toLowerCase();
     list.textContent = '';
-    membros.filter(m => m.casa_id !== casa.id && semAcento(m.nome).includes(semAcento(q))).slice(0, 60).forEach(m => {
+    membros.filter(m => m.casa_id !== casa.id && (casa.tipo==='equipe'||m.serve!==false) && semAcento(m.nome).includes(semAcento(q))).slice(0, 60).forEach(m => {
       const row = document.createElement('div'); row.className = 'pick-row';
       row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 30, { nivelSlug: m.nivel||'aspirante', casaSlug: casaSlugDe(m) }));
       const info = document.createElement('div'); info.style.flex = '1';

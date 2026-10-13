@@ -258,6 +258,12 @@ async function initModulo(requiredRoles = null, opts = null) {
     }
   }
 
+  // Quem não serve permanece na coordenação, inclusive ao abrir um link de Jornada.
+  if (typeof podeAbrirPaginaServico === 'function' && !podeAbrirPaginaServico(location.pathname, membro?.serve)) {
+    localStorage.setItem('nav-mode','coordenacao');
+    location.replace('index.html');return null;
+  }
+
   // etapa atual do CRM do membro — gateia "Complete seu cadastro" (só após aprovado)
   if (membro && membro.id) {
     const { data: _crm } = await sb.from('acolitos_crm')

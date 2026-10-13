@@ -130,6 +130,11 @@
     .rod-item:first-of-type { border-top:0; }
     .rod-item-nome { flex:1; min-width:0; line-height:1.2; }
     .rod-item-nome b { display:block; font-size:12.5px; }
+    .rod-item-titulo { display:flex; align-items:center; gap:4px; }
+    .rod-item-titulo b { min-width:0; overflow-wrap:anywhere; }
+    .rod-editar { flex:none; display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid var(--border-wine); border-radius:5px; background:var(--surface); color:var(--gold-light); cursor:pointer; }
+    .rod-editar:hover, .rod-editar:focus-visible { background:var(--surface2); outline:2px solid var(--gold); outline-offset:1px; }
+    @media(max-width:600px) { .rod-editar { width:44px; height:44px; } .rod-item .btn-sm { min-height:44px; } }
     .rod-item-nome span { font-size:10.5px; color:var(--text-muted); }
     .rod-item .btn-sm { flex:none; white-space:nowrap; padding:6px 10px; font-size:11px; }
     .rodizio-susp { display:inline-block; margin-top:3px; padding:1px 6px; border-radius:2px; font-size:9px; letter-spacing:.5px; text-transform:uppercase; background:color-mix(in srgb, var(--red-soft) 28%, transparent); color:var(--text); }
@@ -635,8 +640,12 @@ function desenharAba(a){
 // loadDados() já zera rodizioLinhas sozinho, então a aba atual (seja qual for) relê os
 // dados certos na hora de repintar.
 async function aoFichaRapidaMudou(){
+  const y=window.scrollY;
+  const rolagens=[...document.querySelectorAll('.planilha-wrap')].map(el=>({top:el.scrollTop,left:el.scrollLeft}));
   await loadDados();
   await desenharAba(abaAtual);
+  document.querySelectorAll('.planilha-wrap').forEach((el,i)=>{if(rolagens[i]){el.scrollTop=rolagens[i].top;el.scrollLeft=rolagens[i].left;}});
+  window.scrollTo({top:y,behavior:'instant'});
 }
 async function setAba(a) {
   abaAtual = ABAS.indexOf(a)>=0 ? a : 'cards';   // aba inventada cai no operacional, não em tela branca
@@ -1782,7 +1791,7 @@ function _freqOrdena(a){ return a.sort((x,y)=>{ if(x.taxa==null&&y.taxa==null) r
 async function freqPDF(){
   const de=document.getElementById('freq-de').value, ate=document.getElementById('freq-ate').value;
   if(de&&ate&&de>ate){ toast('A data inicial é maior que a final.','error'); return; }
-  let rows; try { rows=await _freqDados(de,ate); }
+  let rows; try { rows=frequenciaExportVisivel(await _freqDados(de,ate)); }
   catch(e){ console.error('frequência falhou', e); toast('Não consegui ler a frequência do período. Tente de novo.','error'); return; }
   const ordem=['matriz','santo_antonio','outra']; const grp={matriz:[],santo_antonio:[],outra:[]};
   rows.forEach(r=>grp[ordem.includes(r.m.comunidade)?r.m.comunidade:'outra'].push(r));
@@ -1800,7 +1809,7 @@ async function freqPDF(){
 async function freqCSV(){
   const de=document.getElementById('freq-de').value, ate=document.getElementById('freq-ate').value;
   if(de&&ate&&de>ate){ toast('A data inicial é maior que a final.','error'); return; }
-  let rows; try { rows=await _freqDados(de,ate); }
+  let rows; try { rows=frequenciaExportVisivel(await _freqDados(de,ate)); }
   catch(e){ console.error('frequência falhou', e); toast('Não consegui ler a frequência do período. Tente de novo.','error'); return; }
   _freqOrdena(rows);
   const fmtD=d=>d?new Date(d+'T00:00:00').toLocaleDateString('pt-BR'):'';
@@ -1923,7 +1932,7 @@ function configFiltroRodizio(){
     busca: { placeholder:'Buscar nome...', campos: l => [l.membro.nome, l.membro.apelido] },
     desempate: l => l.membro.nome,   // o padrão procura item.nome, e aqui o nome mora um andar abaixo
   };
-  cfg.contar = (e) => FiltroLista.aplicar(rodizioLinhas||[], e, cfg).length;
+  cfg.contar = (e) => FiltroLista.aplicar(rodizioBaseVisivel(), e, cfg).length;
   cfg.suavizarAltura = 'view-rodizio';
   return cfg;
 }
@@ -1990,7 +1999,7 @@ function desenharRodizio(){
   bDet.onclick=()=>{ rodizioDetalhes=!rodizioDetalhes; bDet.textContent = rodizioDetalhes ? '➖ Esconder detalhes' : '➕ Ver detalhes'; pintarRodizio(lista); };
   acoes.append(bDet,bPdf,bCsv,bPer); el.appendChild(acoes);
 
-  pintarRodizio(lista);
+  rodizioRepintar();
 }
 
 // ── Histórico semanal (bolinhas) ────────────────────────────────────────────
@@ -2072,16 +2081,22 @@ function aplicarSuspensaoNoAusMap(refazer){
 function pintarPainelRodizio(el){
   el.textContent=''; el.className='';
   const hoje=hojeLocal();
-  const faltantes=RodizioCore.maisFaltantes(rodizioLinhas, hoje, 8);
-  const suspensos=(rodizioLinhas||[]).filter(l=>RodizioCore.suspensoNaData(l.membro, hoje))
+  const linhas=rodizioVisivel();
+  const faltantes=RodizioCore.maisFaltantes(linhas, hoje, 8);
+  const suspensos=linhas.filter(l=>RodizioCore.suspensoNaData(l.membro, hoje))
     .sort((a,b)=> a.membro.suspenso_ate.localeCompare(b.membro.suspenso_ate));
 
   const item=(l, linha2, btn)=>{
     const d=document.createElement('div'); d.className='rod-item';
     const n=document.createElement('div'); n.className='rod-item-nome';
     const b=document.createElement('b'); b.textContent=l.membro.apelido||l.membro.nome;
+    const titulo=document.createElement('div');titulo.className='rod-item-titulo';
+    const editar=document.createElement('button');editar.type='button';editar.className='rod-editar';editar.textContent='✏️';
+    editar.title='Editar rápido: '+l.membro.nome;editar.setAttribute('aria-label',editar.title);
+    editar.onclick=()=>abrirFichaRapida(l.membro,{aoMudar:aoFichaRapidaMudou});
+    titulo.append(b,editar);
     const sp=document.createElement('span'); sp.textContent=linha2;
-    n.append(b,sp); d.append(n,btn); return d;
+    n.append(titulo,sp); d.append(n,btn); return d;
   };
 
   if(faltantes.length){
@@ -2107,9 +2122,9 @@ function pintarPainelRodizio(el){
 }
 
 // O que está NA TELA agora — é isto que o PDF e o CSV levam, não a lista inteira.
-function rodizioVisivel(){
-  return filtroRodizio ? filtroRodizio.aplicar(rodizioLinhas||[]) : (rodizioLinhas||[]);
-}
+function rodizioBaseVisivel(){const com=document.getElementById('filtro-com')?.value;return (rodizioLinhas||[]).filter(l=>!com||l.membro.comunidade===com);}
+function rodizioVisivel(){const base=rodizioBaseVisivel();return filtroRodizio?filtroRodizio.aplicar(base):base;}
+function frequenciaExportVisivel(rows){const com=document.getElementById('filtro-com')?.value;const ids=abaAtual==='rodizio'&&filtroRodizio?new Set(rodizioVisivel().map(l=>l.membro.id)):null;return rows.filter(r=>(!com||r.m.comunidade===com)&&(!ids||ids.has(r.m.id)));}
 
 function pintarRodizio(lista){
   lista.textContent='';

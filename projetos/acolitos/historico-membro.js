@@ -3,6 +3,11 @@ function duracaoPastoral(dias){
   const anos=Math.floor(dias/365.2425), meses=Math.floor((dias-anos*365.2425)/30.436875);
   return [anos?anos+(anos===1?' ano':' anos'):'',meses?meses+(meses===1?' mês':' meses'):''].filter(Boolean).join(' e ') || dias+(dias===1?' dia':' dias');
 }
+function tempoRegistradoPastoral(createdAt, hoje=hojeLocal()){
+  const inicio=createdAt?new Date(createdAt):null;
+  const dias=inicio && !isNaN(inicio.getTime())?Math.floor((new Date(hoje+'T23:59:59')-inicio)/86400000):null;
+  return dias===null || dias<0?'—':duracaoPastoral(dias);
+}
 const RODIZIO_SEMANAS_HISTORICO = 16;
 function _horLabel(ev){
   var d = formatDate(ev.data).slice(0,5);
@@ -45,9 +50,8 @@ async function abrirHistoricoMembro(m, opts = {}){
   titulo.textContent='📅 Últimas '+RODIZIO_SEMANAS_HISTORICO+' semanas — '+(m.apelido||m.nome);
   md.appendChild(titulo);
   const tempo=document.createElement('p'); tempo.className='historico-tempo'; tempo.style.cssText='font-size:13px;line-height:1.5;margin:8px 0;color:var(--text);';
-  const inicio=m.created_at?new Date(m.created_at):null;
-  const dias=inicio && !isNaN(inicio.getTime())?Math.floor((new Date(hojeLocal()+'T23:59:59')-inicio)/86400000):null;
-  tempo.textContent=dias===null || dias<0?'Tempo na pastoral: data não registrada.':'Tempo registrado na pastoral: '+duracaoPastoral(dias)+' (cadastro em '+formatDate(m.created_at)+').';
+  const duracao=tempoRegistradoPastoral(m.created_at);
+  tempo.textContent=duracao==='—'?'Tempo na pastoral: data não registrada.':'Tempo registrado na pastoral: '+duracao+' (cadastro em '+formatDate(m.created_at)+').';
   const nota=document.createElement('p'); nota.style.cssText='font-size:11px;line-height:1.5;color:var(--text-muted);';nota.textContent='Contado desde o cadastro no app. A data de ingresso na pastoral ainda não está registrada.';
   md.append(tempo,nota);
   const grid=document.createElement('div'); grid.className='historico-semanas'; grid.style.cssText='display:flex;flex-wrap:wrap;margin:6px -2px 4px;';
