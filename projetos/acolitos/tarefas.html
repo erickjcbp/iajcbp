@@ -1138,6 +1138,7 @@ function renderAbas(main) {
 }
 
 function render() {
+  const posicao={left:scrollX,top:scrollY,behavior:'instant'};
   document.querySelectorAll('.fab').forEach(x => x.remove()); // evita FAB duplicado a cada redesenho
   const main = document.getElementById('main-content'); main.textContent = '';main.classList.add('tf-workspace');
   const t = document.createElement('h1'); t.className = 'page-title'; t.textContent = 'Tarefas dos times';
@@ -1168,6 +1169,7 @@ function render() {
   fab.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 5v14 M5 12h14"/></svg><span>Nova tarefa</span>'; // SVG hardcoded — seguro
   fab.onclick = () => abrirFormTarefa();
   document.body.appendChild(fab);
+  window.scrollTo(posicao);
 }
 
 async function init() {

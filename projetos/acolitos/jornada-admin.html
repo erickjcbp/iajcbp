@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="matriz-lote.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
   <link rel="icon" href="icon-192.png">
@@ -68,6 +69,7 @@
 <script src="shared.js"></script>
 <script src="ficha-rapida.js"></script>
 <script src="historico-membro.js"></script>
+<script src="matriz-lote.js"></script>
 <script>
 const NIVEIS_SLUGS = () => NIVEIS.map(n => n.slug);
 let ctx = null;
@@ -81,6 +83,7 @@ async function init() {
 }
 
 async function renderAll() {
+  const estado=capturarEstadoJornada();
   const main = document.getElementById('main');
   const box = document.createElement('div');
   const title = document.createElement('h1'); title.className = 'page-title'; title.textContent = 'Administrar Jornada'; box.appendChild(title);
@@ -112,7 +115,8 @@ async function renderAll() {
     await renderSemanaAdmin(box);
     await renderCriarQuest(box);
   }
-  main.textContent = ''; main.appendChild(box);   // troca atômica: só zera o main quando tudo está pronto
+  box.style.animation='none';main.textContent = ''; main.appendChild(box);
+  atualizarSelecaoMatriz();restaurarEstadoJornada(estado);   // troca atômica: só zera o main quando tudo está pronto
 }
 
 // As filas do dia: o que está esperando uma decisão da coordenação.
@@ -591,6 +595,7 @@ function gruposPorNivel(){
   return NIVEIS.map(n=>[n.label,[n.slug]]).concat(extras.length?[['Nível não cadastrado',extras]]:[]);
 }
 function renderMatriz(container){
+  const pos=container.querySelector('.matriz-scroll');const scrollLeft=pos?.scrollLeft||0,scrollTop=pos?.scrollTop||0;
   container.textContent='';
   atrasoMapa=null;
   const resAt=AtrasoFuncao.resumo(mapaDeAtrasos());
@@ -599,13 +604,13 @@ function renderMatriz(container){
   avisoAt.textContent = resAt.marcas
     ? '? = já devia ser Apto nesta função (a maioria do mesmo nível já é). Hoje: '+resAt.marcas+' pontos em '+resAt.pessoas+' pessoas. Toque no quadradinho para ajustar.'
     : 'Nenhum ? hoje: ninguém está atrás dos colegas do mesmo nível. Toque num quadradinho para ajustar.';
-  container.appendChild(avisoAt);
+  container.appendChild(avisoAt);container.appendChild(barraLoteMatriz());
   // Cabeçalho fixo (topo) + nome fixo (esquerda) juntos: canto precisa ficar por cima dos dois
   // eixos (z-index mais alto), senão a coluna de função passa por cima dele ao rolar.
-  const wrap=document.createElement('div'); wrap.style.cssText='overflow:auto;max-height:65vh;border:1px solid var(--border);border-radius:8px;';
-  const tbl=document.createElement('table'); tbl.style.cssText='border-collapse:collapse;font-size:11px;min-width:100%;';
+  const wrap=document.createElement('div'); wrap.className='matriz-scroll';wrap.style.cssText='overflow:auto;max-height:65vh;border:1px solid var(--border);border-radius:8px;';
+  const tbl=document.createElement('table');tbl.className='matriz-table';tbl.style.cssText='border-collapse:collapse;font-size:11px;min-width:100%;';
   const thead=document.createElement('thead'); const htr=document.createElement('tr');
-  const corner=document.createElement('th'); corner.textContent='Membro';
+  const corner=document.createElement('th'); corner.append(checkboxMatriz('Selecionar todos os membros',_devMembros.map(m=>m.id)),document.createTextNode('Membro'));
   corner.style.cssText='position:sticky;left:0;top:0;z-index:3;background:var(--surface2);color:var(--gold);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);min-width:120px;';
   htr.appendChild(corner);
   const ageHead=document.createElement('th'); ageHead.textContent='Idade'; ageHead.style.cssText='position:sticky;top:0;background:var(--surface2);padding:8px;z-index:2;'; htr.appendChild(ageHead);
@@ -616,23 +621,23 @@ function renderMatriz(container){
     const membros=_devMembros.filter(m=>slugs.includes(m.nivel||'aspirante'));
     if(!membros.length) return;
     const sep=document.createElement('tr'); const sc=document.createElement('td'); sc.colSpan=_devFuncoes.length+2;
-    sc.textContent=lglabel+' · '+membros.length; sc.style.cssText='position:sticky;left:0;background:var(--surface);color:var(--gold);font-family:Sora,sans-serif;font-weight:700;padding:6px 8px;border-bottom:1px solid var(--border-wine);';
+    sc.append(checkboxMatriz('Selecionar '+lglabel,membros.map(m=>m.id)),document.createTextNode(lglabel+' · '+membros.length)); sc.style.cssText='position:sticky;left:0;background:var(--surface);color:var(--gold);font-family:Sora,sans-serif;font-weight:700;padding:6px 8px;border-bottom:1px solid var(--border-wine);';
     sep.appendChild(sc); tbody.appendChild(sep);
     membros.forEach(m=>{
       const tr=document.createElement('tr');
-      const nmtd=document.createElement('td'); const nome=document.createElement('span'); nome.textContent=m.apelido||m.nome;
+      const nmtd=document.createElement('td'); const nome=document.createElement('span');nome.className='matriz-member-name';nome.title=m.nome;nome.textContent=m.apelido||m.nome;
       const acoes=document.createElement('div');acoes.style.cssText='display:flex;gap:4px;';
-      const editar=document.createElement('button');editar.type='button';editar.className='btn-sm gray';editar.textContent='✏️';editar.title='Editar ficha de '+(m.apelido||m.nome);editar.setAttribute('aria-label',editar.title);editar.style.cssText='min-width:44px;min-height:44px;';
+      const editar=document.createElement('button');editar.type='button';editar.className='matriz-action';editar.textContent='✏️';editar.title='Editar ficha de '+(m.apelido||m.nome);editar.setAttribute('aria-label',editar.title);
       editar.onclick=()=>abrirFichaRapida(m,{aoMudar:()=>renderAll()});
-      const calendario=document.createElement('button');calendario.type='button';calendario.className='btn-sm gray';calendario.textContent='📅';calendario.title='Ver últimas missas de '+(m.apelido||m.nome);calendario.setAttribute('aria-label',calendario.title);calendario.style.cssText='min-width:44px;min-height:44px;';calendario.onclick=async()=>{calendario.disabled=true;try{await abrirHistoricoMembro(m)}finally{calendario.disabled=false}};
-      acoes.append(editar,calendario);nmtd.append(nome,acoes);
-      nmtd.style.cssText='position:sticky;left:0;z-index:1;background:var(--surface2);color:var(--text);padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;';
+      const calendario=document.createElement('button');calendario.type='button';calendario.className='matriz-action';calendario.textContent='📅';calendario.title='Ver últimas missas de '+(m.apelido||m.nome);calendario.setAttribute('aria-label',calendario.title);calendario.onclick=async()=>{calendario.disabled=true;try{await abrirHistoricoMembro(m)}finally{calendario.disabled=false}};
+      acoes.append(editar,calendario);const member=document.createElement('div');member.className='matriz-member';member.append(checkboxMatriz('Selecionar '+(m.apelido||m.nome),m.id),nome,acoes);nmtd.appendChild(member);
+      nmtd.style.cssText='position:sticky;left:0;z-index:1;background:var(--surface2);color:var(--text);padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;';
       tr.appendChild(nmtd);
       const age=document.createElement('td'); const anos=_idadeDe(m.data_nascimento); age.textContent=anos?anos+' anos':'—'; age.style.cssText='padding:8px;white-space:nowrap;text-align:center;border-bottom:1px solid var(--border);'; tr.appendChild(age);
       _devFuncoes.forEach(([val])=>{
         const cur=(habAll[m.id]||{})[val]||'nao_treinado';
         const td=document.createElement('td'); td.style.cssText='text-align:center;border-bottom:1px solid var(--border);padding:0;';
-        const cell=document.createElement('div'); cell.style.cssText='width:44px;height:44px;margin:2px auto;border-radius:4px;cursor:pointer;background:'+(PROF_COR[cur]==='transparent'?'transparent':PROF_COR[cur])+';border:1px solid var(--border);';
+        const cell=document.createElement('div');cell.className='matriz-prof';cell.style.cssText='margin:2px auto;border-radius:4px;cursor:pointer;background:'+(PROF_COR[cur]==='transparent'?'transparent':PROF_COR[cur])+';border:1px solid var(--border);';
         cell.title=(m.apelido||m.nome)+' — '+PROF_LABEL[cur];
         pintarAtraso(cell, m, val, cur);
         cell.onclick=()=>editarCelula(td, cell, m, val);
@@ -641,7 +646,7 @@ function renderMatriz(container){
       tbody.appendChild(tr);
     });
   });
-  tbl.appendChild(tbody); wrap.appendChild(tbl); container.appendChild(wrap);
+  tbl.appendChild(tbody); wrap.appendChild(tbl); container.appendChild(wrap);wrap.scrollLeft=scrollLeft;wrap.scrollTop=scrollTop;queueMicrotask(atualizarSelecaoMatriz);
   // A coluna cabe em 4 letras; o nome da função, não. Sem esta legenda, "Cred" e "Cerim"
   // ficam adivinhação — e quem lê a matriz é justamente quem vai decidir quem formar.
   const legenda=document.createElement('div');
@@ -654,7 +659,7 @@ function editarCelula(td, cell, m, funcao){
   const cur=(habAll[m.id]||{})[funcao]||'nao_treinado';
   const sel=document.createElement('select'); sel.className='hab-sel'; sel.style.cssText='font-size:10px;width:auto;';
   PROF_NIVEIS.forEach(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=PROF_LABEL[n]; if(n===cur)o.selected=true; sel.appendChild(o); });
-  cell.style.display='none'; td.appendChild(sel); sel.focus();
+  cell.style.display='none'; td.appendChild(sel);
   const fechar=()=>{ if(sel.parentNode) sel.remove(); cell.style.display=''; };
   sel.onchange=async()=>{ const ok=await salvarProficiencia(m.id,funcao,sel.value); if(ok){ const c=PROF_COR[sel.value]; cell.style.background=(c==='transparent'?'transparent':c); cell.title=(m.apelido||m.nome)+' — '+PROF_LABEL[sel.value];
     atrasoMapa=null; pintarAtraso(cell, m, funcao, sel.value);
@@ -694,22 +699,23 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
   // A MATRIZ COMPLETA É A PRIMEIRA COISA (pedido do dono, 01/10/2026) e já vem aberta; o
   // resumo por função desce para baixo dela, recolhível.
   const matrizBox = document.createElement('div'); matrizBox.style.cssText = 'margin-top:4px;';
-  const resumoBox = document.createElement('div'); resumoBox.style.display = 'none';
+  const resumoBox = document.createElement('div'); resumoBox.style.display = estadoJornada.resumo?'':'none';
   const toggle = document.createElement('div'); toggle.style.cssText = 'cursor:pointer;font-family:Sora,sans-serif;font-weight:700;font-size:12px;color:var(--gold-light);margin-top:12px;';
-  let resumoAberto = false;
+  let resumoAberto = estadoJornada.resumo;
   const setToggle = () => { toggle.textContent = (resumoAberto ? '▾' : '▸') + ' Cobertura por função (onde faltam pessoas)'; };
   _redrawCobertura = () => renderCobertura(resumoBox, abrirCoberturaFuncao);
   _redrawMatriz = () => renderMatriz(matrizBox);
-  toggle.onclick = () => { resumoAberto = !resumoAberto; resumoBox.style.display = resumoAberto ? '' : 'none'; setToggle(); };
+  toggle.onclick = () => { resumoAberto = !resumoAberto;estadoJornada.resumo=resumoAberto; resumoBox.style.display = resumoAberto ? '' : 'none'; setToggle(); };
   setToggle(); _redrawCobertura(); renderMatriz(matrizBox);
   mapaSec.append(matrizBox, toggle, resumoBox); main.appendChild(mapaSec);
   if (depoisDoMapa) await depoisDoMapa(main);
   const card = document.createElement('div'); card.className = 'mx-card';
   const filtros = document.createElement('div'); filtros.style.cssText = 'display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;';
-  const busca = document.createElement('input'); busca.className = 'form-input'; busca.placeholder = 'buscar membro…'; busca.style.cssText = 'flex:2;min-width:140px;';
-  const selNivel = document.createElement('select'); selNivel.className = 'form-input'; selNivel.style.cssText = 'flex:1;min-width:130px;';
+  const busca = document.createElement('input'); busca.id='dev-busca';busca.value=estadoJornada.busca;busca.className = 'form-input'; busca.placeholder = 'buscar membro…'; busca.style.cssText = 'flex:2;min-width:140px;';
+  const selNivel = document.createElement('select'); selNivel.id='dev-nivel';selNivel.className = 'form-input'; selNivel.style.cssText = 'flex:1;min-width:130px;';
   const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Todos os níveis'; selNivel.appendChild(o0);
   (typeof NIVEIS !== 'undefined' ? NIVEIS : []).forEach(n => { const o = document.createElement('option'); o.value = n.slug; o.textContent = n.label; selNivel.appendChild(o); });
+  selNivel.value=estadoJornada.nivel;
   const btnLote = document.createElement('button'); btnLote.type='button'; btnLote.textContent='🖨 Boletins';
   btnLote.title='Imprimir 1 boletim por membro (leve, sem quests)';
   btnLote.style.cssText='flex:none;font-family:Oxanium,sans-serif;font-weight:700;font-size:11px;padding:0 10px;border-radius:8px;cursor:pointer;background:transparent;border:1px solid var(--gold-dim);color:var(--gold-light);';
@@ -771,7 +777,7 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
     });
     if (!algum) { const e = document.createElement('div'); e.style.cssText = 'color:var(--text-muted);font-size:13px;font-style:italic;padding:10px 0;'; e.textContent = 'Nenhum membro encontrado.'; list.appendChild(e); }
   }
-  busca.oninput = desenha; selNivel.onchange = desenha; desenha();
+  busca.oninput = ()=>{estadoJornada.busca=busca.value;desenha()};selNivel.onchange=()=>{estadoJornada.nivel=selNivel.value;desenha()}; desenha();
   main.appendChild(card);
   // gerir a LISTA de competências (movida do Config)
   const hr = document.createElement('div'); hr.style.cssText = 'border-top:1px solid var(--border-wine);margin:14px 0 10px;'; main.appendChild(hr);

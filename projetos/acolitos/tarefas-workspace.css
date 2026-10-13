@@ -1,11 +1,5 @@
 /* As quatro visões compartilham a mesa de trabalho e as mesmas células. */
-.main.tf-workspace {
-  --surface:#202637;--surface2:#292f41;--surface3:#343c50;--border:#394257;--border-wine:#394257;
-  --text:#f3f5fb;--text-muted:#b1bbce;--gold:#579bfc;--gold-light:#94bdff;--gold-dim:#426ca5;
-  --success-text:#80dfb6;--danger-text:#ff9daa;--focus-bg:#343c50;
-  background:#191f2d;min-height:calc(100vh - 180px);padding-bottom:100px;
-}
-html[data-theme=light] .main.tf-workspace {--surface:#fff;--surface2:#edf1f8;--surface3:#e4eaf4;--border:#d5dcea;--border-wine:#d5dcea;--text:#243148;--text-muted:#526079;--gold:#2863cf;--gold-light:#2863cf;--gold-dim:#b2c8f0;--success-text:#146647;--danger-text:#b32b42;--focus-bg:#e4eaf4;background:#f5f7fb;}
+.main.tf-workspace {min-height:calc(100vh - 180px);padding-bottom:100px;}
 .tf-workspace > * {animation:none;}
 .tf-workspace button,.tf-workspace .btn-sm,.tf-workspace .tf-time-tag,.tf-workspace .tf-col-head,.tf-workspace .view-tabs button {text-transform:none;letter-spacing:0;}
 .tf-workspace button,.tf-workspace select {min-height:44px;}
@@ -13,14 +7,14 @@ html[data-theme=light] .main.tf-workspace {--surface:#fff;--surface2:#edf1f8;--s
 .tf-workspace-heading {display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:10px;}
 .tf-workspace-heading .page-title {margin:0;font-size:23px;letter-spacing:0;text-transform:none;}
 .tf-workspace-heading .page-title::before,.tf-workspace-heading .page-title::after {display:none;}
-.tf-workspace .tf-create {background:#2863cf;color:#fff;border:1px solid #2863cf;border-radius:6px;padding:10px 16px;}
+.tf-workspace .tf-create {background:linear-gradient(165deg,var(--wine),var(--surface));color:var(--gold-light);border:1px solid var(--gold);border-radius:6px;padding:10px 16px;}
 .tf-workspace .view-tabs {background:transparent;border:0;border-bottom:1px solid var(--border);border-radius:0;padding:0;gap:20px;margin:18px 0;}
 .tf-workspace .view-tabs button {flex:0 1 auto;padding:10px 6px;border-radius:0;font-weight:500;}
 .tf-workspace .view-tabs button.on {background:none;box-shadow:none;border-bottom:3px solid var(--gold);color:var(--text);}
 .tf-toolbar {margin-bottom:20px;}
 .tf-workspace .tf-quadro {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;overflow:visible;padding:0;}
 .tf-workspace .tf-col {min-width:0;max-width:none;width:100%;border:0;border-radius:8px;padding:12px;background:var(--surface2);}
-.tf-col-afazer {--status-color:#b38938;}.tf-col-andamento {--status-color:#579bfc;}.tf-col-feita {--status-color:#35ae7f;}
+.tf-col-afazer {--status-color:var(--gold);}.tf-col-andamento {--status-color:#4a90c4;}.tf-col-feita {--status-color:var(--success);}
 .tf-workspace .tf-col-head {font-size:15px;color:var(--text);font-weight:600;padding:4px 2px 14px;border-top:3px solid var(--status-color);gap:10px;}
 .tf-workspace .tf-col-count {border-radius:5px;background:var(--surface3);font-size:12px;padding:3px 8px;}
 .tf-workspace .tf-col-body {gap:12px;min-height:140px;}
@@ -89,5 +83,5 @@ html[data-theme=light] .main.tf-workspace {--surface:#fff;--surface2:#edf1f8;--s
 
 .tf-workspace button {clip-path:none;}
 .tf-menu .tf-acoes-extra {position:fixed;width:180px;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:0 8px 30px #0004;z-index:100;}
-body:has(.tf-workspace)>.fab {background:#2863cf;border:0;color:#fff;box-shadow:0 4px 12px #0003;clip-path:none;}
+body:has(.tf-workspace)>.fab {background:linear-gradient(165deg,var(--wine),var(--surface));border:1px solid var(--gold);color:var(--gold-light);box-shadow:0 4px 12px #0003;clip-path:none;}
 .tf-workspace .tf-area-acoes .mini-add {border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text);font-size:12px;}

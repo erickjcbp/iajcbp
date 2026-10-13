@@ -3679,3 +3679,10 @@ function baixarCSV(nomeBase, linhas){
   }
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
 })();
+
+// Controles de escolha com a identidade do app, sem menu nativo do sistema.
+if (!document.querySelector('script[data-escolha-app]')) {
+  const escolhaScript = document.createElement('script');
+  escolhaScript.src = '/projetos/acolitos/escolha-app.js';
+  escolhaScript.dataset.escolhaApp = '1'; document.head.appendChild(escolhaScript);
+}
