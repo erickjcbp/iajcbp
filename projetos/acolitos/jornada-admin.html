@@ -664,17 +664,24 @@ function editarCelula(td, cell, m, funcao){
 }
 let _devMembros = [], _devFuncoes = [], _devComps = [];
 async function carregarDev() {
-  const [{ data: mems }, { data: listas }] = await Promise.all([
-    sb.from('acolitos_membros').select('id,nome,apelido,nivel,role,status,telefone,created_at,foto_url,comunidade,casa_id,data_nascimento,pode_outras_comunidades,suspenso_em,suspenso_ate,escalar_frequente,competencias_desenvolvidas,desenvolvimento_competencias').eq('status', 'ativo').order('nome'),
+  const [membrosRes, listasRes] = await Promise.all([
+    sb.from('acolitos_membros').select('id,nome,apelido,nivel,status,telefone,created_at,foto_url,comunidade,casa_id,data_nascimento,pode_outras_comunidades,suspenso_em,suspenso_ate,escalar_frequente,competencias_desenvolvidas,desenvolvimento_competencias').eq('status', 'ativo').order('nome'),
     sb.from('acolitos_listas').select('valor,label,tipo').in('tipo', ['funcao', 'competencia']),
   ]);
+  if (membrosRes.error || listasRes.error) throw membrosRes.error || listasRes.error;
+  const mems=membrosRes.data, listas=listasRes.data;
   _devMembros = mems || [];
   const fc = (listas || []).filter(l => l.tipo === 'funcao').map(l => [l.valor, l.label || l.valor]);
   _devFuncoes = FUNCOES_DEFAULT_DEV.concat(fc);
   _devComps = (listas || []).filter(l => l.tipo === 'competencia').map(l => [l.valor, l.label || l.valor]);
 }
 async function renderDesenvolvimento(main, depoisDoMapa) {
-  await carregarDev();
+  try { await carregarDev(); } catch(e) {
+    console.error('Evolução: carregar membros falhou',e);
+    const aviso=document.createElement('div');aviso.className='empty';aviso.textContent='Não foi possível carregar os membros da evolução. Tente novamente.';
+    const retry=document.createElement('button');retry.className='btn-sm gray';retry.textContent='Tentar novamente';retry.onclick=()=>renderAll();
+    main.append(aviso,retry);return;
+  }
   const head = document.createElement('h2'); head.style.cssText = 'font-family:Sora,sans-serif;font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 4px;'; head.textContent = '📈 Desenvolvimento'; main.appendChild(head);
   const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0 0 12px;'; sub.textContent = 'Funções = proficiência real de cada um (a desenvolver = abaixo de Apto). Competências = plano de desenvolvimento.'; main.appendChild(sub);
   // 🗺 Mapa de Cobertura — resumo por função (escassez) + matriz colapsável, com edição rápida
