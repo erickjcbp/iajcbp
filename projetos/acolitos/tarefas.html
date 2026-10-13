@@ -116,6 +116,45 @@
     .fab { position:fixed; right:16px; bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px); z-index:48; height:50px; padding:0 18px; border-radius:26px; border:1px solid var(--gold); background:linear-gradient(165deg, var(--wine), var(--surface)); color:var(--gold-light); font-family:'Sora',sans-serif; font-weight:700; font-size:14px; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 6px 22px rgba(0,0,0,.55), 0 0 16px var(--red-glow); }
     .fab svg { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2.2; stroke-linecap:round; }
     .tf-form label { display:block; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin:10px 0 4px; }
+
+    /* Mesa de trabalho: grupos por time e células alinhadas, com status em destaque. */
+    .tf-board-group { margin:20px 0; border-left:4px solid var(--cor-area); }
+    .tf-board-heading { display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 12px;color:var(--cor-area); }
+    .tf-board-heading h2 { margin:0;font-size:17px; }
+    .tf-board-heading span { font-size:12px;color:var(--text-muted); }
+    .tf-board-scroll { overflow-x:auto; }
+    .tf-board-table { width:100%;border-collapse:collapse;table-layout:fixed;min-width:860px;background:var(--surface); }
+    .tf-board-table th { text-align:left;font-size:12px;color:var(--text-muted);font-weight:500;background:var(--surface2);padding:12px;border:1px solid var(--border); }
+    .tf-board-table td { padding:8px 12px;border:1px solid var(--border);vertical-align:top;font-size:13px; }
+    .tf-board-table th:first-child { width:36%; }
+    .tf-board-table th:nth-child(2) { width:19%; }
+    .tf-board-table th:nth-child(3) { width:17%; }
+    .tf-board-table th:nth-child(4) { width:16%; }
+    .tf-board-table th:last-child { width:12%; }
+    .tf-board-table tr:hover td { background:var(--surface2); }
+    .tf-board-title { background:none;border:0;text-align:left;color:var(--text);font:inherit;font-weight:600;cursor:pointer;min-height:44px;width:100%;overflow-wrap:anywhere; }
+    .tf-board-status { width:100%;min-height:44px;border:0;border-radius:4px;padding:8px;font-size:14px;font-weight:600;cursor:pointer;color:#fff; }
+    .tf-board-status.afazer { background:#8b6520; }
+    .tf-board-status.andamento { background:#326bc1; }
+    .tf-board-status.feita { background:#237848; }
+    .tf-board-status option { color:var(--text);background:var(--surface); }
+    .tf-board-person { display:flex;align-items:center;gap:8px;min-height:44px;overflow-wrap:anywhere; }
+    .tf-board-avatar { width:30px;height:30px;display:grid;place-items:center;border-radius:50%;background:var(--surface2);color:var(--text-muted);flex:none;font-weight:700; }
+    .tf-board-date { display:block;min-height:44px;padding-top:12px; }
+    .tf-board-late { color:var(--danger-text);font-weight:600; }
+    .tf-board-table .tf-board-actions { display:flex;gap:4px;flex-wrap:wrap; }
+    .tf-board-table .tf-board-actions button { min-height:44px;min-width:44px; }
+    @media(max-width:639px) {
+      .tf-board-table { min-width:0;table-layout:auto;display:block; }
+      .tf-board-table thead { display:none; }
+      .tf-board-table tbody { display:block; }
+      .tf-board-table tr { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);padding:10px;border-bottom:1px solid var(--border); }
+      .tf-board-table td { display:block;border:0;padding:4px;min-width:0; }
+      .tf-board-table td:first-child { grid-column:1/-1; }
+      .tf-board-table td::before { content:attr(data-label);display:block;font-size:11px;color:var(--text-muted);margin-bottom:4px; }
+      .tf-board-table td:first-child::before { display:none; }
+      .tf-board-status { font-size:16px; }
+    }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -166,7 +205,7 @@ let TAREFAS = [], ERR_TAREFAS = false;
 let TIMES = [], LABEL_TIME = {};
 let RESPONSABILIDADES = {}, ERR_RESP = false;
 
-let modoVisao = localStorage.getItem('tarefas-view') || 'quadro'; // 'quadro' | 'lista' | 'time'
+let modoVisao = localStorage.getItem('tarefas-view') || 'tabela'; // 'quadro' | 'lista' | 'time'
 let filtro = { time:'', estado:'', responsavel:'', texto:'' };
 let ordCampo = 'prazo', ordDesc = false;
 
@@ -701,6 +740,51 @@ function responsaveisUnicos(tarefas) {
   return Object.keys(mapa).map(id => ({ id, label: mapa[id] })).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
 }
 
+
+// Tabela por time: as mudanças de status usam as mesmas transições do kanban.
+function renderTabela(main) {
+  const caixa=document.createElement('div'); main.appendChild(caixa);
+  filtroTarefas=montarFiltroLista(caixa, configFiltroTarefas(), () => render());
+  const tarefas=filtroTarefas?filtroTarefas.aplicar(TAREFAS):ordenar(TAREFAS,'prazo',false);
+  const grupos=agruparPorTime(tarefas,TIMES);
+  if (!tarefas.length && TAREFAS.length) {
+    const vazio=document.createElement('p'); vazio.className='empty'; vazio.textContent='Nenhuma tarefa bate com esse filtro.'; main.appendChild(vazio); return;
+  }
+  grupos.forEach(g=>{
+    const slug=g.time.valor;
+    const section=document.createElement('section'); section.className='tf-board-group'; section.style.setProperty('--cor-area',corDoTime(slug));
+    const heading=document.createElement('div'); heading.className='tf-board-heading';
+    const title=document.createElement('h2'); title.textContent=g.time.label||slug;
+    const count=document.createElement('span'); count.textContent=g.tarefas.length+' tarefas';
+    const add=document.createElement('button'); add.className='btn-sm gray'; add.textContent='+ Tarefa'; add.onclick=()=>abrirFormTarefa(null,slug);
+    heading.append(title,count,add); section.appendChild(heading);
+    const scroll=document.createElement('div'); scroll.className='tf-board-scroll';
+    const table=document.createElement('table'); table.className='tf-board-table'; table.setAttribute('aria-label','Tarefas de '+title.textContent);
+    const labels=['Tarefa','Responsável','Status','Prazo','Ações'];
+    const head=document.createElement('thead'); const hr=document.createElement('tr');
+    labels.forEach(label=>{const th=document.createElement('th');th.textContent=label;th.scope='col';hr.appendChild(th)}); head.appendChild(hr);table.appendChild(head);
+    const body=document.createElement('tbody');
+    g.tarefas.forEach(t=>{
+      const tr=document.createElement('tr'); const cells=labels.map(label=>{const td=document.createElement('td');td.dataset.label=label;tr.appendChild(td);return td});
+      const name=document.createElement('button'); name.className='tf-board-title';name.textContent=t.titulo;name.onclick=()=>abrirFormTarefa(t);cells[0].appendChild(name);
+      if(t.observacao){const obs=document.createElement('div');obs.className='tf-obs tf-obs-curta';obs.textContent=t.observacao;obs.title=t.observacao;cells[0].appendChild(obs)}
+      if(ehProjeto(t)) cells[0].appendChild(blocoDoProjeto(t));
+      const person=document.createElement('div');person.className='tf-board-person';
+      const avatar=document.createElement('span');avatar.className='tf-board-avatar';avatar.textContent=t.responsavel_id?nomeResponsavel(t).trim().slice(0,1):'—';avatar.setAttribute('aria-hidden','true');
+      const pname=document.createElement('span');pname.textContent=nomeResponsavel(t);person.append(avatar,pname);cells[1].appendChild(person);
+      const estado=estadoDaTarefa(t); const status=document.createElement('select');status.className='tf-board-status '+estado;status.setAttribute('aria-label','Status de '+t.titulo);
+      Object.entries(ESTADO_LABEL).forEach(([val,label])=>{const opt=document.createElement('option');opt.value=val;opt.textContent=label;status.appendChild(opt)});status.value=estado;
+      status.onchange=async()=>{const destino=status.value;status.disabled=true;try{await aplicarTransicao(t,destino,status)}finally{status.value=estadoDaTarefa(t);status.disabled=false}};cells[2].appendChild(status);
+      const date=document.createElement('span');date.className='tf-board-date'+(ehAtrasada(t)?' tf-board-late':'');date.textContent=quandoLabel(t);cells[3].appendChild(date);
+      const actions=document.createElement('div');actions.className='tf-board-actions';botoesEditarApagar(t).forEach(b=>actions.appendChild(b));cells[4].appendChild(actions);
+      body.appendChild(tr);
+    });
+    if(!g.tarefas.length){const row=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;td.textContent='Nenhuma tarefa neste time. Use + Tarefa para começar.';row.appendChild(td);body.appendChild(row)}
+    table.appendChild(body);scroll.appendChild(table);section.appendChild(scroll);main.appendChild(section);
+  });
+  if(!grupos.length) renderNadaAqui(main);
+}
+
 function renderListaView(main) {
   if (!TAREFAS.length) { renderNadaAqui(main); return; }
 
@@ -1097,6 +1181,7 @@ async function abrirFormTarefa(tarefa, timePadrao, tipoPadrao) {
 function renderAbas(main) {
   const tabs = document.createElement('div'); tabs.className = 'view-tabs';
   const defs = [
+    { id:'tabela', label:'Tabela', icone:'lista' },
     { id:'quadro', label:'Quadro',   icone:'quadro' },
     { id:'lista',  label:'Lista',    icone:'lista' },
     { id:'time',   label:'Áreas',    icone:'users' },
@@ -1115,7 +1200,7 @@ function render() {
   const main = document.getElementById('main-content'); main.textContent = '';
   const t = document.createElement('h1'); t.className = 'page-title'; t.textContent = 'Tarefas dos times'; main.appendChild(t);
   const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;';
-  hint.textContent = modoVisao === 'quadro'
+  hint.textContent = modoVisao === 'tabela' ? 'Organize por time. Clique na tarefa para editar ou mude o status na própria linha.' : modoVisao === 'quadro'
     ? 'Toque em Avançar/Voltar pra mudar de coluna — ou arraste, se estiver no computador.'
     : modoVisao === 'lista'
       ? 'Filtre e ordene como precisar.'
@@ -1128,7 +1213,8 @@ function render() {
     main.appendChild(e);
   } else {
     renderAbas(main);
-    if (modoVisao === 'quadro') renderQuadro(main);
+    if (modoVisao === 'tabela') renderTabela(main);
+    else if (modoVisao === 'quadro') renderQuadro(main);
     else if (modoVisao === 'lista') renderListaView(main);
     else renderPorTime(main);
   }

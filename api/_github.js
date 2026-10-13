@@ -20,7 +20,7 @@ export function motivoGitHub(status, corpo) {
 // 'manual') — antes o workflow deduzia isso do tipo do evento, e desde que o
 // agendamento saiu do GitHub TODA geração passou a se dizer "manual", inclusive as
 // do robô. Agora quem pede é que diz.
-export async function dispararArte({ GH_PAT, GH_REPO, origem }) {
+export async function dispararArte({ GH_PAT, GH_REPO, origem, formato = 'automatico' }) {
   const r = await fetch(`https://api.github.com/repos/${GH_REPO}/actions/workflows/arte-escala.yml/dispatches`, {
     method: 'POST',
     headers: {
@@ -29,7 +29,7 @@ export async function dispararArte({ GH_PAT, GH_REPO, origem }) {
       'X-GitHub-Api-Version': '2022-11-28',
       'User-Agent': 'iajcbp-arte-escala',
     },
-    body: JSON.stringify({ ref: 'main', inputs: { origem: origem || 'manual' } }),
+    body: JSON.stringify({ ref: 'main', inputs: { origem: origem || 'manual', formato } }),
   });
   if (r.ok) return { ok: true };
   const corpo = await r.text();

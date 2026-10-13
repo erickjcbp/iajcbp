@@ -407,10 +407,10 @@ function gerarRelatorioPDF(){
     const nt = bucketsFuncao(v).zero;
     return '<div class="dev"><b>'+_escHtml(l)+'</b><div>'+(emForm.length?('Em formação: '+emForm.join(', ')):'<i>Ninguém em formação — recrutar</i>')+'</div><div class="muted">Não treinados: '+nt+'</div></div>';
   }).join('') || '<p class="muted">Nenhuma função escassa. 🎉</p>';
-  const matriz = LIGAS_DEV.map(([lglabel,slugs])=>{
+  const matriz = gruposPorNivel().map(([lglabel,slugs])=>{
     const mem=_membrosDaLiga(slugs); if(!mem.length) return '';
-    const head='<th>Membro</th>'+_devFuncoes.map(([,l])=>'<th title="'+_escHtml(l)+'">'+_escHtml(l.length>4?l.slice(0,4):l)+'</th>').join('');
-    const rows=mem.map(m=>'<tr><td class="nm">'+_escHtml(_nome(m))+'</td>'+_devFuncoes.map(([v])=>{const p=_profDe(m.id,v);return '<td style="background:'+PROF_COR_PRINT[p]+'">'+PROF_ABREV[p]+'</td>';}).join('')+'</tr>').join('');
+    const head='<th>Membro</th><th>Idade</th>'+_devFuncoes.map(([,l])=>'<th title="'+_escHtml(l)+'">'+_escHtml(l.length>4?l.slice(0,4):l)+'</th>').join('');
+    const rows=mem.map(m=>'<tr><td class="nm">'+_escHtml(_nome(m))+'</td><td>'+(_idadeDe(m.data_nascimento)||'—')+'</td>'+_devFuncoes.map(([v])=>{const p=_profDe(m.id,v);return '<td style="background:'+PROF_COR_PRINT[p]+'">'+PROF_ABREV[p]+'</td>';}).join('')+'</tr>').join('');
     return '<h3>'+_escHtml(lglabel)+' · '+mem.length+'</h3><table class="mtz"><thead><tr>'+head+'</tr></thead><tbody>'+rows+'</tbody></table>';
   }).join('');
   const legenda='<p class="leg">'+PROF_NIVEIS.map(p=>'<span style="background:'+PROF_COR_PRINT[p]+'">'+PROF_ABREV[p]+'</span> '+_escHtml(PROF_LABEL[p])).join(' &nbsp; ')+'</p>';
@@ -430,11 +430,11 @@ function gerarRelatorioPDF(){
   abrirRelatorio({ titulo:'Relatório de Desenvolvimento', subtitulo:'Acólitos · '+_devMembros.length+' membros ativos', corpo, css: extraCss });
 }
 function baixarRelatorioCSV(){
-  const head=['Liga','Membro'].concat(_devFuncoes.map(([,l])=>l));
+  const head=['Nível','Membro','Idade'].concat(_devFuncoes.map(([,l])=>l));
   const linhas=[head];
-  LIGAS_DEV.forEach(([lglabel,slugs])=>{
+  gruposPorNivel().forEach(([lglabel,slugs])=>{
     _membrosDaLiga(slugs).forEach(m=>{
-      linhas.push([lglabel.replace(/^[^\w]+\s*/,''), _nome(m)].concat(_devFuncoes.map(([v])=>PROF_LABEL[_profDe(m.id,v)])));
+      linhas.push([lglabel.replace(/^[^\w]+\s*/,''), _nome(m), _idadeDe(m.data_nascimento)].concat(_devFuncoes.map(([v])=>PROF_LABEL[_profDe(m.id,v)])));
     });
   });
   baixarCSV('desenvolvimento', linhas);
@@ -583,6 +583,10 @@ function pintarAtraso(cell, m, funcao, prof){
     cell.title=(m.apelido||m.nome)+' — '+PROF_LABEL[prof]+'. Já devia ser Apto: '+Math.round(at.pares*100)+'% do mesmo nível já é.';
   } else { cell.textContent=''; cell.style.border='1px solid var(--border)'; }
 }
+function gruposPorNivel(){
+  const extras=[...new Set(_devMembros.map(m=>m.nivel||'aspirante').filter(slug=>!NIVEIS.some(n=>n.slug===slug)))];
+  return NIVEIS.map(n=>[n.label,[n.slug]]).concat(extras.length?[['Nível não cadastrado',extras]]:[]);
+}
 function renderMatriz(container){
   container.textContent='';
   atrasoMapa=null;
@@ -601,13 +605,14 @@ function renderMatriz(container){
   const corner=document.createElement('th'); corner.textContent='Membro';
   corner.style.cssText='position:sticky;left:0;top:0;z-index:3;background:var(--surface2);color:var(--gold);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);min-width:120px;';
   htr.appendChild(corner);
+  const ageHead=document.createElement('th'); ageHead.textContent='Idade'; ageHead.style.cssText='position:sticky;top:0;background:var(--surface2);padding:8px;z-index:2;'; htr.appendChild(ageHead);
   _devFuncoes.forEach(([val,label])=>{ const th=document.createElement('th'); th.textContent=label.length>4?label.slice(0,4):label; th.title=label; th.style.cssText='position:sticky;top:0;z-index:2;background:var(--surface2);padding:6px 4px;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap;'; htr.appendChild(th); });
   thead.appendChild(htr); tbl.appendChild(thead);
   const tbody=document.createElement('tbody');
-  LIGAS_DEV.forEach(([lglabel,slugs])=>{
+  gruposPorNivel().forEach(([lglabel,slugs])=>{
     const membros=_devMembros.filter(m=>slugs.includes(m.nivel||'aspirante'));
     if(!membros.length) return;
-    const sep=document.createElement('tr'); const sc=document.createElement('td'); sc.colSpan=_devFuncoes.length+1;
+    const sep=document.createElement('tr'); const sc=document.createElement('td'); sc.colSpan=_devFuncoes.length+2;
     sc.textContent=lglabel+' · '+membros.length; sc.style.cssText='position:sticky;left:0;background:var(--surface);color:var(--gold);font-family:Sora,sans-serif;font-weight:700;padding:6px 8px;border-bottom:1px solid var(--border-wine);';
     sep.appendChild(sc); tbody.appendChild(sep);
     membros.forEach(m=>{
@@ -615,10 +620,11 @@ function renderMatriz(container){
       const nmtd=document.createElement('td'); nmtd.textContent=m.apelido||m.nome;
       nmtd.style.cssText='position:sticky;left:0;z-index:1;background:var(--surface2);color:var(--text);padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;';
       tr.appendChild(nmtd);
+      const age=document.createElement('td'); const anos=_idadeDe(m.data_nascimento); age.textContent=anos?anos+' anos':'—'; age.style.cssText='padding:8px;white-space:nowrap;text-align:center;border-bottom:1px solid var(--border);'; tr.appendChild(age);
       _devFuncoes.forEach(([val])=>{
         const cur=(habAll[m.id]||{})[val]||'nao_treinado';
         const td=document.createElement('td'); td.style.cssText='text-align:center;border-bottom:1px solid var(--border);padding:0;';
-        const cell=document.createElement('div'); cell.style.cssText='width:24px;height:22px;margin:2px auto;border-radius:4px;cursor:pointer;background:'+(PROF_COR[cur]==='transparent'?'transparent':PROF_COR[cur])+';border:1px solid var(--border);';
+        const cell=document.createElement('div'); cell.style.cssText='width:44px;height:44px;margin:2px auto;border-radius:4px;cursor:pointer;background:'+(PROF_COR[cur]==='transparent'?'transparent':PROF_COR[cur])+';border:1px solid var(--border);';
         cell.title=(m.apelido||m.nome)+' — '+PROF_LABEL[cur];
         pintarAtraso(cell, m, val, cur);
         cell.onclick=()=>editarCelula(td, cell, m, val);

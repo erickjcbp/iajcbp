@@ -1,12 +1,13 @@
 // arte-escala/render.mjs
 // Injeta assets (base64) + dados no template, monta o HTML das missas em 2 colunas
-// (+ espinha de rosário) e faz screenshot de #arte (2160×4800). Se o fim de semana
-// inteiro não cabe no quadro, sai uma arte para o sábado e outra para o domingo.
+// (+ espinha de rosário) e fotografa #arte (2160px de largura, altura adaptável).
+// O formato escolhido define uma imagem ou a separação por dia.
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import puppeteer from 'puppeteer'
 import { distribuirColunas } from './colunas.mjs'
+import { partesDaArte } from './partes.mjs'
 
 const DIR = dirname(fileURLToPath(import.meta.url))
 const b64 = async p => (await readFile(join(DIR, p))).toString('base64')
@@ -77,10 +78,8 @@ function soDias(html, dias) {
   return html
 }
 
-// Devolve [{ parte, png }]: parte 'unica' quando o fim de semana cabe numa arte só;
-// senão 'sabado' e 'domingo'. Encolher a letra para caber foi descartado pelo dono
-// (28/09/2026): "somente quando precisar, duas artes".
-export async function renderArtes(dados) {
+// Devolve [{ parte, png }], preservando os nomes e o tamanho das letras.
+export async function renderArtes(dados, formato = 'automatico') {
   let html = await readFile(join(DIR, 'template.html'), 'utf8')
   const subs = {
     __SORA__: await b64('assets/sora.woff2'),
@@ -103,31 +102,28 @@ export async function renderArtes(dados) {
     const page = await browser.newPage()
     await page.setViewport({ width: 2160, height: ALTURA, deviceScaleFactor: 1 })
 
-    // abre, mede a altura que o conteúdo PEDE e fotografa se couber. A medida é com
-    // `height:auto` e sem `overflow:hidden` — com o recorte ligado, o scrollHeight
-    // mente que cabe.
-    const tentar = async (h, forcar) => {
-      await page.setContent(h, { waitUntil: 'networkidle0' })
-      await page.evaluateHandle('document.fonts.ready')
-      const precisa = await page.evaluate(() => {
+    // Preserva o tamanho das letras e amplia o quadro quando há mais nomes.
+    const fotografar = async h => {
+      await page.setContent(h, { waitUntil: 'load' })
+      await page.evaluate(async () => {
+        await document.fonts.ready
+        await Promise.all([...document.images].map(img => img.decode()))
+      })
+      await page.evaluate(altura => {
         const a = document.querySelector('#arte')
         a.style.height = 'auto'; a.style.overflow = 'visible'
-        const alt = a.getBoundingClientRect().height
-        a.style.height = ''; a.style.overflow = ''
-        return alt
-      })
-      if (precisa > ALTURA && !forcar) return null
-      if (precisa > ALTURA) console.warn(`Arte pede ${Math.ceil(precisa)} px mesmo sozinha — vai cortar.`)
+        const precisa = Math.ceil(a.getBoundingClientRect().height)
+        a.style.height = Math.max(altura, precisa) + 'px'
+        a.style.overflow = 'hidden'
+      }, ALTURA)
       return await (await page.$('#arte')).screenshot({ type: 'png' })
     }
-
-    const unica = await tentar(html, false)
-    if (unica) return [{ parte: 'unica', png: unica }]
-    console.log('O fim de semana não cabe numa arte — saem duas (sábado e domingo).')
-    return [
-      { parte: 'sabado', png: await tentar(soDias(html, ['sabado']), true) },
-      { parte: 'domingo', png: await tentar(soDias(html, ['domingo']), true) },
-    ]
+    const partes = partesDaArte(dados, formato)
+    const artes = []
+    for (const parte of partes) {
+      artes.push({ parte, png: await fotografar(parte === 'unica' ? html : soDias(html, [parte])) })
+    }
+    return artes
   } finally {
     await browser.close()
   }

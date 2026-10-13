@@ -15,6 +15,13 @@ on:
         required: false
         default: 'manual'
 
+      formato:
+        description: 'Formato: automatico, unica ou por_dia'
+        required: false
+        default: 'automatico'
+        type: choice
+        options: [automatico, unica, por_dia]
+
 jobs:
   gerar:
     runs-on: ubuntu-latest
@@ -37,6 +44,7 @@ jobs:
           # do robô, e o banco deixou de saber quem gerou o quê. Agora quem dispara diz.
           # O valor é fechado nestas duas opções de propósito: só entra no ambiente o que
           # esta linha decide, nunca o texto cru de quem chamou.
+          ARTE_FORMATO: ${{ github.event.inputs.formato || 'automatico' }}
           GERADO_POR: ${{ github.event.inputs.origem == 'cron' && 'cron' || 'manual' }}
           # Avisar a coordenação por push quando a arte ficar pronta.
           # Se estes dois secrets não existirem, o robô só pula o aviso (a arte é gerada do mesmo jeito).

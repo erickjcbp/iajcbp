@@ -5,6 +5,8 @@ import { dispararArte } from './_github.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
+  const formato = req.body?.formato || 'automatico';
+  if (!['automatico', 'unica', 'por_dia'].includes(formato)) return res.status(400).json({ error: 'Formato inválido' });
   const URL = process.env.SUPABASE_URL;
   const ANON = process.env.SUPABASE_ANON_KEY;
   const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -32,7 +34,7 @@ export default async function handler(req, res) {
 
   // 3. Manda o robô trabalhar. A tela mostra o MOTIVO da recusa, não só "falhou":
   // em 17/08/2026 o crachá venceu e a mensagem inútil custou horas de investigação.
-  const gh = await dispararArte({ GH_PAT, GH_REPO, origem: 'manual' });
+  const gh = await dispararArte({ GH_PAT, GH_REPO, origem: 'manual', formato });
   if (!gh.ok) return res.status(502).json({ error: gh.motivo, detalhe: gh.detalhe });
   return res.status(202).json({ ok: true });
 }

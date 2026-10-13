@@ -1379,7 +1379,7 @@ async function arteRender(md, domISO, isAdmin){
       ? [{ url:arte.png_url, rot:'Sábado', arq:'sabado' }, { url:arte.png_url_domingo, rot:'Domingo', arq:'domingo' }]
       : [{ url:arte.png_url, rot:'', arq:'' }];
     const t=Date.now();
-    html+=(partes.length>1?'<p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">Muitas missas neste fim de semana — a escala saiu em <b>2 artes</b>.</p>':'')
+    html+=(partes.length>1?'<p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;">A escala deste fim de semana está separada por dia em <b>2 artes</b>.</p>':'')
       +'<div style="display:grid;grid-template-columns:repeat('+partes.length+',1fr);gap:8px;">'
       +partes.map(p=>'<div>'+(p.rot?'<div style="font-size:12px;font-weight:700;margin-bottom:4px;">'+p.rot+'</div>':'')
         +'<img src="'+_arteEscAttr(p.url+'?t='+t)+'" alt="Arte da escala'+(p.rot?' — '+p.rot:'')+'" style="width:100%;border-radius:10px;border:1px solid var(--border);display:block;"></div>').join('')
@@ -1406,6 +1406,7 @@ async function arteRender(md, domISO, isAdmin){
           }).join('')
         +'</div>';
     }
+    html+='<label style="display:block;text-align:left;margin-bottom:14px;">Formato das artes<select id="arte-formato" class="form-select" style="width:100%;"><option value="automatico">Automático — até 5 missas em uma imagem</option><option value="unica">Uma imagem com todas as missas</option><option value="por_dia">Separar por dia — sábado e domingo</option></select></label><p style="text-align:left;font-size:12px;color:var(--text-muted);">A imagem cresce conforme a escala, sem cortar os nomes.</p>';
     html+='<div style="text-align:left;font-size:12px;color:var(--text-muted);font-weight:700;margin-bottom:8px;">Ajuste litúrgico (opcional — sobrepõe o cálculo automático)</div>'
       +'<label style="display:block;text-align:left;font-size:12px;color:var(--text-muted);">Tempo litúrgico<input id="ov-tempo" class="form-input" style="width:100%;" placeholder="ex.: TEMPO COMUM" value="'+(ovr?_arteEscAttr(ovr.tempo):'')+'"></label>'
       +'<label style="display:block;text-align:left;font-size:12px;color:var(--text-muted);margin-top:6px;">Descrição<input id="ov-desc" class="form-input" style="width:100%;" placeholder="ex.: 16º Domingo do Tempo Comum, Ano A" value="'+(ovr?_arteEscAttr(ovr.descricao):'')+'"></label>'
@@ -1470,7 +1471,7 @@ async function regenerarArte(md, domISO){
   const btn=md.querySelector('#arte-regen'); const old=btn?btn.textContent:'';
   if(btn){ btn.disabled=true; btn.textContent='Disparando...'; }
   try{
-    const r=await apiPost('/api/regenerar-arte', {});
+    const r=await apiPost('/api/regenerar-arte', { formato: md.querySelector('#arte-formato').value });
     if(r&&r.ok) toast('Geração disparada — aguarde ~1 min e reabra a arte.');
     else toast((r&&r.data&&r.data.error)||'Falha ao disparar a geração.','error');
   }catch(e){ toast('Falha ao disparar a geração.','error'); }

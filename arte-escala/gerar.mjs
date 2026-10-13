@@ -46,7 +46,7 @@ async function main() {
   }
   console.log(`Missas: ${todas.length} | escalados: ${totalEscalados} | ${dados.tempo} / ${dados.cor}`)
 
-  const artes = await renderArtes(dados)
+  const artes = await renderArtes(dados, process.env.ARTE_FORMATO || 'automatico')
 
   // Uma arte: `<domingo>.png`. Duas: `<domingo>-sabado.png` + `<domingo>-domingo.png`.
   // `png_url` é sempre a primeira (a única, ou a do sábado) e `png_url_domingo` só existe
