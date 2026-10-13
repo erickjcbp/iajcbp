@@ -90,7 +90,7 @@
     /* Quadro (kanban): três colunas que rolam de lado DENTRO do próprio container — a
        página nunca ganha rolagem horizontal, mesmo em 320px. */
     .tf-quadro { display:flex; gap:10px; overflow-x:auto; padding:2px 2px 12px; -webkit-overflow-scrolling:touch; }
-    .tf-col { flex:1 1 240px; min-width:240px; max-width:340px; background:var(--surface2); border:1px solid var(--border-wine); border-radius:12px; padding:10px; display:flex; flex-direction:column; }
+    .tf-col { flex:1 1 240px; min-width:240px; background:var(--surface2); border:1px solid var(--border-wine); border-radius:12px; padding:10px; display:flex; flex-direction:column; }
     .tf-col.tf-dragover { border-color:var(--gold); box-shadow:0 0 0 1px var(--gold-dim) inset; }
     .tf-col-head { display:flex; align-items:center; justify-content:space-between; font-family:'Sora',sans-serif; font-weight:800; font-size:12px; color:var(--gold-light); letter-spacing:.6px; text-transform:uppercase; padding:4px 4px 10px; }
     .tf-col-count { background:var(--surface3); color:var(--text-muted); border-radius:20px; padding:1px 8px; font-size:11px; }
@@ -156,6 +156,7 @@
       .tf-board-status { font-size:16px; }
     }
   </style>
+  <link rel="stylesheet" href="tarefas-workspace.css">
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
 <body>
@@ -590,59 +591,35 @@ function acoesDaTarefa(t) {
 }
 
 // ── LINHA DE TAREFA (Lista e Por time) ───────────────────────────────
-function linhaTarefaCompleta(t) {
-  const atrasada = ehAtrasada(t);
-  const estado = estadoDaTarefa(t);
-  const row = document.createElement('div'); row.className = 'tf-item' + (atrasada ? ' tf-atrasada' : '');
-  const bar = document.createElement('div'); bar.className = 'tf-bar';
-  const body = document.createElement('div'); body.className = 'tf-body';
-  const titRow = document.createElement('div'); titRow.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;';
-  const tit = document.createElement('div'); tit.className = 'tf-tit'; tit.textContent = t.titulo;
-  const badge = document.createElement('span'); badge.className = 'tf-badge tf-' + estado; badge.textContent = ESTADO_LABEL[estado];
-  titRow.append(tit, badge);
-  // A etiqueta do time, ao lado do estado: na Lista e no Quadro as tarefas de times
-  // diferentes se misturam, e sem ela não dava para saber de quem era a tarefa sem ler a
-  // linha miúda embaixo. Na visão Por time ela não entra — ali o título do grupo já diz.
-  if (modoVisao !== 'time') titRow.appendChild(etiquetaDoTime(t));
-  const meta = document.createElement('div'); meta.className = 'tf-meta' + (atrasada ? ' tf-atrasada-txt' : '');
-  meta.textContent = [quandoLabel(t), nomeResponsavel(t)].join(' · ');
-  body.append(titRow, meta);
-  if (t.observacao) {
-    // Cortada em duas linhas; toca e abre. Observação inteira empurrava a tarefa seguinte
-    // para fora da tela — a do Orientador tem quatro linhas.
-    const obs = document.createElement('div'); obs.className = 'tf-obs tf-obs-curta';
-    obs.textContent = t.observacao;
-    obs.title = 'Tocar para ver inteira';
-    obs.onclick = () => obs.classList.toggle('tf-obs-curta');
-    body.appendChild(obs);
-  }
-
-  // UMA ação à vista. O resto (voltar, editar, apagar) mora atrás do "…": antes eram quatro
-  // botões por tarefa, e com cinco tarefas a tela virava um paredão de botão.
-  if (ehProjeto(t)) body.appendChild(blocoDoProjeto(t));
-  const acoes = document.createElement('div'); acoes.className = 'tf-acoes';
-  const lista = acoesDaTarefa(t);
-  const principal = lista[lista.length - 1] || null;   // a que faz a tarefa ANDAR
-  if (principal) {
-    const b = document.createElement('button'); b.className = 'btn-sm gold'; b.textContent = principal.label;
-    b.onclick = () => principal.fn(b);
-    acoes.appendChild(b);
-  }
-  const extra = document.createElement('div'); extra.className = 'tf-acoes-extra'; extra.hidden = true;
-  lista.slice(0, Math.max(lista.length - 1, 0)).forEach(a => {
-    const b = document.createElement('button'); b.className = 'btn-sm gray'; b.textContent = a.label;
-    b.onclick = () => a.fn(b);
-    extra.appendChild(b);
-  });
-  botoesEditarApagar(t).forEach(b => extra.appendChild(b));
-  if (extra.children.length) {
-    const mais = document.createElement('button'); mais.className = 'tf-mais';
-    mais.textContent = '⋯'; mais.title = 'Mais ações'; mais.setAttribute('aria-label', 'Mais ações');
-    mais.onclick = () => { extra.hidden = !extra.hidden; };
-    acoes.appendChild(mais);
-  }
-  row.append(bar, body, acoes, extra);
-  return row;
+function tarefasNaVisao(){ return filtroTarefas?filtroTarefas.aplicar(TAREFAS):ordenar(TAREFAS,'prazo',false); }
+function seletorStatus(t){
+  const estado=estadoDaTarefa(t), sel=document.createElement('select');sel.className='tf-board-status '+estado;sel.setAttribute('aria-label','Status de '+t.titulo);
+  Object.entries(ESTADO_LABEL).forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;sel.appendChild(o)});sel.value=estado;
+  sel.onchange=async()=>{const destino=sel.value;sel.disabled=true;try{await aplicarTransicao(t,destino,sel)}finally{sel.value=estadoDaTarefa(t);sel.className='tf-board-status '+sel.value;sel.disabled=false}};
+  return sel;
+}
+function pessoaDaTarefa(t){
+  const el=document.createElement('div');el.className='tf-board-person';const av=document.createElement('span');av.className='tf-board-avatar';av.setAttribute('aria-hidden','true');av.textContent=t.responsavel_id?nomeResponsavel(t).trim().slice(0,1):'—';const nome=document.createElement('span');nome.textContent=nomeResponsavel(t);el.append(av,nome);return el;
+}
+function menuDaTarefa(t){
+  const box=document.createElement('div');box.className='tf-menu';
+  const b=document.createElement('button');b.className='tf-mais';b.textContent='⋯';b.setAttribute('aria-label','Mais ações de '+t.titulo);b.setAttribute('aria-expanded','false');
+  const extra=document.createElement('div');extra.className='tf-acoes-extra';extra.hidden=true;
+  acoesDaTarefa(t).forEach(a=>{const btn=document.createElement('button');btn.className='btn-sm gray';btn.textContent=a.label;btn.onclick=()=>a.fn(btn);extra.appendChild(btn)});
+  botoesEditarApagar(t).forEach(btn=>extra.appendChild(btn));
+  b.onclick=e=>{e?.stopPropagation();extra.hidden=!extra.hidden;b.setAttribute('aria-expanded',String(!extra.hidden));if(!extra.hidden){const r=b.getBoundingClientRect();extra.style.left=Math.max(8,Math.min(innerWidth-188,r.right-180))+'px';const h=extra.getBoundingClientRect().height;extra.style.top=Math.max(8,Math.min(innerHeight-h-8,r.bottom+4))+'px';const fechar=()=>{extra.hidden=true;b.setAttribute('aria-expanded','false')};document.addEventListener('click',fechar,{once:true});}};box.append(b,extra);return box;
+}
+function tituloDaTarefa(t,classe){const b=document.createElement('button');b.className=classe;b.textContent=t.titulo;b.onclick=()=>abrirFormTarefa(t);return b;}
+function linhaTarefaCompleta(t){
+ const row=document.createElement('div');row.className='tf-item'+(ehAtrasada(t)?' tf-atrasada':'');row.dataset.taskId=t.id;
+ const body=document.createElement('div');body.className='tf-body';body.appendChild(tituloDaTarefa(t,'tf-board-title'));
+ if(modoVisao!=='time')body.appendChild(etiquetaDoTime(t));
+ if(t.observacao){const obs=document.createElement('div');obs.className='tf-obs tf-obs-curta';obs.textContent=t.observacao;obs.title=t.observacao;body.appendChild(obs)}
+ if(ehProjeto(t))body.appendChild(blocoDoProjeto(t));
+ const person=pessoaDaTarefa(t);person.dataset.label='Responsável';
+ const status=document.createElement('div');status.dataset.label='Status';status.appendChild(seletorStatus(t));
+ const prazo=document.createElement('div');prazo.className='tf-row-date'+(ehAtrasada(t)?' tf-board-late':'');prazo.dataset.label='Prazo';prazo.textContent=quandoLabel(t);
+ row.append(body,person,status,prazo,menuDaTarefa(t));return row;
 }
 
 // ── VISÃO: QUADRO (kanban) ────────────────────────────────────────────
@@ -653,50 +630,22 @@ function botaoMover(label, icone, acao) {
   return b;
 }
 
-function cartaoTarefa(t, estadoAtual) {
-  const atrasada = ehAtrasada(t);
-  const card = document.createElement('div'); card.className = 'tf-card' + (atrasada ? ' tf-atrasada' : '');
-  // Arrastar é um extra pra quem está no computador — o essencial (mover por toque) são
-  // os botões abaixo, que funcionam em qualquer aparelho.
-  card.draggable = true;
-  card.ondragstart = (e) => { e.dataTransfer.setData('text/plain', String(t.id)); };
-  const tit = document.createElement('div'); tit.className = 'tf-card-tit'; tit.textContent = t.titulo;
-  const meta = document.createElement('div'); meta.className = 'tf-card-meta' + (atrasada ? ' tf-atrasada-txt' : '');
-  meta.textContent = [quandoLabel(t), nomeResponsavel(t)].join(' · ');
-  card.append(tit, etiquetaDoTime(t), meta);
-  if (t.observacao) {
-    const obs = document.createElement('div'); obs.className = 'tf-card-obs'; obs.textContent = t.observacao;
-    card.appendChild(obs);
-  }
-  const acoes = document.createElement('div'); acoes.className = 'tf-card-acoes';
-  if (estadoAtual === 'afazer') {
-    acoes.appendChild(botaoMover('Avançar', 'seta-dir', (b) => aplicarTransicao(t, 'andamento', b)));
-  } else if (estadoAtual === 'andamento') {
-    acoes.appendChild(botaoMover('Voltar', 'seta-esq', (b) => aplicarTransicao(t, 'afazer', b)));
-    acoes.appendChild(botaoMover('Concluir', 'seta-dir', (b) => aplicarTransicao(t, 'feita', b)));
-  } else {
-    acoes.appendChild(botaoMover('Reabrir', 'seta-esq', (b) => aplicarTransicao(t, 'andamento', b)));
-  }
-  // Editar e apagar vão para trás do "…", como na lista. Com os três lado a lado, o APAGAR
-  // vazava para fora da coluna do quadro — e mover a tarefa, que é o que se faz ali, ficava
-  // do mesmo tamanho de apagar, que é o que quase nunca se faz.
-  const extra = document.createElement('div'); extra.className = 'tf-acoes-extra'; extra.hidden = true;
-  botoesEditarApagar(t).forEach(b => extra.appendChild(b));
-  if (extra.children.length) {
-    const mais = document.createElement('button'); mais.className = 'tf-mais';
-    mais.textContent = '⋯'; mais.title = 'Mais ações'; mais.setAttribute('aria-label', 'Mais ações');
-    mais.onclick = () => { extra.hidden = !extra.hidden; };
-    acoes.appendChild(mais);
-  }
-  card.append(acoes, extra);
-  return card;
+function cartaoTarefa(t, estadoAtual){
+ const card=document.createElement('div');card.className='tf-card'+(ehAtrasada(t)?' tf-atrasada':'');card.dataset.taskId=t.id;card.draggable=true;
+ card.ondragstart=e=>e.dataTransfer.setData('text/plain',String(t.id));
+ const top=document.createElement('div');top.className='tf-card-top';top.append(etiquetaDoTime(t),menuDaTarefa(t));
+ card.append(top,tituloDaTarefa(t,'tf-board-title tf-card-title'));
+ if(t.observacao){const obs=document.createElement('div');obs.className='tf-card-obs';obs.textContent=t.observacao;obs.title=t.observacao;card.appendChild(obs)}
+ if(ehProjeto(t))card.appendChild(blocoDoProjeto(t));
+ const meta=document.createElement('div');meta.className='tf-card-footer';const date=document.createElement('span');date.className=ehAtrasada(t)?'tf-board-late':'';date.textContent=quandoLabel(t);meta.append(pessoaDaTarefa(t),date);
+ card.append(meta,seletorStatus(t));return card;
 }
 
 function renderQuadro(main) {
   const wrap = document.createElement('div'); wrap.className = 'tf-quadro';
   COLUNAS.forEach(col => {
-    const tarefasCol = ordenar(TAREFAS.filter(t => estadoDaTarefa(t) === col.estado), 'prazo', false);
-    const colEl = document.createElement('div'); colEl.className = 'tf-col';
+    const tarefasCol = ordenar(tarefasNaVisao().filter(t => estadoDaTarefa(t) === col.estado), 'prazo', false);
+    const colEl = document.createElement('div'); colEl.className = 'tf-col tf-col-'+col.estado;
     const head = document.createElement('div'); head.className = 'tf-col-head';
     const lab = document.createElement('span'); lab.textContent = col.titulo;
     const cont = document.createElement('span'); cont.className = 'tf-col-count'; cont.textContent = String(tarefasCol.length);
@@ -711,7 +660,7 @@ function renderQuadro(main) {
       if (t) aplicarTransicao(t, col.estado);
     };
     if (!tarefasCol.length) {
-      const vazio = document.createElement('div'); vazio.className = 'tf-col-vazio'; vazio.textContent = 'Nada por aqui.';
+      const vazio = document.createElement('div'); vazio.className = 'tf-col-vazio'; vazio.textContent = 'Nenhuma tarefa '+(col.estado==='feita'?'concluída.':'neste status.');
       body.appendChild(vazio);
     } else {
       tarefasCol.forEach(t => body.appendChild(cartaoTarefa(t, col.estado)));
@@ -743,9 +692,7 @@ function responsaveisUnicos(tarefas) {
 
 // Tabela por time: as mudanças de status usam as mesmas transições do kanban.
 function renderTabela(main) {
-  const caixa=document.createElement('div'); main.appendChild(caixa);
-  filtroTarefas=montarFiltroLista(caixa, configFiltroTarefas(), () => render());
-  const tarefas=filtroTarefas?filtroTarefas.aplicar(TAREFAS):ordenar(TAREFAS,'prazo',false);
+  const tarefas=tarefasNaVisao();
   const grupos=agruparPorTime(tarefas,TIMES);
   if (!tarefas.length && TAREFAS.length) {
     const vazio=document.createElement('p'); vazio.className='empty'; vazio.textContent='Nenhuma tarefa bate com esse filtro.'; main.appendChild(vazio); return;
@@ -772,11 +719,9 @@ function renderTabela(main) {
       const person=document.createElement('div');person.className='tf-board-person';
       const avatar=document.createElement('span');avatar.className='tf-board-avatar';avatar.textContent=t.responsavel_id?nomeResponsavel(t).trim().slice(0,1):'—';avatar.setAttribute('aria-hidden','true');
       const pname=document.createElement('span');pname.textContent=nomeResponsavel(t);person.append(avatar,pname);cells[1].appendChild(person);
-      const estado=estadoDaTarefa(t); const status=document.createElement('select');status.className='tf-board-status '+estado;status.setAttribute('aria-label','Status de '+t.titulo);
-      Object.entries(ESTADO_LABEL).forEach(([val,label])=>{const opt=document.createElement('option');opt.value=val;opt.textContent=label;status.appendChild(opt)});status.value=estado;
-      status.onchange=async()=>{const destino=status.value;status.disabled=true;try{await aplicarTransicao(t,destino,status)}finally{status.value=estadoDaTarefa(t);status.disabled=false}};cells[2].appendChild(status);
+      cells[2].appendChild(seletorStatus(t));
       const date=document.createElement('span');date.className='tf-board-date'+(ehAtrasada(t)?' tf-board-late':'');date.textContent=quandoLabel(t);cells[3].appendChild(date);
-      const actions=document.createElement('div');actions.className='tf-board-actions';botoesEditarApagar(t).forEach(b=>actions.appendChild(b));cells[4].appendChild(actions);
+      cells[4].appendChild(menuDaTarefa(t));
       body.appendChild(tr);
     });
     if(!g.tarefas.length){const row=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;td.textContent='Nenhuma tarefa neste time. Use + Tarefa para começar.';row.appendChild(td);body.appendChild(row)}
@@ -788,23 +733,20 @@ function renderTabela(main) {
 function renderListaView(main) {
   if (!TAREFAS.length) { renderNadaAqui(main); return; }
 
-  // A barra de filtro da CASA (a mesma de Membros, Agenda, CRM, Chamada e Ausências): um
-  // botão e um painel. Antes eram cinco caixas empilhadas que ocupavam a tela inteira antes
-  // de aparecer a primeira tarefa — e a tela nunca tinha recebido a barra.
-  const caixaFiltro = document.createElement('div');
-  main.appendChild(caixaFiltro);
-  const cfg = configFiltroTarefas();
-  filtroTarefas = montarFiltroLista(caixaFiltro, cfg, () => render());
-
-  const ordenadas = filtroTarefas ? filtroTarefas.aplicar(TAREFAS)
-                                  : ordenar(TAREFAS, 'prazo', false);
+  const ordenadas=tarefasNaVisao();
   if (!ordenadas.length) {
     const e = document.createElement('div'); e.className = 'empty';
     e.textContent = 'Nenhuma tarefa bate com esse filtro.';
     main.appendChild(e);
     return;
   }
-  ordenadas.forEach(t => main.appendChild(linhaTarefaCompleta(t)));
+  COLUNAS.forEach(col=>{
+    const lista=ordenadas.filter(t=>estadoDaTarefa(t)===col.estado);if(!lista.length)return;
+    const group=document.createElement('section');group.className='tf-list-group tf-col-'+col.estado;
+    const title=document.createElement('h2');title.className='tf-list-heading';title.textContent=col.titulo+' · '+lista.length;group.appendChild(title);
+    const headers=document.createElement('div');headers.className='tf-list-columns';['Tarefa','Responsável','Status','Prazo',''].forEach(t=>{const span=document.createElement('span');span.textContent=t;headers.appendChild(span)});group.appendChild(headers);
+    lista.forEach(t=>group.appendChild(linhaTarefaCompleta(t)));main.appendChild(group);
+  });
 }
 
 // A configuração da barra de filtro da lista. Os filtros só aparecem quando há o que
@@ -813,7 +755,7 @@ function renderListaView(main) {
 let filtroTarefas = null;
 function configFiltroTarefas() {
   const filtros = [
-    { id: 'estado', nome: 'Estado', opcoes: [
+    { id: 'estado', nome: 'Status', opcoes: [
       { id: 'afazer', nome: 'A fazer', testa: t => estadoDaTarefa(t) === 'afazer' },
       { id: 'andamento', nome: 'Em andamento', testa: t => estadoDaTarefa(t) === 'andamento' },
       { id: 'feita', nome: 'Feita', testa: t => estadoDaTarefa(t) === 'feita' },
@@ -861,7 +803,7 @@ function guardarTimesAbertos(lista) {
 }
 
 function renderPorTime(main) {
-  const grupos = agruparPorTime(TAREFAS, TIMES);
+  const grupos = agruparPorTime(tarefasNaVisao(), TIMES);
   if (!grupos.length) { renderNadaAqui(main); return; }
   grupos.sort((a, b) => (a.time.label || a.time.valor).localeCompare(b.time.label || b.time.valor, 'pt-BR'));
 
@@ -952,7 +894,7 @@ function renderPorTime(main) {
     } else {
       ordenar(g.tarefas, 'prazo', false).forEach(t => corpo.appendChild(linhaTarefaCompleta(t)));
     }
-    renderRotinasDoTime(corpo, slug);
+    const rotinas=document.createElement('details');rotinas.className='tf-area-rotinas';const resumo=document.createElement('summary');resumo.textContent='Rotinas e automações do time';rotinas.appendChild(resumo);renderRotinasDoTime(rotinas,slug);corpo.appendChild(rotinas);
     areaEl.appendChild(corpo);
     main.appendChild(areaEl);
 
@@ -1197,14 +1139,16 @@ function renderAbas(main) {
 
 function render() {
   document.querySelectorAll('.fab').forEach(x => x.remove()); // evita FAB duplicado a cada redesenho
-  const main = document.getElementById('main-content'); main.textContent = '';
-  const t = document.createElement('h1'); t.className = 'page-title'; t.textContent = 'Tarefas dos times'; main.appendChild(t);
+  const main = document.getElementById('main-content'); main.textContent = '';main.classList.add('tf-workspace');
+  const t = document.createElement('h1'); t.className = 'page-title'; t.textContent = 'Tarefas dos times';
+  const heading=document.createElement('div');heading.className='tf-workspace-heading';
+  const nova=document.createElement('button');nova.className='btn-sm tf-create';nova.textContent='+ Nova tarefa';nova.onclick=()=>abrirFormTarefa();heading.append(t,nova);main.appendChild(heading);
   const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;';
   hint.textContent = modoVisao === 'tabela' ? 'Organize por time. Clique na tarefa para editar ou mude o status na própria linha.' : modoVisao === 'quadro'
-    ? 'Toque em Avançar/Voltar pra mudar de coluna — ou arraste, se estiver no computador.'
+    ? 'Acompanhe o trabalho por status. Arraste os cartões ou use o seletor para mover uma tarefa.'
     : modoVisao === 'lista'
-      ? 'Filtre e ordene como precisar.'
-      : 'Uma área por setor: o que ele cuida, as rotinas e as tarefas dele.';
+      ? 'Pendências organizadas por status, com responsável e prazo na mesma linha.'
+      : 'Abra um time para acompanhar tarefas, projetos e rotinas.';
   main.appendChild(hint);
 
   if (ERR_TAREFAS) {
@@ -1213,6 +1157,7 @@ function render() {
     main.appendChild(e);
   } else {
     renderAbas(main);
+    const caixaFiltro=document.createElement('div');caixaFiltro.className='tf-toolbar';main.appendChild(caixaFiltro);filtroTarefas=montarFiltroLista(caixaFiltro,configFiltroTarefas(),()=>render());
     if (modoVisao === 'tabela') renderTabela(main);
     else if (modoVisao === 'quadro') renderQuadro(main);
     else if (modoVisao === 'lista') renderListaView(main);
