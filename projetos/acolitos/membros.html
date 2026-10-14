@@ -72,6 +72,7 @@
       margin-top:6px; padding:8px 10px; border-radius:4px;
       background:color-mix(in srgb, var(--warn-text) 30%, transparent); color:var(--text);
     }
+    .frequencia-bloqueada .form-toggle { background:var(--surface2);border-color:var(--border);color:var(--text-muted);opacity:.6;cursor:not-allowed; }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -913,13 +914,24 @@ async function renderTab(tab) {
 
     const contagem = document.createElement('p');
     contagem.style.cssText = 'font-size:11.5px;line-height:1.5;margin:8px 0 0;color:var(--text-muted);';
-    el.appendChild(editBool('Escalar com mais frequência?', 'escalar_frequente', m.escalar_frequente,
-      () => pintarContagemFrequentes(contagem, m.id)));
+    const frequencia=editBool('Escalar com mais frequência?', 'escalar_frequente', m.escalar_frequente,
+      () => pintarContagemFrequentes(contagem, m.id));
+    el.appendChild(frequencia);
     el.appendChild(contagem);
     pintarContagemFrequentes(contagem, m.id);
-    el.appendChild(editBool('Servir toda semana?', 'servir_toda_semana', m.servir_toda_semana));
+    const bloqueio=document.createElement('p');bloqueio.style.cssText='font-size:12px;line-height:1.5;color:var(--text-muted);margin:6px 0;';bloqueio.textContent='Mais frequência desativada pelo plano semanal.';frequencia.appendChild(bloqueio);
+    const sincronizarFrequencia=()=>{
+      const ativo=!!curVal('servir_toda_semana',m.servir_toda_semana);
+      frequencia.classList.toggle('frequencia-bloqueada',ativo);bloqueio.hidden=!ativo;contagem.hidden=ativo;
+      frequencia.querySelectorAll('button').forEach(b=>{b.disabled=ativo;if(ativo)b.classList.toggle('active',b.textContent==='Não');});
+    };
+    el.appendChild(editBool('Servir toda semana?', 'servir_toda_semana', m.servir_toda_semana,ativo=>{
+      if(ativo)fichaEdits.escalar_frequente=false;
+      sincronizarFrequencia();pintarContagemFrequentes(contagem,m.id);
+    }));
+    sincronizarFrequencia();
     const semanal=document.createElement('p');semanal.style.cssText='font-size:12px;line-height:1.5;color:var(--text-muted);margin:8px 0;';
-    semanal.textContent='4 escalas por mês, em semanas diferentes: 2 em funções aptas e 2 em apoio. Esta opção prevalece sobre escalar com mais frequência. Respeita disponibilidade e suspensão.';el.appendChild(semanal);
+    semanal.textContent='4 escalas por mês, em semanas diferentes: 2 em funções aptas e 2 em apoio. Ativar desliga “Escalar com mais frequência”. Respeita disponibilidade e suspensão.';el.appendChild(semanal);
   }
 
   if (tab === 'Família') {

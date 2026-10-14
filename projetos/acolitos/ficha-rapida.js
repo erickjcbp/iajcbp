@@ -130,9 +130,9 @@
 
     const semanal=document.createElement('label');semanal.className='toggle-row';
     const textoSemanal=document.createElement('span');textoSemanal.textContent='Servir toda semana';
-    const chkSemanal=document.createElement('input');chkSemanal.type='checkbox';chkSemanal.className='toggle-checkbox';chkSemanal.checked=!!membro.servir_toda_semana;chkSemanal.onchange=()=>{edits.servir_toda_semana=chkSemanal.checked;};
+    const chkSemanal=document.createElement('input');chkSemanal.type='checkbox';chkSemanal.className='toggle-checkbox';chkSemanal.checked=!!membro.servir_toda_semana;chkSemanal.onchange=()=>{edits.servir_toda_semana=chkSemanal.checked;if(chkSemanal.checked)edits.escalar_frequente=false;};
     semanal.append(textoSemanal,chkSemanal);md.appendChild(semanal);
-    const notaSemanal=document.createElement('p');notaSemanal.style.cssText='font-size:12px;line-height:1.5;color:var(--text-muted);';notaSemanal.textContent='4 escalas por mês, uma por semana: 2 em funções aptas e 2 em apoio. Prevalece sobre a preferência de mais frequência.';md.appendChild(notaSemanal);
+    const notaSemanal=document.createElement('p');notaSemanal.style.cssText='font-size:12px;line-height:1.5;color:var(--text-muted);';notaSemanal.textContent='4 escalas por mês, uma por semana: 2 em funções aptas e 2 em apoio. Ativar desliga a preferência de mais frequência.';md.appendChild(notaSemanal);
 
     // ── Suspensão / Arquivar ──
     md.appendChild(blocoSuspensaoRapida(membro, aoMudar));
