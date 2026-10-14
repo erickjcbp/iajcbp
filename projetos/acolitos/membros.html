@@ -917,6 +917,9 @@ async function renderTab(tab) {
       () => pintarContagemFrequentes(contagem, m.id)));
     el.appendChild(contagem);
     pintarContagemFrequentes(contagem, m.id);
+    el.appendChild(editBool('Servir toda semana?', 'servir_toda_semana', m.servir_toda_semana));
+    const semanal=document.createElement('p');semanal.style.cssText='font-size:12px;line-height:1.5;color:var(--text-muted);margin:8px 0;';
+    semanal.textContent='4 escalas por mês, em semanas diferentes: 2 em funções aptas e 2 em apoio. Esta opção prevalece sobre escalar com mais frequência. Respeita disponibilidade e suspensão.';el.appendChild(semanal);
   }
 
   if (tab === 'Família') {

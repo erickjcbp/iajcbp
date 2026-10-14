@@ -78,7 +78,7 @@
       // provavelmente serviu e ninguém fechou a chamada. Pendência mais VELHA que a última
       // presença não acende — seria alarme falso.
       l.chamadaPendente = !!l.ultimaPendente && (!l.ultimaServida || l.ultimaPendente > l.ultimaServida);
-      l.abaixoDaRegra = l.vezesNoMes < meta;
+      l.abaixoDaRegra = l.vezesNoMes < (l.membro.servir_toda_semana?4:meta);
     });
     return linhas;
   }
@@ -143,6 +143,7 @@
   // A REGRA da pastoral (dita pelo dono em 23/09/2026): todo membro serve 2x por mês.
   // Fica como número, e não cravada no meio da conta, porque é decisão dele e pode mudar.
   var META_PADRAO = 2;
+  function metaDoMembro(m){return m&&m.servir_toda_semana?4:META_PADRAO;}
 
   function mesDe(dataISO) { return String(dataISO || '').slice(0, 7); }
 
@@ -292,7 +293,7 @@
 
   var api = { semanasSem: semanasSem, montarRodizio: montarRodizio, historicoSemanal: historicoSemanal,
                pisoDoGrupo: pisoDoGrupo, vagasPorFimDeSemana: vagasPorFimDeSemana, motivoDe: motivoDe, rotuloDoMotivo: rotuloDoMotivo,
-               META_PADRAO: META_PADRAO, mesDe: mesDe,
+               metaDoMembro:metaDoMembro, META_PADRAO: META_PADRAO, mesDe: mesDe,
                PESO_MES: PESO_MES, pesoRodizio: pesoRodizio, contarParaRodizio: contarParaRodizio,
                fimDeSemanaRestantes: fimDeSemanaRestantes, resumoDaRegra: resumoDaRegra,
                DIAS_SUSPENSAO: DIAS_SUSPENSAO, suspensoAteDe: suspensoAteDe, suspensoNaData: suspensoNaData, maisFaltantes: maisFaltantes };

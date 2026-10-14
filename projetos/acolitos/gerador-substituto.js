@@ -3,6 +3,7 @@
 // Espelha as regras do gerador (elegibilidade, comunidade, cerimoniário, rodízio).
 (function(global){
   'use strict';
+  var semanal=global.SemanalCore||(typeof module!=='undefined'&&module.exports?require('./servir-semanal-core.js'):null);
   // As funções "maiores" quando ninguém configurou nada. Fica aqui, exportada, porque o
   // Config precisa MOSTRAR exatamente o que o gerador APLICA: enquanto esta lista estava
   // copiada nos dois arquivos, marcar a caixinha na tela e a regra do gerador podiam divergir
@@ -53,11 +54,12 @@
       return m.id !== ctx.membroAusenteId
         && !usadosNaMissa.has(m.id)
         && !(ctx.data && m.suspenso_ate && ctx.data < m.suspenso_ate)   // suspenso até depois desta missa
+        && (!m.servir_toda_semana || (semanal && semanal.pode(m,funcao,ctx.data,ctx.historicoSemanal,habMap)))
         && disp(m.id)
         && elegivelFuncao(m, funcao, comKey, habMap, config);
     });
-    // apoio: cerimoniário só entra manualmente — nunca na substituição automática (exclui antes das camadas)
-    if (funcao === 'apoio') pool = pool.filter(function(m){ return nivelInt(m.nivel||'aspirante') < 6; });
+    // Apoio de cerimoniário exige adesão explícita ao plano semanal.
+    if (funcao === 'apoio') pool = pool.filter(function(m){ return m.servir_toda_semana || nivelInt(m.nivel||'aspirante') < 6; });
     if(!pool.length) return { membroId:null, motivo:'sem_candidato' };
 
     // camadas de comunidade
@@ -78,7 +80,7 @@
 
     // rodízio: menor carga primeiro, empate aleatório
     grupo = grupo.slice().sort(function(a,b){
-      return (carga[a.id]||0) - (carga[b.id]||0) || (rnd()-0.5);
+      return (b.servir_toda_semana?1:0)-(a.servir_toda_semana?1:0) || (carga[a.id]||0) - (carga[b.id]||0) || (rnd()-0.5);
     });
     return { membroId: grupo[0].id, motivo:null };
   }

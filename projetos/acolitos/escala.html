@@ -336,6 +336,7 @@
 <script src="shared.js"></script>
 <script src="ficha-rapida.js"></script>
 <script src="historico-membro.js"></script>
+<script src="servir-semanal-core.js"></script>
 <script src="gerador-substituto.js"></script>
 <script>
 const MOTIVO_LABEL = { doenca:'🤒 Doença', viagem:'✈️ Viagem', familia:'👨‍👩‍👧 Família', outro:'📌 Outro' };
@@ -573,7 +574,7 @@ async function loadDados() {
       escalasMap[e.celebracao_id].push(e);
     });
     const [{ data: mems }, { data: habs }, { data: disps }, freqData, { data: auss }, { data: chs }] = await Promise.all([
-      sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,casa_id,escalar_frequente,suspenso_ate,suspenso_em,pode_outras_comunidades,data_nascimento,foto_url,observacoes,necessidades_especiais,nome_pai,nome_mae,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro,grupo_irmaos,escalar_com_irmao').eq('status','ativo').eq('serve',true).order('nome'),
+      sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,casa_id,escalar_frequente,servir_toda_semana,suspenso_ate,suspenso_em,pode_outras_comunidades,data_nascimento,foto_url,observacoes,necessidades_especiais,nome_pai,nome_mae,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro,grupo_irmaos,escalar_com_irmao').eq('status','ativo').eq('serve',true).order('nome'),
       // PAGINADAS: 839 e 686 linhas hoje, e o teto é mil. Ao passar dele, gente marcada
       // como apta SOME do campo de seleção — o mesmo sintoma da trava, sem trava nenhuma.
       lerTudo(() => sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia')),
@@ -991,22 +992,22 @@ function elegivelFuncao(m, f, comKey) {
 
 
 let FUNCOES_MAIORES = new Set(['cred_altar','cred_credencia','missal','turibulo','naveta','mitra','baculo']);
-let FUNCOES_SEM_CERIMONIARIO = new Set(['apoio']); // cerimoniário (nível 6+) só entra nessas funções MANUALMENTE — nunca pelo gerador automático
+let FUNCOES_SEM_CERIMONIARIO = new Set(['apoio']); // cerimoniário só tem apoio automático ao aderir ao plano semanal
 // Núcleo do gerador. vagas = array de funções (uma por vaga aberta). Retorna array alinhado de membro_id|null.
 // Regras: apto + não-ausente + sem repetir na missa; IRMÃOS juntos = bloco tudo-ou-nada;
 //   cerimoniários priorizados nas MAIORES (só em último caso vão p/ menores); não repetir no fim de semana (usadoFds);
 //   COMUNIDADE da missa preferida (cruza só faltando); rodízio justo do mês (carga); mix de experiência nas menores.
-function planejarVagas(vagas, horKey, ausNesta, usados, carga, usadoFds, comKey) {
+function planejarVagas(vagas, horKey, ausNesta, usados, carga, usadoFds, comKey, data, historico) {
   usadoFds = usadoFds || new Set();
   const res = new Array(vagas.length).fill(null);
   const nint = {}; membros.forEach(m => { nint[m.id] = nivelInfo(m.nivel||'aspirante').int; });
   const memById = {}; membros.forEach(m => { memById[m.id] = m; });
-  const apta = (id,f) => { const m = memById[id]; if (!m) return false; if (FUNCOES_SEM_CERIMONIARIO.has(f) && nint[id] >= 6) return false; return elegivelFuncao(m, f, comKey); }; // cerimoniário nunca em 'apoio' pelo gerador (só manual)
+  const apta = (id,f) => { const m = memById[id]; if (!m) return false; if (FUNCOES_SEM_CERIMONIARIO.has(f) && nint[id] >= 6 && !m.servir_toda_semana) return false; return elegivelFuncao(m, f, comKey) && SemanalCore.pode(m,f,data,historico,habMap); }; // apoio de cerimoniário exige adesão explícita ao plano semanal
   const disp = id => !horKey || (dispMap[id]||[]).includes(horKey);
   const livres = () => res.map((r,i)=>r?-1:i).filter(i=>i>=0);
   // sobe O MÊS e a janela de uma vez: subir só a janela deixaria quem acabou de ser
   // escalado ainda valendo como "0 no mês" para a vaga seguinte.
-  const assign = (i,id) => { res[i]=id; usados.add(id); usadoFds.add(id); carga[id]=(carga[id]||0)+RodizioCore.PESO_MES+1; };
+  const assign = (i,id) => { res[i]=id; usados.add(id); usadoFds.add(id); carga[id]=(carga[id]||0)+RodizioCore.PESO_MES+1; if(historico)historico.push({membro_id:id,funcao:vagas[i],data}); };
   const bloqueados = new Set();
   const ehCerimo = m => nint[m.id] >= 6; // cerimoniário = nível 6+
   // POOL DURO: apto + DISPONÍVEL no horário + não-ausente + sem repetir na missa + não bloqueado
@@ -1023,6 +1024,11 @@ function planejarVagas(vagas, horKey, ausNesta, usados, carga, usadoFds, comKey)
     }
     plan.forEach(([i,id]) => assign(i,id));
     return true;
+  }
+
+  if(membros.some(m=>m.servir_toda_semana)){
+    const slots=livres(), pools=new Map(slots.map(i=>[i,new Set(cands(i).map(m=>m.id))]));
+    SemanalCore.reservar(membros,slots,(m,i)=>pools.get(i).has(m.id)).forEach(({slot,membro})=>assign(slot,membro.id));
   }
 
   // 0) COMPLETAR FAMÍLIA dos já escalados (manual/existente): irmãos que servem junto entram também.
@@ -1097,7 +1103,12 @@ async function gerarEscalaAuto() {
   const open = pendingEdicao.filter(pe => !pe.sel.value);
   const usados = new Set(); pendingEdicao.forEach(pe => { if (pe.sel.value) usados.add(pe.sel.value); });
   const cargaH = await carregarPesoRodizio(celAtual.data);
-  const res = planejarVagas(open.map(pe=>pe.funcao), horKeyDe(celAtual), ausNesta, usados, cargaH, new Set(usados), celAtual.comunidade);
+  let historico=[];
+  try { if(membros.some(m=>m.servir_toda_semana))historico=await SemanalCore.carregar(sb,lerTudo,[celAtual.data]); }
+  catch(e){toast('Não consegui conferir o plano semanal. Tente novamente.','error');return;}
+  historico=historico.filter(e=>e.celebracao_id!==celAtual.id);
+  pendingEdicao.forEach(pe=>{if(pe.sel.value)historico.push({membro_id:pe.sel.value,data:celAtual.data,funcao:pe.funcao});});
+  const res = planejarVagas(open.map(pe=>pe.funcao), horKeyDe(celAtual), ausNesta, usados, cargaH, new Set(usados), celAtual.comunidade,celAtual.data,historico);
   res.forEach((id,i) => { if (id) { open[i].sel.value = id; open[i].sel.classList.add('filled'); } });
   const vazias = res.filter(r => !r).length;
   const btn = document.getElementById('btn-gerar-auto');
@@ -1130,7 +1141,9 @@ function refreshDuplicatasMissa(){
 // Reutilizado por trocarPosicao (Task 3) e futuramente por outras telas (Task 4).
 async function montarCtxSub(celeb, funcao, membroAusenteId, usadosNaMissa, usadoFds){
   const carga = await carregarPesoRodizio(celeb.data);
+  const historicoSemanal=membros.some(m=>m.servir_toda_semana)?await SemanalCore.carregar(sb,lerTudo,[celeb.data]):[];
   return {
+    data:celeb.data,historicoSemanal,
     funcao: funcao,
     comunidade: celeb.comunidade,
     horKey: horKeyDe(celeb),
@@ -1231,6 +1244,9 @@ async function gerarEscalaSemana(celebs, btnEl, todosDaSemana) {
   const ordc = celebs.slice().sort((a,b) => a.data.localeCompare(b.data) || compararHorario(a.horario, b.horario));
   const todosFds = (todosDaSemana && todosDaSemana.length) ? todosDaSemana : celebs;
   const carga = await carregarPesoRodizio(ordc[0] ? ordc[0].data : ''); // rodízio: histórico real (banco) — ref = data mais antiga
+  let historico=[];
+  try { if(membros.some(m=>m.servir_toda_semana))historico=await SemanalCore.carregar(sb,lerTudo,ordc.map(c=>c.data)); }
+  catch(e){await uiAlert('Não consegui conferir o plano semanal. Nenhuma escala foi gerada. Tente novamente.');if(btnEl){btnEl.disabled=false;btnEl.textContent=txt0;}return;}
   const ausFresh = await carregarAusenciasFresh(ordc);
   const usadoFds = new Set();                // ninguém repete no fim de semana
   todosFds.forEach(c => (escalasMap[c.id]||[]).forEach(e => usadoFds.add(e.membro_id))); // já escalados contam
@@ -1253,7 +1269,8 @@ async function gerarEscalaSemana(celebs, btnEl, todosDaSemana) {
   const candsDe = s => {
     const aus = ausFresh[s.c.id] || new Set();
     return membros.filter(m => elegivelFuncao(m, s.funcao, s.com)
-      && !(FUNCOES_SEM_CERIMONIARIO.has(s.funcao) && ehCerimo(m)) // cerimoniário nunca em 'apoio' pelo gerador (só manual)
+      && !(FUNCOES_SEM_CERIMONIARIO.has(s.funcao) && ehCerimo(m) && !m.servir_toda_semana)
+      && SemanalCore.pode(m,s.funcao,s.c.data,historico,habMap)
       && (!s.hk || (dispMap[m.id]||[]).includes(s.hk))
       && !usadoFds.has(m.id) && !usadosMissa[s.c.id].has(m.id) && !aus.has(m.id));
   };
@@ -1271,7 +1288,12 @@ async function gerarEscalaSemana(celebs, btnEl, todosDaSemana) {
   const colocar = (s, m) => {
     s.filled = true; usadoFds.add(m.id); usadosMissa[s.c.id].add(m.id); carga[m.id] = (carga[m.id]||0)+RodizioCore.PESO_MES+1;
     novas.push({ celebracao_id: s.c.id, membro_id: m.id, funcao: s.funcao, created_by: ctx.user.id });
+    historico.push({celebracao_id:s.c.id,membro_id:m.id,funcao:s.funcao,data:s.c.data});
   };
+  if(membros.some(m=>m.servir_toda_semana)){
+    const pools=new Map(slots.map(s=>[s,new Set(candsDe(s).map(m=>m.id))]));
+    SemanalCore.reservar(membros,slots,(m,s)=>pools.get(s).has(m.id)).forEach(({slot,membro})=>colocar(slot,membro));
+  }
   // GREEDY GLOBAL: preenche sempre a vaga com MENOS candidatos primeiro (reserva os "frescos" p/ onde há pouca opção)
   while (true) {
     let best = null, bestCands = null;
@@ -1300,7 +1322,10 @@ async function gerarEscalaSemana(celebs, btnEl, todosDaSemana) {
     // instante da geração e o celular de todo mundo recebia uma escala que ainda ia mudar.
     // Quem avisa é o botão "Confirmar escala da semana", por decisão do dono em 18/08/2026.
   }
+  const pendentes=membros.filter(m=>m.servir_toda_semana&&ordc.some(c=>{const st=SemanalCore.situacao(m.id,c.data,historico);return (!st.naSemana&&st.total<4)||st.funcao>2||st.apoio>2||(st.total>=4&&st.semanas<4);}));
   await loadDados();
+  if(btnEl){btnEl.disabled=false;btnEl.textContent=txt0;}
+  if(pendentes.length)await uiAlert('Plano semanal: sem vaga válida nesta semana para '+pendentes.map(m=>m.apelido||m.nome).join(', ')+'. Confira disponibilidade, aptidão, vagas de apoio/função e a divisão das escalas já montadas.');
 }
 
 // Exporta as escalas da semana em texto "Nome - Função" (copiar/baixar p/ compartilhar)
@@ -1834,7 +1859,7 @@ async function carregarRodizio(){
   // quando a pergunta dele ("quem está parado") é justamente a que não depende de ter missa.
   if (!membros.length) {
     const { data: ms } = await sb.from('acolitos_membros')
-      .select('id,nome,apelido,nivel,comunidade,casa_id,foto_url,escalar_frequente,suspenso_ate,suspenso_em,data_nascimento')
+      .select('id,nome,apelido,nivel,comunidade,casa_id,foto_url,escalar_frequente,servir_toda_semana,suspenso_ate,suspenso_em,data_nascimento')
       .eq('status','ativo').eq('serve',true).order('nome');
     membros = ms || [];
   }
@@ -1842,11 +1867,11 @@ async function carregarRodizio(){
   // PAGINADO: um ano passa de mil escalas com folga, e o banco corta calado — a lista sairia
   // dizendo "nunca escalado" para gente que serve todo mês.
   const { data, error } = await lerTudo(() => sb.from('acolitos_escalas')
-    .select('membro_id,substituto_id,status,acolitos_celebracoes!inner(data,horario)')
+    .select('membro_id,substituto_id,status,funcao,acolitos_celebracoes!inner(data,horario)')
     .gte('acolitos_celebracoes.data', de.toISOString().slice(0,10)));
   if (error) throw error;   // lista curta virando diagnóstico é pior que a aba falhar
   const escalas = (data||[]).map(e => ({
-    membro_id: e.membro_id, substituto_id: e.substituto_id, status: e.status,
+    membro_id: e.membro_id, substituto_id: e.substituto_id, status: e.status, funcao:e.funcao,
     data: e.acolitos_celebracoes && e.acolitos_celebracoes.data,
     horario: e.acolitos_celebracoes && e.acolitos_celebracoes.horario,
   }));
@@ -1861,6 +1886,7 @@ async function carregarRodizio(){
   const linhas = RodizioCore.montarRodizio({ membros, escalas, hoje });
   const teto = rodizioPiso ? rodizioPiso.teto : null;
   linhas.forEach(l => {
+    if(l.membro.servir_toda_semana){l.planoSemanal=SemanalCore.situacao(l.membro.id,hoje,escalas);l.vezesNoMes=l.planoSemanal.total;l.abaixoDaRegra=l.planoSemanal.funcao!==2||l.planoSemanal.apoio!==2||l.planoSemanal.semanas!==4;}
     const habs = habMap[l.membro.id] || {};
     const nHab = Object.keys(habs).filter(f => RODIZIO_PROF_OK.indexOf(habs[f]) >= 0).length;
     l.motivo = l.abaixoDaRegra
@@ -1920,6 +1946,7 @@ function configFiltroRodizio(){
       // Escolha ÚNICA: ligar "8+" com "4+" ligado daria a lista do 4+, e o número mentiria.
       { id:'frequente', nome:'Frequência', opcoes: [
         { id:'sim', nome:'Marcados como frequentes', testa: l => !!l.membro.escalar_frequente },
+        { id:'semanal', nome:'Servir toda semana', testa: l => !!l.membro.servir_toda_semana },
       ] },
       { id:'parado', nome:'Situação', unico:true, opcoes: [
         { id:'abaixo', nome:'Abaixo da regra este mês', testa: l => l.abaixoDaRegra },
@@ -1966,7 +1993,7 @@ function desenharRodizio(){
   const faltam = RodizioCore.fimDeSemanaRestantes(hojeLocal());
   const regua=document.createElement('p'); regua.className='rodizio-regua';
   const l1=document.createElement('strong');
-  l1.textContent='A regra é servir '+RodizioCore.META_PADRAO+'× por mês.';
+  l1.textContent='A regra é servir '+RodizioCore.META_PADRAO+'× por mês. Quem tem “Servir toda semana”: 4×, em semanas distintas (2 funções + 2 apoios).';
   const l2=document.createElement('div');
   l2.textContent = res.cumpriram+' de '+res.total+' cumpriram este mês'
     + (res.emZero ? ' · '+res.emZero+' ainda não serviram nenhuma vez' : '')
@@ -2106,7 +2133,7 @@ function pintarPainelRodizio(el){
     dica.textContent='Suspender tira a pessoa da escala por '+RodizioCore.DIAS_SUSPENSAO+' dias, sem mexer na disponibilidade dela.';
     box.append(h,dica);
     faltantes.forEach(l=>box.appendChild(item(l,
-      l.faltas+(l.faltas===1?' falta':' faltas')+' · '+l.vezesNoMes+' de '+RodizioCore.META_PADRAO+' este mês',
+      l.faltas+(l.faltas===1?' falta':' faltas')+' · '+l.vezesNoMes+' de '+RodizioCore.metaDoMembro(l.membro)+' este mês',
       botaoSuspensao(l.membro))));
     el.appendChild(box);
   }
@@ -2186,7 +2213,8 @@ function pintarRodizio(lista){
     // Sem o selo, um frequente servindo mais que os outros parece defeito do rodízio — e é
     // justamente o contrário: é alguém que o dono marcou de propósito.
     if(RodizioCore.suspensoNaData(m, hojeLocal())){ const sp=document.createElement('div'); sp.className='rodizio-susp'; sp.textContent='suspenso até '+formatDate(m.suspenso_ate).slice(0,5); nm.appendChild(sp); }
-    if(m.escalar_frequente){ const sf=document.createElement('div'); sf.className='rodizio-selo'; sf.textContent='frequente'; nm.appendChild(sf); }
+    if(m.servir_toda_semana){const sf=document.createElement('div');sf.className='rodizio-selo';sf.textContent=l.planoSemanal?'toda semana · '+l.planoSemanal.funcao+'/2 funções · '+l.planoSemanal.apoio+'/2 apoios':'toda semana · 2 funções + 2 apoios';nm.appendChild(sf);}
+    else if(m.escalar_frequente){ const sf=document.createElement('div'); sf.className='rodizio-selo'; sf.textContent='frequente'; nm.appendChild(sf); }
     box.appendChild(nm); tdN.appendChild(box); tr.appendChild(tdN);
 
     const cel=(txt,label)=>{ const td=document.createElement('td'); td.style.cssText='text-align:center;font-size:11px;'; td.textContent=txt; if(label) td.setAttribute('data-label',label); return td; };
@@ -2196,7 +2224,7 @@ function pintarRodizio(lista){
     // 1,4:1 no tema claro — sumiria justamente em quem importa.
     const tdR=document.createElement('td'); tdR.style.cssText='text-align:center;font-size:11px;'; tdR.setAttribute('data-label','Este mês');
     const marca=document.createElement('span');
-    marca.textContent=l.vezesNoMes+' / '+RodizioCore.META_PADRAO;
+    marca.textContent=l.vezesNoMes+' / '+RodizioCore.metaDoMembro(m);
     if(l.abaixoDaRegra) marca.className='rodizio-alerta'; else marca.style.fontWeight='700';
     tdR.appendChild(marca); tr.appendChild(tdR);
 
@@ -2224,7 +2252,7 @@ function pintarRodizio(lista){
 
 function _rodLinhasExport(){
   return rodizioVisivel().map(l => [
-    l.membro.nome||'', l.vezesNoMes+'/'+RodizioCore.META_PADRAO,
+    l.membro.nome||'', l.vezesNoMes+'/'+RodizioCore.metaDoMembro(l.membro),
     _rodSemanas(l.semEscalar), _rodSemanas(l.semServir),
     String(l.faltas), RodizioCore.rotuloDoMotivo(l.motivo),
     l.ultimaServida ? formatDate(l.ultimaServida) : '',

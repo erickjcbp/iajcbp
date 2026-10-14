@@ -1,0 +1,29 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {iniciarProvas,PAPEIS} from './abrir-tela.mjs';
+const dir='/Users/erickmartins/arquivos/auditorias/coroinhas/2026-10-14-servir-semanal';fs.mkdirSync(dir,{recursive:true});
+const maria={id:'m1',nome:'Maria Clara',nivel:'coroinha',status:'ativo',serve:true,comunidade:'matriz',servir_toda_semana:false,escalar_frequente:true};
+const p=await iniciarProvas();
+try{
+ for(const largura of [360,768,1366,2560]){
+  const r=await p.abrir('membros.html',{papel:PAPEIS.admin,largura,tabelas:{acolitos_membros:{data:[maria]}},avaliar:`await abrirFicha(todos[0]);[...document.querySelectorAll('.ficha-tab')].find(b=>/Disponibilidade/.test(b.textContent)).click();await new Promise(r=>setTimeout(r,450));const g=[...document.querySelectorAll('#ficha-conteudo .form-group')].find(x=>/Servir toda semana/.test(x.textContent));g.querySelector('button').click();await salvarFicha();document.getElementById('splash')?.remove();document.getElementById('pwa-banner')?.remove();[...document.querySelectorAll('#ficha-conteudo .form-group')].find(x=>/Servir toda semana/.test(x.textContent))?.scrollIntoView({block:'center'});await new Promise(r=>setTimeout(r,100));return {texto:document.querySelector('#ficha-conteudo').textContent,overflow:document.documentElement.scrollWidth>innerWidth+1};`,foto:{caminho:dir+'/ficha-'+largura+'.png',viewport:true}});
+  assert.deepEqual(r.erros,[]);assert.equal(r.erroAvaliar,null);assert.match(r.avaliado.texto,/4 escalas por mês/);assert.equal(r.avaliado.overflow,false);assert.ok(r.gravacoes.some(g=>g.tabela==='acolitos_membros'&&g.dados?.servir_toda_semana===true));console.log('Ficha completa',largura,'OK');
+  const q=await p.abrir('escala.html',{papel:PAPEIS.admin,largura,avaliar:`await abrirFichaRapida(${JSON.stringify(maria)});await new Promise(r=>setTimeout(r,450));const label=[...document.querySelectorAll('.modal-overlay.open label')].find(l=>l.textContent==='Servir toda semana');const chk=label.querySelector('input');chk.checked=true;chk.dispatchEvent(new Event('change'));await [...document.querySelectorAll('.modal-overlay.open button')].find(b=>b.textContent==='Salvar').onclick();document.getElementById('splash')?.remove();document.getElementById('pwa-banner')?.remove();label.scrollIntoView({block:'center'});await new Promise(r=>setTimeout(r,100));return {texto:document.querySelector('.modal-overlay.open').textContent,overflow:document.documentElement.scrollWidth>innerWidth+1};`,foto:{caminho:dir+'/rapida-'+largura+'.png',viewport:true}});
+  assert.deepEqual(q.erros,[]);assert.equal(q.erroAvaliar,null);assert.equal(q.avaliado.overflow,false);assert.match(q.avaliado.texto,/2 em funções aptas e 2 em apoio/);assert.ok(q.gravacoes.some(g=>g.tabela==='acolitos_membros'&&g.dados?.servir_toda_semana===true));console.log('Ficha rápida',largura,'OK');
+ }
+ const g=await p.abrir('escala.html',{papel:PAPEIS.admin,avaliar:`
+ membros=[{...${JSON.stringify(maria)},servir_toda_semana:true},{id:'m2',nome:'Reserva',nivel:'coroinha',comunidade:'matriz'}];habMap={m1:{vela:'apto',apoio:'apto'},m2:{vela:'apto',apoio:'apto'}};dispMap={m1:['domingo_9h'],m2:['domingo_9h']};escalasMap={};const h=[],novas=[],avisos=[];
+ uiConfirm=async()=>true;uiAlert=async msg=>avisos.push(msg);loadDados=async()=>{};carregarPesoRodizio=async()=>({});carregarAusenciasFresh=async()=>({});horKeyDe=()=> 'domingo_9h';modeloFor=()=>[{funcao:'vela'},{funcao:'apoio'}];SemanalCore.carregar=async()=>h.slice();
+ const datas=['2026-11-01','2026-11-08','2026-11-15','2026-11-22','2026-11-29'];let atual;
+ sb.from=()=>({insert:async rows=>{novas.push(...rows.map(e=>({...e,data:atual})));h.push(...rows.map(e=>({...e,data:atual})));return {error:null};}});
+ for(const data of datas){atual=data;await gerarEscalaSemana([{id:data,data,horario:'9h',comunidade:'matriz',tipo:'dominical'}]);}
+ const plano=novas.filter(e=>e.membro_id==='m1');
+ const indisponivel=planejarVagas(['vela','apoio'],'domingo_7h',new Set(),new Set(),{},new Set(),'matriz','2026-12-06',[]);
+ const semAptidao=planejarVagas(['cruz'],'domingo_9h',new Set(),new Set(),{},new Set(),'matriz','2026-12-06',[]);
+ const duplicada=planejarVagas(['vela','apoio'],'domingo_9h',new Set(),new Set(),{},new Set(),'matriz','2026-11-07',h);
+ rodizioLinhas=RodizioCore.montarRodizio({membros,escalas:h,hoje:'2026-11-14'});filtroRodizio=null;const lista=document.createElement('div');pintarRodizio(lista);
+ return {plano,avisos,indisponivel,semAptidao,duplicada,texto:lista.textContent};`});
+ assert.equal(g.erroAvaliar,null);assert.equal(g.avaliado.plano.length,4);assert.equal(g.avaliado.plano.filter(e=>e.funcao==='apoio').length,2);assert.equal(new Set(g.avaliado.plano.map(e=>e.data)).size,4);assert.deepEqual(g.avaliado.indisponivel,[null,null]);assert.deepEqual(g.avaliado.semAptidao,[null]);assert.ok(!g.avaliado.duplicada.includes('m1'));assert.match(g.avaliado.texto,/4 \/ 4/);console.log('Gerador semanal e da missa: 2 funções, 2 apoios, teto, disponibilidade e aptidão OK');
+ const falha=await p.abrir('escala.html',{papel:PAPEIS.admin,tabelas:{acolitos_membros:{data:[{...maria,servir_toda_semana:true}]},acolitos_escalas:{error:{message:'Falha de histórico'}}},avaliar:`membros=[{...{"id": "m1", "nome": "Maria Clara", "nivel": "coroinha", "comunidade": "matriz"},servir_toda_semana:true}];uiConfirm=async()=>true;let aviso;uiAlert=async msg=>aviso=msg;const b=document.createElement('button');b.textContent='Gerar';await gerarEscalaSemana([{id:'c1',data:'2026-11-01',horario:'9h',comunidade:'matriz'}],b);return {aviso,disabled:b.disabled};`});
+ assert.equal(falha.erroAvaliar,null);assert.match(falha.avaliado.aviso,/Nenhuma escala foi gerada/);assert.equal(falha.avaliado.disabled,false);assert.ok(!falha.gravacoes.some(g=>g.tabela==='acolitos_escalas'&&g.acao==='insert'));console.log('Histórico recusado impede geração do plano, sem gravação parcial: OK');
+}finally{await p.encerrar();}
