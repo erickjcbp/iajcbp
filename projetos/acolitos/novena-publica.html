@@ -192,8 +192,9 @@
 
       <div class="card">
         <div id="passo1">
-          <label>Quem é você? <span class="req">*</span></label>
-          <input id="busca" type="text" placeholder="digite seu nome (mín. 2 letras)…" autocomplete="off">
+          <label id="passo1-tit">Quem é você?</label>
+          <div id="passo1-txt" class="help">Carregando…</div>
+          <a id="entrar" class="btn" href="/projetos/acolitos/login.html?volta=novena" style="display:none;text-align:center;text-decoration:none;">Entrar com meu login</a>
           <div id="results" class="results"></div>
         </div>
         <div id="passo2" style="display:none;">
@@ -223,7 +224,7 @@
     <h2>Confirma sua escala?</h2>
     <p class="sub" id="dlgNome" style="margin:0;"></p>
     <div id="dlgLista" class="lista"></div>
-    <p class="sub" style="margin:12px 0 0;">Ao confirmar, você entra na escala dessas missas. Depois você pode trocar a função ou sair por este mesmo link.</p>
+    <p class="sub" style="margin:12px 0 0;">Ao confirmar, você entra na escala dessas missas. Depois você pode trocar a função ou sair por este mesmo link, entrando com seu login.</p>
     <div class="row"><button class="voltar" id="dlgVoltar" type="button">Voltar</button><button class="ir" id="dlgIr" type="button">Sim, confirmar</button></div>
   </div></div>
 
@@ -250,19 +251,33 @@
     function diaCerto(c){ const d=new Date(c.data+'T00:00:00'), n=DIAS[d.getDay()];
       return (d.getDay()>0&&d.getDay()<6 ? n+'-feira' : n)+', '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long'}); }
 
-    // ── BUSCA ──
-    let buscaT=null;
-    $('busca').addEventListener('input', e=>{
-      clearTimeout(buscaT);
-      const q=e.target.value.trim();
-      if(q.length<2){ $('results').classList.remove('show'); $('results').innerHTML=''; return; }
-      buscaT=setTimeout(()=>buscar(q), 250);
-    });
-    async function buscar(q){
-      const { data, error } = await sb.rpc('acolitos_ausencia_publica_buscar', { p_q:q });
+    // ── QUEM É VOCÊ: só pelo login (migration 097) ──
+    // Marcar, trocar e sair mexem na escala de verdade, então o banco só aceita o próprio servo,
+    // a família dele (grupo_irmaos) ou a equipe. Antes era uma busca pública por nome, e
+    // qualquer um podia agir no nome de outro.
+    let perfis = [];
+    async function identificar(){
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session){
+        $('passo1-txt').textContent='Entre com o mesmo usuário e senha do app dos coroinhas para marcar suas missas.';
+        $('entrar').style.display='block'; return;
+      }
+      const { data: eu, error } = await sb.from('acolitos_membros')
+        .select('id,nome,apelido,grupo_irmaos').eq('user_id', session.user.id).maybeSingle();
+      if(error || !eu){ $('passo1-txt').textContent='Seu login não está ligado a um cadastro de servo. Fale com a coordenação.'; return; }
+      perfis = [eu];
+      if(eu.grupo_irmaos){
+        const { data: fam } = await sb.from('acolitos_membros').select('id,nome,apelido')
+          .eq('grupo_irmaos', eu.grupo_irmaos).eq('status','ativo').eq('serve', true).neq('id', eu.id).order('nome');
+        perfis = perfis.concat(fam || []);
+      }
+      if(perfis.length===1){ escolher(eu); return; }
+      $('passo1-txt').textContent='Para quem você vai marcar as missas?';
+      listar(perfis);
+    }
+    function listar(data){
       const box=$('results'); box.innerHTML='';
-      if(error || !Array.isArray(data) || !data.length){ box.classList.remove('show'); return; }
-      const hint=document.createElement('div'); hint.className='rhint'; hint.textContent='toque no seu nome';
+      const hint=document.createElement('div'); hint.className='rhint'; hint.textContent='toque no nome';
       box.appendChild(hint);
       data.forEach(m=>{
         const b=document.createElement('button');
@@ -278,10 +293,12 @@
       membro=m; selCels.clear(); clearErr();
       $('meNome').textContent=m.nome;
       $('passo1').style.display='none'; $('passo2').style.display='block';
-      $('results').classList.remove('show'); $('busca').value='';
+      $('results').classList.remove('show');
+      $('trocar').style.display = perfis.length>1 ? '' : 'none';
       carregar();
     }
-    $('trocar').onclick=()=>{ membro=null; $('passo2').style.display='none'; $('passo1').style.display='block'; };
+    $('trocar').onclick=()=>{ membro=null; $('passo2').style.display='none'; $('passo1').style.display='block'; listar(perfis); };
+    identificar();
 
     // ── MISSAS ──
     async function carregar(){
@@ -363,7 +380,7 @@
       const { data, error } = await sb.rpc('acolitos_novena_publica_alterar', { p_membro_id: membro.id, p_celebracao_id: c.id, p_acao: acao, p_funcao: funcao });
       if(error || !data || data.erro){
         const MSG={ sem_vaga:'Essa função acabou de lotar. Atualizando a lista…', nao_escalado:'Você não está mais nessa missa. Atualizando…',
-                    invalida:'Essa missa não está mais aberta.', membro_invalido:'Seu cadastro não está disponível. Fale com a coordenação.' };
+                    invalida:'Essa missa não está mais aberta.', sem_login:'Entre de novo com seu login.', membro_invalido:'Seu cadastro não está disponível. Fale com a coordenação.' };
         showErr((data && MSG[data.erro]) || 'Não foi possível alterar. Tente de novo.');
         selCels.clear(); carregar(); return;
       }
@@ -405,7 +422,7 @@
       if(error || (data && data.erro)){
         const MSG={ sem_itens_validos:'Essas missas não têm mais vaga para você. Atualizando a lista…',
                     membro_invalido:'Seu cadastro não está disponível para servir. Fale com a coordenação.',
-                    muitos_itens:'Marcou missas demais de uma vez.' };
+                    muitos_itens:'Marcou missas demais de uma vez.', sem_login:'Entre de novo com seu login.' };
         showErr((data && MSG[data.erro]) || 'Não foi possível enviar. Tente de novo.');
         if(data && data.erro==='sem_itens_validos'){ selCels.clear(); carregar(); }
         return;

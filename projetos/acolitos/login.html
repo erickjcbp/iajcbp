@@ -260,6 +260,9 @@
   const DOMINIO='@coroinhas.jcbplimeira.com.br';
   function synthEmail(u){ const c=String(u||'').trim().toLowerCase(); return c.includes('@')?c:c.replace(/[^a-z0-9._-]/g,'')+DOMINIO; }
 
+  // Para onde voltar depois de entrar. Lista fechada: só destinos conhecidos (nada de URL livre).
+  const DESTINO = ({ novena:'/novena' })[new URLSearchParams(location.search).get('volta')] || 'index.html';
+
   async function entrar(){
     const id=document.getElementById('li-email').value.trim();
     const senha=document.getElementById('li-senha').value;
@@ -268,7 +271,7 @@
     btn.disabled=true; btn.textContent='Entrando...';
     const { error }=await sb.auth.signInWithPassword({ email: synthEmail(id), password:senha });
     if(error){ msg('msg-entrar','Usuário ou senha incorretos.','error'); btn.disabled=false; btn.textContent='Entrar'; return; }
-    window.location.href='index.html';
+    window.location.href=DESTINO;
   }
 
   async function criarConta(){
@@ -295,7 +298,7 @@
   // Quando as pessoas puderem cadastrar um e-mail de verdade, ela volta, e aí funciona.
 
   // Se já está logado, vai direto para a home do módulo
-  sb.auth.getSession().then(({ data:{ session } })=>{ if(session) window.location.href='index.html'; });
+  sb.auth.getSession().then(({ data:{ session } })=>{ if(session) window.location.href=DESTINO; });
 
   // ── Cadastro família ───────────────────────────────────────────
   function sugereUsuario(nome){

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict R6qZjpOdRcYdh4et0WLb7fdFt9RmUbVeTDtYqRw1JsYxA3PMPZ4vaegFmgnOZXT
+\restrict leN8sXVZoTDQIPrppJi2L0hGiw4hr240BgifoiaILEHahsXFMY22gRWr1IBSgqo
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.6
@@ -2088,6 +2088,22 @@ $$;
 
 
 --
+-- Name: acolitos_novena_pode_agir(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acolitos_novena_pode_agir(p_membro_id uuid) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select auth.uid() is not null and p_membro_id is not null and (
+    acolitos_get_role(auth.uid()) in ('coord_admin','subadmin','membro_equipe')
+    or exists (select 1 from acolitos_membros where id = p_membro_id and user_id = auth.uid())
+    or exists (select 1 from acolitos_membros me join acolitos_membros tgt on tgt.grupo_irmaos = me.grupo_irmaos
+               where me.user_id = auth.uid() and me.grupo_irmaos is not null and tgt.id = p_membro_id));
+$$;
+
+
+--
 -- Name: acolitos_novena_publica_alterar(uuid, uuid, text, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2097,6 +2113,7 @@ CREATE FUNCTION public.acolitos_novena_publica_alterar(p_membro_id uuid, p_celeb
     AS $$
 declare c public.acolitos_celebracoes%rowtype; e public.acolitos_escalas%rowtype;
 begin
+  if not public.acolitos_novena_pode_agir(p_membro_id) then return jsonb_build_object('erro','sem_login'); end if;
   if p_membro_id is null or p_celebracao_id is null or p_acao not in ('trocar','sair') then
     return jsonb_build_object('erro','pedido_invalido');
   end if;
@@ -2141,6 +2158,7 @@ declare
   v_ordem text[] := array['cred_altar','cred_credencia','missal','altar','cruz','sineta','sinao','vela','apoio'];
   v_postos jsonb := '[]'::jsonb; v_pulados jsonb := '[]'::jsonb;
 begin
+  if not public.acolitos_novena_pode_agir(p_membro_id) then return jsonb_build_object('erro','sem_login'); end if;
   if p_membro_id is null or p_itens is null or jsonb_typeof(p_itens) <> 'array' or jsonb_array_length(p_itens) = 0 then
     return jsonb_build_object('erro','sem_itens');
   end if;
@@ -2199,6 +2217,7 @@ CREATE FUNCTION public.acolitos_novena_publica_missas(p_membro_id uuid) RETURNS 
     AS $$
 declare v_out jsonb;
 begin
+  if not public.acolitos_novena_pode_agir(p_membro_id) then return '[]'::jsonb; end if;
   if p_membro_id is null
      or not exists (select 1 from public.acolitos_membros where id = p_membro_id and status = 'ativo') then
     return '[]'::jsonb;
@@ -7582,13 +7601,21 @@ GRANT ALL ON FUNCTION public.acolitos_normalizar_frequencia() TO service_role;
 
 
 --
+-- Name: FUNCTION acolitos_novena_pode_agir(p_membro_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.acolitos_novena_pode_agir(p_membro_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.acolitos_novena_pode_agir(p_membro_id uuid) TO authenticated;
+GRANT ALL ON FUNCTION public.acolitos_novena_pode_agir(p_membro_id uuid) TO service_role;
+
+
+--
 -- Name: FUNCTION acolitos_novena_publica_alterar(p_membro_id uuid, p_celebracao_id uuid, p_acao text, p_funcao text); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.acolitos_novena_publica_alterar(p_membro_id uuid, p_celebracao_id uuid, p_acao text, p_funcao text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.acolitos_novena_publica_alterar(p_membro_id uuid, p_celebracao_id uuid, p_acao text, p_funcao text) TO authenticated;
 GRANT ALL ON FUNCTION public.acolitos_novena_publica_alterar(p_membro_id uuid, p_celebracao_id uuid, p_acao text, p_funcao text) TO service_role;
-GRANT ALL ON FUNCTION public.acolitos_novena_publica_alterar(p_membro_id uuid, p_celebracao_id uuid, p_acao text, p_funcao text) TO anon;
 
 
 --
@@ -7598,7 +7625,6 @@ GRANT ALL ON FUNCTION public.acolitos_novena_publica_alterar(p_membro_id uuid, p
 REVOKE ALL ON FUNCTION public.acolitos_novena_publica_enviar(p_membro_id uuid, p_itens jsonb) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.acolitos_novena_publica_enviar(p_membro_id uuid, p_itens jsonb) TO authenticated;
 GRANT ALL ON FUNCTION public.acolitos_novena_publica_enviar(p_membro_id uuid, p_itens jsonb) TO service_role;
-GRANT ALL ON FUNCTION public.acolitos_novena_publica_enviar(p_membro_id uuid, p_itens jsonb) TO anon;
 
 
 --
@@ -7608,7 +7634,6 @@ GRANT ALL ON FUNCTION public.acolitos_novena_publica_enviar(p_membro_id uuid, p_
 REVOKE ALL ON FUNCTION public.acolitos_novena_publica_missas(p_membro_id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.acolitos_novena_publica_missas(p_membro_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.acolitos_novena_publica_missas(p_membro_id uuid) TO service_role;
-GRANT ALL ON FUNCTION public.acolitos_novena_publica_missas(p_membro_id uuid) TO anon;
 
 
 --
@@ -8489,5 +8514,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON T
 -- PostgreSQL database dump complete
 --
 
-\unrestrict R6qZjpOdRcYdh4et0WLb7fdFt9RmUbVeTDtYqRw1JsYxA3PMPZ4vaegFmgnOZXT
+\unrestrict leN8sXVZoTDQIPrppJi2L0hGiw4hr240BgifoiaILEHahsXFMY22gRWr1IBSgqo
 
