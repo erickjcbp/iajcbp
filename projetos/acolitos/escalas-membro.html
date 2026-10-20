@@ -658,22 +658,12 @@ async function enviarAusencia() {
     if (error) { msg.className='msg error'; msg.textContent='Erro ao salvar a data avulsa.'; btn.disabled=false; btn.textContent='Confirmar Ausência'; return; }
   }
 
-  // Substituição automática: se já estava escalado nessas missas, troca por alguém disponível
-  let celebsAfetadas = ids.slice();
-  if (datas.length) {
-    const { data: cc } = await sb.from('acolitos_celebracoes').select('id').in('data', datas);
-    celebsAfetadas = celebsAfetadas.concat((cc||[]).map(c => c.id));
-  }
-  celebsAfetadas = [...new Set(celebsAfetadas)];
-  let nSub = 0;
-  if (celebsAfetadas.length) {
-    const { data: r } = await sb.rpc('acolitos_substituir_ausente', { p_membros: membrosAll, p_celebracoes: celebsAfetadas });
-    nSub = r || 0;
-  }
+  // A troca na escala é do BANCO (gatilho da migration 096): quem estava escalado já saiu e
+  // outra pessoa apta entrou no lugar, ou a vaga ficou vazia se não havia ninguém.
 
   const total = ids.length + datas.length;
   const extra = irmaosJuntos.length ? ' (e ' + irmaosJuntos.map(i => i.apelido || (i.nome||'').split(' ')[0]).join(', ') + ', que serve' + (irmaosJuntos.length>1?'m':'') + ' junto)' : '';
-  const subTxt = nSub ? ' Já substituí ' + nSub + ' posição(ões) na escala.' : '';
+  const subTxt = ' Se estava escalado, a escala já foi ajustada.';
   msg.className='msg success'; msg.textContent = total + (total>1 ? ' ausências registradas!' : ' ausência registrada!') + extra + subTxt;
   btn.disabled=true; btn.textContent='Registrado ✓';
   setTimeout(()=>{ document.querySelectorAll(".modal-overlay").forEach(x=>x.remove()); location.reload(); }, 1600);   // recarrega: as missas atrás do modal mudaram

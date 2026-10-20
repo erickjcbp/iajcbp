@@ -701,22 +701,12 @@ async function enviarAusencia() {
     if (error) { msg.className='msg error'; msg.textContent='Erro ao salvar a data avulsa.'; btn.disabled=false; btn.textContent='Confirmar Ausência'; return; }
   }
 
-  // Substituição automática: se já estava escalado nessas missas, troca por alguém disponível
-  let celebsAfetadas = ids.slice();
-  if (datas.length) {
-    const { data: cc } = await sb.from('acolitos_celebracoes').select('id').in('data', datas);
-    celebsAfetadas = celebsAfetadas.concat((cc||[]).map(c => c.id));
-  }
-  celebsAfetadas = [...new Set(celebsAfetadas)];
-  let nSub = 0;
-  if (celebsAfetadas.length) {
-    const { data: r } = await sb.rpc('acolitos_substituir_ausente', { p_membros: membrosAll, p_celebracoes: celebsAfetadas });
-    nSub = r || 0;
-  }
+  // A troca na escala é do BANCO (gatilho da migration 096): quem estava escalado já saiu e
+  // outra pessoa apta entrou no lugar, ou a vaga ficou vazia se não havia ninguém.
 
   const total = ids.length + datas.length;
   const extra = irmaosJuntos.length ? ' (e ' + irmaosJuntos.map(i => i.apelido || (i.nome||'').split(' ')[0]).join(', ') + ', que serve' + (irmaosJuntos.length>1?'m':'') + ' junto)' : '';
-  const subTxt = nSub ? ' Já substituí ' + nSub + ' posição(ões) na escala.' : '';
+  const subTxt = ' Se estava escalado, a escala já foi ajustada.';
   msg.className='msg success'; msg.textContent = total + (total>1 ? ' ausências registradas!' : ' ausência registrada!') + extra + subTxt;
   btn.disabled=true; btn.textContent='Registrado ✓';
   setTimeout(()=>renderViewMembro(), 1600);
@@ -961,8 +951,8 @@ async function abrirRegistroAusencia() {
     ids.forEach(id => { selecionados.forEach(s => rows.push({ membro_id: s.id, celebracao_id: id, motivo: motivoSel, observacao: obsVal })); });
     const { error } = await sb.from('acolitos_ausencias').upsert(rows, { onConflict: 'membro_id,celebracao_id' });
     if (error) { msg.className = 'msg error'; msg.textContent = 'Erro ao registrar. Tente novamente.'; conf.disabled = false; conf.textContent = 'Registrar'; return; }
-    const { data: nSub } = await sb.rpc('acolitos_substituir_ausente', { p_membros: selecionados.map(s => s.id), p_celebracoes: ids });
-    const subTxt = nSub ? ' Substituí ' + nSub + ' posição(ões) na escala.' : '';
+    // A troca na escala é do banco (gatilho da migration 096), feita junto com a gravação acima.
+    const subTxt = ' Quem estava escalado já saiu da escala.';
     msg.className = 'msg success'; msg.textContent = 'Registrado para ' + selecionados.length + ' membro(s).' + subTxt;
     setTimeout(() => { ov.remove(); renderViewEquipe(); }, 1500);
   };
