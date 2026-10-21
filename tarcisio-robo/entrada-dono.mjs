@@ -4,13 +4,14 @@
 // O número do dono vem só de tarcisio_config.numero_conferencia; nada fica escrito no código.
 // Projeto: docs/superpowers/specs/2026-10-20-escala-automatica-design.md (seções 5 e 7)
 import { agoraSP } from './regras.mjs'
-import { ehPdf, numeroLimpo, simOuNao, remetentesAutorizados } from './ministros-pdf.mjs'
+import { ehPdf, simOuNao, quemAutorizado, donoDe } from './ministros-pdf.mjs'
 
 const exigir = ({ data, error }, onde) => {
   if (error) throw new Error(`${onde}: ${error.message}`)
   return data
 }
 
+export const TRATADA = 'Essa escala já foi tratada.'
 export const RESPOSTAS = {
   confirmada: 'Confirmada. Arte indo para os grupos.',
   revisar: 'Combinado, revise no app.',
@@ -32,25 +33,31 @@ export function criarEntradaDono({ db, evo, confirmarSemana, ministros, relogio 
       'mudar estado da semana').length > 0
   }
 
-  // Só age com a semana em 'aguardando'. Outros estados: nada muda; toque repetido recebe aviso.
+  // Só age com a semana em 'aguardando'. botao: 'escala:<acao>:<semana>' (botão) ou
+  // 'escala:<acao>' (atalho "1"/"2"). Botão de outra semana, ou semana já tratada: só o aviso.
+  // Atalho sem semana esperando: false (vira conversa normal), salvo aviso de semana já decidida.
   async function tratarRespostaDono({ numero, botao, cfg = null }) {
     cfg ??= await lerCfg()
-    const dono = numeroLimpo(cfg?.numero_conferencia)
-    if (!dono || numeroLimpo(numero) !== dono) return false
-    if (botao !== 'escala:confirmar' && botao !== 'escala:revisar') return false
+    const dono = donoDe(cfg, numero)
+    if (!dono) return false
+    const m = /^escala:(confirmar|revisar)(?::(\d{4}-\d{2}-\d{2}))?$/.exec(String(botao || ''))
+    if (!m) return false
+    const [, acao, daSemana] = m
     const hoje = agoraSP(relogio()).data
     const semanas = exigir(await db.from('tarcisio_escala_auto').select('semana,estado').gte('semana', hoje).order('semana'), 'ler semanas')
-    const alvo = semanas.find((s) => s.estado === 'aguardando') || semanas[0]
-    if (!alvo) return true
+    const alvo = semanas.find((s) => s.estado === 'aguardando')
     const responder = (t) => evo.enviarTexto(dono, t)
-    const jaDecidida = async () => {
-      const agora = exigir(await db.from('tarcisio_escala_auto').select('estado').eq('semana', alvo.semana).maybeSingle(), 'ler semana')
-      if (JA_DECIDIDA[agora?.estado]) await responder(JA_DECIDIDA[agora.estado])
+    const jaDecidida = async () => { await responder(TRATADA); return true }
+    if (daSemana) {
+      if (!alvo || alvo.semana !== daSemana) return jaDecidida()
+    } else if (!alvo) {
+      const perto = semanas[0]
+      if (!perto || !JA_DECIDIDA[perto.estado]) return false
+      await responder(JA_DECIDIDA[perto.estado])
       return true
     }
-    if (alvo.estado !== 'aguardando') return jaDecidida()
 
-    if (botao === 'escala:revisar') {
+    if (acao === 'revisar') {
       if (!(await cas(alvo.semana, 'aguardando', 'em_revisao'))) return jaDecidida()
       await responder(RESPOSTAS.revisar)
       return true
@@ -74,8 +81,7 @@ export function criarEntradaDono({ db, evo, confirmarSemana, ministros, relogio 
   function precisaOlhar(msg, cfg) {
     if (msg.documento && ehPdf(msg.documento)) return true
     if (msg.tocou) return true
-    const autorizado = remetentesAutorizados(cfg).has(numeroLimpo(msg.numero))
-    if (!autorizado) return false
+    if (!quemAutorizado(cfg, msg.numero)) return false
     return !!msg.botao || !!simOuNao(msg.texto)
   }
 
@@ -111,8 +117,9 @@ export function criarEntradaDono({ db, evo, confirmarSemana, ministros, relogio 
     let tratada = true
     try { tratada = await tratar(msg, cfg) } catch (e) {
       log.error(`resposta do dono: ${e.message}`)
-      if (remetentesAutorizados(cfg).has(numeroLimpo(msg.numero))) {
-        try { await evo.enviarTexto(numeroLimpo(msg.numero), `Deu erro ao tratar sua mensagem: ${e.message}. Confira no app.`) } catch { /* sem como avisar */ }
+      const quem = quemAutorizado(cfg, msg.numero)
+      if (quem) {
+        try { await evo.enviarTexto(quem, `Deu erro ao tratar sua mensagem: ${e.message}. Confira no app.`) } catch { /* sem como avisar */ }
       }
     }
     if (!tratada) exigir(await db.from('tarcisio_mensagens').update({ respondida: false }).eq('id', gravada[0].id), 'devolver para a IA')

@@ -1,7 +1,8 @@
 // Só para testes: banco em memória com o pedaço da API do supabase-js que o robô usa.
 // from(t).select/insert/upsert/update/delete + eq/gte/lte/lt/in/contains/order/limit,
 // terminando em await, maybeSingle ou single. Nada sai daqui: nenhum dado real.
-export function bancoMemoria(inicial = {}, falhar = () => false) {
+// `agora` (opcional) dá a hora do created_at; sem ele, um relógio que anda 1 s por linha.
+export function bancoMemoria(inicial = {}, falhar = () => false, agora = null) {
   const t = structuredClone(inicial)
   let seq = 0
   let relogio = Date.parse('2026-10-01T00:00:00Z')
@@ -19,7 +20,7 @@ export function bancoMemoria(inicial = {}, falhar = () => false) {
     const casa = (r) => ops.filter((o) => FILTROS.includes(o[0])).every((o) => passa(r, o))
     const ins = achar('insert'), ups = achar('upsert'), upd = achar('update'), del = achar('delete')
     if (falhar(tabela, ops)) return { data: null, error: { message: `falha simulada em ${tabela}` } }
-    const novo = (x) => ({ id: `${tabela.slice(0, 3)}${++seq}`, created_at: new Date(relogio += 1000).toISOString(), ...x })
+    const novo = (x) => ({ id: `${tabela.slice(0, 3)}${++seq}`, created_at: new Date(agora ? +agora() + seq : (relogio += 1000)).toISOString(), ...x })
     if (del) { const fora = linhas.filter(casa); t[tabela] = linhas.filter((r) => !fora.includes(r)); return { data: fora, error: null } }
     if (ins) { const novos = [].concat(ins[1]).map(novo); linhas.push(...novos); return { data: structuredClone(novos), error: null } }
     if (ups) {

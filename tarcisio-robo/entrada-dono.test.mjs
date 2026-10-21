@@ -18,8 +18,9 @@ const WEBHOOK = JSON.parse(fs.readFileSync(path.join(AQUI, 'fixtures', 'webhook-
 
 const silencioso = { info() {}, warn() {}, error() {} }
 // Números de teste (inventados). O do dono vem SÓ da config, como em produção.
-const DONO = '5519900000001'
-const COORD = '5519900000002'
+const DONO = '5519987650001'
+const DONO_ANTIGO = '551987650001'   // o mesmo número no JID antigo do WhatsApp, sem o 9
+const COORD = '5519987650002'
 const OUTRO = '5519911112222'
 const CFG = { id: 1, numero_conferencia: DONO, remetentes_pdf: [COORD] }
 const HOJE = '2026-10-20T21:30:00Z'   // terça, 18:30 em Brasília
@@ -33,12 +34,14 @@ const MEMBROS = [
 ]
 
 function cenario({ estado = 'aguardando', confirmar = async () => ({ ok: true }), texto = TEXTO_OUTUBRO, botoesFalham = false, banco = {} } = {}) {
+  const relogio = { agora: new Date(HOJE) }
+  const passar = (min) => { relogio.agora = new Date(+relogio.agora + min * 60_000) }
   const db = bancoMemoria({
     tarcisio_config: [CFG],
     tarcisio_escala_auto: estado ? [{ semana: SAB, estado, lembretes: 0 }] : [],
     acolitos_membros: MEMBROS,
     ...banco,
-  })
+  }, undefined, () => relogio.agora)
   const enviados = []
   const baixados = []
   const evo = {
@@ -47,16 +50,18 @@ function cenario({ estado = 'aguardando', confirmar = async () => ({ ok: true })
     baixarMidia: async (id) => { baixados.push(id); return { base64: Buffer.from('%PDF-1.4 falso').toString('base64'), mimetype: 'application/pdf' } },
   }
   const chamadas = { confirmar: 0 }
-  const ministros = criarMinistrosPdf({ db, evo, nucleo: () => NUCLEO, log: silencioso, relogio: () => new Date(HOJE),
+  const ministros = criarMinistrosPdf({ db, evo, nucleo: () => NUCLEO, log: silencioso, relogio: () => relogio.agora,
     extrairTexto: async () => (typeof texto === 'function' ? texto() : texto) })
-  const entrada = criarEntradaDono({ db, evo, ministros, log: silencioso, relogio: () => new Date(HOJE),
+  const entrada = criarEntradaDono({ db, evo, ministros, log: silencioso, relogio: () => relogio.agora,
     confirmarSemana: async (s) => { chamadas.confirmar++; assert.equal(s, SAB); return confirmar(s) } })
-  return { db, evo, enviados, baixados, chamadas, entrada, ministros }
+  return { db, evo, enviados, baixados, chamadas, entrada, ministros, passar }
 }
 const estadoSemana = (db) => db.t.tarcisio_escala_auto.find((r) => r.semana === SAB)?.estado
 // Evento do webhook, no formato da Evolution
 const evento = (numero, message, id) => ({ event: 'messages.upsert', data: { key: { remoteJid: `${numero}@s.whatsapp.net`, fromMe: false, id }, message } })
 const toque = (numero, idBotao, id = 'T' + Math.random()) => evento(numero, { buttonsResponseMessage: { selectedButtonId: idBotao, selectedDisplayText: 'x' } }, id)
+const CONFIRMAR = `escala:confirmar:${SAB}`
+const REVISAR = `escala:revisar:${SAB}`
 const pdf = (numero, id = 'P' + Math.random(), nome = 'ESCALA OUTUBRO REV01.pdf') => evento(numero, { documentMessage: { mimetype: 'application/pdf', fileName: nome } }, id)
 const receber = (c, corpo) => c.entrada.receber(lerMensagemRecebida(corpo))
 
@@ -64,7 +69,7 @@ const receber = (c, corpo) => c.entrada.receber(lerMensagemRecebida(corpo))
 
 test('botão do dono confirma uma vez', async () => {
   const c = cenario()
-  await receber(c, toque(DONO, 'escala:confirmar'))
+  await receber(c, toque(DONO, CONFIRMAR))
   assert.equal(c.chamadas.confirmar, 1)
   assert.equal(estadoSemana(c.db), 'confirmada')
   assert.deepEqual(c.enviados, [{ n: DONO, t: 'Confirmada. Arte indo para os grupos.' }])
@@ -74,16 +79,16 @@ test('botão do dono confirma uma vez', async () => {
 
 test('duas vezes: segunda não envia nada', async () => {
   const c = cenario()
-  await receber(c, toque(DONO, 'escala:confirmar'))
-  await receber(c, toque(DONO, 'escala:confirmar'))
+  await receber(c, toque(DONO, CONFIRMAR))
+  await receber(c, toque(DONO, CONFIRMAR))
   assert.equal(c.chamadas.confirmar, 1)
   assert.equal(c.enviados.filter((e) => e.t === RESPOSTAS.confirmada).length, 1)
-  // o segundo toque só recebe o aviso de que já estava confirmada
-  assert.match(c.enviados[1].t, /já está confirmada/)
+  // o segundo toque só recebe o aviso
+  assert.equal(c.enviados[1].t, 'Essa escala já foi tratada.')
   assert.equal(c.enviados.length, 2)
   // o mesmo evento repetido pela Evolution (mesmo id) nem é tratado
   const d = cenario()
-  const ev = toque(DONO, 'escala:confirmar', 'MESMO')
+  const ev = toque(DONO, CONFIRMAR, 'MESMO')
   await receber(d, ev)
   await receber(d, ev)
   assert.equal(d.chamadas.confirmar, 1)
@@ -92,7 +97,7 @@ test('duas vezes: segunda não envia nada', async () => {
 
 test('dois toques ao mesmo tempo: só um confirma', async () => {
   const c = cenario({ confirmar: () => new Promise((r) => setTimeout(() => r({ ok: true }), 5)) })
-  await Promise.all([receber(c, toque(DONO, 'escala:confirmar')), receber(c, toque(DONO, 'escala:confirmar'))])
+  await Promise.all([receber(c, toque(DONO, CONFIRMAR)), receber(c, toque(DONO, CONFIRMAR))])
   assert.equal(c.chamadas.confirmar, 1)
   assert.equal(c.enviados.filter((e) => e.t === RESPOSTAS.confirmada).length, 1)
 })
@@ -100,8 +105,8 @@ test('dois toques ao mesmo tempo: só um confirma', async () => {
 test('botão de outro número é ignorado sem resposta', async () => {
   const c = cenario()
   assert.equal(await c.entrada.tratarRespostaDono({ numero: OUTRO, botao: 'escala:confirmar', cfg: CFG }), false)
-  await receber(c, toque(OUTRO, 'escala:confirmar'))
-  await receber(c, toque(COORD, 'escala:revisar'))   // remetente de PDF também não confirma escala
+  await receber(c, toque(OUTRO, CONFIRMAR))
+  await receber(c, toque(COORD, REVISAR))   // remetente de PDF também não confirma escala
   assert.equal(c.chamadas.confirmar, 0)
   assert.equal(estadoSemana(c.db), 'aguardando')
   assert.deepEqual(c.enviados, [])
@@ -122,23 +127,58 @@ test('texto 2 vira revisar', async () => {
 
 test('só age com a semana aguardando: em revisão, falhou ou sem linha não confirma', async () => {
   const r = cenario({ estado: 'em_revisao' })
-  await receber(r, toque(DONO, 'escala:confirmar'))
+  await receber(r, toque(DONO, CONFIRMAR))
   assert.equal(r.chamadas.confirmar, 0)
   assert.equal(estadoSemana(r.db), 'em_revisao')
-  assert.match(r.enviados[0].t, /revisão: confirme pelo app/)
+  assert.equal(r.enviados[0].t, 'Essa escala já foi tratada.')
+  await receber(r, evento(DONO, { conversation: '1' }, 'E1'))   // por texto: aviso do estado
+  assert.match(r.enviados[1].t, /revisão: confirme pelo app/)
   for (const estado of ['falhou', 'gerando', 'sem_missas', null]) {
     const c = cenario({ estado })
-    await receber(c, toque(DONO, 'escala:confirmar'))
-    await receber(c, toque(DONO, 'escala:revisar'))
+    await receber(c, toque(DONO, CONFIRMAR))
+    await receber(c, toque(DONO, REVISAR))
     assert.equal(c.chamadas.confirmar, 0, String(estado))
     assert.equal(estadoSemana(c.db), estado ?? undefined)
-    assert.deepEqual(c.enviados, [], String(estado))
+    assert.ok(c.enviados.every((e) => e.t === 'Essa escala já foi tratada.'), String(estado))
+    // "1" / "2" escrito sem semana esperando: segue para a conversa normal (IA)
+    await receber(c, evento(DONO, { conversation: '1' }, 'X1'))
+    await receber(c, evento(DONO, { conversation: '2' }, 'X2'))
+    assert.equal(c.chamadas.confirmar, 0)
+    assert.ok(['X1', 'X2'].every((id) => c.db.t.tarcisio_mensagens.find((m) => m.external_id === id).respondida === false), String(estado))
+  }
+})
+
+test('botão de outra semana não mexe na que espera', async () => {
+  const c = cenario()
+  await receber(c, toque(DONO, 'escala:confirmar:2026-10-17'))
+  assert.equal(c.chamadas.confirmar, 0)
+  assert.equal(estadoSemana(c.db), 'aguardando')
+  assert.deepEqual(c.enviados, [{ n: DONO, t: 'Essa escala já foi tratada.' }])
+  // id sem semana (atalho) continua valendo
+  await receber(c, toque(DONO, 'escala:revisar'))
+  assert.equal(estadoSemana(c.db), 'em_revisao')
+})
+
+test('número do dono: com e sem o 9 e com sufixo de aparelho vale; forma nacional e outro não', async () => {
+  for (const jid of [DONO, DONO_ANTIGO, `${DONO}:12`, `${DONO_ANTIGO}:3`]) {
+    const c = cenario()
+    await receber(c, toque(jid, REVISAR))
+    assert.equal(estadoSemana(c.db), 'em_revisao', jid)
+    assert.deepEqual(c.enviados, [{ n: DONO, t: 'Combinado, revise no app.' }], jid)   // resposta no número canônico
+  }
+  for (const jid of ['19987650001', '1987650001', '5519987650009', '5519987650001999']) {
+    const c = cenario()
+    await receber(c, toque(jid, REVISAR))
+    await receber(c, pdf(jid))
+    assert.equal(estadoSemana(c.db), 'aguardando', jid)
+    assert.deepEqual(c.enviados, [], jid)
+    assert.deepEqual(c.baixados, [], jid)
   }
 })
 
 test('confirmar que falha devolve a semana para aguardando e avisa o dono', async () => {
   const c = cenario({ confirmar: async () => ({ ok: false, erro: 'confirmação automática ainda não ligada' }) })
-  await receber(c, toque(DONO, 'escala:confirmar'))
+  await receber(c, toque(DONO, CONFIRMAR))
   assert.equal(estadoSemana(c.db), 'aguardando')
   assert.match(c.enviados[0].t, /Não consegui confirmar: confirmação automática ainda não ligada/)
   assert.ok(!c.enviados.some((e) => e.t === RESPOSTAS.confirmada))
@@ -233,6 +273,60 @@ test('resposta de apelido de outro número não grava nem responde', async () =>
   assert.equal(c.enviados.length, n)
 })
 
+test('sim/não escrito só vale logo depois da pergunta (30 min) e com ela por último', async () => {
+  const c = cenario({ botoesFalham: true })
+  await receber(c, pdf(DONO, 'PDF1'))
+  c.passar(31)
+  await receber(c, evento(DONO, { conversation: 'sim' }, 'S1'))
+  assert.equal(c.db.t.tarcisio_mensagens.find((m) => m.external_id === 'S1').respondida, false)
+  assert.deepEqual(c.db.t.acolitos_ministro_apelidos || [], [])
+  // outra mensagem do robô depois da pergunta (a IA respondeu): "sim" também não é da pergunta
+  const d = cenario({ botoesFalham: true })
+  await receber(d, pdf(DONO, 'PDF1'))
+  d.db.t.tarcisio_mensagens.push({ id: 'ia1', numero: DONO, direcao: 'saida', texto: 'resposta da IA', created_at: new Date(Date.parse(HOJE) + 60_000).toISOString() })
+  d.passar(2)
+  await receber(d, evento(DONO, { conversation: 'sim' }, 'S2'))
+  assert.equal(d.db.t.tarcisio_mensagens.find((m) => m.external_id === 'S2').respondida, false)
+  assert.deepEqual(d.db.t.acolitos_ministro_apelidos || [], [])
+})
+
+test('dúvida vence em 24 h: toque avisa, escrito vai para a IA', async () => {
+  const c = cenario()
+  await receber(c, pdf(DONO, 'PDF1'))
+  const pergunta = c.enviados.find((e) => e.botoes)
+  c.passar(25 * 60)
+  const n = c.enviados.length
+  await receber(c, toque(DONO, pergunta.botoes[0].id))
+  assert.deepEqual(c.db.t.acolitos_ministro_apelidos || [], [])
+  assert.match(c.enviados[n].t, /venceu/)
+  await receber(c, evento(DONO, { conversation: 'sim' }, 'S3'))
+  assert.equal(c.db.t.tarcisio_mensagens.find((m) => m.external_id === 'S3').respondida, false)
+})
+
+test("'sim' velho do 2º candidato não conta: a pergunta dele vem", async () => {
+  // memória "sim" do Luís para a Ana (m4), que não tem pai ministro: vale nada
+  const c = cenario({ banco: { acolitos_ministro_apelidos: [{ nome_pdf: 'luis', membro_id: 'm4', pai_ou_mae: 'pai', resposta: 'sim' }] } })
+  await receber(c, pdf(DONO, 'PDF1'))
+  const p1 = c.enviados.find((e) => e.botoes)
+  const primeiro = /Carlos/.test(p1.t) ? 'João' : 'Pedro'
+  await receber(c, toque(DONO, p1.botoes[1].id))   // não
+  const p2 = c.enviados.at(-1)
+  assert.ok(p2.botoes, 'pergunta do 2º candidato')
+  assert.match(p2.t, /^'Luís' é Luís /)
+  assert.ok(!p2.t.includes(primeiro))
+})
+
+test('toque repetido de apelido pergunta de novo a próxima pendente', async () => {
+  const c = cenario()
+  await receber(c, pdf(DONO, 'PDF1'))
+  const p1 = c.enviados.find((e) => e.botoes)
+  await receber(c, toque(DONO, p1.botoes[1].id))
+  const p2 = c.enviados.at(-1)
+  await receber(c, toque(DONO, p1.botoes[1].id))
+  assert.match(c.enviados.at(-2).t, /^Já estava anotado/)
+  assert.deepEqual(c.enviados.at(-1), p2)
+})
+
 test('memória velha (membro sem o pai ministro) é ignorada e pergunta de novo', async () => {
   const c = cenario({ banco: { acolitos_ministro_apelidos: [{ nome_pdf: 'luis', membro_id: 'm4', pai_ou_mae: 'pai', resposta: 'sim' }] } })
   await receber(c, pdf(DONO, 'PDF1'))
@@ -247,7 +341,7 @@ test("PDF ilegível: avisa 'não consegui ler' e não grava nada", async () => {
     assert.equal(c.enviados.length, 1)
     assert.match(c.enviados[0].t, /Não consegui ler a escala dos ministros em "ESCALA OUTUBRO REV01.pdf"\. Nada foi gravado\./)
     assert.deepEqual(c.db.t.acolitos_escala_ministros.map((l) => l.id), ['velha'])
-    assert.ok(!c.db.t.tarcisio_mensagens.some((m) => m.direcao === 'saida'))
+    assert.ok(!c.db.t.tarcisio_mensagens.some((m) => (m.ferramentas || []).some((f) => f.ferramenta === 'escala_ministros_pdf')))
   }
 })
 
@@ -261,7 +355,7 @@ test('sim/não escrito sem pergunta pendente vai para a IA', async () => {
 test('sem a config, a mensagem é guardada como conversa comum', async () => {
   const c = cenario()
   c.db.t.tarcisio_config = []
-  await receber(c, toque(DONO, 'escala:confirmar', 'C1'))
+  await receber(c, toque(DONO, CONFIRMAR, 'C1'))
   assert.equal(c.db.t.tarcisio_mensagens[0].respondida, false)
   assert.equal(c.chamadas.confirmar, 0)
 })

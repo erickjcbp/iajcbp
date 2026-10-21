@@ -85,7 +85,7 @@ test('gera uma vez; segunda rodada e reinício não geram', async () => {
     [{ celebracao_id: 'c1', membro_id: 'm1', funcao: 'cruz' }])
   assert.equal(c.enviados.length, 1)
   assert.equal(c.enviados[0].d, '5519999071702')
-  assert.deepEqual(c.enviados[0].botoes.map((b) => b.id), ['escala:confirmar', 'escala:revisar'])
+  assert.deepEqual(c.enviados[0].botoes.map((b) => b.id), [`escala:confirmar:${SAB}`, `escala:revisar:${SAB}`])
   assert.equal(linhaSemana(c.db).estado, 'aguardando')
   assert.equal(linhaSemana(c.db).mensagem_dono_id, 'msg1')
 

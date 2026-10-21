@@ -13,7 +13,8 @@ export const HORA_GERAR = '18:01'
 export const HORA_AVISO_PERDIDA = '09:00'   // quarta: aviso de que a terça não rodou
 // Lembretes ao dono enquanto ele não responde: terça 20:00 e quarta 09:00 (dia relativo ao sábado).
 export const LEMBRETES = [{ dia: -4, hm: '20:00' }, { dia: -3, hm: '09:00' }]
-export const BOTOES = [{ id: 'escala:confirmar', texto: 'Confirmar' }, { id: 'escala:revisar', texto: 'Revisar' }]
+// A semana vai no id: um toque numa mensagem velha não mexe na semana que está esperando.
+export const botoesDaSemana = (sabado) => [{ id: `escala:confirmar:${sabado}`, texto: 'Confirmar' }, { id: `escala:revisar:${sabado}`, texto: 'Revisar' }]
 const PRESA_MIN = 15   // linha em 'gerando' há mais que isso = o robô caiu no meio
 
 const MINUTO = 60_000
@@ -104,11 +105,11 @@ export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEnt
   }
 
   // Botões; se a Evolution recusar, o mesmo texto vai sem botão (ele já diz "1"/"2").
-  async function enviarConferencia(cfg, texto) {
+  async function enviarConferencia(cfg, texto, sabado) {
     const numero = numeroDono(cfg)
     if (!numero) throw new Error('sem número de conferência na configuração')
     try {
-      const r = await evo.enviarBotoes(numero, texto, BOTOES)
+      const r = await evo.enviarBotoes(numero, texto, botoesDaSemana(sabado))
       return r?.key?.id ?? null
     } catch (e) {
       log.warn(`escala automática: botões falharam (${e.message}); indo como texto`)
@@ -158,7 +159,7 @@ export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEnt
       const resumo = { texto, novas: novas.length, vazias: resultado.vazias || [], alemDoMinimo: resultado.alemDoMinimo || [],
         semVagaFilhoDeMinistro: resultado.semVagaFilhoDeMinistro || resultado.filhosSemVaga || [], semMinistros: !!resultado.semMinistros }
       // botões e texto falhando: lança, e a semana NÃO fica 'aguardando' (cai no desfazer abaixo)
-      const id = await enviarConferencia(cfg, texto)
+      const id = await enviarConferencia(cfg, texto, sabado)
       enviouConferencia = true
       await marcar(sabado, { estado: 'aguardando', gerada_em: agora.toISOString(), resumo, mensagem_dono_id: id, erro: null })
       log.info(`escala automática ${sabado}: ${novas.length} vaga(s) preenchida(s), dono avisado`)
@@ -216,7 +217,7 @@ export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEnt
         .eq('semana', l.semana).eq('estado', 'aguardando').eq('lembretes', l.lembretes).select('semana'), 'contar lembrete')
       if (!ok.length) continue
       try {
-        await enviarConferencia(cfg, `Lembrete: a escala ainda espera sua conferência.\n\n${l.resumo?.texto || ''}`)
+        await enviarConferencia(cfg, `Lembrete: a escala ainda espera sua conferência.\n\n${l.resumo?.texto || ''}`, l.semana)
       } catch (e) { log.warn(`lembrete da escala ${l.semana}: ${e.message}`) }
     }
   }

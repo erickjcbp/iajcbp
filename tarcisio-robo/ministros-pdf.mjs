@@ -9,6 +9,9 @@ import { agoraSP, nomeLimpo, normalizarNumero } from './regras.mjs'
 
 export const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 export const FERRAMENTA = 'escala_ministros_pdf'
+export const PERGUNTA = 'escala_ministros_pergunta'
+const VALIDADE_DUVIDA_MS = 24 * 60 * 60_000   // dúvida vence em 24 h
+const JANELA_TEXTO_MS = 30 * 60_000           // "sim"/"não" escrito só logo depois da pergunta
 const LIMITE_BYTES = 10 * 1024 * 1024
 const CAMPOS_MEMBRO = 'id,nome,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro'
 
@@ -88,11 +91,24 @@ export function mesDosLidos(lidos) {
 }
 const nomeDoMes = (mes) => MESES[+mes.slice(5, 7) - 1]
 
-export const numeroLimpo = (n) => normalizarNumero(n) || String(n || '').replace(/\D/g, '')
-export function remetentesAutorizados(cfg) {
-  return new Set([cfg?.numero_conferencia, ...(Array.isArray(cfg?.remetentes_pdf) ? cfg.remetentes_pdf : [])]
-    .map(numeroLimpo).filter(Boolean))
+// Números. O de quem MANDA não é "consertado" (nada de pôr 55 ou 9): só os dígitos do JID, sem o
+// "@..." e sem o ":aparelho". Ele vale se for uma das formas do número da config: a canônica
+// (55 + DDD + 9 + 8 dígitos) ou a mesma sem o 9 (JID antigo do WhatsApp). Resposta sai na canônica.
+export const digitosDoJid = (n) => String(n || '').split('@')[0].split(':')[0].replace(/\D/g, '')
+export function formasDoNumero(n) {
+  const c = normalizarNumero(n)
+  return c ? [c, c.slice(0, 4) + c.slice(5)] : []
 }
+// Map: forma aceita → número canônico da config
+export function remetentesAutorizados(cfg) {
+  const m = new Map()
+  for (const x of [cfg?.numero_conferencia, ...(Array.isArray(cfg?.remetentes_pdf) ? cfg.remetentes_pdf : [])]) {
+    for (const f of formasDoNumero(x)) if (!m.has(f)) m.set(f, normalizarNumero(x))
+  }
+  return m
+}
+export const quemAutorizado = (cfg, numero) => remetentesAutorizados(cfg).get(digitosDoJid(numero)) ?? null
+export const donoDe = (cfg, numero) => (formasDoNumero(cfg?.numero_conferencia).includes(digitosDoJid(numero)) ? normalizarNumero(cfg.numero_conferencia) : null)
 export const ehPdf = (doc) => !!doc && (String(doc.mimetype || '').toLowerCase() === 'application/pdf' || /\.pdf$/i.test(String(doc.nome || '')))
 
 // Resposta "sim" / "não" por texto (o aparelho não mostrou os botões).
@@ -107,7 +123,18 @@ export function simOuNao(texto) {
 // extrairTexto(buffer) → texto, relogio, log.
 export function criarMinistrosPdf({ db, evo, nucleo, extrairTexto = extrairTextoPdf, relogio = () => new Date(), log = console }) {
   const lerCfg = async () => exigir(await db.from('tarcisio_config').select('*').eq('id', 1).single(), 'ler config')
-  const autorizado = (cfg, numero) => remetentesAutorizados(cfg).has(numeroLimpo(numero))
+  const autorizado = (cfg, numero) => !!quemAutorizado(cfg, numero)
+
+  // Tudo o que este módulo manda fica no histórico (é por ele que o "sim" escrito acha a pergunta).
+  async function enviar(num, texto, ferramentas = null) {
+    await evo.enviarTexto(num, texto)
+    await registrar(num, texto, ferramentas)
+  }
+  async function registrar(num, texto, ferramentas = null) {
+    const r = await db.from('tarcisio_mensagens').insert({ numero: num, direcao: 'saida', texto, respondida: true, ferramentas }).select('id')
+    if (r.error) { log.warn(`registrar mensagem: ${r.error.message}`); return null }
+    return r.data[0]?.id ?? null
+  }
 
   const lerMembros = async () => exigir(await db.from('acolitos_membros').select(CAMPOS_MEMBRO).eq('status', 'ativo').eq('serve', true), 'ler membros')
   const lerApelidos = async () => exigir(await db.from('acolitos_ministro_apelidos').select('nome_pdf,membro_id,pai_ou_mae,resposta'), 'ler apelidos')
@@ -129,7 +156,10 @@ export function criarMinistrosPdf({ db, evo, nucleo, extrairTexto = extrairTexto
     const novas = linhas.length ? exigir(await db.from('acolitos_escala_ministros')
       .upsert(linhas, { onConflict: 'data,horario,comunidade,membro_id' }).select('id'), 'gravar escala dos ministros').map((r) => r.id) : []
     const sair = velhas.filter((id) => !novas.includes(id))
-    if (sair.length) exigir(await db.from('acolitos_escala_ministros').delete().in('id', sair), 'limpar escala dos ministros')
+    if (!sair.length) return
+    const r = await db.from('acolitos_escala_ministros').delete().in('id', sair)
+    // sem transação: as novas já estão gravadas, as velhas ficaram. Avisar em vez de calar.
+    if (r.error) throw new Error(`a escala dos ministros ficou com ${sair.length} linha(s) antiga(s) misturadas (${r.error.message}); mande o PDF de novo`)
   }
   const contarMes = async (mes) => exigir(await db.from('acolitos_escala_ministros').select('id').eq('mes', mes), 'contar escala dos ministros').length
 
@@ -141,23 +171,38 @@ export function criarMinistrosPdf({ db, evo, nucleo, extrairTexto = extrairTexto
   }
   // Uma pergunta por vez. Botão recusado: vai como texto ("sim" / "não" também valem).
   async function perguntar(numero, lote, k, p, membros) {
-    const texto = textoDaPergunta(p, membros)
+    let texto = textoDaPergunta(p, membros)
     try {
       await evo.enviarBotoes(numero, texto, [{ id: `apelido:sim:${lote}.${k}`, texto: 'Sim' }, { id: `apelido:nao:${lote}.${k}`, texto: 'Não, outra pessoa' }],
         'Escala dos ministros', 'Responda sim ou não')
     } catch (e) {
       log.warn(`pergunta do apelido: botões falharam (${e.message}); indo como texto`)
-      await evo.enviarTexto(numero, `${texto}\n\nResponda SIM ou NÃO.`)
+      texto = `${texto}\n\nResponda SIM ou NÃO.`
+      await evo.enviarTexto(numero, texto)
     }
+    await registrar(numero, texto, [{ ferramenta: PERGUNTA, lote, k }])
   }
-  // Pendente = sem memória para este par e o nome ainda sem nenhum "sim".
-  function proximaPendente(perguntas, apelidos) {
+  // A memória vale pela MESMA regra do núcleo: um "sim" só conta se o casarNomes ainda o usa
+  // (membro com esse pai ministro e o mesmo primeiro nome). "Não" o núcleo aplica sempre.
+  function memoriaVale(a, nome, membros) {
+    if (a.resposta !== 'sim') return true
+    const r = nucleo().casarNomes([{ data: '-', horario: '-', comunidade: '-', nomes: [nome] }], membros, [a])
+    return r.casados.some((c) => c.membro_id === a.membro_id && c.pai_ou_mae === a.pai_ou_mae)
+  }
+  // Pendente = sem memória válida para este par e o nome ainda sem nenhum "sim" válido.
+  function proximaPendente(perguntas, apelidos, membros) {
     return perguntas.findIndex((p) => {
       const chave = nomeLimpo(p.nome)
-      const doNome = apelidos.filter((a) => nomeLimpo(a.nome_pdf) === chave)
+      const doNome = apelidos.filter((a) => nomeLimpo(a.nome_pdf) === chave && memoriaVale(a, p.nome, membros))
       if (doNome.some((a) => a.resposta === 'sim')) return false
       return !doNome.some((a) => a.membro_id === p.membro_id && a.pai_ou_mae === p.pai_ou_mae)
     })
+  }
+  async function lerLote(lote) {
+    const linha = exigir(await db.from('tarcisio_mensagens').select('id,ferramentas,created_at').eq('id', lote).maybeSingle(), 'ler pergunta')
+    const info = (Array.isArray(linha?.ferramentas) ? linha.ferramentas : []).find((f) => f?.ferramenta === FERRAMENTA) || null
+    const vencido = !linha || +relogio() - Date.parse(linha.created_at) > VALIDADE_DUVIDA_MS
+    return { info, vencido }
   }
   async function ultimaLeitura(filtro) {
     let q = db.from('tarcisio_mensagens').select('id,numero,ferramentas,created_at').eq('direcao', 'saida')
@@ -169,8 +214,8 @@ export function criarMinistrosPdf({ db, evo, nucleo, extrairTexto = extrairTexto
 
   async function receberPdfMinistros({ numero, documento, external_id, cfg = null }) {
     cfg ??= await lerCfg()
-    if (!autorizado(cfg, numero) || !ehPdf(documento)) return false
-    const num = numeroLimpo(numero)
+    const num = quemAutorizado(cfg, numero)
+    if (!num || !ehPdf(documento)) return false
     const arquivo = documento.nome || null
     let texto = ''
     try {
@@ -183,7 +228,7 @@ export function criarMinistrosPdf({ db, evo, nucleo, extrairTexto = extrairTexto
     const ano = anoDoTexto(texto, relogio())
     const lidos = texto ? lerEscalaMinistros(texto, ano) : []
     if (!lidos.length) {
-      await evo.enviarTexto(num, `Não consegui ler a escala dos ministros${arquivo ? ` em "${arquivo}"` : ' neste arquivo'}. Nada foi gravado. `
+      await enviar(num, `Não consegui ler a escala dos ministros${arquivo ? ` em "${arquivo}"` : ' neste arquivo'}. Nada foi gravado. `
         + 'Confira se é o PDF do mês (com texto, não foto) ou suba pela tela do app.')
       return true
     }
@@ -202,7 +247,8 @@ export function criarMinistrosPdf({ db, evo, nucleo, extrairTexto = extrairTexto
       numero: num, direcao: 'saida', texto: resumo, respondida: true,
       ferramentas: [{ ferramenta: FERRAMENTA, mes, ano, arquivo, lidos, perguntas }],
     }).select('id'), 'gravar leitura dos ministros')
-    if (perguntas.length) await perguntar(num, linha.id, 0, perguntas[0], membros)
+    const k = proximaPendente(perguntas, apelidos, membros)
+    if (k >= 0) await perguntar(num, linha.id, k, perguntas[k], membros)
     log.info(`escala dos ministros ${mes}: ${linhas.length} caso(s), ${r.duvidas.length} dúvida(s)`)
     return true
   }
@@ -212,20 +258,25 @@ export function criarMinistrosPdf({ db, evo, nucleo, extrairTexto = extrairTexto
     const m = /^apelido:(sim|nao):([^.]+)\.(\d+)$/.exec(String(botao || ''))
     if (!m) return false
     cfg ??= await lerCfg()
-    if (!autorizado(cfg, numero)) return false
-    const num = numeroLimpo(numero)
+    const num = quemAutorizado(cfg, numero)
+    if (!num) return false
     const [, resposta, lote, k] = m
-    const linha = exigir(await db.from('tarcisio_mensagens').select('id,ferramentas').eq('id', lote).maybeSingle(), 'ler pergunta')
-    const info = (Array.isArray(linha?.ferramentas) ? linha.ferramentas : []).find((f) => f?.ferramenta === FERRAMENTA)
+    const { info, vencido } = await lerLote(lote)
     const p = info?.perguntas?.[+k]
     if (!p) return true   // pergunta que não existe mais: nada a fazer
+    if (vencido) {
+      await enviar(num, 'Essa pergunta venceu (mais de 24 h). Mande o PDF de novo ou resolva na tela do app.')
+      return true
+    }
     const nomePdf = nomeLimpo(p.nome)
     const ja = exigir(await db.from('acolitos_ministro_apelidos').select('resposta').eq('nome_pdf', nomePdf)
       .eq('membro_id', p.membro_id).eq('pai_ou_mae', p.pai_ou_mae).maybeSingle(), 'ler apelido')
     const membros = await lerMembros()
     const papel = `${p.pai_ou_mae === 'pai' ? 'pai' : 'mãe'} de ${membros.find((x) => x.id === p.membro_id)?.nome || 'um acólito'}`
     if (ja?.resposta === resposta) {
-      await evo.enviarTexto(num, `Já estava anotado: '${p.nome}' ${resposta === 'sim' ? 'é' : 'não é'} ${papel}.`)
+      await enviar(num, `Já estava anotado: '${p.nome}' ${resposta === 'sim' ? 'é' : 'não é'} ${papel}.`)
+      const prox = proximaPendente(info.perguntas, await lerApelidos(), membros)   // não trava: repete a próxima
+      if (prox >= 0) await perguntar(num, lote, prox, info.perguntas[prox], membros)
       return true
     }
     exigir(await db.from('acolitos_ministro_apelidos').upsert({ nome_pdf: nomePdf, membro_id: p.membro_id, pai_ou_mae: p.pai_ou_mae,
@@ -250,30 +301,34 @@ export function criarMinistrosPdf({ db, evo, nucleo, extrairTexto = extrairTexto
       await substituir(linhasParaGravar(r.casados, info.mes, info.arquivo ?? null), velhas)
     }
 
-    const proxima = proximaPendente(info.perguntas, apelidos)
+    const proxima = proximaPendente(info.perguntas, apelidos, membros)
     const anotado = `Anotado: '${p.nome}' ${resposta === 'sim' ? 'é' : 'não é'} ${papel}.${aviso}`
     if (proxima >= 0 && !aviso) {
-      await evo.enviarTexto(num, anotado)
+      await enviar(num, anotado)
       await perguntar(num, lote, proxima, info.perguntas[proxima], membros)
     } else {
-      await evo.enviarTexto(num, aviso ? anotado
+      await enviar(num, aviso ? anotado
         : `${anotado} Pronto: ${await contarMes(info.mes)} casos de ${nomeDoMes(info.mes)} valem para o gerador.`)
     }
     return true
   }
 
-  // "sim" / "não" escrito: responde a pergunta pendente da última leitura deste número.
+  // "sim" / "não" escrito só vale se a ÚLTIMA mensagem do robô para este número foi a pergunta,
+  // há no máximo 30 min, e a dúvida ainda não venceu nem foi respondida. Senão: conversa normal.
   async function responderPorTexto({ numero, texto, cfg = null }) {
     const resposta = simOuNao(texto)
     if (!resposta) return false
     cfg ??= await lerCfg()
-    if (!autorizado(cfg, numero)) return false
-    const ultima = await ultimaLeitura({ numero: numeroLimpo(numero) })
-    const info = (ultima?.ferramentas || []).find((f) => f?.ferramenta === FERRAMENTA)
-    if (!info?.perguntas?.length) return false
-    const k = proximaPendente(info.perguntas, await lerApelidos())
-    if (k < 0) return false
-    return responderApelido({ numero, botao: `apelido:${resposta}:${ultima.id}.${k}`, cfg })
+    const num = quemAutorizado(cfg, numero)
+    if (!num) return false
+    const [ultima] = exigir(await db.from('tarcisio_mensagens').select('ferramentas,created_at').eq('direcao', 'saida')
+      .in('numero', formasDoNumero(num)).order('created_at', { ascending: false }).limit(1), 'ler última mensagem do robô')
+    const f = (Array.isArray(ultima?.ferramentas) ? ultima.ferramentas : []).find((x) => x?.ferramenta === PERGUNTA)
+    if (!f || +relogio() - Date.parse(ultima.created_at) > JANELA_TEXTO_MS) return false
+    const { info, vencido } = await lerLote(f.lote)
+    if (vencido || !info?.perguntas?.[f.k]) return false
+    if (proximaPendente(info.perguntas, await lerApelidos(), await lerMembros()) !== f.k) return false
+    return responderApelido({ numero, botao: `apelido:${resposta}:${f.lote}.${f.k}`, cfg })
   }
 
   return { receberPdfMinistros, responderApelido, responderPorTexto, autorizado, lerCfg }

@@ -115,7 +115,8 @@ export function lerMensagemRecebida(corpo) {
   if (!jid || chave?.fromMe || jid.endsWith('@g.us') || jid === 'status@broadcast') return null
   // WhatsApp novo esconde o número atrás de um @lid; a Evolution às vezes manda o real ao lado
   const real = jid.endsWith('@lid') ? String(chave?.remoteJidAlt || d?.senderPn || '') : jid
-  const numero = real.split('@')[0].replace(/\D/g, '')
+  // "5519…:12@s.whatsapp.net": o ":12" é o aparelho, não faz parte do número
+  const numero = real.split('@')[0].split(':')[0].replace(/\D/g, '')
   if (!numero || !chave?.id) return null
   let m = d?.message || {}
   if (m.ephemeralMessage?.message) m = m.ephemeralMessage.message
