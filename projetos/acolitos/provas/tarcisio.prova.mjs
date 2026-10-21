@@ -40,7 +40,15 @@ const tabelas = {
       dados: { relacao: 'mae', quem_fala: 'Ana', data_nascimento: '2014-05-01', candidatos: [{ id: 'm9', nome: 'Pedro Henrique Albuquerque Siqueira', data_nascimento: '2014-05-01' }] } },
     { id: 'p2', tipo: 'coordenacao', numero: '5519998765432', resumo: 'Mãe pergunta se o João pode trocar de função para Cruz no retiro', estado: 'aberta', created_at: agora, dados: {} },
   ] },
-  acolitos_membros: { data: [{ id: 'm1', nome: 'João Pedro Albuquerque' }] },
+  acolitos_membros: { data: [{ id: 'm1', nome: 'João Pedro Albuquerque', status: 'ativo', serve: true, tem_mae_ministro: true, nome_mae_ministro: 'Cristiana Moreira' }] },
+  acolitos_escala_ministros: { data: [
+    { id: 'e1', mes: '2026-10-01', data: '2026-10-03', horario: '17h', comunidade: 'matriz', membro_id: 'm1', pai_ou_mae: 'mae', arquivo: 'ESCALA OUTUBRO.pdf' },
+    { id: 'e2', mes: '2026-10-01', data: '2026-10-04', horario: '9h', comunidade: 'matriz', membro_id: 'm1', pai_ou_mae: 'mae', arquivo: 'ESCALA OUTUBRO.pdf' },
+  ] },
+  acolitos_ministro_apelidos: { data: [
+    { id: 'ap1', nome_pdf: 'cristiana m.', membro_id: 'm1', pai_ou_mae: 'mae', resposta: 'sim', respondido_por: 'app', em: agora },
+    { id: 'ap2', nome_pdf: 'joao b.', membro_id: 'm1', pai_ou_mae: 'pai', resposta: 'nao', respondido_por: '5519999071702', em: agora },
+  ] },
   tarcisio_avisos: { data: [
     { id: 'a1', titulo: 'Reunião de formação', texto: 'Segunda às 19h30 no salão.', imagem_url: null, grupos: ['acolitos', 'pais'], privado: [],
       quando: agora, repetir: 'semanal', ate: '2026-12-20', ativo: true },
@@ -63,6 +71,8 @@ const avaliar = `
   return { rolagemLateral: document.documentElement.scrollWidth > innerWidth + 1, pequenos, letra, fora,
     larguraMain: document.querySelector('.main')?.getBoundingClientRect().width, larguraModal: modal ? modal.getBoundingClientRect().width : null,
     parede: !!document.getElementById('parede-whatsapp'), abas: [...document.querySelectorAll('.tc-aba-btn')].map((b) => b.textContent),
+    arquivoPdf: !!document.querySelector('#tm-arquivo'), remover: [...document.querySelectorAll('.tc-linha button')].filter((b) => /Remover/.test(b.textContent)).length,
+    campoConferencia: [...document.querySelectorAll('.tc-campo')].length,
     textoTc: document.querySelectorAll('.tc-st-card, .tc-linha, .tc-conversa, .tc-st-muted').length };
 `;
 
@@ -71,6 +81,8 @@ const cenarios = [
   { id: 'aviso-novo', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_avisos'] }, { clicar: '+ Novo aviso' }] },
   { id: 'sem-numero', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_sem'] }] },
   { id: 'config-whatsapp', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_whatsapp'] }] },
+  { id: 'config-ministros', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_ministros'] }] },
+  { id: 'config-nomes', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_nomes'] }] },
   { id: 'config-grupos', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_grupos'] }] },
   { id: 'config-ia', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_ia'] }] },
   { id: 'config-conversas', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_conversas'] }] },
@@ -97,6 +109,9 @@ try {
     exigir(!a.fora, `${id}: ${a.fora} controle(s) para fora da tela`);
     if (largura >= 1366) exigir(Math.abs(a.larguraMain - largura) <= 1, `${id}: a tela não ocupa a largura toda (${a.larguraMain})`);
     if (largura < 640 && a.larguraModal != null) exigir(Math.abs(a.larguraModal - largura) <= 1, `${id}: diálogo não é tela cheia (${a.larguraModal})`);
+    if (c.id === 'config-ministros') exigir(a.arquivoPdf, `${id}: sem o campo de PDF dos ministros`);
+    if (c.id === 'config-nomes') exigir(a.remover === 2, `${id}: esperava 2 nomes lembrados com Remover, veio ${a.remover}`);
+    if (c.id === 'config-whatsapp') exigir(a.campoConferencia >= 3, `${id}: campos da escala automática não apareceram`);
     console.log(id, JSON.stringify(a));
   }
   // 2) Quem não é admin/subadmin não vê nada
