@@ -10,6 +10,7 @@
 import { agoraSP, somarDias, diaPorExtenso, rotuloMissa, semanaConfirmada, FUNCOES, JANELA_RECUPERACAO_MIN } from './regras.mjs'
 
 export const HORA_GERAR = '18:01'
+export const HORA_AVISO_PERDIDA = '09:00'   // quarta: aviso de que a terça não rodou
 // Lembretes ao dono enquanto ele não responde: terça 20:00 e quarta 09:00 (dia relativo ao sábado).
 export const LEMBRETES = [{ dia: -4, hm: '20:00' }, { dia: -3, hm: '09:00' }]
 export const BOTOES = [{ id: 'escala:confirmar', texto: 'Confirmar' }, { id: 'escala:revisar', texto: 'Revisar' }]
@@ -92,7 +93,7 @@ export function montarMensagemConferencia(semana, resultado = {}) {
 
 // deps: db (chave de serviço), evo, gerarSemana(entrada), carregarEntrada(db, sabado), rnd, log.
 // `push` fica reservado para a confirmação (Task 9): gerar não avisa ninguém.
-export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEntrada, rnd = Math.random, log = console }) {
+export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEntrada, montarMensagem = montarMensagemConferencia, rnd = Math.random, log = console }) {
   void push
   const numeroDono = (cfg) => String(cfg.numero_conferencia || '').replace(/\D/g, '')
 
@@ -134,7 +135,8 @@ export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEnt
       .select('semana'), 'travar semana')
     if (!trava.length) return
     const fds = fimDeSemana(sabado)
-    let gravou = false
+    let gravados = []          // ids que ESTA rodada inseriu: na falha, saem todos
+    let enviouConferencia = false
     try {
       if (await jaConfirmada(sabado)) {
         await marcar(sabado, { estado: 'ja_confirmada' })
@@ -151,20 +153,27 @@ export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEnt
       const novas = (resultado.novas || []).map((n) => ({
         celebracao_id: n.celebracao_id, membro_id: n.membro_id, funcao: n.funcao, created_by: cfg.usuario_sistema_id ?? null,
       }))
-      if (novas.length) { exigir(await db.from('acolitos_escalas').insert(novas), 'gravar escala'); gravou = true }
-      const texto = montarMensagemConferencia({ sabado, ...entrada }, resultado)
+      if (novas.length) gravados = exigir(await db.from('acolitos_escalas').insert(novas).select('id'), 'gravar escala').map((r) => r.id)
+      const texto = montarMensagem({ sabado, ...entrada }, resultado)
       const resumo = { texto, novas: novas.length, vazias: resultado.vazias || [], alemDoMinimo: resultado.alemDoMinimo || [],
         semVagaFilhoDeMinistro: resultado.semVagaFilhoDeMinistro || resultado.filhosSemVaga || [], semMinistros: !!resultado.semMinistros }
-      let id = null
-      let erro = null
-      try { id = await enviarConferencia(cfg, texto) } catch (e) { erro = `mensagem ao dono falhou: ${e.message}` }
-      await marcar(sabado, { estado: 'aguardando', gerada_em: agora.toISOString(), resumo, mensagem_dono_id: id, erro })
-      log.info(`escala automática ${sabado}: ${novas.length} vaga(s) preenchida(s)${erro ? `; ${erro}` : ', dono avisado'}`)
+      // botões e texto falhando: lança, e a semana NÃO fica 'aguardando' (cai no desfazer abaixo)
+      const id = await enviarConferencia(cfg, texto)
+      enviouConferencia = true
+      await marcar(sabado, { estado: 'aguardando', gerada_em: agora.toISOString(), resumo, mensagem_dono_id: id, erro: null })
+      log.info(`escala automática ${sabado}: ${novas.length} vaga(s) preenchida(s), dono avisado`)
     } catch (e) {
+      // "Nada gravado" vale também para falha depois do insert: apaga exatamente o que esta rodada pôs.
       log.error(`escala automática ${sabado}: ${e.message}`)
+      let sobrou = false
+      if (gravados.length) {
+        const r = await db.from('acolitos_escalas').delete().in('id', gravados)
+        if (r.error) { sobrou = true; log.error(`desfazer escala ${sabado}: ${r.error.message}`) }
+      }
       try { await marcar(sabado, { estado: 'falhou', erro: String(e.message).slice(0, 500) }) } catch (e2) { log.error(e2.message) }
-      await avisarDono(cfg, `A escala automática do fim de semana ${fds} falhou: ${e.message}. `
-        + (gravou ? 'Parte foi gravada como rascunho; confira no app.' : 'Nada foi gravado. Monte pelo app.'))
+      await avisarDono(cfg, (enviouConferencia ? 'Desconsidere a mensagem anterior da escala. ' : '')
+        + `A escala automática do fim de semana ${fds} falhou: ${e.message}. `
+        + (sobrou ? 'Não consegui apagar o rascunho gravado; confira e limpe no app.' : 'Nada foi gravado. Monte pelo app.'))
     }
   }
 
@@ -178,12 +187,30 @@ export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEnt
     }
   }
 
+  // Quarta 09:00 sem linha da semana = a terça não rodou (robô fora). Não gera atrasado: avisa o
+  // dono uma vez. A própria linha ('falhou') é a trava do aviso.
+  async function avisarTercaPerdida(sp, cfg) {
+    if (diaDaSemana(sp.data) !== 3 || sp.hm < HORA_AVISO_PERDIDA) return
+    const sabado = somarDias(sp.data, 3)
+    const nova = exigir(await db.from('tarcisio_escala_auto')
+      .upsert({ semana: sabado, estado: 'falhou', erro: 'A geração automática de terça não rodou.' }, { onConflict: 'semana', ignoreDuplicates: true })
+      .select('semana'), 'registrar terça perdida')
+    if (!nova.length) return
+    await avisarDono(cfg, `A geração automática da escala do fim de semana ${fimDeSemana(sabado)} não rodou na terça. Gere pelo app (Escala → Gerar).`)
+  }
+
   async function lembrar(sp, cfg) {
     const linhas = exigir(await db.from('tarcisio_escala_auto').select('semana,lembretes,resumo')
       .eq('estado', 'aguardando').gte('semana', sp.data), 'ler semanas aguardando')
     for (const l of linhas) {
       const k = lembreteDaVez(l.semana, sp)
       if (!k || l.lembretes >= k) continue
+      // confirmada no app depois da geração: encerra sem lembrar
+      if (await jaConfirmada(l.semana)) {
+        exigir(await db.from('tarcisio_escala_auto').update({ estado: 'confirmada' })
+          .eq('semana', l.semana).eq('estado', 'aguardando'), 'encerrar semana confirmada')
+        continue
+      }
       // compara-e-troca: só quem mudar o contador envia (outra rodada/reinício não repete)
       const ok = exigir(await db.from('tarcisio_escala_auto').update({ lembretes: k })
         .eq('semana', l.semana).eq('estado', 'aguardando').eq('lembretes', l.lembretes).select('semana'), 'contar lembrete')
@@ -200,6 +227,7 @@ export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEnt
     await destravarPresas(agora, cfg)
     const sabado = semanaParaGerar(sp)
     if (sabado) await gerar(sabado, agora, cfg)
+    await avisarTercaPerdida(sp, cfg)
     await lembrar(sp, cfg)
   }
 

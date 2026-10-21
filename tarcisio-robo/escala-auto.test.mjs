@@ -5,8 +5,9 @@ import { criarEvolution } from './evolution.mjs'
 
 // Banco em memória: from(t).select/insert/upsert/update + eq/gte/lte/lt/in, terminando em
 // await, maybeSingle ou single. Só o necessário para a geração de terça e os lembretes.
-function bancoMemoria(inicial = {}) {
+function bancoMemoria(inicial = {}, falhar = () => false) {
   const t = structuredClone(inicial)
+  let seq = 0
   const filtrar = (ops) => (r) => ops.every(([f, c, v]) =>
     f === 'eq' ? r[c] === v : f === 'gte' ? r[c] >= v : f === 'lte' ? r[c] <= v
       : f === 'lt' ? r[c] < v : f === 'in' ? v.includes(r[c]) : true)
@@ -14,8 +15,10 @@ function bancoMemoria(inicial = {}) {
     const linhas = (t[tabela] ||= [])
     const achar = (nome) => ops.find((o) => o[0] === nome)
     const casa = filtrar(ops.filter((o) => ['eq', 'gte', 'lte', 'lt', 'in'].includes(o[0])))
-    const ins = achar('insert'), ups = achar('upsert'), upd = achar('update')
-    if (ins) { const novos = [].concat(ins[1]).map((x) => ({ ...x })); linhas.push(...novos); return { data: novos, error: null } }
+    const ins = achar('insert'), ups = achar('upsert'), upd = achar('update'), del = achar('delete')
+    if (falhar(tabela, ops)) return { data: null, error: { message: `falha simulada em ${tabela}` } }
+    if (del) { const fora = linhas.filter(casa); t[tabela] = linhas.filter((r) => !fora.includes(r)); return { data: fora, error: null } }
+    if (ins) { const novos = [].concat(ins[1]).map((x) => ({ id: `e${++seq}`, ...x })); linhas.push(...novos); return { data: novos, error: null } }
     if (ups) {
       const chave = ups[2].onConflict
       const novos = [].concat(ups[1]).filter((n) => !linhas.some((r) => r[chave] === n[chave])).map((x) => ({ lembretes: 0, ...x }))
@@ -54,16 +57,16 @@ const RESULTADO = { novas: [{ celebracao_id: 'c1', membro_id: 'm1', funcao: 'cru
 // Terça 20/10/2026, 18:01 em Brasília = 21:01 UTC.
 const TERCA_1801 = '2026-10-20T21:01:00Z'
 
-function cenario({ banco = {}, resultado = RESULTADO, lancar = null, celebracoes = CELS } = {}) {
-  const db = bancoMemoria(banco)
+function cenario({ banco = {}, resultado = RESULTADO, lancar = null, celebracoes = CELS, falhar, evoFalha = null, montarMensagem } = {}) {
+  const db = bancoMemoria(banco, falhar)
   const enviados = []
   const evo = {
-    enviarBotoes: async (d, texto, botoes) => { enviados.push({ d, texto, botoes }); return { key: { id: 'msg1' } } },
-    enviarTexto: async (d, texto) => { enviados.push({ d, texto }) },
+    enviarBotoes: async (d, texto, botoes) => { if (evoFalha) throw evoFalha; enviados.push({ d, texto, botoes }); return { key: { id: 'msg1' } } },
+    enviarTexto: async (d, texto) => { if (evoFalha) throw evoFalha; enviados.push({ d, texto }) },
   }
   const chamadas = { gerar: 0 }
   const deps = {
-    db, evo, log: silencioso, rnd: () => 0.5,
+    db, evo, log: silencioso, rnd: () => 0.5, ...(montarMensagem ? { montarMensagem } : {}),
     carregarEntrada: async () => ({ celebracoes, membros: MEMBROS, escalasExistentes: {} }),
     gerarSemana: (entrada) => { chamadas.gerar++; assert.equal(typeof entrada.rnd, 'function'); if (lancar) throw lancar; return resultado },
   }
@@ -219,6 +222,72 @@ test('horário em America/Sao_Paulo (18:01 UTC-3)', async () => {
   const q = cenario()
   await q.auto.cuidar(new Date('2026-10-21T21:01:00Z'), CFG)
   assert.equal(q.chamadas.gerar, 0)
+})
+
+const escalasGravadas = (db) => (db.t.acolitos_escalas || []).length
+
+test('lembrete não sai se a semana já foi confirmada no app; estado vira confirmada', async () => {
+  const c = cenario({ banco: {
+    tarcisio_escala_auto: [{ semana: SAB, estado: 'aguardando', lembretes: 0, resumo: { texto: 'x' } }],
+    acolitos_config: [{ chave: 'escala_avisados', valor: { '2026-10-24': ['m1'] } }],
+  } })
+  await c.auto.cuidar(new Date('2026-10-20T23:00:00Z'), CFG)   // terça 20:00
+  await c.novo().cuidar(new Date('2026-10-21T12:00:00Z'), CFG) // quarta 09:00
+  assert.equal(c.enviados.length, 0)
+  assert.equal(linhaSemana(c.db).estado, 'confirmada')
+})
+
+test('falha depois de gravar (montar a mensagem): apaga o que esta rodada gravou, falhou, dono avisado', async () => {
+  const c = cenario({
+    banco: { acolitos_escalas: [{ id: 'antiga', celebracao_id: 'c2', membro_id: 'm2', funcao: 'altar' }] },
+    montarMensagem: () => { throw new Error('quebrou o texto') },
+  })
+  await c.auto.cuidar(new Date(TERCA_1801), CFG)
+  assert.deepEqual(c.db.t.acolitos_escalas.map((e) => e.id), ['antiga'])   // só a desta rodada saiu
+  assert.equal(linhaSemana(c.db).estado, 'falhou')
+  assert.equal(c.enviados.length, 1)
+  assert.match(c.enviados[0].texto, /Nada foi gravado/)
+  assert.doesNotMatch(c.enviados[0].texto, /gravada como rascunho/)
+})
+
+test('gravar aguardando falha depois da mensagem: apaga, falhou, dono manda desconsiderar', async () => {
+  const c = cenario({ falhar: (tabela, ops) => tabela === 'tarcisio_escala_auto' && ops.some((o) => o[0] === 'update' && o[1].estado === 'aguardando') })
+  await c.auto.cuidar(new Date(TERCA_1801), CFG)
+  assert.equal(escalasGravadas(c.db), 0)
+  assert.equal(linhaSemana(c.db).estado, 'falhou')
+  assert.equal(c.enviados.length, 2)
+  assert.ok(c.enviados[0].botoes)
+  assert.match(c.enviados[1].texto, /Desconsidere a mensagem anterior/)
+  assert.match(c.enviados[1].texto, /Nada foi gravado/)
+  // e não vira "parou no meio" depois
+  await c.novo().cuidar(new Date('2026-10-20T21:30:00Z'), CFG)
+  assert.equal(c.enviados.length, 2)
+})
+
+test('botões e texto falham: não fica aguardando; apaga o gravado e marca falhou', async () => {
+  const c = cenario({ evoFalha: new Error('Evolution fora') })
+  await c.auto.cuidar(new Date(TERCA_1801), CFG)
+  assert.equal(escalasGravadas(c.db), 0)
+  assert.equal(linhaSemana(c.db).estado, 'falhou')
+  assert.match(linhaSemana(c.db).erro, /Evolution fora/)
+})
+
+test('terça perdida: quarta 9h avisa o dono uma vez e não gera', async () => {
+  const c = cenario()
+  await c.auto.cuidar(new Date('2026-10-21T11:59:00Z'), CFG)   // quarta 08:59: ainda nada
+  assert.equal(c.enviados.length, 0)
+  await c.auto.cuidar(new Date('2026-10-21T12:00:00Z'), CFG)   // quarta 09:00
+  await c.auto.cuidar(new Date('2026-10-21T13:00:00Z'), CFG)
+  await c.novo().cuidar(new Date('2026-10-21T18:00:00Z'), CFG) // reinício
+  assert.equal(c.chamadas.gerar, 0)
+  assert.equal(escalasGravadas(c.db), 0)
+  assert.equal(c.enviados.length, 1)
+  assert.match(c.enviados[0].texto, /não rodou/)
+  assert.match(c.enviados[0].texto, /app/)
+  // semana que rodou na terça: quarta não manda nada disso
+  const ok = cenario({ banco: { tarcisio_escala_auto: [{ semana: SAB, estado: 'confirmada', lembretes: 0 }] } })
+  await ok.auto.cuidar(new Date('2026-10-21T12:00:00Z'), CFG)
+  assert.equal(ok.enviados.length, 0)
 })
 
 // evolution.enviarBotoes: corpo do /message/sendButtons (fetch falso, nenhum envio de verdade)
