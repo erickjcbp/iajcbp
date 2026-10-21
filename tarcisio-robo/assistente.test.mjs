@@ -115,7 +115,7 @@ test('áudio sem texto: pede para escrever, sem chamar a IA', async () => {
 test('lê mensagem recebida; ignora grupo, status e o que o próprio número mandou', () => {
   const ev = (key, message = { conversation: 'oi' }) => ({ event: 'messages.upsert', data: { key, message } })
   assert.deepEqual(lerMensagemRecebida(ev({ remoteJid: '5519998765432@s.whatsapp.net', id: 'A1', fromMe: false })),
-    { numero: '5519998765432', external_id: 'A1', texto: 'oi', midia: null })
+    { numero: '5519998765432', external_id: 'A1', texto: 'oi', midia: null, botao: null, tocou: false, documento: null })
   assert.equal(lerMensagemRecebida(ev({ remoteJid: '123@g.us', id: 'A2' })), null)
   assert.equal(lerMensagemRecebida(ev({ remoteJid: '5519998765432@s.whatsapp.net', id: 'A3', fromMe: true })), null)
   assert.equal(lerMensagemRecebida(ev({ remoteJid: 'status@broadcast', id: 'A4' })), null)

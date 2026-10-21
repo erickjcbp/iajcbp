@@ -1,0 +1,31 @@
+{
+  "_aviso": "SINTÉTICO: montado a partir da documentação/código da Evolution 2.x e do Baileys, NÃO capturado do aparelho. Conferir com o log real do webhook na Task 11 (tocar Confirmar/Revisar no celular do dono e mandar um PDF) e trocar por cópias sanitizadas.",
+  "botao_resposta": { "event": "messages.upsert", "instance": "SaoTarcisio", "data": {
+    "key": { "remoteJid": "5519900000001@s.whatsapp.net", "fromMe": false, "id": "SINT-BTN-1" },
+    "messageType": "buttonsResponseMessage",
+    "message": { "buttonsResponseMessage": { "selectedButtonId": "escala:confirmar", "selectedDisplayText": "Confirmar",
+      "contextInfo": { "stanzaId": "SINT-CONFERENCIA-1" } } } } },
+  "botao_modelo": { "event": "messages.upsert", "data": {
+    "key": { "remoteJid": "5519900000001@s.whatsapp.net", "fromMe": false, "id": "SINT-BTN-2" },
+    "messageType": "templateButtonReplyMessage",
+    "message": { "templateButtonReplyMessage": { "selectedId": "escala:revisar", "selectedDisplayText": "Revisar", "selectedIndex": 1 } } } },
+  "lista": { "event": "messages.upsert", "data": {
+    "key": { "remoteJid": "5519900000001@s.whatsapp.net", "fromMe": false, "id": "SINT-BTN-3" },
+    "messageType": "listResponseMessage",
+    "message": { "listResponseMessage": { "title": "Sim", "listType": 1, "singleSelectReply": { "selectedRowId": "apelido:sim:SINT-LOTE.0" } } } } },
+  "fluxo_nativo": { "event": "messages.upsert", "data": {
+    "key": { "remoteJid": "5519900000001@s.whatsapp.net", "fromMe": false, "id": "SINT-BTN-4" },
+    "messageType": "interactiveResponseMessage",
+    "message": { "interactiveResponseMessage": { "body": { "text": "Confirmar" },
+      "nativeFlowResponseMessage": { "name": "quick_reply", "paramsJson": "{\"display_text\":\"Confirmar\",\"id\":\"escala:confirmar\"}", "version": 3 } } } } },
+  "pdf": { "event": "messages.upsert", "data": {
+    "key": { "remoteJid": "5519900000001@s.whatsapp.net", "fromMe": false, "id": "SINT-PDF-1" },
+    "messageType": "documentMessage",
+    "message": { "documentMessage": { "mimetype": "application/pdf", "fileName": "ESCALA OUTUBRO REV01.pdf", "pageCount": 1,
+      "url": "https://mmg.whatsapp.net/SINTETICO", "fileLength": "123456" } } } },
+  "pdf_com_legenda": { "event": "messages.upsert", "data": {
+    "key": { "remoteJid": "5519900000001@s.whatsapp.net", "fromMe": false, "id": "SINT-PDF-2" },
+    "messageType": "documentWithCaptionMessage",
+    "message": { "documentWithCaptionMessage": { "message": { "documentMessage": {
+      "mimetype": "application/pdf", "fileName": "escala novembro.pdf", "caption": "escala de novembro" } } } } } }
+}

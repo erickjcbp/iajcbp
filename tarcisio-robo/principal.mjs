@@ -10,6 +10,8 @@ import { criarRobo } from './robo.mjs'
 import { criarIA } from './ia.mjs'
 import { criarAssistente } from './assistente.mjs'
 import { criarEscalaAuto, criarCarregarEntrada } from './escala-auto.mjs'
+import { criarMinistrosPdf } from './ministros-pdf.mjs'
+import { criarEntradaDono } from './entrada-dono.mjs'
 
 const precisa = (nome) => {
   const v = process.env[nome]
@@ -36,6 +38,15 @@ const lerNucleos = () => (nucleos ??= (() => {
 const escalaAuto = criarEscalaAuto({ db, evo, log: console,
   gerarSemana: (entrada) => lerNucleos().Gerador.gerarSemana(entrada),
   carregarEntrada: (banco, sabado) => criarCarregarEntrada(lerNucleos())(banco, sabado) })
+// Respostas do dono e PDF dos ministros: tratados no webhook, antes da IA.
+// O núcleo dos ministros é o MESMO da tela (projetos/acolitos/escala-ministros-core.js).
+const ministros = criarMinistrosPdf({ db, evo, log: console,
+  nucleo: () => exigirNucleo(path.join(PASTA_NUCLEOS, 'escala-ministros-core.js')) })
+// PROVISÓRIO até a Task 6 (regra única de confirmar, confirmar-escala-core.js): o toque em
+// Confirmar NÃO confirma nada ainda; o dono recebe o aviso abaixo, a semana volta para
+// 'aguardando' e ele confirma pelo app. Trocar por confirmarSemana real quando a Task 6 entrar.
+const confirmarSemana = async () => ({ ok: false, erro: 'confirmação automática ainda não ligada' })
+const entradaDono = criarEntradaDono({ db, evo, ministros, confirmarSemana, log: console })
 const robo = criarRobo({ db, evo, ia, assistente, escalaAuto, supabaseUrl: process.env.SUPABASE_URL })
 
 // Entrada das mensagens: só a Evolution, de dentro do compose, fala com esta porta (não é publicada).
@@ -47,10 +58,7 @@ http.createServer((req, res) => {
   req.on('end', async () => {
     res.writeHead(200); res.end()
     try {
-      const msg = lerMensagemRecebida(JSON.parse(corpo || '{}'))
-      if (!msg) return
-      const { error } = await db.from('tarcisio_mensagens').upsert({ ...msg, direcao: 'entrada' }, { onConflict: 'external_id', ignoreDuplicates: true })
-      if (error) console.error('guardar mensagem:', error.message)
+      await entradaDono.receber(lerMensagemRecebida(JSON.parse(corpo || '{}')))
     } catch (e) { console.error('webhook:', e.message) }
   })
 }).listen(PORTA, () => console.info(`entrada de mensagens na porta ${PORTA}`))

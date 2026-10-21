@@ -59,16 +59,49 @@ export function criarEvolution({ url, chave, instancia, fetchFn = fetch }) {
     enviarTexto: (destino, texto) => chamar(`/message/sendText/${nome}`, { metodo: 'POST', corpo: { number: destino, text: texto } }),
     // Botões de resposta (Evolution 2.x, /message/sendButtons). botoes: [{ id, texto }].
     // A resposta do toque volta pelo webhook com o `id` (lida na Task 9).
-    enviarBotoes: (destino, texto, botoes, titulo = 'São Tarcísio | JCBP') => chamar(`/message/sendButtons/${nome}`, {
+    enviarBotoes: (destino, texto, botoes, titulo = 'São Tarcísio | JCBP', rodape = 'Responda 1 = Confirmar, 2 = Revisar') => chamar(`/message/sendButtons/${nome}`, {
       metodo: 'POST',
-      corpo: { number: destino, title: titulo, description: texto, footer: 'Responda 1 = Confirmar, 2 = Revisar',
+      corpo: { number: destino, title: titulo, description: texto, footer: rodape,
         buttons: botoes.map((b) => ({ type: 'reply', displayText: b.texto, id: b.id })) },
     }),
+    // Arquivo recebido (PDF dos ministros): a Evolution devolve o conteúdo em base64 pelo id da
+    // mensagem (o webhook vem com base64:false, então o arquivo não chega no corpo do evento).
+    baixarMidia: async (externalId) => {
+      const r = await chamar(`/chat/getBase64FromMediaMessage/${nome}`, {
+        metodo: 'POST', corpo: { message: { key: { id: externalId } }, convertToMp4: false } })
+      if (!r?.base64) throw new ErroGateway(0, 'A Evolution não devolveu o arquivo.')
+      return { base64: String(r.base64), mimetype: r.mimetype ?? null, nome: r.fileName ?? null }
+    },
     enviarImagem: (destino, url, legenda) => chamar(`/message/sendMedia/${nome}`, {
       metodo: 'POST',
       corpo: { number: destino, mediatype: 'image', mimetype: 'image/png', media: url, caption: legenda || '', fileName: 'sao-tarcisio.png' },
     }),
   }
+}
+
+// Toque em botão: o id volta em formatos diferentes conforme o aparelho e a versão da Evolution 2.x
+// (botão de resposta, botão de modelo, lista, fluxo nativo). Nenhum desses formatos foi capturado
+// do aparelho real ainda: os exemplos em fixtures/ são SINTÉTICOS (conferir ao vivo na Task 11).
+function idDoBotao(m) {
+  if (m.buttonsResponseMessage) return m.buttonsResponseMessage.selectedButtonId || null
+  if (m.templateButtonReplyMessage) return m.templateButtonReplyMessage.selectedId || null
+  if (m.listResponseMessage) return m.listResponseMessage.singleSelectReply?.selectedRowId || m.listResponseMessage.selectedRowId || null
+  const nf = m.interactiveResponseMessage?.nativeFlowResponseMessage
+  if (nf) {
+    try { const p = JSON.parse(nf.paramsJson || '{}'); return p.id || p.selectedId || null } catch { return null }
+  }
+  return null
+}
+function textoDoBotao(m) {
+  return m.buttonsResponseMessage?.selectedDisplayText || m.templateButtonReplyMessage?.selectedDisplayText
+    || m.listResponseMessage?.title || m.interactiveResponseMessage?.body?.text || null
+}
+// Resposta por texto (botão não chegou ou o aparelho não mostra): "1"/"confirmar" e "2"/"revisar".
+export function botaoDoTexto(texto) {
+  const t = String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[.!\s]+$/g, '').trim()
+  if (t === '1' || t === 'confirmar') return 'escala:confirmar'
+  if (t === '2' || t === 'revisar') return 'escala:revisar'
+  return null
 }
 
 // Lê um evento da Evolution (portado de parseEvolutionEvent, satorhub/_shared/evolution.ts).
@@ -84,9 +117,20 @@ export function lerMensagemRecebida(corpo) {
   const real = jid.endsWith('@lid') ? String(chave?.remoteJidAlt || d?.senderPn || '') : jid
   const numero = real.split('@')[0].replace(/\D/g, '')
   if (!numero || !chave?.id) return null
-  const m = d?.message || {}
-  const texto = m.conversation || m.extendedTextMessage?.text || m.imageMessage?.caption || m.videoMessage?.caption || null
-  const midia = m.audioMessage ? 'audio' : m.imageMessage ? 'imagem' : m.videoMessage ? 'video' : m.documentMessage ? 'documento'
-    : m.stickerMessage ? 'figurinha' : (!texto ? 'outro' : null)
-  return { numero, external_id: String(chave.id), texto: texto ? String(texto).slice(0, 4000) : null, midia }
+  let m = d?.message || {}
+  if (m.ephemeralMessage?.message) m = m.ephemeralMessage.message
+  const doc = m.documentMessage || m.documentWithCaptionMessage?.message?.documentMessage || null
+  const tocado = idDoBotao(m)
+  const texto = m.conversation || m.extendedTextMessage?.text || m.imageMessage?.caption || m.videoMessage?.caption
+    || doc?.caption || textoDoBotao(m) || null
+  const midia = m.audioMessage ? 'audio' : m.imageMessage ? 'imagem' : m.videoMessage ? 'video' : doc ? 'documento'
+    : m.stickerMessage ? 'figurinha' : (!texto && !tocado ? 'outro' : null)
+  const documento = doc ? { mimetype: doc.mimetype ? String(doc.mimetype) : null, nome: doc.fileName ? String(doc.fileName).slice(0, 200) : null } : null
+  return {
+    numero, external_id: String(chave.id), texto: texto ? String(texto).slice(0, 4000) : null, midia,
+    // botão tocado, ou o atalho por texto ("1"/"2"); `tocou` diz se veio de botão de verdade
+    botao: tocado ? String(tocado).slice(0, 200) : (!doc ? botaoDoTexto(texto) : null),
+    tocou: !!tocado,
+    documento,
+  }
 }
