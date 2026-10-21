@@ -1,0 +1,1556 @@
+{
+ "_origem": "Sintético e anonimizado. \"esperado\" foi gravado rodando o código ANTIGO de escala.html (commit b9c75fb) com rnd semeado.",
+ "seed": 20261018,
+ "hoje": "2026-10-17T12:00:00.000Z",
+ "modelos": {
+  "missa_comum|matriz": [
+   "cruz",
+   "vela",
+   "vela",
+   "turibulo",
+   "naveta",
+   "missal",
+   "cred_altar",
+   "apoio"
+  ],
+  "missa_solene|matriz": [
+   "cruz",
+   "vela",
+   "vela",
+   "turibulo",
+   "naveta",
+   "mitra",
+   "missal",
+   "cred_altar",
+   "apoio",
+   "apoio"
+  ],
+  "missa_comum|santo_antonio": [
+   "cruz",
+   "vela",
+   "vela",
+   "apoio",
+   "missal"
+  ]
+ },
+ "entrada": {
+  "celebracoes": [
+   {
+    "id": "c1",
+    "data": "2026-10-17",
+    "horario": "19h",
+    "comunidade": "matriz",
+    "tipo": "missa_comum"
+   },
+   {
+    "id": "c2",
+    "data": "2026-10-18",
+    "horario": "9h",
+    "comunidade": "matriz",
+    "tipo": "missa_solene"
+   },
+   {
+    "id": "c3",
+    "data": "2026-10-18",
+    "horario": "7h",
+    "comunidade": "santo_antonio",
+    "tipo": "missa_comum"
+   },
+   {
+    "id": "c4",
+    "data": "2026-10-18",
+    "horario": "19h",
+    "comunidade": "matriz",
+    "tipo": "missa_comum"
+   }
+  ],
+  "todosDaSemana": [
+   {
+    "id": "c1",
+    "data": "2026-10-17",
+    "horario": "19h",
+    "comunidade": "matriz",
+    "tipo": "missa_comum"
+   },
+   {
+    "id": "c2",
+    "data": "2026-10-18",
+    "horario": "9h",
+    "comunidade": "matriz",
+    "tipo": "missa_solene"
+   },
+   {
+    "id": "c3",
+    "data": "2026-10-18",
+    "horario": "7h",
+    "comunidade": "santo_antonio",
+    "tipo": "missa_comum"
+   },
+   {
+    "id": "c4",
+    "data": "2026-10-18",
+    "horario": "19h",
+    "comunidade": "matriz",
+    "tipo": "missa_comum"
+   },
+   {
+    "id": "c5",
+    "data": "2026-10-18",
+    "horario": "9h",
+    "comunidade": "santo_antonio",
+    "tipo": "missa_comum"
+   }
+  ],
+  "membros": [
+   {
+    "id": "m01",
+    "nome": "Membro 1",
+    "apelido": null,
+    "nivel": "cerimoniario_aspirante",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2005-02-15"
+   },
+   {
+    "id": "m02",
+    "nome": "Membro 2",
+    "apelido": null,
+    "nivel": "acolito_guardiao",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2008-03-15"
+   },
+   {
+    "id": "m03",
+    "nome": "Membro 3",
+    "apelido": null,
+    "nivel": "coroinha",
+    "comunidade": "santo_antonio",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2011-04-15"
+   },
+   {
+    "id": "m04",
+    "nome": "Membro 4",
+    "apelido": null,
+    "nivel": "cerimoniario_guardiao",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": true,
+    "data_nascimento": "2014-05-15"
+   },
+   {
+    "id": "m05",
+    "nome": "Membro 5",
+    "apelido": "Ap5",
+    "nivel": "acolito_sentinela",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2003-06-15",
+    "escalar_com_irmao": true,
+    "grupo_irmaos": "g1"
+   },
+   {
+    "id": "m06",
+    "nome": "Membro 6",
+    "apelido": null,
+    "nivel": "coroinha",
+    "comunidade": "santo_antonio",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2006-07-15",
+    "escalar_com_irmao": true,
+    "grupo_irmaos": "g1"
+   },
+   {
+    "id": "m07",
+    "nome": "Membro 7",
+    "apelido": null,
+    "nivel": "cerimoniario_magistral",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2009-08-15"
+   },
+   {
+    "id": "m08",
+    "nome": "Membro 8",
+    "apelido": null,
+    "nivel": "aspirante_cerimoniario",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": true,
+    "data_nascimento": "2012-09-15"
+   },
+   {
+    "id": "m09",
+    "nome": "Membro 9",
+    "apelido": null,
+    "nivel": "acolito_aspirante",
+    "comunidade": "santo_antonio",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2015-10-15"
+   },
+   {
+    "id": "m10",
+    "nome": "Membro 10",
+    "apelido": "Ap10",
+    "nivel": "aspirante",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2004-11-15"
+   },
+   {
+    "id": "m11",
+    "nome": "Membro 11",
+    "apelido": null,
+    "nivel": "cerimoniario_aspirante",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2007-12-15"
+   },
+   {
+    "id": "m12",
+    "nome": "Membro 12",
+    "apelido": null,
+    "nivel": "acolito_guardiao",
+    "comunidade": "santo_antonio",
+    "pode_outras_comunidades": true,
+    "data_nascimento": "2010-01-15",
+    "escalar_com_irmao": true,
+    "grupo_irmaos": "g2"
+   },
+   {
+    "id": "m13",
+    "nome": "Membro 13",
+    "apelido": null,
+    "nivel": "coroinha",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2013-02-15",
+    "escalar_com_irmao": true,
+    "grupo_irmaos": "g2"
+   },
+   {
+    "id": "m14",
+    "nome": "Membro 14",
+    "apelido": null,
+    "nivel": "cerimoniario_guardiao",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2002-03-15"
+   },
+   {
+    "id": "m15",
+    "nome": "Membro 15",
+    "apelido": "Ap15",
+    "nivel": "acolito_sentinela",
+    "comunidade": "santo_antonio",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2005-04-15"
+   },
+   {
+    "id": "m16",
+    "nome": "Membro 16",
+    "apelido": null,
+    "nivel": "coroinha",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": true,
+    "data_nascimento": "2008-05-15"
+   },
+   {
+    "id": "m17",
+    "nome": "Membro 17",
+    "apelido": null,
+    "nivel": "cerimoniario_magistral",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2011-06-15"
+   },
+   {
+    "id": "m18",
+    "nome": "Membro 18",
+    "apelido": null,
+    "nivel": "aspirante_cerimoniario",
+    "comunidade": "santo_antonio",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2014-07-15"
+   },
+   {
+    "id": "m19",
+    "nome": "Membro 19",
+    "apelido": null,
+    "nivel": "acolito_aspirante",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2003-08-15"
+   },
+   {
+    "id": "m20",
+    "nome": "Membro 20",
+    "apelido": "Ap20",
+    "nivel": "aspirante",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": true,
+    "data_nascimento": "2006-09-15",
+    "escalar_com_irmao": true,
+    "grupo_irmaos": "g3"
+   },
+   {
+    "id": "m21",
+    "nome": "Membro 21",
+    "apelido": null,
+    "nivel": "cerimoniario_aspirante",
+    "comunidade": "santo_antonio",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2009-10-15",
+    "escalar_com_irmao": true,
+    "grupo_irmaos": "g3"
+   },
+   {
+    "id": "m22",
+    "nome": "Membro 22",
+    "apelido": null,
+    "nivel": "acolito_guardiao",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2012-11-15"
+   },
+   {
+    "id": "m23",
+    "nome": "Membro 23",
+    "apelido": null,
+    "nivel": "coroinha",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2015-12-15"
+   },
+   {
+    "id": "m24",
+    "nome": "Membro 24",
+    "apelido": null,
+    "nivel": "cerimoniario_guardiao",
+    "comunidade": "santo_antonio",
+    "pode_outras_comunidades": true,
+    "data_nascimento": "2004-01-15"
+   },
+   {
+    "id": "m25",
+    "nome": "Membro 25",
+    "apelido": "Ap25",
+    "nivel": "acolito_sentinela",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2007-02-15"
+   },
+   {
+    "id": "m26",
+    "nome": "Membro 26",
+    "apelido": null,
+    "nivel": "coroinha",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2010-03-15"
+   },
+   {
+    "id": "m27",
+    "nome": "Membro 27",
+    "apelido": null,
+    "nivel": "cerimoniario_magistral",
+    "comunidade": "santo_antonio",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2013-04-15"
+   },
+   {
+    "id": "m28",
+    "nome": "Membro 28",
+    "apelido": null,
+    "nivel": "aspirante_cerimoniario",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": true,
+    "data_nascimento": "2002-05-15"
+   },
+   {
+    "id": "m29",
+    "nome": "Membro 29",
+    "apelido": null,
+    "nivel": "acolito_aspirante",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2005-06-15"
+   },
+   {
+    "id": "m30",
+    "nome": "Membro 30",
+    "apelido": "Ap30",
+    "nivel": "aspirante",
+    "comunidade": "santo_antonio",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2008-07-15",
+    "servir_toda_semana": true
+   },
+   {
+    "id": "m31",
+    "nome": "Membro 31",
+    "apelido": null,
+    "nivel": "cerimoniario_aspirante",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2011-08-15"
+   },
+   {
+    "id": "m32",
+    "nome": "Membro 32",
+    "apelido": null,
+    "nivel": "acolito_guardiao",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": true,
+    "data_nascimento": "2014-09-15"
+   },
+   {
+    "id": "m33",
+    "nome": "Membro 33",
+    "apelido": null,
+    "nivel": "coroinha",
+    "comunidade": "santo_antonio",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2003-10-15"
+   },
+   {
+    "id": "m34",
+    "nome": "Membro 34",
+    "apelido": null,
+    "nivel": "cerimoniario_guardiao",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2006-11-15"
+   },
+   {
+    "id": "m35",
+    "nome": "Membro 35",
+    "apelido": "Ap35",
+    "nivel": "acolito_sentinela",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2009-12-15"
+   },
+   {
+    "id": "m36",
+    "nome": "Membro 36",
+    "apelido": null,
+    "nivel": "coroinha",
+    "comunidade": "santo_antonio",
+    "pode_outras_comunidades": true,
+    "data_nascimento": "2012-01-15"
+   },
+   {
+    "id": "m37",
+    "nome": "Membro 37",
+    "apelido": null,
+    "nivel": "cerimoniario_magistral",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2015-02-15"
+   },
+   {
+    "id": "m38",
+    "nome": "Membro 38",
+    "apelido": null,
+    "nivel": "aspirante_cerimoniario",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2004-03-15",
+    "servir_toda_semana": true
+   },
+   {
+    "id": "m39",
+    "nome": "Membro 39",
+    "apelido": null,
+    "nivel": "acolito_aspirante",
+    "comunidade": "santo_antonio",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2007-04-15"
+   },
+   {
+    "id": "m40",
+    "nome": "Membro 40",
+    "apelido": "Ap40",
+    "nivel": "aspirante",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": true,
+    "data_nascimento": "2010-05-15"
+   },
+   {
+    "id": "m41",
+    "nome": "Membro 41",
+    "apelido": null,
+    "nivel": "cerimoniario_aspirante",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2013-06-15"
+   },
+   {
+    "id": "m42",
+    "nome": "Membro 42",
+    "apelido": null,
+    "nivel": "acolito_guardiao",
+    "comunidade": "santo_antonio",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2002-07-15"
+   },
+   {
+    "id": "m43",
+    "nome": "Membro 43",
+    "apelido": null,
+    "nivel": "coroinha",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": false,
+    "data_nascimento": "2005-08-15"
+   },
+   {
+    "id": "m44",
+    "nome": "Membro 44",
+    "apelido": null,
+    "nivel": "cerimoniario_guardiao",
+    "comunidade": "matriz",
+    "pode_outras_comunidades": true,
+    "data_nascimento": "2008-09-15",
+    "servir_toda_semana": true
+   }
+  ],
+  "habMap": {
+   "m01": {},
+   "m02": {
+    "cruz": "experiente",
+    "vela": "referencia",
+    "turibulo": "em_formacao",
+    "naveta": "apto",
+    "missal": "experiente",
+    "cred_altar": "referencia",
+    "apoio": "em_formacao",
+    "mitra": "apto"
+   },
+   "m03": {
+    "cruz": "referencia",
+    "vela": "em_formacao",
+    "turibulo": "apto",
+    "naveta": "experiente",
+    "missal": "referencia",
+    "cred_altar": "em_formacao",
+    "apoio": "apto",
+    "mitra": "experiente"
+   },
+   "m04": {
+    "cruz": "em_formacao",
+    "vela": "apto"
+   },
+   "m05": {
+    "cruz": "apto",
+    "vela": "experiente",
+    "turibulo": "referencia",
+    "naveta": "em_formacao",
+    "missal": "apto",
+    "cred_altar": "experiente",
+    "apoio": "referencia",
+    "mitra": "em_formacao"
+   },
+   "m06": {
+    "cruz": "experiente",
+    "vela": "referencia",
+    "turibulo": "em_formacao",
+    "naveta": "apto",
+    "missal": "experiente",
+    "cred_altar": "referencia",
+    "apoio": "em_formacao",
+    "mitra": "apto"
+   },
+   "m07": {},
+   "m08": {
+    "cruz": "em_formacao",
+    "vela": "apto",
+    "turibulo": "experiente",
+    "naveta": "referencia",
+    "missal": "em_formacao",
+    "cred_altar": "apto",
+    "apoio": "experiente",
+    "mitra": "referencia"
+   },
+   "m09": {
+    "cruz": "apto",
+    "vela": "experiente",
+    "turibulo": "referencia",
+    "naveta": "em_formacao",
+    "missal": "apto",
+    "cred_altar": "experiente",
+    "apoio": "referencia",
+    "mitra": "em_formacao"
+   },
+   "m10": {
+    "cruz": "experiente",
+    "vela": "referencia"
+   },
+   "m11": {
+    "cruz": "referencia",
+    "vela": "em_formacao",
+    "turibulo": "apto",
+    "naveta": "experiente",
+    "missal": "referencia",
+    "cred_altar": "em_formacao",
+    "apoio": "apto",
+    "mitra": "experiente"
+   },
+   "m12": {
+    "cruz": "em_formacao",
+    "vela": "apto",
+    "turibulo": "experiente",
+    "naveta": "referencia",
+    "missal": "em_formacao",
+    "cred_altar": "apto",
+    "apoio": "experiente",
+    "mitra": "referencia"
+   },
+   "m13": {},
+   "m14": {
+    "cruz": "experiente",
+    "vela": "referencia",
+    "turibulo": "em_formacao",
+    "naveta": "apto",
+    "missal": "experiente",
+    "cred_altar": "referencia",
+    "apoio": "em_formacao",
+    "mitra": "apto"
+   },
+   "m15": {
+    "cruz": "referencia",
+    "vela": "em_formacao",
+    "turibulo": "apto",
+    "naveta": "experiente",
+    "missal": "referencia",
+    "cred_altar": "em_formacao",
+    "apoio": "apto",
+    "mitra": "experiente"
+   },
+   "m16": {
+    "cruz": "em_formacao",
+    "vela": "apto"
+   },
+   "m17": {
+    "cruz": "apto",
+    "vela": "experiente",
+    "turibulo": "referencia",
+    "naveta": "em_formacao",
+    "missal": "apto",
+    "cred_altar": "experiente",
+    "apoio": "referencia",
+    "mitra": "em_formacao"
+   },
+   "m18": {
+    "cruz": "experiente",
+    "vela": "referencia",
+    "turibulo": "em_formacao",
+    "naveta": "apto",
+    "missal": "experiente",
+    "cred_altar": "referencia",
+    "apoio": "em_formacao",
+    "mitra": "apto"
+   },
+   "m19": {},
+   "m20": {
+    "cruz": "em_formacao",
+    "vela": "apto",
+    "turibulo": "experiente",
+    "naveta": "referencia",
+    "missal": "em_formacao",
+    "cred_altar": "apto",
+    "apoio": "experiente",
+    "mitra": "referencia"
+   },
+   "m21": {
+    "cruz": "apto",
+    "vela": "experiente",
+    "turibulo": "referencia",
+    "naveta": "em_formacao",
+    "missal": "apto",
+    "cred_altar": "experiente",
+    "apoio": "referencia",
+    "mitra": "em_formacao"
+   },
+   "m22": {
+    "cruz": "experiente",
+    "vela": "referencia"
+   },
+   "m23": {
+    "cruz": "referencia",
+    "vela": "em_formacao",
+    "turibulo": "apto",
+    "naveta": "experiente",
+    "missal": "referencia",
+    "cred_altar": "em_formacao",
+    "apoio": "apto",
+    "mitra": "experiente"
+   },
+   "m24": {
+    "cruz": "em_formacao",
+    "vela": "apto",
+    "turibulo": "experiente",
+    "naveta": "referencia",
+    "missal": "em_formacao",
+    "cred_altar": "apto",
+    "apoio": "experiente",
+    "mitra": "referencia"
+   },
+   "m25": {},
+   "m26": {
+    "cruz": "experiente",
+    "vela": "referencia",
+    "turibulo": "em_formacao",
+    "naveta": "apto",
+    "missal": "experiente",
+    "cred_altar": "referencia",
+    "apoio": "em_formacao",
+    "mitra": "apto"
+   },
+   "m27": {
+    "cruz": "referencia",
+    "vela": "em_formacao",
+    "turibulo": "apto",
+    "naveta": "experiente",
+    "missal": "referencia",
+    "cred_altar": "em_formacao",
+    "apoio": "apto",
+    "mitra": "experiente"
+   },
+   "m28": {
+    "cruz": "em_formacao",
+    "vela": "apto"
+   },
+   "m29": {
+    "cruz": "apto",
+    "vela": "experiente",
+    "turibulo": "referencia",
+    "naveta": "em_formacao",
+    "missal": "apto",
+    "cred_altar": "experiente",
+    "apoio": "referencia",
+    "mitra": "em_formacao"
+   },
+   "m30": {
+    "cruz": "experiente",
+    "vela": "referencia",
+    "turibulo": "em_formacao",
+    "naveta": "apto",
+    "missal": "experiente",
+    "cred_altar": "referencia",
+    "apoio": "em_formacao",
+    "mitra": "apto"
+   },
+   "m31": {},
+   "m32": {
+    "cruz": "em_formacao",
+    "vela": "apto",
+    "turibulo": "experiente",
+    "naveta": "referencia",
+    "missal": "em_formacao",
+    "cred_altar": "apto",
+    "apoio": "experiente",
+    "mitra": "referencia"
+   },
+   "m33": {
+    "cruz": "apto",
+    "vela": "experiente",
+    "turibulo": "referencia",
+    "naveta": "em_formacao",
+    "missal": "apto",
+    "cred_altar": "experiente",
+    "apoio": "referencia",
+    "mitra": "em_formacao"
+   },
+   "m34": {
+    "cruz": "experiente",
+    "vela": "referencia"
+   },
+   "m35": {
+    "cruz": "referencia",
+    "vela": "em_formacao",
+    "turibulo": "apto",
+    "naveta": "experiente",
+    "missal": "referencia",
+    "cred_altar": "em_formacao",
+    "apoio": "apto",
+    "mitra": "experiente"
+   },
+   "m36": {
+    "cruz": "em_formacao",
+    "vela": "apto",
+    "turibulo": "experiente",
+    "naveta": "referencia",
+    "missal": "em_formacao",
+    "cred_altar": "apto",
+    "apoio": "experiente",
+    "mitra": "referencia"
+   },
+   "m37": {},
+   "m38": {
+    "cruz": "experiente",
+    "vela": "referencia",
+    "turibulo": "em_formacao",
+    "naveta": "apto",
+    "missal": "experiente",
+    "cred_altar": "referencia",
+    "apoio": "em_formacao",
+    "mitra": "apto"
+   },
+   "m39": {
+    "cruz": "referencia",
+    "vela": "em_formacao",
+    "turibulo": "apto",
+    "naveta": "experiente",
+    "missal": "referencia",
+    "cred_altar": "em_formacao",
+    "apoio": "apto",
+    "mitra": "experiente"
+   },
+   "m40": {
+    "cruz": "em_formacao",
+    "vela": "apto"
+   },
+   "m41": {
+    "cruz": "apto",
+    "vela": "experiente",
+    "turibulo": "referencia",
+    "naveta": "em_formacao",
+    "missal": "apto",
+    "cred_altar": "experiente",
+    "apoio": "referencia",
+    "mitra": "em_formacao"
+   },
+   "m42": {
+    "cruz": "experiente",
+    "vela": "referencia",
+    "turibulo": "em_formacao",
+    "naveta": "apto",
+    "missal": "experiente",
+    "cred_altar": "referencia",
+    "apoio": "em_formacao",
+    "mitra": "apto"
+   },
+   "m43": {},
+   "m44": {
+    "cruz": "em_formacao",
+    "vela": "apto",
+    "turibulo": "experiente",
+    "naveta": "referencia",
+    "missal": "em_formacao",
+    "cred_altar": "apto",
+    "apoio": "experiente",
+    "mitra": "referencia"
+   }
+  },
+  "dispMap": {
+   "m01": [
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m02": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m03": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h"
+   ],
+   "m04": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_7h"
+   ],
+   "m05": [
+    "sabado_19h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m06": [
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m07": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m08": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h"
+   ],
+   "m09": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_7h"
+   ],
+   "m10": [
+    "sabado_19h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m11": [
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m12": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m13": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h"
+   ],
+   "m14": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_7h"
+   ],
+   "m15": [
+    "sabado_19h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m16": [
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m17": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m18": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h"
+   ],
+   "m19": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_7h"
+   ],
+   "m20": [
+    "sabado_19h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m21": [
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m22": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m23": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h"
+   ],
+   "m24": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_7h"
+   ],
+   "m25": [
+    "sabado_19h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m26": [
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m27": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m28": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h"
+   ],
+   "m29": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_7h"
+   ],
+   "m30": [
+    "sabado_19h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m31": [
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m32": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m33": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h"
+   ],
+   "m34": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_7h"
+   ],
+   "m35": [
+    "sabado_19h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m36": [
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m37": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m38": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h"
+   ],
+   "m39": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_7h"
+   ],
+   "m40": [
+    "sabado_19h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m41": [
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m42": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h",
+    "domingo_7h"
+   ],
+   "m43": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_19h"
+   ],
+   "m44": [
+    "sabado_19h",
+    "domingo_9h",
+    "domingo_7h"
+   ]
+  },
+  "escalasExistentes": {
+   "c2": [
+    {
+     "membro_id": "m03",
+     "funcao": "cruz"
+    },
+    {
+     "membro_id": "m09",
+     "funcao": "turibulo"
+    }
+   ],
+   "c1": [
+    {
+     "membro_id": "m10",
+     "funcao": "apoio"
+    }
+   ],
+   "c5": [
+    {
+     "membro_id": "m14",
+     "funcao": "cruz"
+    },
+    {
+     "membro_id": "m17",
+     "funcao": "vela"
+    },
+    {
+     "membro_id": "m18",
+     "funcao": "apoio"
+    },
+    {
+     "membro_id": "m19",
+     "funcao": "missal"
+    },
+    {
+     "membro_id": "m23",
+     "funcao": "vela"
+    }
+   ]
+  },
+  "ausencias": {
+   "c1": [
+    "m01",
+    "m02",
+    "m07"
+   ],
+   "c2": [
+    "m04",
+    "m08"
+   ],
+   "c4": [
+    "m11",
+    "m15",
+    "m16",
+    "m22",
+    "m24",
+    "m25",
+    "m26",
+    "m27",
+    "m28",
+    "m29"
+   ]
+  },
+  "historicoSemanal": [
+   {
+    "membro_id": "m30",
+    "data": "2026-10-04",
+    "funcao": "cruz",
+    "celebracao_id": "x1"
+   },
+   {
+    "membro_id": "m30",
+    "data": "2026-10-11",
+    "funcao": "apoio",
+    "celebracao_id": "x2"
+   },
+   {
+    "membro_id": "m38",
+    "data": "2026-10-04",
+    "funcao": "apoio",
+    "celebracao_id": "x3"
+   }
+  ],
+  "carga": {
+   "m02": 1000,
+   "m03": 2000,
+   "m04": 3000,
+   "m06": 5000,
+   "m07": 0,
+   "m08": 1000,
+   "m10": 3000,
+   "m11": 4000,
+   "m12": 5000,
+   "m14": 1000,
+   "m15": 2000,
+   "m16": 3000,
+   "m18": 5000,
+   "m19": 0,
+   "m20": 1000,
+   "m22": 3000,
+   "m23": 4000,
+   "m24": 5000,
+   "m26": 1000,
+   "m27": 2000,
+   "m28": 3000,
+   "m30": 5000,
+   "m31": 0,
+   "m32": 1000,
+   "m34": 3000,
+   "m35": 4000,
+   "m36": 5000,
+   "m38": 1000,
+   "m39": 2000,
+   "m40": 3000,
+   "m42": 5000,
+   "m43": 0,
+   "m44": 1000
+  },
+  "config": {
+   "gerador": {
+    "kits": [
+     {
+      "id": "leve",
+      "nome": "Kit leve",
+      "modo": "libera",
+      "comunidades": [
+       "santo_antonio"
+      ],
+      "funcoes": [
+       "cruz",
+       "vela"
+      ],
+      "idade_min": 7
+     },
+     {
+      "id": "proc",
+      "nome": "Processional",
+      "modo": "trava",
+      "comunidades": [
+       "matriz"
+      ],
+      "funcoes": [
+       "turibulo"
+      ],
+      "idade_min": 14,
+      "liberados": [
+       "m22"
+      ]
+     }
+    ]
+   },
+   "funcoes_maiores": null
+  }
+ },
+ "planejar": {
+  "seed": 20261019,
+  "horKey": "domingo_9h",
+  "comunidade": "matriz",
+  "data": "2026-10-18",
+  "usados": [
+   "m03"
+  ],
+  "usadoFds": [
+   "m03",
+   "m09"
+  ],
+  "ausentes": [
+   "m04",
+   "m08"
+  ],
+  "vagas": [
+   "cruz",
+   "vela",
+   "vela",
+   "turibulo",
+   "naveta",
+   "mitra",
+   "missal",
+   "cred_altar",
+   "apoio",
+   "apoio"
+  ],
+  "esperado": [
+   "m38",
+   "m44",
+   "m26",
+   "m17",
+   "m02",
+   "m14",
+   "m41",
+   "m29",
+   "m32",
+   "m23"
+  ]
+ },
+ "esperado": [
+  {
+   "celebracao_id": "c1",
+   "membro_id": "m30",
+   "funcao": "vela"
+  },
+  {
+   "celebracao_id": "c1",
+   "membro_id": "m38",
+   "funcao": "cruz"
+  },
+  {
+   "celebracao_id": "c1",
+   "membro_id": "m44",
+   "funcao": "vela"
+  },
+  {
+   "celebracao_id": "c2",
+   "membro_id": "m29",
+   "funcao": "apoio"
+  },
+  {
+   "celebracao_id": "c2",
+   "membro_id": "m32",
+   "funcao": "apoio"
+  },
+  {
+   "celebracao_id": "c1",
+   "membro_id": "m05",
+   "funcao": "missal"
+  },
+  {
+   "celebracao_id": "c1",
+   "membro_id": "m08",
+   "funcao": "cred_altar"
+  },
+  {
+   "celebracao_id": "c4",
+   "membro_id": "m20",
+   "funcao": "apoio"
+  },
+  {
+   "celebracao_id": "c4",
+   "membro_id": "m21",
+   "funcao": "cruz"
+  },
+  {
+   "celebracao_id": "c4",
+   "membro_id": "m35",
+   "funcao": "turibulo"
+  },
+  {
+   "celebracao_id": "c3",
+   "membro_id": "m39",
+   "funcao": "apoio"
+  },
+  {
+   "celebracao_id": "c1",
+   "membro_id": "m24",
+   "funcao": "turibulo"
+  },
+  {
+   "celebracao_id": "c1",
+   "membro_id": "m12",
+   "funcao": "naveta"
+  },
+  {
+   "celebracao_id": "c4",
+   "membro_id": "m02",
+   "funcao": "naveta"
+  },
+  {
+   "celebracao_id": "c4",
+   "membro_id": "m41",
+   "funcao": "missal"
+  },
+  {
+   "celebracao_id": "c4",
+   "membro_id": "m36",
+   "funcao": "cred_altar"
+  },
+  {
+   "celebracao_id": "c2",
+   "membro_id": "m26",
+   "funcao": "cred_altar"
+  },
+  {
+   "celebracao_id": "c2",
+   "membro_id": "m11",
+   "funcao": "naveta"
+  },
+  {
+   "celebracao_id": "c2",
+   "membro_id": "m27",
+   "funcao": "mitra"
+  },
+  {
+   "celebracao_id": "c3",
+   "membro_id": "m15",
+   "funcao": "missal"
+  },
+  {
+   "celebracao_id": "c2",
+   "membro_id": "m33",
+   "funcao": "missal"
+  },
+  {
+   "celebracao_id": "c4",
+   "membro_id": "m40",
+   "funcao": "vela"
+  },
+  {
+   "celebracao_id": "c4",
+   "membro_id": "m42",
+   "funcao": "vela"
+  },
+  {
+   "celebracao_id": "c2",
+   "membro_id": "m28",
+   "funcao": "vela"
+  },
+  {
+   "celebracao_id": "c2",
+   "membro_id": "m16",
+   "funcao": "vela"
+  },
+  {
+   "celebracao_id": "c3",
+   "membro_id": "m06",
+   "funcao": "cruz"
+  },
+  {
+   "celebracao_id": "c3",
+   "membro_id": "m04",
+   "funcao": "vela"
+  },
+  {
+   "celebracao_id": "c3",
+   "membro_id": "m25",
+   "funcao": "vela"
+  }
+ ],
+ "esperadoPendentes": [],
+ "esperadoSemTodosDaSemana": [
+  {
+   "celebracao_id": "c1",
+   "membro_id": "m30",
+   "funcao": "vela"
+  },
+  {
+   "celebracao_id": "c1",
+   "membro_id": "m38",
+   "funcao": "cruz"
+  },
+  {
+   "celebracao_id": "c1",
+   "membro_id": "m44",
+   "funcao": "vela"
+  },
+  {
+   "celebracao_id": "c2",
+   "membro_id": "m29",
+   "funcao": "apoio"
+  },
+  {
+   "celebracao_id": "c2",
+   "membro_id": "m32",
+   "funcao": "apoio"
+  },
+  {
+   "celebracao_id": "c3",
+   "membro_id": "m15",
+   "funcao": "apoio"
+  },
+  {
+   "celebracao_id": "c4",
+   "membro_id": "m05",
+   "funcao": "apoio"
+  },
+  {
+   "celebracao_id": "c4",
+   "membro_id": "m06",
+   "funcao": "cruz"
+  },
+  {
+   "celebracao_id": "c1",
+   "membro_id": "m17",
+   "funcao": "turibulo"
+  },
+  {
+   "celebracao_id": "c4",
+   "membro_id": "m20",
+   "funcao": "turibulo"
+  },
+  {
+   "celebracao_id": "c4",
+   "membro_id": "m21",
+   "funcao": "vela"
+  },
+  {
+   "celebracao_id": "c1",
+   "membro_id": "m14",
+   "funcao": "cred_altar"
+  },
+  {
+   "celebracao_id": "c1",
+   "membro_id": "m35",
+   "funcao": "missal"
+  },
+  {
+   "celebracao_id": "c4",
+   "membro_id": "m41",
+   "funcao": "missal"
+  },
+  {
+   "celebracao_id": "c3",
+   "membro_id": "m39",
+   "funcao": "missal"
+  },
+  {
+   "celebracao_id": "c1",
+   "membro_id": "m08",
+   "funcao": "naveta"
+  },
+  {
+   "celebracao_id": "c4",
+   "membro_id": "m02",
+   "funcao": "naveta"
+  },
+  {
+   "celebracao_id": "c4",
+   "membro_id": "m12",
+   "funcao": "cred_altar"
+  },
+  {
+   "celebracao_id": "c4",
+   "membro_id": "m40",
+   "funcao": "vela"
+  },
+  {
+   "celebracao_id": "c2",
+   "membro_id": "m26",
+   "funcao": "cred_altar"
+  },
+  {
+   "celebracao_id": "c2",
+   "membro_id": "m11",
+   "funcao": "missal"
+  },
+  {
+   "celebracao_id": "c2",
+   "membro_id": "m23",
+   "funcao": "naveta"
+  },
+  {
+   "celebracao_id": "c2",
+   "membro_id": "m24",
+   "funcao": "mitra"
+  },
+  {
+   "celebracao_id": "c2",
+   "membro_id": "m28",
+   "funcao": "vela"
+  },
+  {
+   "celebracao_id": "c2",
+   "membro_id": "m16",
+   "funcao": "vela"
+  },
+  {
+   "celebracao_id": "c3",
+   "membro_id": "m36",
+   "funcao": "cruz"
+  },
+  {
+   "celebracao_id": "c3",
+   "membro_id": "m42",
+   "funcao": "vela"
+  },
+  {
+   "celebracao_id": "c3",
+   "membro_id": "m27",
+   "funcao": "vela"
+  }
+ ]
+}
