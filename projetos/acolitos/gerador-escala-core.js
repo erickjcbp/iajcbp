@@ -197,6 +197,16 @@
         if (cnt[s.funcao] > (existPorFunc[s.funcao] || 0)) slots.push({ c, funcao: s.funcao, hk: horKeyDe(c), com: c.comunidade, filled: false });
       });
     });
+    var ger = ctx.config.gerador || {}, minimoMes = Number(ger.minimo_mes); if (!(minimoMes > 0)) minimoMes = 2;
+    // entrada.vezesNoMes { membro_id: n }: as vezes EXATAS do mês. Só com elas o teto do mês vale
+    // (a carga é peso de rodízio — "frequente" tira meia vez — e não serve de contagem dura).
+    // Sem elas a geração é a de sempre (paridade com o código antigo) e a conta de
+    // alemDoMinimo usa a parte "mês" da carga.
+    var vezesBase = (entrada.vezesNoMes && typeof entrada.vezesNoMes === 'object') ? entrada.vezesNoMes : null;
+    var novasPor = {}, semTeto = !vezesBase;
+    // quem tem "Servir toda semana" segue a regra própria (4×, SemanalCore): o mínimo dele é 4.
+    const minimoDe = m => m && m.servir_toda_semana ? Math.max(minimoMes, RodizioCore.metaDoMembro(m)) : minimoMes;
+    const vezes = id => (vezesBase ? (vezesBase[id] || 0) : Math.floor(((entrada.carga || {})[id] || 0) / RodizioCore.PESO_MES)) + (novasPor[id] || 0);
     // pool DURO de candidatos p/ uma vaga, no estado atual
     const candsDe = s => {
       const aus = ausFresh[s.c.id] || new Set();
@@ -204,7 +214,8 @@
         && !(FUNCOES_SEM_CERIMONIARIO.has(s.funcao) && ehCerimo(m) && !m.servir_toda_semana)
         && SemanalCore.pode(m, s.funcao, s.c.data, historico, habMap)
         && (!s.hk || (dispMap[m.id] || []).includes(s.hk))
-        && !usadoFds.has(m.id) && !usadosMissa[s.c.id].has(m.id) && !aus.has(m.id));
+        && !usadoFds.has(m.id) && !usadosMissa[s.c.id].has(m.id) && !aus.has(m.id)
+        && (semTeto || vezes(m.id) < minimoDe(m)));
     };
     // escolha dentro do pool: comunidade → reserva cerimoniário (nas menores) → RODÍZIO → aleatório
     const escolher = (s, pool) => {
@@ -213,13 +224,15 @@
       const menor = !FUNCOES_MAIORES.has(s.funcao);
       const tiers = menor ? [comPool.filter(m => !ehCerimo(m)), comPool] : [comPool];
       const grupo = tiers.find(t => t.length).slice();
-      grupo.sort((a, b) => ((carga[a.id] || 0) - (carga[b.id] || 0)) || (rnd() - 0.5));
+      // 2ª passada (além do mínimo): o MENOS servido no mês primeiro; depois o rodízio de sempre.
+      if (semTeto && vezesBase) grupo.sort((a, b) => (vezes(a.id) - vezes(b.id)) || ((carga[a.id] || 0) - (carga[b.id] || 0)) || (rnd() - 0.5));
+      else grupo.sort((a, b) => ((carga[a.id] || 0) - (carga[b.id] || 0)) || (rnd() - 0.5));
       return grupo[0];
     };
     const novas = [];
     const colocar = (s, m) => {
       s.filled = true; usadoFds.add(m.id); usadosMissa[s.c.id].add(m.id); carga[m.id] = (carga[m.id] || 0) + RodizioCore.PESO_MES + 1;
-      novas.push({ celebracao_id: s.c.id, membro_id: m.id, funcao: s.funcao });
+      novas.push({ celebracao_id: s.c.id, membro_id: m.id, funcao: s.funcao }); novasPor[m.id] = (novasPor[m.id] || 0) + 1;
       historico.push({ celebracao_id: s.c.id, membro_id: m.id, funcao: s.funcao, data: s.c.data });
     };
     if (membros.some(m => m.servir_toda_semana)) {
@@ -227,15 +240,20 @@
       SemanalCore.reservar(membros, slots, (m, s) => pools.get(s).has(m.id)).forEach(({ slot, membro }) => colocar(slot, membro));
     }
     // GREEDY GLOBAL: preenche sempre a vaga com MENOS candidatos primeiro (reserva os "frescos" p/ onde há pouca opção)
+    // 1ª passada: só quem ainda está ABAIXO do mínimo do mês (minimo_mes, padrão 2).
+    // 2ª passada (sem o teto do mês): as vagas que sobraram vazias, com quem já cumpriu o mínimo —
+    // o menos servido no mês primeiro, empate pelo rodízio e depois sorteio. As regras duras não mudam.
+    const vaziasPass = new Set();
+    const passada = () => { vaziasPass.clear();
     while (true) {
       let best = null, bestCands = null;
       for (const s of slots) {
-        if (s.filled) continue;
+        if (s.filled || vaziasPass.has(s)) continue;
         const cs = candsDe(s);
         if (best === null || cs.length < bestCands.length) { best = s; bestCands = cs; }
       }
       if (!best) break;
-      if (!bestCands.length) { best.filled = true; continue; } // ninguém apto+disponível → vaga fica vazia
+      if (!bestCands.length) { vaziasPass.add(best); continue; } // ninguém apto+disponível → vaga fica vazia (nesta passada)
       const m = escolher(best, bestCands);
       colocar(best, m);
       // IRMÃOS JUNTOS: se serve com irmão, tenta colocar o(s) irmão(s) na MESMA missa
@@ -246,7 +264,9 @@
             if (s2) colocar(s2, irm);
           });
       }
-    }
+    } };
+    passada();
+    if (!semTeto && vaziasPass.size && ger.permitir_alem_do_minimo !== false) { semTeto = true; passada(); }
     // vagas abertas que ninguém pôde ocupar: `slots` sem linha correspondente em `novas`
     const sobra = {};
     novas.forEach(n => { const k = n.celebracao_id + '|' + n.funcao; sobra[k] = (sobra[k] || 0) + 1; });
@@ -256,7 +276,11 @@
       if (sobra[k] > 0) sobra[k]--; else vazias.push({ celebracao_id: s.c.id, funcao: s.funcao });
     });
     const semanalPendentes = membros.filter(m => m.servir_toda_semana && ordc.some(c => { const st = SemanalCore.situacao(m.id, c.data, historico); return (!st.naSemana && st.total < 4) || st.funcao > 2 || st.apoio > 2 || (st.total >= 4 && st.semanas < 4); })).map(m => m.apelido || m.nome);
-    return { novas: novas, vazias: vazias, alemDoMinimo: [], semanalPendentes: semanalPendentes };
+    // quem terminou ACIMA do mínimo do mês nesta geração (as vezes do mês + as novas)
+    const alemDoMinimo = [];
+    const porId = {}; membros.forEach(m => { porId[m.id] = m; });
+    Object.keys(novasPor).forEach(id => { const v = vezes(id); if (v > minimoDe(porId[id])) alemDoMinimo.push({ membro_id: id, vezes: v }); });
+    return { novas: novas, vazias: vazias, alemDoMinimo: alemDoMinimo, semanalPendentes: semanalPendentes };
   }
 
   var api = { gerarSemana: gerarSemana, planejarVagas: planejarVagas, elegivelFuncao: elegivelFuncao, MAIORES_PADRAO: MAIORES_PADRAO };
