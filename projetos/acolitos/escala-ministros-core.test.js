@@ -211,3 +211,20 @@ test('sim lembrado para um dos dois pais de mesmo primeiro nome casa só aquele'
   assert.deepStrictEqual(r.duvidas, []);
   assert.deepStrictEqual(r.casados.map((c) => [c.membro_id, c.pai_ou_mae]), [['m8', 'mae']]);
 });
+
+// ---- leitura por posição (mesmo caso do teste do robô) ----
+const { montarTextoDosItens, anoDoTexto, mesDosLidos } = require('./escala-ministros-core.js');
+test('montarTextoDosItens: títulos de dia primeiro, depois um bloco de horários por dia', () => {
+  const it = (str, x, y) => ({ str, x, y });
+  const itens = [it('SANTO ANTÔNIO', 40, 700), it('SÁBADO 24/out', 40, 680), it('DOMINGO 25/out', 200, 680), it('SÁBADO 31/out', 360, 680),
+    it('17:00h', 40, 600), it('Rita E.', 80, 600), it('18:30h', 40, 580), it('Bia', 80, 580), it('7:00h', 200, 600), it('Ana', 240, 600), it('17:00h', 360, 600), it('Caio', 400, 600)];
+  const txt = montarTextoDosItens([itens]);
+  assert.ok(txt.indexOf('SÁBADO 24/out') < txt.indexOf('17:00h'));
+  assert.ok(/Rita E\./.test(txt) && /Caio/.test(txt));
+});
+test('anoDoTexto e mesDosLidos', () => {
+  assert.equal(anoDoTexto('ESCALA Outubro 2026', new Date('2030-01-01')), 2026);
+  assert.equal(anoDoTexto('sem ano', new Date('2030-06-01')), 2030);
+  assert.equal(mesDosLidos([{ data: '2026-10-03' }, { data: '2026-10-04' }, { data: '2026-11-01' }]), '2026-10');
+  assert.equal(mesDosLidos([]), null);
+});

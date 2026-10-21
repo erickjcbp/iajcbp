@@ -90,6 +90,8 @@
 <script src="identidade-core.js"></script>
 <script src="shared.js"></script>
 <script src="tarcisio-painel.js"></script>
+<script src="escala-ministros-core.js"></script>
+<script src="ministros-painel.js"></script>
 <script>
 // A seção inicial PRECISA existir em SECOES — senão o painel abre numa tela
 // que não tem botão no menu e, ao sair dela, não há como voltar sem recarregar.
@@ -116,7 +118,7 @@ const GRUPOS = [
   ['Como o app funciona',[['navegacao','Navegação'], ['gerador','Regras do gerador'], ['missoes','Missões & XP']]],
   // São Tarcísio | JCBP (migrations 098–102): as telas moram em tarcisio-painel.js, a mesma
   // fonte da tela de Avisos da coordenação — aqui só se escolhe qual delas abrir.
-  ['São Tarcísio | WhatsApp', [['tarcisio_avisos','Avisos'], ['tarcisio_sem','Sem número'], ['tarcisio_whatsapp','WhatsApp'], ['tarcisio_grupos','Grupos'], ['tarcisio_ia','Assistente de IA'], ['tarcisio_conversas','Conversas']]],
+  ['São Tarcísio | WhatsApp', [['tarcisio_avisos','Avisos'], ['tarcisio_sem','Sem número'], ['tarcisio_whatsapp','WhatsApp'], ['tarcisio_ministros','Escala dos ministros'], ['tarcisio_nomes','Nomes lembrados'], ['tarcisio_grupos','Grupos'], ['tarcisio_ia','Assistente de IA'], ['tarcisio_conversas','Conversas']]],
 ];
 // Admin e subadmin entram só no grupo São Tarcísio, e só em Avisos e Sem número; o resto é do superadmin.
 const SECOES_COORD = ['tarcisio_avisos', 'tarcisio_sem'];
@@ -156,6 +158,8 @@ const CONTEUDO = {
   tarcisio_avisos:    [{ nome:'Avisos',            fn:(b) => TarcisioPainel.avisos(b) }],
   tarcisio_sem:       [{ nome:'Sem número',        fn:(b) => TarcisioPainel.semNumero(b) }],
   tarcisio_whatsapp:  [{ nome:'WhatsApp',          fn:(b) => TarcisioPainel.whatsapp(b) }],
+  tarcisio_ministros: [{ nome:'Escala dos ministros', fn:(b) => MinistrosPainel.ministros(b) }],
+  tarcisio_nomes:     [{ nome:'Nomes lembrados',   fn:(b) => MinistrosPainel.nomesLembrados(b) }],
   tarcisio_grupos:    [{ nome:'Grupos',            fn:(b) => TarcisioPainel.grupos(b) }],
   tarcisio_ia:        [{ nome:'Assistente de IA',  fn:(b) => TarcisioPainel.assistente(b) }],
   tarcisio_conversas: [{ nome:'Conversas',         fn:(b) => TarcisioPainel.conversas(b) }],
@@ -786,6 +790,8 @@ async function renderGerador(b){
   const mk=(label)=>{ const L=document.createElement('label'); L.style.cssText='display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px;'; L.textContent=label; b.appendChild(L); return L; };
   mk('Janela do rodízio (dias) — quanto histórico o gerador considera');
   const iJ=document.createElement('input'); iJ.className='form-input'; iJ.type='number'; iJ.min='7'; iJ.value=ger.janela_dias||42; b.appendChild(iJ);
+  mk('Mínimo por mês — vezes que cada pessoa deve servir (quem já cumpriu só entra se faltar gente)');
+  const iMin=document.createElement('input'); iMin.className='form-input'; iMin.type='number'; iMin.min='1'; iMin.max='8'; iMin.value=ger.minimo_mes||2; b.appendChild(iMin);
 
   const sep=document.createElement('div'); sep.style.cssText='margin-top:20px;font-family:var(--font-body);font-weight:700;color:var(--gold-light);font-size:12px;'; sep.textContent='Kits (funções com regra própria de quem pode servir)'; b.appendChild(sep);
   const dica=document.createElement('p'); dica.style.cssText='font-size:11px;color:var(--text-muted);margin:4px 0 10px;line-height:1.5;';
@@ -869,7 +875,7 @@ async function renderGerador(b){
   save.onclick=async()=>{
     // kit_leve some do salvamento: quem lê já aceita os dois formatos (normalizarKits),
     // então guardar os dois só criaria duas verdades pro mesmo assunto.
-    const ok = await setConfig('gerador', { janela_dias:Number(iJ.value)||42, kits:_kitsEdit });
+    const ok = await setConfig('gerador', { janela_dias:Number(iJ.value)||42, minimo_mes:Math.max(1, Math.min(8, Number(iMin.value)||2)), kits:_kitsEdit });
     if (ok) _kitsEdit = null;   // falhou = guarda o rascunho, senão o trabalho some junto com o erro
   };
   b.appendChild(save);

@@ -52,3 +52,12 @@
 .tc-bolha.tc-entrada { background:var(--surface2); border:1px solid var(--border); }
 .tc-bolha.tc-saida { background:rgba(201,168,76,.12); border:1px solid var(--gold-dim); margin-left:auto; }
 .tc-bolha small { display:block; color:var(--text-muted); font-size:11px; margin-top:3px; }
+
+/* Escala dos ministros (ministros-painel.js) */
+.tm-arquivo { display:block; width:100%; min-height:44px; font-size:16px; padding:8px 0; color:var(--text); }
+.tm-revisao { margin-top:14px; min-width:0; }
+.tm-duvida { flex-direction:column; }
+.tm-op { padding:2px 0; overflow-wrap:anywhere; }
+.tm-op input[type=radio] { width:22px; height:22px; accent-color:var(--gold); flex:none; }
+.tc-campo { width:100%; min-height:44px; font-size:16px; padding:8px 12px; border-radius:10px; border:1px solid var(--border);
+  background:var(--surface2); color:var(--text); }

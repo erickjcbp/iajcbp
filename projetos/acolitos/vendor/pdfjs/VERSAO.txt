@@ -1,0 +1,1 @@
+// pdfjs-dist 6.4.299 (mesma versão do robô). Carregado só ao escolher o PDF dos ministros.

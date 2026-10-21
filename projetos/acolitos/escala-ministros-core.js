@@ -184,7 +184,54 @@
     } catch (e) { return r; }
   }
 
-  var api = { lerEscalaMinistros: lerEscalaMinistros, casarNomes: casarNomes, nomeLimpo: nomeLimpo };
+  // ---- Leitura do PDF no navegador/robô: pdf.js devolve os pedaços de texto FORA de ordem (o PDF
+  // dos ministros tem os títulos de dia em outro bloco). Reconstrói o texto pela posição de cada pedaço.
+  // paginas: [[{ str, x, y }]] (y cresce para cima, como no PDF). Mesma regra do robô (tarcisio-robo).
+  var RE_HORA_ITEM = /^\d{1,2}:\d{2}h$/i, RE_MARCADOR = /^SANTO ANT[ÔO]NIO$/i;
+  function montarTextoDosItens(paginas) {
+    var titulos = [], blocos = [];
+    (paginas || []).forEach(function (itens) {
+      var vivos = (itens || []).map(function (i) { return { s: String(i.str || '').trim(), x: +i.x || 0, y: +i.y || 0 }; })
+        .filter(function (i) { return i.s; }).sort(function (a, b) { return (b.y - a.y) || (a.x - b.x); });
+      var linhas = [];
+      vivos.forEach(function (it) {
+        var ult = linhas[linhas.length - 1];
+        if (ult && Math.abs(ult.y - it.y) <= 3) ult.itens.push(it); else linhas.push({ y: it.y, itens: [it] });
+      });
+      var horas = [];
+      linhas.forEach(function (l) {
+        l.itens.sort(function (a, b) { return a.x - b.x; });
+        var hora = l.itens.filter(function (i) { return RE_HORA_ITEM.test(i.s); })[0];
+        if (!hora) { titulos.push(l.itens.map(function (i) { return i.s; }).join(' ')); return; }
+        var fora = l.itens.filter(function (i) { return i.x < hora.x - 1 || RE_MARCADOR.test(i.s); });
+        if (fora.length) titulos.push(fora.map(function (i) { return i.s; }).join(' '));
+        horas.push({ y: l.y, t: l.itens.filter(function (i) { return fora.indexOf(i) < 0; }).map(function (i) { return i.s; }).join(' ') });
+      });
+      var vaos = horas.slice(1).map(function (h, i) { return horas[i].y - h.y; }).sort(function (a, b) { return a - b; });
+      var vaoComum = vaos.length ? vaos[Math.floor(vaos.length / 2)] : 0;
+      var atual = null;
+      horas.forEach(function (h, i) {
+        if (!atual || (vaoComum && horas[i - 1].y - h.y > vaoComum * 1.5)) { atual = []; blocos.push(atual); }
+        atual.push(h.t);
+      });
+    });
+    return titulos.concat([''], blocos.map(function (b) { return b.join(' '); })).join('\n');
+  }
+  // O ano vem do texto ("Outubro 2026"); sem ele, o ano da data dada (padrão: hoje).
+  function anoDoTexto(texto, agora) {
+    var m = /\b(20\d{2})\b/.exec(String(texto || ''));
+    return m ? +m[1] : (agora || new Date()).getFullYear();
+  }
+  // O mês do PDF é o que mais aparece nas datas lidas (o "1/nov" do fim de outubro não muda o mês).
+  function mesDosLidos(lidos) {
+    var conta = {};
+    (lidos || []).forEach(function (l) { var k = String(l.data).slice(0, 7); conta[k] = (conta[k] || 0) + 1; });
+    var chaves = Object.keys(conta).sort(function (a, b) { return (conta[b] - conta[a]) || a.localeCompare(b); });
+    return chaves.length ? chaves[0] : null;
+  }
+
+  var api = { lerEscalaMinistros: lerEscalaMinistros, casarNomes: casarNomes, nomeLimpo: nomeLimpo,
+    montarTextoDosItens: montarTextoDosItens, anoDoTexto: anoDoTexto, mesDosLidos: mesDosLidos };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  else { global.lerEscalaMinistros = lerEscalaMinistros; global.casarNomes = casarNomes; }   // pelo NOME
+  else { global.lerEscalaMinistros = lerEscalaMinistros; global.casarNomes = casarNomes; global.EscalaMinistrosCore = api; }   // pelo NOME
 })(typeof globalThis !== 'undefined' ? globalThis : this);

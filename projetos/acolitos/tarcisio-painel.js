@@ -102,6 +102,35 @@
     cReg.append(lt); grid.append(cReg);
     box.append(grid);
 
+    // Escala automática de terça e aviso de ausências (migration 104)
+    const cAuto = cartao('Escala automática e ausências');
+    cAuto.append(el('p', 'tc-st-muted', 'Terça, 18h01, o robô monta a escala do fim de semana e manda a conferência para o número abaixo, com os botões Confirmar e Revisar. De domingo a terça ele lembra os grupos de avisar as ausências.'));
+    const campo = (rotulo, el0) => { cAuto.append(el('label', 'tc-rotulo', rotulo)); cAuto.append(el0); return el0; };
+    const entrada = (valor, ph) => { const i = el('input', 'tc-campo'); i.type = 'text'; i.value = valor || ''; if (ph) i.placeholder = ph; return i; };
+    const iNum = campo('Número que recebe a conferência (com DDD)', entrada(foneBonito(conf.numero_conferencia) || conf.numero_conferencia, '(19) 99999-9999'));
+    iNum.inputMode = 'tel';
+    const aRem = campo('Outros números que podem mandar o PDF dos ministros (um por linha)', el('textarea', 'tc-area'));
+    aRem.value = (conf.remetentes_pdf || []).map(foneBonito).join('\n'); aRem.style.minHeight = '64px';
+    const iHor = campo('Horários do aviso de ausência (ex.: 09:00, 18:00)', entrada((conf.ausencia_horas || []).join(', '), '09:00'));
+    const iUlt = campo('Último aviso (terça, até as…)', entrada(conf.ausencia_ultimo, '15:00'));
+    const aTxt = campo('Texto do aviso — deixe vazio para usar o padrão', el('textarea', 'tc-area'));
+    aTxt.value = conf.ausencia_texto || ''; aTxt.style.minHeight = '80px';
+    const acAuto = el('div', 'tc-st-acoes');
+    acAuto.append(botao('Salvar', 'gold', async () => {
+      const digitos = (t) => String(t || '').replace(/\D/g, '');
+      const norm = (t) => { let d = digitos(t); if (d.length === 10 || d.length === 11) d = '55' + d; return /^55\d{10,11}$/.test(d) ? d : null; };
+      const num = norm(iNum.value);
+      if (!num) { uiAlert('Número inválido. Use DDD + número, por exemplo (19) 99999-9999.'); return; }
+      const rem = []; for (const l of aRem.value.split(/\n+/).map((x) => x.trim()).filter(Boolean)) { const n = norm(l); if (!n) { uiAlert('Número inválido na lista de remetentes: ' + l); return; } rem.push(n); }
+      const horas = iHor.value.split(/[,;\s]+/).filter(Boolean);
+      const hh = /^([01]?\d|2[0-3]):[0-5]\d$/;
+      if (!horas.length || !horas.every((h) => hh.test(h))) { uiAlert('Horários inválidos. Use o formato 09:00, 18:00.'); return; }
+      if (!hh.test(iUlt.value.trim())) { uiAlert('Horário do último aviso inválido. Use o formato 15:00.'); return; }
+      const pad = (h) => (h.length === 4 ? '0' + h : h);
+      await salvarConfig({ numero_conferencia: num, remetentes_pdf: rem, ausencia_horas: horas.map(pad), ausencia_ultimo: pad(iUlt.value.trim()), ausencia_texto: aTxt.value.trim() || null }, 'Salvo.');
+    }));
+    cAuto.append(acAuto); box.append(cAuto);
+
     const cTx = cartao('Textos fixos');
     const tLem = textoEditavel(cTx, 'Lembrete — use {dia} e {itens}', conf.texto_lembrete);
     const tAni = textoEditavel(cTx, 'Aniversário — use {nome}', conf.texto_aniversario);
