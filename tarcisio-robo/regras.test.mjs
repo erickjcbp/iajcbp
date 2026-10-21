@@ -147,3 +147,48 @@ test('cumprimento da IA sem número nem quebra de linha', () => {
   assert.equal(cumprimentoValido('Oi\nvocê'), false)
   assert.equal(cumprimentoValido(''), false)
 })
+
+// ── lembrete de ausência (domingo a terça) ──
+import { lembreteAusenciaAgora } from './regras.mjs'
+const CFG_AUS = { ausencia_horas: ['09:00'], ausencia_ultimo: '15:00', ausencia_texto: null }
+// 2026-10-18 é domingo; 19 segunda; 20 terça; 21 quarta; 24 sábado. SP = UTC-3.
+const sp = (iso) => agoraSP(new Date(iso))
+
+test('domingo 9h devolve texto com o link e o prazo', () => {
+  const r = lembreteAusenciaAgora(sp('2026-10-18T12:00:00Z'), CFG_AUS)
+  assert.ok(r)
+  assert.match(r.texto, /https:\/\/coroinhas\.jcbplimeira\.com\.br\/ausencias/)
+  assert.match(r.texto, /app/i)
+  assert.match(r.texto, /até terça-feira, 18h/)
+  assert.doesNotMatch(r.texto, /último/i)
+  assert.equal(r.chave, 'ausencia:2026-10-18:09:00')
+})
+test('segunda 9h devolve texto', () => {
+  assert.equal(lembreteAusenciaAgora(sp('2026-10-19T12:00:00Z'), CFG_AUS).chave, 'ausencia:2026-10-19:09:00')
+})
+test('quarta 9h devolve null', () => {
+  assert.equal(lembreteAusenciaAgora(sp('2026-10-21T12:00:00Z'), CFG_AUS), null)
+})
+test('sábado 9h devolve null', () => {
+  assert.equal(lembreteAusenciaAgora(sp('2026-10-24T12:00:00Z'), CFG_AUS), null)
+})
+test('terça 15h devolve o último lembrete', () => {
+  // 18:00 UTC = 15:00 em Brasília
+  const r = lembreteAusenciaAgora(sp('2026-10-20T18:00:00Z'), CFG_AUS)
+  assert.ok(r)
+  assert.match(r.texto, /último/i)
+  assert.equal(r.chave, 'ausencia:2026-10-20:15:00')
+})
+test('terça 18h01 devolve null', () => {
+  // 21:01 UTC = 18:01 em Brasília; mesmo com o horário configurado na lista, passou do prazo
+  assert.equal(lembreteAusenciaAgora(sp('2026-10-20T21:01:00Z'), CFG_AUS), null)
+  assert.equal(lembreteAusenciaAgora(sp('2026-10-20T21:30:00Z'), { ...CFG_AUS, ausencia_horas: ['09:00', '18:30'] }), null)
+})
+test('texto personalizado da config substitui o padrão', () => {
+  const r = lembreteAusenciaAgora(sp('2026-10-18T12:00:00Z'), { ...CFG_AUS, ausencia_texto: 'Mande suas ausências!' })
+  assert.equal(r.texto, 'Mande suas ausências!')
+})
+test('horário que não está na lista devolve null', () => {
+  assert.equal(lembreteAusenciaAgora(sp('2026-10-18T12:01:00Z'), CFG_AUS), null)
+  assert.equal(lembreteAusenciaAgora(sp('2026-10-19T18:00:00Z'), CFG_AUS), null) // 15h só vale na terça
+})

@@ -4,7 +4,7 @@
 // Só envia: não lê resposta de ninguém. Projeto: docs/superpowers/specs/2026-10-20-sao-tarcisio-whatsapp-design.md
 import {
   agoraSP, somarDias, hmCurto, dentroDaJanela, montarLembretes, montarAniversarios,
-  publicoPrivado, proximaVez, pausaEntreEnvios, imagemPermitida, cumprimentoValido,
+  publicoPrivado, proximaVez, lembreteAusenciaAgora, pausaEntreEnvios, imagemPermitida, cumprimentoValido,
 } from './regras.mjs'
 
 const CAMPOS_MEMBRO = 'id,nome,apelido,nivel,user_id,data_nascimento,telefone,celular_recado,celular_responsavel,celular_mae'
@@ -130,6 +130,24 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
       exigir(await db.from('tarcisio_avisos').update(proxima ? { quando: proxima } : { ativo: false }).eq('id', a.id), 'avançar aviso')
       log.info(`aviso "${a.titulo}": ${linhas.length} destino(s)${proxima ? `, próximo ${proxima}` : ', encerrado'}`)
     }
+  }
+
+  // ── lembrete de ausência: domingo a terça, um por grupo; a chave única impede repetir ──
+  async function gerarLembreteAusencia(cfg, agora, sp) {
+    if (cfg.pausado) return
+    const l = lembreteAusenciaAgora(sp, cfg)
+    if (!l) return
+    const grupos = exigir(await db.from('tarcisio_grupos').select('jid,nome,papel').not('papel', 'is', null), 'ler grupos')
+    const jidDoPapel = new Map(grupos.map((g) => [g.papel, g]))
+    const linhas = Object.keys(PAPEL_GRUPO).map((papel) => {
+      const g = jidDoPapel.get(papel)
+      const chave = `${l.chave}:grupo:${papel}`
+      return g
+        ? { tipo: 'aviso', destino_jid: g.jid, destino_nome: g.nome, texto: l.texto, chave_unica: chave }
+        : { tipo: 'aviso', estado: 'falhou', destino_nome: `Grupo ${PAPEL_GRUPO[papel]}`, erro: 'Grupo não ligado na aba Grupos', chave_unica: chave }
+    })
+    const n = await inserirNaFila(linhas)
+    if (n) log.info(`lembrete de ausência ${sp.data} ${sp.hm}: ${n} destino(s)`)
   }
 
   // ── escala confirmada: espera a arte nova do fim de semana e põe uma imagem por grupo ──
@@ -277,6 +295,7 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
       ['lembretes', () => gerarLembretes(cfg, sp)],
       ['aniversários', () => gerarAniversarios(cfg, sp)],
       ['avisos', () => gerarAvisos(cfg, agora, sp)],
+      ['ausência', () => gerarLembreteAusencia(cfg, agora, sp)],
       ['escala', () => cuidarEscala(agora)],
       ['validade', () => expirar(agora)],
       ['conversas', () => cuidarConversas(cfg, agora)],

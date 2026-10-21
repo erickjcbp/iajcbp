@@ -112,3 +112,63 @@ test('imagem de fora da pasta do projeto não é enviada (a Evolution não busca
   assert.equal(enviados.length, 0)
   assert.equal(updates.at(-1).estado, 'falhou')
 })
+
+// ── lembrete de ausência ──
+// Banco com memória: a fila respeita chave_unica (ignora duplicata), como o upsert real.
+function cenarioAusencia({ cfg = {}, grupos, hora = '2026-10-18T12:00:00Z', fila = new Map() }) {
+  const db = {
+    from(tabela) {
+      let upserted = null
+      const q = new Proxy({}, {
+        get(_, nome) {
+          if (nome === 'then') {
+            let r = { data: [], error: null }
+            if (tabela === 'tarcisio_config') r = { data: { ...CFG, ausencia_horas: ['09:00'], ausencia_ultimo: '15:00', ausencia_texto: null, ...cfg }, error: null }
+            if (tabela === 'tarcisio_grupos') r = { data: grupos, error: null }
+            if (tabela === 'tarcisio_envios' && upserted) {
+              const novas = upserted.filter((l) => !fila.has(l.chave_unica))
+              novas.forEach((l) => fila.set(l.chave_unica, l))
+              r = { data: novas.map((l, i) => ({ id: i })), error: null }
+            }
+            return (ok, erro) => Promise.resolve(r).then(ok, erro)
+          }
+          return (...args) => { if (nome === 'upsert') upserted = args[0]; return q }
+        },
+      })
+      return q
+    },
+  }
+  const evo = { estado: async () => 'close', numeroConectado: async () => null }
+  const robo = criarRobo({ db, evo, supabaseUrl: 'https://p.supabase.co', relogio: () => new Date(hora), rnd: () => 0, log: silencioso })
+  return { robo, fila }
+}
+const GRUPOS = ['pais', 'acolitos', 'cerimoniarios', 'equipe'].map((p) => ({ jid: `${p}@g.us`, nome: `G ${p}`, papel: p }))
+
+test('pausa geral suprime o lembrete de ausência', async () => {
+  const { robo, fila } = cenarioAusencia({ cfg: { pausado: true }, grupos: GRUPOS })
+  await robo.rodada()
+  assert.equal(fila.size, 0)
+})
+
+test('a mesma hora não repete na mesma rodada nem após reinício', async () => {
+  const fila = new Map()
+  const a = cenarioAusencia({ grupos: GRUPOS, fila })
+  await a.robo.rodada()
+  assert.equal(fila.size, 4)
+  assert.deepEqual([...fila.keys()].sort(), ['pais', 'acolitos', 'cerimoniarios', 'equipe'].map((p) => `ausencia:2026-10-18:09:00:grupo:${p}`).sort())
+  assert.ok([...fila.values()].every((l) => l.tipo === 'aviso' && /ausencias/.test(l.texto)))
+  await a.robo.rodada() // próxima rodada de 5 s
+  const reiniciado = cenarioAusencia({ grupos: GRUPOS, fila }) // robô novo, mesma fila no banco
+  await reiniciado.robo.rodada()
+  assert.equal(fila.size, 4)
+})
+
+test('um grupo não ligado vira linha falhou e os outros recebem', async () => {
+  const { robo, fila } = cenarioAusencia({ grupos: GRUPOS.filter((g) => g.papel !== 'pais') })
+  await robo.rodada()
+  assert.equal(fila.size, 4)
+  const falhou = fila.get('ausencia:2026-10-18:09:00:grupo:pais')
+  assert.equal(falhou.estado, 'falhou')
+  assert.equal(falhou.erro, 'Grupo não ligado na aba Grupos')
+  assert.equal(fila.get('ausencia:2026-10-18:09:00:grupo:equipe').destino_jid, 'equipe@g.us')
+})

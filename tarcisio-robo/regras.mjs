@@ -232,3 +232,31 @@ export function cumprimentoValido(t) {
   const s = String(t || '').trim()
   return s.length >= 3 && s.length <= 90 && !/\d/.test(s) && !/[\n{}]/.test(s)
 }
+
+// ── lembrete de ausência: domingo, segunda e terça (prazo: terça 18h, Brasília) ──
+export const LINK_AUSENCIAS = 'https://coroinhas.jcbplimeira.com.br/ausencias'
+export const PRAZO_AUSENCIA = '18:00'
+
+export function textoPadraoAusencia(ultimo) {
+  const linhas = [
+    'Bom dia, pessoal! Quem não puder servir no próximo fim de semana, por favor avise as ausências.',
+    `Pode ser pelo link ${LINK_AUSENCIAS} ou direto no app dos Acólitos.`,
+    'O prazo é até terça-feira, 18h. Obrigado!',
+  ]
+  if (ultimo) linhas.push('Este é o último lembrete.')
+  return linhas.join('\n')
+}
+
+// sp = agoraSP(...). Devolve { texto, chave } só no minuto exato de um horário configurado.
+export function lembreteAusenciaAgora(sp, cfg) {
+  const dia = new Date(sp.data + 'T12:00:00Z').getUTCDay() // 0 dom, 1 seg, 2 ter
+  if (dia > 2) return null
+  if (dia === 2 && sp.hm > PRAZO_AUSENCIA) return null
+  const horas = (cfg.ausencia_horas || []).map(hmCurto)
+  const ultimo = dia === 2 && sp.hm === hmCurto(cfg.ausencia_ultimo)
+  if (!ultimo && !horas.includes(sp.hm)) return null
+  return {
+    texto: cfg.ausencia_texto || textoPadraoAusencia(ultimo),
+    chave: `ausencia:${sp.data}:${sp.hm}`,
+  }
+}
