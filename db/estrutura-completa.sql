@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict n451pAFAzfb8APMdG2N17CIZdmjCvzbUhjZbFeCfIMVYG2qLpioSUrwjOBlakXM
+\restrict JYHhDX7FGAwdIw4zgkaLrTbsdLngZnt1tjhIYctWtp8fMQAkDBfiAz5r8aLoHNW
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.6
@@ -3791,6 +3791,23 @@ COMMENT ON COLUMN public.acolitos_escala_artes.png_url_domingo IS 'Arte do domin
 
 
 --
+-- Name: acolitos_escala_ministros; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.acolitos_escala_ministros (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    mes date NOT NULL,
+    data date NOT NULL,
+    horario text NOT NULL,
+    comunidade text NOT NULL,
+    membro_id uuid NOT NULL,
+    pai_ou_mae text,
+    arquivo text,
+    CONSTRAINT acolitos_escala_ministros_pai_ou_mae_check CHECK ((pai_ou_mae = ANY (ARRAY['pai'::text, 'mae'::text])))
+);
+
+
+--
 -- Name: acolitos_escalas; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4082,6 +4099,23 @@ COMMENT ON COLUMN public.acolitos_membros.suspenso_em IS 'Dia em que a suspensã
 --
 
 COMMENT ON COLUMN public.acolitos_membros.servir_toda_semana IS 'Plano mensal: quatro escalas em semanas distintas, duas funções aptas e dois apoios.';
+
+
+--
+-- Name: acolitos_ministro_apelidos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.acolitos_ministro_apelidos (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    nome_pdf text NOT NULL,
+    membro_id uuid NOT NULL,
+    pai_ou_mae text NOT NULL,
+    resposta text NOT NULL,
+    respondido_por text,
+    em timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT acolitos_ministro_apelidos_pai_ou_mae_check CHECK ((pai_ou_mae = ANY (ARRAY['pai'::text, 'mae'::text]))),
+    CONSTRAINT acolitos_ministro_apelidos_resposta_check CHECK ((resposta = ANY (ARRAY['sim'::text, 'nao'::text])))
+);
 
 
 --
@@ -4681,8 +4715,13 @@ CREATE TABLE public.tarcisio_config (
     persona_nome text DEFAULT 'São Tarcísio'::text NOT NULL,
     persona_tom text DEFAULT 'Acolhedor, simples e respeitoso, como um coordenador jovem da pastoral falando com famílias da paróquia. Frases curtas, sem gírias, no máximo um emoji.'::text NOT NULL,
     persona_regras text DEFAULT 'Nunca invente horário, data ou função: use só o que as ferramentas devolvem. Se não souber, diga que vai passar para a coordenação. Não fale de outros servos além dos ligados a este número. Assuntos fora da pastoral: responda com gentileza que este número é só da pastoral.'::text NOT NULL,
-    ia_modelo text DEFAULT 'claude-sonnet-5-5'::text NOT NULL,
+    ia_modelo text DEFAULT 'claude-haiku-5-5'::text NOT NULL,
     ia_disponivel boolean DEFAULT false NOT NULL,
+    numero_conferencia text DEFAULT '5519999071702'::text NOT NULL,
+    remetentes_pdf text[] DEFAULT '{}'::text[] NOT NULL,
+    ausencia_horas text[] DEFAULT '{09:00}'::text[] NOT NULL,
+    ausencia_ultimo text DEFAULT '15:00'::text NOT NULL,
+    ausencia_texto text,
     CONSTRAINT tarcisio_config_id_check CHECK ((id = 1)),
     CONSTRAINT tarcisio_config_teto_diario_check CHECK (((teto_diario >= 0) AND (teto_diario <= 1000)))
 );
@@ -4713,6 +4752,22 @@ CREATE TABLE public.tarcisio_envios (
     CONSTRAINT tarcisio_envios_estado_check CHECK ((estado = ANY (ARRAY['aguardando_arte'::text, 'pendente'::text, 'enviando'::text, 'enviado'::text, 'falhou'::text, 'cancelado'::text, 'sem_numero'::text]))),
     CONSTRAINT tarcisio_envios_imagem_do_projeto CHECK (((imagem_url IS NULL) OR (imagem_url ~~ 'https://fttjgsotuosjfrasttds.supabase.co/storage/v1/object/public/tarcisio/%'::text) OR (imagem_url ~~ 'https://fttjgsotuosjfrasttds.supabase.co/storage/v1/object/public/artes-escala/%'::text))),
     CONSTRAINT tarcisio_envios_tipo_check CHECK ((tipo = ANY (ARRAY['escala'::text, 'lembrete'::text, 'aviso'::text, 'aniversario'::text])))
+);
+
+
+--
+-- Name: tarcisio_escala_auto; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tarcisio_escala_auto (
+    semana date NOT NULL,
+    estado text NOT NULL,
+    gerada_em timestamp with time zone,
+    resumo jsonb,
+    mensagem_dono_id text,
+    lembretes integer DEFAULT 0 NOT NULL,
+    erro text,
+    CONSTRAINT tarcisio_escala_auto_estado_check CHECK ((estado = ANY (ARRAY['gerando'::text, 'aguardando'::text, 'em_revisao'::text, 'confirmada'::text, 'falhou'::text, 'sem_missas'::text, 'ja_confirmada'::text])))
 );
 
 
@@ -4946,6 +5001,22 @@ ALTER TABLE ONLY public.acolitos_escala_artes
 
 
 --
+-- Name: acolitos_escala_ministros acolitos_escala_ministros_data_horario_comunidade_membro_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.acolitos_escala_ministros
+    ADD CONSTRAINT acolitos_escala_ministros_data_horario_comunidade_membro_id_key UNIQUE (data, horario, comunidade, membro_id);
+
+
+--
+-- Name: acolitos_escala_ministros acolitos_escala_ministros_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.acolitos_escala_ministros
+    ADD CONSTRAINT acolitos_escala_ministros_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: acolitos_escalas acolitos_escalas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5047,6 +5118,22 @@ ALTER TABLE ONLY public.acolitos_logins
 
 ALTER TABLE ONLY public.acolitos_membros
     ADD CONSTRAINT acolitos_membros_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: acolitos_ministro_apelidos acolitos_ministro_apelidos_nome_pdf_membro_id_pai_ou_mae_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.acolitos_ministro_apelidos
+    ADD CONSTRAINT acolitos_ministro_apelidos_nome_pdf_membro_id_pai_ou_mae_key UNIQUE (nome_pdf, membro_id, pai_ou_mae);
+
+
+--
+-- Name: acolitos_ministro_apelidos acolitos_ministro_apelidos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.acolitos_ministro_apelidos
+    ADD CONSTRAINT acolitos_ministro_apelidos_pkey PRIMARY KEY (id);
 
 
 --
@@ -5338,6 +5425,14 @@ ALTER TABLE ONLY public.tarcisio_envios
 
 
 --
+-- Name: tarcisio_escala_auto tarcisio_escala_auto_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarcisio_escala_auto
+    ADD CONSTRAINT tarcisio_escala_auto_pkey PRIMARY KEY (semana);
+
+
+--
 -- Name: tarcisio_grupos tarcisio_grupos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5411,6 +5506,13 @@ CREATE UNIQUE INDEX acolitos_aus_pend_uniq_cel ON public.acolitos_ausencias_pend
 --
 
 CREATE INDEX acolitos_crm_comentarios_por_membro ON public.acolitos_crm_comentarios USING btree (membro_id, quando DESC);
+
+
+--
+-- Name: acolitos_escala_ministros_data; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX acolitos_escala_ministros_data ON public.acolitos_escala_ministros USING btree (data);
 
 
 --
@@ -5860,6 +5962,14 @@ ALTER TABLE ONLY public.acolitos_disponibilidade
 
 
 --
+-- Name: acolitos_escala_ministros acolitos_escala_ministros_membro_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.acolitos_escala_ministros
+    ADD CONSTRAINT acolitos_escala_ministros_membro_id_fkey FOREIGN KEY (membro_id) REFERENCES public.acolitos_membros(id) ON DELETE CASCADE;
+
+
+--
 -- Name: acolitos_escalas acolitos_escalas_celebracao_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5969,6 +6079,14 @@ ALTER TABLE ONLY public.acolitos_membros
 
 ALTER TABLE ONLY public.acolitos_membros
     ADD CONSTRAINT acolitos_membros_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: acolitos_ministro_apelidos acolitos_ministro_apelidos_membro_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.acolitos_ministro_apelidos
+    ADD CONSTRAINT acolitos_ministro_apelidos_membro_id_fkey FOREIGN KEY (membro_id) REFERENCES public.acolitos_membros(id) ON DELETE CASCADE;
 
 
 --
@@ -6547,6 +6665,20 @@ CREATE POLICY "Conta confirma presenca propria" ON public.acolitos_evento_presen
 
 
 --
+-- Name: acolitos_escala_ministros Coordenacao gere; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Coordenacao gere" ON public.acolitos_escala_ministros USING (public.tarcisio_pode_gerir()) WITH CHECK (public.tarcisio_pode_gerir());
+
+
+--
+-- Name: acolitos_ministro_apelidos Coordenacao gere; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Coordenacao gere" ON public.acolitos_ministro_apelidos USING (public.tarcisio_pode_gerir()) WITH CHECK (public.tarcisio_pode_gerir());
+
+
+--
 -- Name: tarcisio_avisos Coordenacao gere; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -6565,6 +6697,13 @@ CREATE POLICY "Coordenacao gere" ON public.tarcisio_config USING (public.tarcisi
 --
 
 CREATE POLICY "Coordenacao gere" ON public.tarcisio_envios USING (public.tarcisio_pode_gerir()) WITH CHECK (public.tarcisio_pode_gerir());
+
+
+--
+-- Name: tarcisio_escala_auto Coordenacao gere; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Coordenacao gere" ON public.tarcisio_escala_auto USING (public.tarcisio_pode_gerir()) WITH CHECK (public.tarcisio_pode_gerir());
 
 
 --
@@ -7139,6 +7278,12 @@ ALTER TABLE public.acolitos_disponibilidade ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.acolitos_escala_artes ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: acolitos_escala_ministros; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.acolitos_escala_ministros ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: acolitos_escalas; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -7197,6 +7342,12 @@ ALTER TABLE public.acolitos_logins ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.acolitos_membros ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: acolitos_ministro_apelidos; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.acolitos_ministro_apelidos ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: acolitos_missao_progresso; Type: ROW SECURITY; Schema: public; Owner: -
@@ -7382,6 +7533,12 @@ ALTER TABLE public.tarcisio_config ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.tarcisio_envios ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: tarcisio_escala_auto; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.tarcisio_escala_auto ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: tarcisio_grupos; Type: ROW SECURITY; Schema: public; Owner: -
@@ -8594,6 +8751,14 @@ GRANT ALL ON TABLE public.acolitos_escala_artes TO service_role;
 
 
 --
+-- Name: TABLE acolitos_escala_ministros; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.acolitos_escala_ministros TO authenticated;
+GRANT ALL ON TABLE public.acolitos_escala_ministros TO service_role;
+
+
+--
 -- Name: TABLE acolitos_escalas; Type: ACL; Schema: public; Owner: -
 --
 
@@ -8687,6 +8852,14 @@ GRANT ALL ON TABLE public.acolitos_logins TO service_role;
 GRANT ALL ON TABLE public.acolitos_membros TO anon;
 GRANT ALL ON TABLE public.acolitos_membros TO authenticated;
 GRANT ALL ON TABLE public.acolitos_membros TO service_role;
+
+
+--
+-- Name: TABLE acolitos_ministro_apelidos; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.acolitos_ministro_apelidos TO authenticated;
+GRANT ALL ON TABLE public.acolitos_ministro_apelidos TO service_role;
 
 
 --
@@ -8935,6 +9108,14 @@ GRANT ALL ON TABLE public.tarcisio_envios TO service_role;
 
 
 --
+-- Name: TABLE tarcisio_escala_auto; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.tarcisio_escala_auto TO authenticated;
+GRANT ALL ON TABLE public.tarcisio_escala_auto TO service_role;
+
+
+--
 -- Name: TABLE tarcisio_grupos; Type: ACL; Schema: public; Owner: -
 --
 
@@ -9038,5 +9219,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON T
 -- PostgreSQL database dump complete
 --
 
-\unrestrict n451pAFAzfb8APMdG2N17CIZdmjCvzbUhjZbFeCfIMVYG2qLpioSUrwjOBlakXM
+\unrestrict JYHhDX7FGAwdIw4zgkaLrTbsdLngZnt1tjhIYctWtp8fMQAkDBfiAz5r8aLoHNW
 
