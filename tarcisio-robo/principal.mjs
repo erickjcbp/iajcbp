@@ -45,10 +45,10 @@ const ministros = criarMinistrosPdf({ db, evo, log: console,
   nucleo: () => exigirNucleo(path.join(PASTA_NUCLEOS, 'escala-ministros-core.js')) })
 // Confirmar a semana = a MESMA regra do botão da tela (confirmar-semana-core.js): avisa por push só
 // quem ainda não foi avisado e pede a arte dos grupos uma vez. O push passa por /api/enviar-push com
-// o segredo do robô (tipo escalado_robo); PUSH_URL e CRON_SECRET vêm do robo.env.
+// a chave só do robô (tipo escalado_robo); PUSH_URL e ROBO_PUSH_SECRET vêm do robo.env.
 const enviarPushEscalado = async (membros) => {
-  const url = process.env.PUSH_URL, segredo = process.env.CRON_SECRET
-  if (!url || !segredo) throw new Error('faltam PUSH_URL e CRON_SECRET no robo.env')
+  const url = process.env.PUSH_URL, segredo = process.env.ROBO_PUSH_SECRET
+  if (!url || !segredo) throw new Error('faltam PUSH_URL e ROBO_PUSH_SECRET no robo.env')
   const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'x-cron-secret': segredo },
     body: JSON.stringify({ tipo: 'escalado_robo', membros }) })
   if (!r.ok) throw new Error(`push respondeu ${r.status}`)

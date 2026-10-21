@@ -53,8 +53,12 @@ export default async function handler(req, res) {
 
   // O robô do cron não tem login: entra pelo segredo compartilhado, e SÓ para os tipos dele.
   const TIPOS_CRON = ['arte', 'escala_pendente', 'arte_faltando', 'crm', 'escalado_robo'];
-  const viaCron = segredoConfere(req.headers['x-cron-secret'], process.env.CRON_SECRET);
-  if (viaCron && !TIPOS_CRON.includes(tipo)) return res.status(403).json({ error: 'Segredo do cron só vale para os avisos do robô' });
+  // ROBO_PUSH_SECRET: chave só do robô do WhatsApp (VPS). Vale SÓ para escalado_robo — menor privilégio
+  // que o CRON_SECRET, e a VPS nunca guarda o segredo dos crons da Vercel.
+  const viaRobo = segredoConfere(req.headers['x-cron-secret'], process.env.ROBO_PUSH_SECRET);
+  if (viaRobo && tipo !== 'escalado_robo') return res.status(403).json({ error: 'Segredo do robô só vale para o aviso de escalado' });
+  const viaCron = viaRobo || segredoConfere(req.headers['x-cron-secret'], process.env.CRON_SECRET);
+  if (viaCron && !viaRobo && !TIPOS_CRON.includes(tipo)) return res.status(403).json({ error: 'Segredo do cron só vale para os avisos do robô' });
   if (TIPOS_CRON.includes(tipo) && !viaCron) return res.status(403).json({ error: 'Acesso negado' });
 
   const h = { apikey: SRK, Authorization: `Bearer ${SRK}` };

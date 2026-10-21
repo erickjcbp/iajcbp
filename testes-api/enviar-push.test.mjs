@@ -10,6 +10,7 @@ process.env.VAPID_PUBLIC_KEY = 'BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVl
 process.env.VAPID_PRIVATE_KEY = 'UUxI4O8-FbRouAevSmBQ6o18hgE4nSG3qwvJTfKc-ls'
 process.env.VAPID_SUBJECT = 'mailto:teste@example.com'
 process.env.CRON_SECRET = 'segredo-de-teste'
+process.env.ROBO_PUSH_SECRET = 'segredo-do-robo'
 
 // O pacote é "commonjs" e o handler é ESM (a Vercel entende; o Node não): importa uma cópia .mjs.
 import fs from 'node:fs'
@@ -60,4 +61,16 @@ test('escalado_robo com segredo certo e uuid válido passa pelos portões (não 
   globalThis.fetch = async (u) => ({ ok: true, json: async () => (String(u).includes('pastoral_modules') ? [{ id: 'mod' }] : []) })
   const r = await chama({ tipo: 'escalado_robo', membros: [UUID] }, { 'x-cron-secret': 'segredo-de-teste' })
   assert.ok(![400, 401, 403].includes(r.code), 'código ' + r.code + ' ' + JSON.stringify(r.body))
+})
+
+test('segredo do robô (ROBO_PUSH_SECRET) vale para escalado_robo', async () => {
+  globalThis.fetch = async (u) => ({ ok: true, json: async () => (String(u).includes('pastoral_modules') ? [{ id: 'mod' }] : []) })
+  const r = await chama({ tipo: 'escalado_robo', membros: [UUID] }, { 'x-cron-secret': 'segredo-do-robo' })
+  assert.ok(![400, 401, 403].includes(r.code), 'código ' + r.code)
+})
+test('segredo do robô não vale para os tipos do cron nem da tela: 403', async () => {
+  fetchFalso()
+  for (const tipo of ['arte', 'escala_pendente', 'escalado', 'aviso', 'crm']) {
+    assert.equal((await chama({ tipo, membros: [UUID] }, { 'x-cron-secret': 'segredo-do-robo' })).code, 403, tipo)
+  }
 })
