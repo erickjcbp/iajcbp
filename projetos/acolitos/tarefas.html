@@ -15,14 +15,14 @@
   <style>
     /* Abas Quadro / Lista / Por time — mesmo padrão visual de agenda.html (.view-tabs). */
     .view-tabs { display:flex; gap:4px; background:var(--surface2); border:1px solid var(--border-wine); border-radius:11px; padding:3px; margin:-2px 0 14px; }
-    .view-tabs button { flex:1; padding:8px; border:none; background:transparent; color:var(--text-muted); font-family:'Sora',sans-serif; font-weight:700; font-size:12px; letter-spacing:.5px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
+    .view-tabs button { flex:1; padding:8px; border:none; background:transparent; color:var(--text-muted); font-family:var(--font-body); font-weight:700; font-size:12px; letter-spacing:.5px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
     .view-tabs button.on { background:linear-gradient(165deg, rgba(232,185,74,.18), var(--surface)); color:var(--gold-light); box-shadow:0 0 0 1px var(--gold-dim) inset; }
     .view-tabs button svg { width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 
     /* Rótulos de grupo (visão Por time) e o texto fixo de responsabilidade do time —
        ambos preservados da tela anterior. Se a consulta falhar, o aviso troca de cor pra
        não passar por "em dia". */
-    .tf-grupo-titulo { font-family:'Sora',sans-serif; font-weight:800; font-size:13px; color:var(--gold-light); letter-spacing:.5px; margin:18px 0 8px; text-transform:uppercase; }
+    .tf-grupo-titulo { font-family:var(--font-title); font-weight:800; font-size:13px; color:var(--gold-light); letter-spacing:.5px; margin:18px 0 8px; text-transform:uppercase; }
     .tf-resp { font-size:12px; color:var(--text-muted); font-style:italic; margin:-2px 0 10px; line-height:1.4; }
     .tf-resp.tf-resp-erro { color:var(--danger-text); font-style:normal; font-weight:600; }
 
@@ -32,7 +32,7 @@
     .tf-bar { width:4px; border-radius:3px; flex:none; background:var(--gold); }
     .tf-item.tf-atrasada .tf-bar { background:var(--danger); }
     .tf-body { flex:1; min-width:180px; }
-    .tf-tit { font-family:'Sora',sans-serif; font-weight:700; font-size:14px; color:var(--text); }
+    .tf-tit { font-family:var(--font-body); font-weight:700; font-size:14px; color:var(--text); }
     .tf-meta { font-size:12px; color:var(--text-muted); margin-top:3px; }
     .tf-meta.tf-atrasada-txt { color:var(--danger-text); font-weight:700; }
     .tf-obs { font-size:12px; color:var(--text-muted); margin-top:4px; font-style:italic; }
@@ -47,7 +47,7 @@
        display vence hidden. Este projeto já levou esse golpe antes — as ações "extras"
        apareciam todas, e o cartão ficava com o mesmo paredão de botão de sempre. */
     .tf-acoes-extra[hidden] { display:none; }
-    .tf-time-tag { font-size:10px; font-weight:700; letter-spacing:.4px; padding:2px 7px;
+    .tf-time-tag { font-size:11px; font-weight:700; letter-spacing:.4px; padding:2px 7px;
                    border-radius:999px; border:1px solid; white-space:nowrap; }
     .tf-area { margin:12px 0 0; background:var(--surface2); border:1px solid var(--border-wine);
                border-left:3px solid var(--cor-area); border-radius:12px; overflow:hidden; }
@@ -59,7 +59,7 @@
     .tf-area-acoes { display:flex; gap:6px; flex-wrap:wrap; margin:10px 0; }
     .tf-area-resp { font-size:12px; color:var(--text-muted); font-style:italic; margin-top:10px; }
     .tf-rotinas { margin-top:12px; padding-top:10px; border-top:1px dashed var(--border); }
-    .tf-rotinas-tit { font-size:10px; letter-spacing:.6px; text-transform:uppercase;
+    .tf-rotinas-tit { font-size:11px; letter-spacing:.6px; text-transform:uppercase;
                       color:var(--text-muted); margin-bottom:4px; }
     .tf-area-topo { display:flex; align-items:center; gap:8px; }
     .tf-area-ponto { width:9px; height:9px; border-radius:50%; background:var(--cor-area); flex:none; }
@@ -69,13 +69,13 @@
     .tf-area-barra span { display:block; height:100%; background:var(--cor-area); }
     .tf-area-rodape { font-size:11px; color:var(--text-muted); }
     .tf-seta { color:var(--gold); font-size:11px; width:10px; }
-    .tf-grupo-nome { flex:1; min-width:0; font-family:'Sora',sans-serif; font-weight:700;
+    .tf-grupo-nome { flex:1; min-width:0; font-family:var(--font-title); font-weight:700;
                      font-size:13px; color:var(--gold-light); letter-spacing:.5px; }
     .tf-grupo-cont { font-size:11px; font-weight:700; color:var(--text-muted);
                      background:var(--surface); border:1px solid var(--border); border-radius:999px;
                      min-width:24px; text-align:center; padding:1px 6px; }
     .tf-acoes { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-    .tf-badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:9.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; border:1px solid; }
+    .tf-badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; border:1px solid; }
     .tf-badge.tf-afazer    { background:var(--surface3); color:var(--text-muted); border-color:var(--border); }
     .tf-badge.tf-andamento { background:rgba(74,144,196,.18); color:#8cc6f0; border-color:#3a6ea0; }
     .tf-badge.tf-feita     { background:rgba(47,158,87,.22); color:var(--success-text); border-color:var(--success); }
@@ -92,13 +92,13 @@
     .tf-quadro { display:flex; gap:10px; overflow-x:auto; padding:2px 2px 12px; -webkit-overflow-scrolling:touch; }
     .tf-col { flex:1 1 240px; min-width:240px; background:var(--surface2); border:1px solid var(--border-wine); border-radius:12px; padding:10px; display:flex; flex-direction:column; }
     .tf-col.tf-dragover { border-color:var(--gold); box-shadow:0 0 0 1px var(--gold-dim) inset; }
-    .tf-col-head { display:flex; align-items:center; justify-content:space-between; font-family:'Sora',sans-serif; font-weight:800; font-size:12px; color:var(--gold-light); letter-spacing:.6px; text-transform:uppercase; padding:4px 4px 10px; }
+    .tf-col-head { display:flex; align-items:center; justify-content:space-between; font-family:var(--font-title); font-weight:800; font-size:12px; color:var(--gold-light); letter-spacing:.6px; text-transform:uppercase; padding:4px 4px 10px; }
     .tf-col-count { background:var(--surface3); color:var(--text-muted); border-radius:20px; padding:1px 8px; font-size:11px; }
     .tf-col-body { display:flex; flex-direction:column; gap:8px; min-height:40px; }
     .tf-col-vazio { font-size:12px; color:var(--text-muted); font-style:italic; padding:10px 4px; text-align:center; }
     .tf-card { background:var(--surface); border:1px solid var(--border-wine); border-radius:10px; padding:10px; cursor:grab; }
     .tf-card.tf-atrasada { border-color:var(--danger); }
-    .tf-card-tit { font-family:'Sora',sans-serif; font-weight:700; font-size:13px; color:var(--text); }
+    .tf-card-tit { font-family:var(--font-body); font-weight:700; font-size:13px; color:var(--text); }
     .tf-card-meta { font-size:11px; color:var(--text-muted); margin-top:3px; }
     .tf-card-meta.tf-atrasada-txt { color:var(--danger-text); font-weight:700; }
     .tf-card-obs { font-size:11px; color:var(--text-muted); margin-top:4px; font-style:italic;
@@ -109,11 +109,11 @@
 
     /* No fim da tarefa: nada por aqui — mesma mensagem que a tela já usava. */
     .tf-nada { text-align:center; padding:42px 16px; color:var(--text-muted); }
-    .tf-nada .t { font-family:Sora,sans-serif; font-weight:700; font-size:16px; color:var(--text); }
+    .tf-nada .t { font-family:var(--font-body); font-weight:700; font-size:16px; color:var(--text); }
     .tf-nada .s { font-size:13px; margin-top:4px; }
 
     /* FAB "Nova tarefa" — mesma régua do FAB de agenda.html. */
-    .fab { position:fixed; right:16px; bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px); z-index:48; height:50px; padding:0 18px; border-radius:26px; border:1px solid var(--gold); background:linear-gradient(165deg, var(--wine), var(--surface)); color:var(--gold-light); font-family:'Sora',sans-serif; font-weight:700; font-size:14px; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 6px 22px rgba(0,0,0,.55), 0 0 16px var(--red-glow); }
+    .fab { position:fixed; right:16px; bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px); z-index:48; height:50px; padding:0 18px; border-radius:26px; border:1px solid var(--gold); background:linear-gradient(165deg, var(--wine), var(--surface)); color:var(--gold-light); font-family:var(--font-body); font-weight:700; font-size:14px; cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 6px 22px rgba(0,0,0,.55), 0 0 16px var(--red-glow); }
     .fab svg { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2.2; stroke-linecap:round; }
     .tf-form label { display:block; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin:10px 0 4px; }
 
@@ -154,6 +154,27 @@
       .tf-board-table td::before { content:attr(data-label);display:block;font-size:11px;color:var(--text-muted);margin-bottom:4px; }
       .tf-board-table td:first-child::before { display:none; }
       .tf-board-status { font-size:16px; }
+    }
+      /* Compacto no celular (21/10/2026) */
+    @media(max-width:639px){
+      .tf-area { margin-top:8px; }
+      .tf-area-cab { padding:9px 10px; }
+      .tf-area-corpo { padding:0 10px 10px; }
+      .tf-area-acoes { margin:8px 0; }
+      .tf-rotinas { margin-top:8px; padding-top:8px; }
+      .tf-ord { margin-bottom:10px; gap:8px; }
+      .tf-ord button { min-height:44px; }
+      .tf-filtros { gap:8px; }
+      .tf-quadro { gap:8px; padding-bottom:8px; }
+      .tf-col { padding:8px; }
+      .tf-card { padding:8px 10px; }
+      .tf-card-acoes { margin-top:6px; }
+      .tf-nada { padding:20px 12px; }
+      .tf-board-group { margin:12px 0; }
+      .tf-board-table tr { padding:6px 8px; }
+      .tf-board-table td { padding:2px 4px; }
+      .tf-board-date { padding-top:8px; }
+      .tf-form label { margin:8px 0 3px; }
     }
   </style>
   <link rel="stylesheet" href="tarefas-workspace.css">
@@ -936,7 +957,7 @@ async function abrirFormTarefa(tarefa, timePadrao, tipoPadrao) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open';
   ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   const m = document.createElement('div'); m.className = 'modal tf-form'; m.style.setProperty('--modal-max', '440px');
-  const h = document.createElement('h2'); h.style.cssText = 'font-family:Sora,sans-serif;font-size:15px;margin:0 0 4px;color:var(--text);';
+  const h = document.createElement('h2'); h.style.cssText = 'font-family:var(--font-title);font-size:15px;margin:0 0 4px;color:var(--text);';
   h.textContent = editando ? 'Editar tarefa' : 'Nova tarefa'; m.appendChild(h);
 
   if (falhouSetores || falhouMembros) {
@@ -1010,7 +1031,7 @@ async function abrirFormTarefa(tarefa, timePadrao, tipoPadrao) {
   // ou ninguém foi posto num time ainda, ou ninguém foi posto NAQUELE time. Sem esta linha o
   // campo só oferece "Ninguém (fica com o time)" e parece defeito.
   const dicaResp = document.createElement('div');
-  dicaResp.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-8px 0 12px;';
+  dicaResp.style.cssText = 'font-size:12px;color:var(--text-muted);margin:4px 0 8px;';
   function atualizarDicaResp() {
     const n = responsaveisPossiveis(membros, sTime.value || null).length;
     if (falhouMembros || n) { dicaResp.textContent = ''; dicaResp.style.display = 'none'; return; }
@@ -1423,7 +1444,7 @@ function barraDoProjeto(rotulo, pct, cor) {
   const linha = document.createElement('div');
   linha.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:4px;';
   const rot = document.createElement('span');
-  rot.style.cssText = 'font-size:10px;color:var(--text-muted);width:44px;flex:none;';
+  rot.style.cssText = 'font-size:11px;color:var(--text-muted);width:44px;flex:none;';
   rot.textContent = rotulo;
   const fora = document.createElement('div');
   fora.style.cssText = 'flex:1;height:6px;border-radius:3px;background:var(--surface2);overflow:hidden;';
@@ -1433,7 +1454,7 @@ function barraDoProjeto(rotulo, pct, cor) {
   dentro.style.cssText = 'display:block;height:100%;background:' + cor + ';width:' + (pct == null ? 0 : pct) + '%;';
   fora.appendChild(dentro);
   const num = document.createElement('span');
-  num.style.cssText = 'font-size:10px;color:var(--text-muted);width:38px;text-align:right;flex:none;';
+  num.style.cssText = 'font-size:11px;color:var(--text-muted);width:38px;text-align:right;flex:none;';
   num.textContent = pct == null ? '—' : pct + '%';
   linha.append(rot, fora, num);
   return linha;

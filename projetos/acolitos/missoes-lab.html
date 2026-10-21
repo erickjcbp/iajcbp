@@ -12,13 +12,13 @@
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
   <style>
-    .lab-tag { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); border:1px solid var(--gold-dim); border-radius:10px; padding:2px 8px; }
+    .lab-tag { font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); border:1px solid var(--gold-dim); border-radius:10px; padding:2px 8px; }
     .mx-card { background:var(--surface); border:1px solid var(--border-wine); border-radius:6px; padding:14px; margin-bottom:14px;
       clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
-    .mx-hd { font-family:'Sora',sans-serif; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+    .mx-hd { font-family:var(--font-body); font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border); }
     .mx-prox { display:flex; align-items:center; gap:14px; }
     .mx-prox-info { flex:1; min-width:0; }
-    .mx-prox-nome { font-family:'Sora',sans-serif; font-weight:700; font-size:15px; color:var(--text); }
+    .mx-prox-nome { font-family:var(--font-title); font-weight:700; font-size:15px; color:var(--text); }
     .mx-bar { height:10px; background:var(--surface2); border-radius:5px; overflow:hidden; margin-top:8px; border:1px solid var(--border); }
     .mx-bar-fill { height:100%; background:linear-gradient(90deg,var(--gold-dim),var(--gold)); border-radius:5px; transition:width .4s; }
     .mx-q { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
@@ -30,10 +30,10 @@
     .mx-q-body { flex:1; min-width:0; }
     .mx-q-tit { font-size:13px; color:var(--text); }
     .mx-q-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
-    .mx-q-xp { font-family:'Sora',sans-serif; font-size:12px; font-weight:700; color:var(--gold); flex-shrink:0; }
+    .mx-q-xp { font-family:var(--font-title); font-size:12px; font-weight:700; color:var(--gold); flex-shrink:0; }
     .mx-elig { background:linear-gradient(165deg, rgba(47,158,87,.18), var(--surface)); border:1px solid var(--success); color:var(--success-text);
       border-radius:6px; padding:12px 14px; font-size:13px; font-weight:600; margin-bottom:14px; text-align:center; }
-    .mx-xp-big { font-family:'Sora',sans-serif; font-size:26px; font-weight:700; color:var(--gold-light); text-shadow:0 0 12px var(--red-glow); }
+    .mx-xp-big { font-family:var(--font-title); font-size:26px; font-weight:700; color:var(--gold-light); text-shadow:0 0 12px var(--red-glow); }
     .mx-empty { color:var(--text-muted); font-size:12px; font-style:italic; padding:6px 0; }
     .mx-fila-item { background:var(--surface2); border:1px solid var(--border-wine); border-radius:6px; padding:10px 12px; margin-bottom:8px; }
     .mx-fila-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
@@ -42,6 +42,13 @@
     .mx-mini.ok { border-color:var(--success); color:var(--success-text); }
     .mx-mini.no { border-color:var(--danger); color:var(--danger-text); }
     .mx-mini.go { border-color:var(--gold); color:var(--gold-light); background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2)); }
+      /* Compacto no celular (21/10/2026) */
+    @media(max-width:639px){
+      .mx-card { padding:10px 12px; margin-bottom:8px; }
+      .mx-hd { margin-bottom:6px; padding-bottom:4px; }
+      .mx-q { padding:7px 0; }
+      .mx-elig { padding:8px 10px; margin-bottom:8px; }
+    }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -147,7 +154,7 @@ async function renderBoard(main) {
     prox.appendChild(buildRankEmblem(data.proximo_nivel, 54));
     const info = document.createElement('div'); info.className = 'mx-prox-info';
     const nm = document.createElement('div'); nm.className = 'mx-prox-nome'; nm.textContent = 'Próximo: ' + nivelInfo(data.proximo_nivel).label;
-    const xpl = document.createElement('div'); xpl.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold-light);margin:3px 0 6px;text-shadow:0 0 8px var(--red-glow);'; xpl.textContent = '✦ ' + data.xp_total + ' XP';
+    const xpl = document.createElement('div'); xpl.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:var(--gold-light);margin:3px 0 6px;text-shadow:0 0 8px var(--red-glow);'; xpl.textContent = '✦ ' + data.xp_total + ' XP';
     const bar = document.createElement('div'); bar.className = 'mx-bar'; const fill = document.createElement('div'); fill.className = 'mx-bar-fill';
     fill.style.width = (totObrig ? Math.round(100 * fezObrig / totObrig) : 0) + '%'; bar.appendChild(fill);
     const cnt = document.createElement('div'); cnt.className = 'mx-q-sub'; cnt.style.marginTop = '4px'; cnt.textContent = fezObrig + ' de ' + totObrig + ' missões · ' + capsOk + '/' + caps.length + ' capítulos';
@@ -177,7 +184,7 @@ async function reivindicar(missaoId) {
 }
 
 async function renderCoord(main) {
-  const head = document.createElement('h2'); head.style.cssText = 'font-family:Sora,sans-serif;font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 12px;';
+  const head = document.createElement('h2'); head.style.cssText = 'font-family:var(--font-title);font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 12px;';
   head.textContent = '⚙️ Coordenação'; main.appendChild(head);
 
   // Fila de aprovação

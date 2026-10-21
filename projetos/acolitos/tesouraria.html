@@ -14,14 +14,14 @@
   <script>window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__bip=e;});</script>
   <style>
     .caixa-card { background:linear-gradient(165deg, var(--surface2), var(--surface)); border:1px solid var(--gold-dim); border-radius:6px; padding:18px 16px; text-align:center; margin-bottom:14px; position:relative; overflow:hidden; }
-    .caixa-label { font-family:'Sora',sans-serif; font-size:11px; color:var(--text-muted); letter-spacing:1px; text-transform:uppercase; }
-    .caixa-valor { font-family:'Oxanium',sans-serif; font-size:34px; font-weight:800; margin-top:4px; }
+    .caixa-label { font-family:var(--font-body); font-size:11px; color:var(--text-muted); letter-spacing:1px; text-transform:uppercase; }
+    .caixa-valor { font-family:var(--font-title); font-size:34px; font-weight:800; margin-top:4px; }
     .caixa-valor.pos { color:var(--gold-light); text-shadow:0 0 18px var(--red-glow); }
     .caixa-valor.neg { color:var(--danger-text); }
     .mini-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
     .mini-card { background:var(--surface); border:1px solid var(--border-wine); border-radius:4px; padding:12px; }
-    .mini-card .l { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
-    .mini-card .v { font-family:'Oxanium',sans-serif; font-size:20px; font-weight:700; margin-top:3px; }
+    .mini-card .l { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+    .mini-card .v { font-family:var(--font-title); font-size:20px; font-weight:700; margin-top:3px; }
     .mini-card .v.ent { color:var(--success-text); }
     .mini-card .v.sai { color:var(--danger-text); }
     .lanc-row { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--border); }
@@ -31,14 +31,26 @@
     .lanc-info { flex:1; min-width:0; }
     .lanc-desc { font-size:13px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .lanc-meta { font-size:11px; color:var(--text-muted); margin-top:2px; }
-    .lanc-val { font-family:'Oxanium',sans-serif; font-weight:700; font-size:15px; flex-shrink:0; }
+    .lanc-val { font-family:var(--font-title); font-weight:700; font-size:15px; flex-shrink:0; }
     .lanc-val.entrada { color:var(--success-text); }
     .lanc-val.saida { color:var(--danger-text); }
     .lanc-del { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:14px; flex-shrink:0; padding:4px; -webkit-tap-highlight-color:transparent; }
     .tipo-toggle { display:flex; gap:8px; margin-bottom:14px; }
-    .tipo-btn { flex:1; min-height:46px; background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); border-radius:4px; cursor:pointer; font-family:'Sora',sans-serif; font-size:12px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; -webkit-tap-highlight-color:transparent; }
+    .tipo-btn { flex:1; min-height:46px; background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); border-radius:4px; cursor:pointer; font-family:var(--font-body); font-size:12px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; -webkit-tap-highlight-color:transparent; }
     .tipo-btn.active.entrada { border-color:var(--success); color:var(--success-text); background:rgba(30,80,30,.14); }
     .tipo-btn.active.saida { border-color:var(--danger); color:var(--danger-text); background:rgba(100,10,10,.18); }
+      /* Compacto no celular (21/10/2026) */
+    @media(max-width:639px){
+      .caixa-card { padding:10px 12px !important; margin-bottom:8px !important; }
+      .caixa-valor { font-size:28px; margin-top:2px; }
+      .mini-grid { gap:6px; margin-bottom:10px; }
+      .mini-card { padding:7px 10px; }
+      .mini-card .v { font-size:17px; margin-top:1px; }
+      .lanc-row { padding:7px 0; gap:10px; }
+      .lanc-ico { width:30px; height:30px; }
+      .tipo-toggle { margin-bottom:10px; }
+      .tipo-btn { min-height:44px; }
+    }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>

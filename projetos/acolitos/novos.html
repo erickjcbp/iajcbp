@@ -21,7 +21,7 @@
     }
     .intro-icon { font-size: 36px; margin-bottom: 8px; }
     .intro-title {
-      font-family: 'Sora', sans-serif; font-size: 15px; color: var(--gold-light);
+      font-family:var(--font-title); font-size: 15px; color: var(--gold-light);
       letter-spacing: 1px; margin-bottom: 6px;
     }
     .intro-sub { font-size: 12px; color: var(--text-muted); font-style: italic; }
@@ -30,7 +30,7 @@
       border-radius: 4px; padding: 18px 14px; margin-bottom: 14px; position: relative;
     }
     .bloco-title {
-      font-family: 'Sora', sans-serif; font-size: 11px; color: var(--gold);
+      font-family:var(--font-title); font-size: 11px; color: var(--gold);
       letter-spacing: 1px; text-transform: uppercase; margin-bottom: 14px;
     }
     .btn-remover {
@@ -50,11 +50,22 @@
       width: 100%; padding: 14px; min-height: 48px;
       background: transparent; border: 1px dashed var(--border-wine);
       color: var(--text-muted); border-radius: 2px; cursor: pointer;
-      font-family: 'Sora', sans-serif; font-size: 11px; letter-spacing: 1.5px;
+      font-family:var(--font-body); font-size: 11px; letter-spacing: 1.5px;
       text-transform: uppercase; transition: all .2s; margin-bottom: 16px;
       -webkit-tap-highlight-color: transparent;
     }
     .btn-add-membro:hover { border-color: var(--gold); color: var(--gold); }
+      /* Compacto no celular (21/10/2026) */
+    @media (max-width:639px){
+      .registro-wrap { padding: 10px 12px 20px; }
+      .intro-card { padding: 10px 12px; margin-bottom: 10px; display:grid; grid-template-columns:auto 1fr; align-items:center; column-gap:10px; text-align:left; }
+      .intro-icon { font-size: 26px; margin: 0; line-height:1; grid-row: span 2; }
+      .intro-title { font-size: 14px; margin-bottom: 2px; }
+      .bloco-membro, .resp-section { padding: 12px 12px; margin-bottom: 10px; }
+      .bloco-title { margin-bottom: 10px; }
+      .section-divider { margin: 10px 0; }
+      .btn-add-membro { padding: 10px; min-height: 44px; margin-bottom: 10px; }
+    }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>

@@ -25,7 +25,7 @@
       background:var(--surface); border:1px solid var(--border-wine);
       border-radius:4px; padding:14px; margin-bottom:10px;
     }
-    .ausencia-data { font-family:'Sora',sans-serif; font-size:13px; color:var(--text); margin-bottom:4px; }
+    .ausencia-data { font-family:var(--font-title); font-size:13px; color:var(--text); margin-bottom:4px; }
     .ausencia-meta { font-size:12px; color:var(--text-muted); }
     .equipe-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); }
     .equipe-row-info { flex:1; }
@@ -35,7 +35,7 @@
     .view-btn {
       padding:8px 16px; min-height:40px; background:var(--surface2);
       border:1px solid var(--border); color:var(--text-muted); border-radius:2px;
-      cursor:pointer; font-family:'Sora',sans-serif; font-size:11px; letter-spacing:1px;
+      cursor:pointer; font-family:var(--font-body); font-size:11px; letter-spacing:1px;
       text-transform:uppercase; transition:all .2s; -webkit-tap-highlight-color:transparent;
     }
     .view-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,.08); }
@@ -488,7 +488,7 @@ function fmtDataBR(d) { const x = new Date(d + 'T00:00:00'); return DIAS[x.getDa
 
 async function renderCaixaCobrir(container, cobrir){
   if(!cobrir.length) return;
-  const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
+  const h=document.createElement('div'); h.style.cssText='font-family:var(--font-title);font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
   h.textContent='🛟 Cobrir / auto-troca ('+cobrir.length+')'; container.appendChild(h);
   for (const it of cobrir){
     const c=document.createElement('div'); c.style.cssText='background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:12px;margin-bottom:8px;';

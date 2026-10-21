@@ -22,7 +22,7 @@
 .tf-workspace .tf-card.tf-atrasada {border-left:3px solid var(--danger-text);}
 .tf-card-top {display:flex;align-items:start;justify-content:space-between;gap:8px;}
 .tf-workspace .tf-time-tag {font-size:11px;padding:4px 8px;border-radius:4px;white-space:normal;}
-.tf-workspace .tf-board-title {font-family:Sora,sans-serif;font-size:13px;font-weight:600;line-height:1.5;padding:4px 0;}
+.tf-workspace .tf-board-title {font-family:var(--font-title);font-size:13px;font-weight:600;line-height:1.5;padding:4px 0;}
 .tf-workspace .tf-card-title {font-size:15px;margin:8px 0;}
 .tf-workspace .tf-card-obs,.tf-workspace .tf-obs {font-size:12px;font-style:normal;line-height:1.5;}
 .tf-card-footer {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:12px 0;font-size:12px;color:var(--text-muted);}
@@ -85,3 +85,30 @@
 .tf-menu .tf-acoes-extra {position:fixed;width:180px;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:0 8px 30px #0004;z-index:100;}
 body:has(.tf-workspace)>.fab {background:linear-gradient(165deg,var(--wine),var(--surface));border:1px solid var(--gold);color:var(--gold-light);box-shadow:0 4px 12px #0003;clip-path:none;}
 .tf-workspace .tf-area-acoes .mini-add {border:1px solid var(--border);border-radius:4px;background:var(--surface2);color:var(--text);font-size:12px;}
+
+/* Compacto no celular (21/10/2026): "muito vertical". Título e "Nova tarefa" na mesma linha,
+   respiros e cartões enxutos; toque continua com 44px. */
+@media(max-width:639px){
+ .main.tf-workspace {padding-bottom:76px;min-height:0;}
+ .tf-workspace-heading {flex-wrap:nowrap;gap:8px;margin-bottom:6px;}
+ .tf-workspace-heading .tf-create {width:auto;flex:none;padding:8px 12px;}
+ .tf-workspace .view-tabs {margin:8px 0;}
+ .tf-workspace .view-tabs button {padding:6px 4px;}
+ .tf-toolbar {margin-bottom:8px;}
+ .tf-workspace .tf-quadro {gap:8px;}
+ .tf-workspace .tf-col {padding:8px;}
+ .tf-workspace .tf-col-head {padding:2px 2px 8px;font-size:14px;}
+ .tf-workspace .tf-col-body {gap:8px;min-height:40px;}
+ .tf-workspace .tf-card {padding:10px;}
+ .tf-workspace .tf-card-title {margin:4px 0;font-size:14px;}
+ .tf-card-footer {margin:6px 0;gap:8px;}
+ .tf-workspace .tf-list-group {margin:8px 0;}
+ .tf-list-heading {padding:9px 12px;font-size:14px;}
+ .tf-workspace .tf-item {padding:8px 10px;gap:4px 8px;}
+ .tf-workspace .tf-area {margin:8px 0;}
+ .tf-workspace .tf-area-cab {padding:9px 10px;gap:4px;}
+ .tf-workspace .tf-area-resp {padding:8px 10px;}
+ .tf-workspace .tf-area-acoes {padding:0 10px;margin:8px 0;}
+ .tf-workspace .tf-area-rotinas {padding:6px 10px;}
+ .tf-workspace .tf-board-heading {padding:8px 10px;}
+}

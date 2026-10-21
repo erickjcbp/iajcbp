@@ -13,22 +13,22 @@
   <link rel="apple-touch-icon" href="icon-192.png">
   <script>window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__bip=e;});</script>
   <style>
-    .semana-titulo { font-family:'Sora',sans-serif; font-size:11px; color:var(--text-muted); letter-spacing:1.5px; text-transform:uppercase; margin:18px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+    .semana-titulo { font-family:var(--font-title); font-size:11px; color:var(--text-muted); letter-spacing:1.5px; text-transform:uppercase; margin:18px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--border); }
     .esc-grid { display:grid; grid-template-columns:1fr; gap:10px; }
     @media(min-width:600px){ .esc-grid{ grid-template-columns:repeat(2,1fr); } }
     @media(min-width:900px){ .esc-grid{ grid-template-columns:repeat(3,1fr); } }
     .esc-card { background:var(--surface); border:1px solid var(--border-wine); border-radius:10px; padding:14px; cursor:pointer; transition:border-color .15s, transform .1s; }
     .esc-card:hover { border-color:var(--gold-dim); }
     .esc-card:active { transform:scale(.99); }
-    .esc-data { font-family:'Sora',sans-serif; font-weight:700; font-size:14px; color:var(--text); }
+    .esc-data { font-family:var(--font-title); font-weight:700; font-size:14px; color:var(--text); }
     .esc-sub { font-size:12px; color:var(--gold); margin-top:2px; }
     .esc-count { font-size:12px; color:var(--text-muted); margin-top:8px; display:flex; align-items:center; gap:6px; }
     .esc-count b { color:var(--text); }
     .esc-line { display:flex; justify-content:space-between; gap:10px; padding:7px 2px; border-bottom:1px solid var(--border); font-size:13px; }
     .esc-line .fn { color:var(--gold); font-weight:700; }
     .esc-line .nm { color:var(--text); text-align:right; }
-    .esc-cat { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin:12px 0 2px; font-weight:700; }
-    .esc-chamada-btn { margin-top:10px; width:100%; padding:9px; border-radius:8px; border:1px solid var(--gold-dim); background:linear-gradient(165deg, rgba(232,185,74,.14), var(--surface2)); color:var(--gold-light); font-family:'Sora',sans-serif; font-weight:700; font-size:12px; letter-spacing:.3px; cursor:pointer; }
+    .esc-cat { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin:12px 0 2px; font-weight:700; }
+    .esc-chamada-btn { margin-top:10px; width:100%; padding:9px; border-radius:8px; border:1px solid var(--gold-dim); background:linear-gradient(165deg, rgba(232,185,74,.14), var(--surface2)); color:var(--gold-light); font-family:var(--font-body); font-weight:700; font-size:12px; letter-spacing:.3px; cursor:pointer; }
     .esc-chamada-btn:hover { border-color:var(--gold); box-shadow:0 0 12px var(--red-glow); }
     .esc-chamada-btn.feita { border-color:var(--success-text,#4caf50); background:linear-gradient(165deg, rgba(76,175,80,.14), var(--surface2)); color:var(--success-text,#7bd88f); }
     /* ── ESCALA EU! ── */
@@ -36,20 +36,20 @@
     .ee-hero.pulsa { animation:eePulse 2.2s ease-in-out infinite; }
     .ee-hero:active { transform:scale(.99); }
     @keyframes eePulse { 0%,100%{ box-shadow:0 0 0 0 rgba(232,185,74,0); } 50%{ box-shadow:0 0 26px 2px var(--red-glow); } }
-    .ee-hero .ee-t { font-family:'Sora',sans-serif; font-weight:800; letter-spacing:2px; font-size:26px; color:var(--gold-light); text-shadow:0 0 16px var(--red-glow); }
+    .ee-hero .ee-t { font-family:var(--font-title); font-weight:800; letter-spacing:2px; font-size:26px; color:var(--gold-light); text-shadow:0 0 16px var(--red-glow); }
     .ee-hero .ee-s { font-size:13px; color:var(--text); margin-top:6px; }
-    .ee-hero .ee-badge { display:inline-block; margin-top:14px; font-family:'Sora',sans-serif; font-weight:700; font-size:12px; color:var(--text); background:rgba(0,0,0,.25); border:1px solid var(--border-wine); border-radius:999px; padding:5px 13px; }
+    .ee-hero .ee-badge { display:inline-block; margin-top:14px; font-family:var(--font-title); font-weight:700; font-size:12px; color:var(--text); background:rgba(0,0,0,.25); border:1px solid var(--border-wine); border-radius:999px; padding:5px 13px; }
     .ee-hero.calmo { animation:none; cursor:default; background:linear-gradient(150deg, rgba(120,20,30,.14), var(--surface2)); }
-    .ee-back { background:none; border:none; color:var(--gold); font-family:'Sora',sans-serif; font-weight:700; font-size:13px; cursor:pointer; padding:6px 0; margin-bottom:6px; }
+    .ee-back { background:none; border:none; color:var(--gold); font-family:var(--font-body); font-weight:700; font-size:13px; cursor:pointer; padding:6px 0; margin-bottom:6px; }
     .ee-step { animation:eeFade .28s ease both; }
     @keyframes eeFade { from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
     .ee-resumo { font-size:12px; color:var(--gold); margin:2px 0 10px; }
     .ee-chips { display:flex; flex-wrap:wrap; gap:10px; }
-    .ee-chip { flex:1 1 44%; min-width:130px; padding:15px 12px; border-radius:12px; border:1px solid var(--gold-dim); background:linear-gradient(165deg, rgba(232,185,74,.12), var(--surface2)); color:var(--gold-light); font-family:'Sora',sans-serif; font-weight:700; font-size:14px; cursor:pointer; text-align:center; transition:border-color .15s, transform .1s, box-shadow .2s; }
+    .ee-chip { flex:1 1 44%; min-width:130px; padding:15px 12px; border-radius:12px; border:1px solid var(--gold-dim); background:linear-gradient(165deg, rgba(232,185,74,.12), var(--surface2)); color:var(--gold-light); font-family:var(--font-body); font-weight:700; font-size:14px; cursor:pointer; text-align:center; transition:border-color .15s, transform .1s, box-shadow .2s; }
     .ee-chip:hover { border-color:var(--gold); box-shadow:0 0 12px var(--red-glow); }
     .ee-chip:active { transform:scale(.98); }
     .ee-chip:disabled { cursor:default; border-color:var(--success-text,#4caf50); color:var(--success-text,#7bd88f); background:linear-gradient(165deg, rgba(76,175,80,.14), var(--surface2)); box-shadow:none; }
-    .esc-secao { font-family:'Sora',sans-serif; font-weight:800; font-size:15px; color:var(--gold-light); letter-spacing:.5px; margin:28px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--border-wine); }
+    .esc-secao { font-family:var(--font-body); font-weight:800; font-size:15px; color:var(--gold-light); letter-spacing:.5px; margin:28px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--border-wine); }
   /* Formulário de informar ausência, vindo de ausencias.html. Sem o aus-cel-box a
      lista de missas cresce sem limite dentro do modal e some do alcance no celular. */
   .motivo-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
@@ -64,12 +64,37 @@
       background:var(--surface); border:1px solid var(--border-wine);
       border-radius:4px; padding:14px; margin-bottom:10px;
     }
-  .ausencia-data { font-family:'Sora',sans-serif; font-size:13px; color:var(--text); margin-bottom:4px; }
+  .ausencia-data { font-family:var(--font-title); font-size:13px; color:var(--text); margin-bottom:4px; }
   .ausencia-meta { font-size:12px; color:var(--text-muted); }
   .aus-cel-box { max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; border:1px solid var(--border-wine); border-radius:6px; padding:8px; }
   .aus-cel-row { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text); cursor:pointer; padding:3px 4px; }
   .aus-cel-row input[type=checkbox] { width:18px; height:18px; flex:none; accent-color:var(--gold); }
   .aus-cel-row.sel-all { font-weight:700; color:var(--gold); margin:4px 0 2px; }
+    .esc-atalhos { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .esc-atalhos > .btn-sm { justify-content:center; text-align:center; line-height:1.2; }
+  /* Compacto no celular (21/10/2026) */
+  @media(max-width:639px){
+    .esc-atalhos { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px; }
+    .esc-atalhos > .btn-sm:only-child { grid-column:1 / -1; }
+    .esc-atalhos > .btn-sm { padding:6px 8px; white-space:normal; text-decoration:none; }
+    .ee-hero { padding:14px 14px; border-radius:12px; }
+    .ee-hero .ee-t { font-size:21px; letter-spacing:1.5px; }
+    .ee-hero .ee-s { margin-top:3px; }
+    .ee-hero .ee-badge { margin-top:8px; }
+    .esc-secao { margin:16px 0 8px; padding-bottom:4px; font-size:14px; }
+    .semana-titulo { margin:12px 0 6px; padding-bottom:4px; }
+    .esc-grid { gap:8px; }
+    .esc-card { padding:10px 12px; }
+    .esc-count { margin-top:6px; }
+    .esc-line { padding:5px 2px; }
+    .esc-cat { margin:8px 0 2px; }
+    .esc-chamada-btn { margin-top:8px; }
+    .ee-chips { gap:8px; }
+    .ee-chip { padding:10px 10px; }
+    .motivo-grid { gap:6px; margin-bottom:10px; }
+    .motivo-btn { padding:8px 6px; min-height:44px; }
+    .ausencia-item { padding:10px 12px; margin-bottom:8px; }
+  }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
   <script src="/projetos/acolitos/solicitacoes-core.js"></script>
@@ -115,20 +140,23 @@ async function init() {
 
   // Avisar ausência era uma aba própria na barra ('Faltar'); virou um botão aqui, onde o
   // membro já vê as missas dele.
+  // Os dois atalhos dividem uma linha (antes cada um ocupava a sua): menos altura no celular.
+  const linhaAtalhos = document.createElement('div'); linhaAtalhos.className = 'esc-atalhos';
+  main.appendChild(linhaAtalhos);
   const btnFaltar = document.createElement('button');
-  btnFaltar.className = 'btn-sm gray'; btnFaltar.style.cssText = 'margin-bottom:14px;';
+  btnFaltar.className = 'btn-sm gray';
   btnFaltar.textContent = 'Não poderei ir em alguma missa';
   btnFaltar.onclick = abrirInformarAusencia;
-  main.appendChild(btnFaltar);
+  linhaAtalhos.appendChild(btnFaltar);
 
   // O CERIMONIÁRIO registra ausência de OUTROS, mas não é equipe: cai no modo jornada e a
   // tela de Ausências não está na barra dele. Sem este atalho ele fica sem porta nenhuma —
   // e o portão está certo, então ninguém seria avisado.
   if (typeof podeVerTela === 'function' && podeVerTela({ tela:'ausencias', role:(ctx.membership||{}).role, caps:navCaps(ctx) })) {
     const a = document.createElement('a'); a.className = 'btn-sm gold';
-    a.style.cssText = 'margin:0 0 14px 8px;'; a.href = 'ausencias.html';
+    a.href = 'ausencias.html';
     a.textContent = 'Registrar ausência de alguém';
-    main.appendChild(a);
+    linhaAtalhos.appendChild(a);
   }
   // ── Tela única: seções empilhadas (rolagem) ──
   function secaoTitulo(txt){ const h=document.createElement('div'); h.className='esc-secao'; h.textContent=txt; return h; }
@@ -200,7 +228,7 @@ async function carregarMinhasMissas(body, ctx){
     const sub=document.createElement('div'); sub.className='esc-sub'; sub.textContent=comLabel(c.comunidade)+' · '+(FUNCAO_LABEL[e.funcao]||e.funcao);
     const bTroca=document.createElement('button');
     bTroca.textContent='⚠ Pedir troca';
-    bTroca.style.cssText='margin-top:10px;width:100%;padding:9px;border-radius:8px;border:1px solid #7a2a34;background:linear-gradient(165deg,rgba(224,96,122,.16),var(--surface2));color:#ff9db0;font-family:Sora,sans-serif;font-weight:700;font-size:12px;cursor:pointer;';
+    bTroca.style.cssText='margin-top:10px;width:100%;padding:9px;border-radius:8px;border:1px solid #7a2a34;background:linear-gradient(165deg,rgba(224,96,122,.16),var(--surface2));color:#ff9db0;font-family:var(--font-body);font-weight:700;font-size:12px;cursor:pointer;';
     bTroca.onclick=()=>abrirPedirTroca(e, ctx);
     card.append(dt,sub,bTroca); body.appendChild(card);
   });

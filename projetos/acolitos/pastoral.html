@@ -19,7 +19,7 @@
   <meta property="og:image" content="../../midia/landing/web/hero.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Sora:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Sora:wght@200;300;400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root{
       --ink:#0a0507; --wine:#160a0e; --oxblood:#250d12;
@@ -27,9 +27,9 @@
       --text:#e9dcc9; --muted:#c2a98f; --faint:#93795f;
       --glass-blue:#3f78b0; --glass-emerald:#3c9a72; --glass-ruby:#b04a5e;
       --line:rgba(200,162,74,.22); --line-soft:rgba(200,162,74,.1);
-      --inscr:'Sora', system-ui, sans-serif;
+      --inscr:'Plus Jakarta Sans', 'Sora', system-ui, sans-serif;
       --title:'Fraunces', Georgia, serif;
-      --body:'Sora', system-ui, sans-serif;
+      --body:'Plus Jakarta Sans', 'Sora', system-ui, sans-serif;
       --black:'Fraunces', Georgia, serif;
     }
     *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -171,22 +171,22 @@
     .ph-ring{ width:62px; height:62px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center; background:conic-gradient(var(--gold-light) 0 64%, rgba(247,230,180,.09) 64% 100%); }
     .ph-ring i{ width:50px; height:50px; border-radius:50%; background:#170a10; display:flex; flex-direction:column; align-items:center; justify-content:center; font-style:normal; }
     .ph-ring b{ font-family:var(--title); color:var(--gold-bright); font-size:20px; line-height:1; }
-    .ph-ring small{ color:var(--muted); font-size:7px; letter-spacing:1.5px; }
+    .ph-ring small{ color:var(--muted); font-size:11px; letter-spacing:1.5px; }
     .ph-lvl-info{ flex:1; min-width:0; }
     .ph-lvl-info b{ font-family:var(--title); font-weight:600; color:var(--gold-bright); font-size:14px; display:block; }
     .ph-xp{ height:6px; border-radius:4px; background:rgba(247,230,180,.1); margin:6px 0 4px; overflow:hidden; }
     .ph-xp i{ display:block; height:100%; width:64%; background:linear-gradient(90deg,var(--gold-light),var(--gold)); }
-    .ph-lvl-info small{ color:var(--muted); font-size:8.5px; letter-spacing:.3px; }
-    .ph-label{ font-family:var(--inscr); font-size:8px; letter-spacing:2px; text-transform:uppercase; color:var(--gold); margin:2px 0 -4px; }
+    .ph-lvl-info small{ color:var(--muted); font-size:11px; letter-spacing:.3px; }
+    .ph-label{ font-family:var(--inscr); font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--gold); margin:2px 0 -4px; }
     .ph-card{ display:flex; align-items:center; gap:9px; background:rgba(247,230,180,.04); border:1px solid var(--line-soft); border-radius:12px; padding:9px 11px; }
     .ph-card .ph-ic{ font-size:16px; flex:none; } .ph-card>div{ flex:1; min-width:0; }
     .ph-card b{ display:block; font-family:var(--title); font-weight:600; color:var(--gold-bright); font-size:12px; }
-    .ph-card small{ color:var(--muted); font-size:9px; }
-    .ph-card .ph-tag{ font-family:var(--inscr); font-size:7.5px; letter-spacing:1px; text-transform:uppercase; color:var(--gold-light); border:1px solid var(--line); border-radius:20px; padding:3px 7px; }
+    .ph-card small{ color:var(--muted); font-size:11px; }
+    .ph-card .ph-tag{ font-family:var(--inscr); font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--gold-light); border:1px solid var(--line); border-radius:20px; padding:3px 7px; }
     .ph-card .ph-star{ font-family:var(--title); color:var(--gold-bright); font-size:12px; }
     .ph-tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-top:auto; }
     .ph-tiles span{ display:flex; flex-direction:column; align-items:center; gap:3px; background:rgba(247,230,180,.04); border:1px solid var(--line-soft); border-radius:11px; padding:9px 4px; color:var(--gold-light); font-size:16px; }
-    .ph-tiles small{ color:var(--muted); font-size:7.5px; letter-spacing:.3px; }
+    .ph-tiles small{ color:var(--muted); font-size:11px; letter-spacing:.3px; }
     .float-card{ position:absolute; z-index:3; display:flex; align-items:center; gap:11px; padding:12px 15px; border-radius:14px; background:linear-gradient(160deg, rgba(46,25,36,.96), rgba(20,9,16,.96)); border:1px solid var(--line); box-shadow:0 24px 48px -16px rgba(0,0,0,.85); backdrop-filter:blur(4px); animation:floaty 5s ease-in-out infinite; }
     .float-card .ic{ width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:19px; flex:none; background:radial-gradient(circle at 50% 30%, rgba(247,230,180,.2), rgba(200,162,74,.06)); border:1px solid var(--line); }
     .float-card .t b{ display:block; font-family:var(--title); font-weight:600; color:var(--gold-bright); font-size:.95rem; line-height:1.1; }
@@ -245,11 +245,14 @@
       .scroll-hint{ animation:none; } html{ scroll-behavior:auto; }
     }
 
+    /* Ícones de traço no lugar dos emojis do celular ilustrado (21/10/2026). */
+    .ico{ width:1.15em; height:1.15em; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; vertical-align:-.2em; }
+    .float-card .ic, .ph-ic, .bell{ color:var(--gold-light); }
     /* ====== MOBILE ====== */
     @media(max-width:600px){
       body{ font-size:16px; }
       .wrap{ padding:0 20px; }
-      section{ padding:clamp(48px,12vw,84px) 0; }
+      section{ padding:clamp(36px,9vw,64px) 0; }
       .hero{ min-height:106svh; }
       .hero-inner{ padding-bottom:clamp(24px,6vw,40px); }
       .hero .media .scrim{ background:linear-gradient(180deg, rgba(10,5,7,.32) 0%, transparent 12%, transparent 48%, rgba(10,5,7,.55) 68%, rgba(10,5,7,.95) 88%, var(--ink) 100%); }
@@ -424,21 +427,21 @@
         </div>
         <div class="col-img reveal">
           <div class="stage-app">
-            <div class="float-card fc1"><div class="ic">🎖️</div><div class="t"><b>Nova medalha</b><span>Luz do Altar</span></div></div>
-            <div class="float-card fc2"><div class="ic">⬆️</div><div class="t"><b>Subiu de nível!</b><span>Acólito Sentinela · Nível 7</span></div></div>
-            <div class="float-card fc3"><div class="ic">🔥</div><div class="t"><b>Missão concluída</b><span>+20 ✦ de Luz</span></div></div>
+            <div class="float-card fc1"><div class="ic"><svg class="ico" viewBox="0 0 24 24" role="img" aria-label="Medalha"><title>Medalha</title><path d="M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14z M8.21 13.89L7 23l5-3 5 3-1.21-9.12"/></svg></div><div class="t"><b>Nova medalha</b><span>Luz do Altar</span></div></div>
+            <div class="float-card fc2"><div class="ic"><svg class="ico" viewBox="0 0 24 24" role="img" aria-label="Subiu de nível"><title>Subiu de nível</title><path d="M12 19V5 M5 12l7-7 7 7"/></svg></div><div class="t"><b>Subiu de nível!</b><span>Acólito Sentinela · Nível 7</span></div></div>
+            <div class="float-card fc3"><div class="ic"><svg class="ico" viewBox="0 0 24 24" role="img" aria-label="Missão"><title>Missão</title><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div><div class="t"><b>Missão concluída</b><span>+20 ✦ de Luz</span></div></div>
             <div class="phone">
               <div class="scr">
-                <div class="ph-top"><img src="../../midia/logos/brasao-pastoral.png" alt="" onerror="this.style.display='none'"><span class="nm">Somos do Altar</span><span class="bell">🔔</span></div>
+                <div class="ph-top"><img src="../../midia/logos/brasao-pastoral.png" alt="" onerror="this.style.display='none'"><span class="nm">Somos do Altar</span><span class="bell"><svg class="ico" viewBox="0 0 24 24" role="img" aria-label="Avisos"><title>Avisos</title><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9 M13.73 21a2 2 0 0 1-3.46 0"/></svg></span></div>
                 <div class="ph-hi">Olá, João ✦</div>
                 <div class="ph-lvl">
                   <div class="ph-ring"><i><b>7</b><small>NÍVEL</small></i></div>
                   <div class="ph-lvl-info"><b>Acólito Sentinela</b><div class="ph-xp"><i></i></div><small>320 / 500 ✦ para o próximo nível</small></div>
                 </div>
                 <div class="ph-label">Próxima escala</div>
-                <div class="ph-card"><span class="ph-ic">🗓️</span><div><b>Domingo · 9h</b><small>Missa · Igreja Matriz</small></div><span class="ph-tag">Acólito</span></div>
+                <div class="ph-card"><span class="ph-ic"><svg class="ico" viewBox="0 0 24 24" role="img" aria-label="Escala"><title>Escala</title><path d="M8 2v4 M16 2v4 M3 10h18 M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z M8 14h.01 M12 14h.01 M16 14h.01"/></svg></span><div><b>Domingo · 9h</b><small>Missa · Igreja Matriz</small></div><span class="ph-tag">Acólito</span></div>
                 <div class="ph-label">Missão da semana</div>
-                <div class="ph-card"><span class="ph-ic">🕯️</span><div><b>Servir na missa de domingo</b><small>Capítulo da Luz</small></div><span class="ph-star">+20 ✦</span></div>
+                <div class="ph-card"><span class="ph-ic"><svg class="ico" viewBox="0 0 24 24" role="img" aria-label="Missão"><title>Missão</title><path d="M9 10h6v12H9z M12 10V7 M12 1.5c1.2 1.6 1.6 2.8 0 4.5-1.6-1.7-1.2-2.9 0-4.5z"/></svg></span><div><b>Servir na missa de domingo</b><small>Capítulo da Luz</small></div><span class="ph-star">+20 ✦</span></div>
                 <div class="ph-tiles"><span>✦<small>Jornada</small></span><span>✠<small>Missões</small></span><span>✛<small>Casas</small></span><span>❧<small>Escalas</small></span></div>
               </div>
             </div>
@@ -544,7 +547,7 @@
   </footer>
 
   <div class="lb" id="lb" aria-hidden="true">
-    <button class="x" type="button" aria-label="Fechar" onclick="lbClose()">✕</button>
+    <button class="x" type="button" aria-label="Fechar" onclick="lbClose()"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18 M6 6l12 12"/></svg></button>
     <button class="nav prev" type="button" aria-label="Foto anterior" onclick="lbStep(-1)">‹</button>
     <img id="lb-img" src="" alt="Foto da pastoral">
     <button class="nav next" type="button" aria-label="Próxima foto" onclick="lbStep(1)">›</button>

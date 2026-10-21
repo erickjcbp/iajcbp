@@ -195,8 +195,10 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
   });
   // 390 é o padrão; `largura` existe para medir no 375 que o padrão da casa exige.
   await pagina.setViewport({ width: opcoes.largura || 390, height: opcoes.altura || 900 });
-  await pagina.evaluateOnNewDocument((modo) => {
+  await pagina.evaluateOnNewDocument((modo, semConvite) => {
     try { localStorage.setItem('nav-mode', modo); } catch (e) {}
+    // Retrato da tela: o convite "Instale o app" cobriria o conteúdo da foto.
+    if (semConvite) { try { localStorage.setItem('pwa-dismiss', '1'); } catch (e) {} }
     // Desliga o service worker DENTRO da prova. Não é frescura: o shared.js recarrega a
     // página sozinho quando um service worker novo assume (`controllerchange`), e a partir
     // da segunda tela isso derrubava a prova no meio da medição. Aqui ele não tem serventia
@@ -216,7 +218,7 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
         },
       });
     } catch (e) {}
-  }, papel.modo);
+  }, papel.modo, !!opcoes.foto);
   await pagina.goto(url, { waitUntil: 'domcontentloaded' });
 
   const medir = async (papel, opcoes) => {
@@ -383,8 +385,9 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
   // dono poder olhar um desenho novo sem precisar publicar — prova verde não é tela vista.
   // Aceita um caminho (página inteira) ou { caminho, seletor } para recortar um pedaço —
   // modal é `position:fixed` e some do retrato de página inteira, que rola até o topo.
-  if (opcoes.foto) {
-    const alvo = typeof opcoes.foto === 'string' ? { caminho: opcoes.foto } : opcoes.foto;
+  // Aceita também uma LISTA de fotos (ex.: a janela do celular + a página inteira).
+  for (const foto of [].concat(opcoes.foto || [])) {
+    const alvo = typeof foto === 'string' ? { caminho: foto } : foto;
     try {
       const el = alvo.seletor ? await pagina.$(alvo.seletor) : null;
       if (alvo.seletor && !el) throw new Error('não achei ' + alvo.seletor + ' para fotografar');

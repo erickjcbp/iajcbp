@@ -17,3 +17,7 @@
 .matriz-lote-checks input {width:18px;height:18px;accent-color:var(--gold);flex:none;}
 .matriz-lote-resumo {font-size:12px;line-height:1.5;color:var(--text-muted);}
 @media(max-width:639px){.matriz-select {min-width:44px;min-height:44px;}.matriz-table .matriz-action {min-width:44px;min-height:44px;height:44px;}.matriz-table .matriz-prof {width:44px;height:44px;}.matriz-lote-checks {grid-template-columns:minmax(0,1fr);}.matriz-lote-modal .form-select {font-size:16px;}}
+/* Celular (21/10/2026): as ações em lote viram UMA linha que rola de lado dentro dela mesma
+   (antes quebravam em três linhas de botões). A página continua sem rolagem lateral. */
+@media(max-width:639px){.matriz-lote-bar {flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:6px 0;padding-bottom:2px;}
+.matriz-lote-bar::-webkit-scrollbar {display:none;}.matriz-lote-bar > * {flex:none;white-space:nowrap;}}

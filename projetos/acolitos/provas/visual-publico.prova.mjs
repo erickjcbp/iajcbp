@@ -28,7 +28,10 @@ try{
    const visible=e=>{const r=e.getBoundingClientRect();const s=getComputedStyle(e);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none'};
    const els=[...document.querySelectorAll('button,a,input,select,textarea')].filter(visible);
    const name=e=>(e.textContent||e.placeholder||e.getAttribute('aria-label')||e.tagName).trim().slice(0,60);
-   return {overflow:document.documentElement.scrollWidth>innerWidth+1,
+   const EP=/\p{Extended_Pictographic}/gu,IGN=/[©®™]/,ESTRUTURA='button,a,label,h1,h2,h3,h4,h5,h6,th,summary,option,.badge,[role=tab],.tab';
+   const emojis=[];const tw=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+   while(tw.nextNode()){const n=tw.currentNode,t=n.textContent,m=(t.match(EP)||[]).filter(c=>!IGN.test(c));if(!m.length)continue;const pe=n.parentElement;if(!pe||pe.closest('#splash,script,style')||!visible(pe))continue;const resto=t.replace(EP,'').replace(/[\uFE0F\u200D\s]/g,'');if(pe.closest(ESTRUTURA)||resto.length<=3)emojis.push(t.trim().slice(0,30));}
+   return {overflow:document.documentElement.scrollWidth>innerWidth+1,altura:document.documentElement.scrollHeight,alturaConteudo:Math.round(Math.max(...[...document.body.children].filter(e=>getComputedStyle(e).position!=='fixed'&&visible(e)).map(e=>e.getBoundingClientRect().bottom+scrollY),0)),emojis,
     small:innerWidth<640?els.filter(e=>!['radio','checkbox','hidden'].includes(e.type)&&(e.getBoundingClientRect().height<43.5||e.getBoundingClientRect().width<43.5)).map(e=>name(e)):[],
     fonts:innerWidth<640?els.filter(e=>['INPUT','SELECT','TEXTAREA'].includes(e.tagName)&&!['checkbox','radio','hidden'].includes(e.type)&&parseFloat(getComputedStyle(e).fontSize)<16).map(e=>name(e)):[]};
   },action);

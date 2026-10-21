@@ -176,7 +176,7 @@ async function renderCaixaSolicitacoes(container){
 
   function grupo(titulo, itens, montarItem){
     if(!itens.length) return;
-    const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
+    const h=document.createElement('div'); h.style.cssText='font-family:var(--font-title);font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
     h.textContent=titulo+' ('+itens.length+')'; container.appendChild(h);
     itens.forEach(it=>container.appendChild(montarItem(it)));
   }
@@ -225,12 +225,12 @@ async function renderCaixaSolicitacoes(container){
       .eq('etapa','aprovacao_cadastro');
     if (erroNovos) throw erroNovos; // o PostgREST não lança — sem isso um erro vira "sem novos cadastros"
     if ((novos||[]).length){
-      const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
+      const h=document.createElement('div'); h.style.cssText='font-family:var(--font-title);font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
       h.textContent='🆕 Novos cadastros ('+novos.length+')'; container.appendChild(h);
       novos.forEach(n=>{
         const c=document.createElement('div'); c.style.cssText='background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;';
         const t=document.createElement('div'); t.style.fontWeight='700'; t.textContent=(n.acolitos_membros && n.acolitos_membros.nome) || '(sem nome)';
-        const b=document.createElement('a'); b.className='btn-sm'; b.href='crm.html'; b.textContent='Abrir no CRM →';
+        const b=document.createElement('a'); b.className='btn-sm gold'; b.style.textDecoration='none'; b.href='crm.html'; b.textContent='Abrir no CRM';
         c.append(t,b); container.appendChild(c);
       });
       total += novos.length;
@@ -246,7 +246,7 @@ async function renderCaixaSolicitacoes(container){
 }
 async function renderCaixaCobrir(container, cobrir){
   if(!cobrir.length) return 0;
-  const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
+  const h=document.createElement('div'); h.style.cssText='font-family:var(--font-title);font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
   h.textContent='🛟 Cobrir / auto-troca ('+cobrir.length+')'; container.appendChild(h);
   for (const it of cobrir){
     const c=document.createElement('div'); c.style.cssText='background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:12px;margin-bottom:8px;';
@@ -296,7 +296,7 @@ async function renderPendentesPublicas(container){
 
   // Cabeçalho fino clicável (toggle)
   const head = document.createElement('div');
-  head.style.cssText='display:flex;align-items:center;gap:8px;cursor:pointer;font-family:Sora,sans-serif;font-weight:700;font-size:14px;color:var(--gold);';
+  head.style.cssText='display:flex;align-items:center;gap:8px;cursor:pointer;font-family:var(--font-title);font-weight:700;font-size:14px;color:var(--gold);';
   const ht = document.createElement('span'); ht.style.flex='1';
   const chev = document.createElement('span'); chev.textContent='▾'; chev.style.cssText='transition:transform .15s;font-size:12px;';
   head.append(ht, chev); card.appendChild(head);
@@ -387,7 +387,7 @@ function renderTudoEmDia(main) {
   const svg = ic.firstChild;
   if (svg) svg.setAttribute('style','width:44px;height:44px;fill:none;stroke:var(--success-text);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;');
   const t = document.createElement('div');
-  t.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:16px;color:var(--text);';
+  t.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:16px;color:var(--text);';
   t.textContent = 'Tudo em dia';
   const s = document.createElement('div');
   s.style.cssText = 'font-size:13px;margin-top:4px;';
@@ -413,7 +413,7 @@ function renderErroCarga(main) {
   const svg = ic.firstChild;
   if (svg) svg.setAttribute('style','width:44px;height:44px;fill:none;stroke:var(--danger-text);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;');
   const t = document.createElement('div');
-  t.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:16px;color:var(--danger-text);';
+  t.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:16px;color:var(--danger-text);';
   t.textContent = 'Não foi possível carregar as pendências';
   const s = document.createElement('div');
   s.style.cssText = 'font-size:13px;margin-top:4px;';

@@ -12,13 +12,13 @@
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
   <style>
-    .lab-tag { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); border:1px solid var(--gold-dim); border-radius:10px; padding:2px 8px; }
+    .lab-tag { font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); border:1px solid var(--gold-dim); border-radius:10px; padding:2px 8px; }
     .mx-card { background:var(--surface); border:1px solid var(--border-wine); border-radius:6px; padding:14px; margin-bottom:14px;
       clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
-    .mx-hd { font-family:'Sora',sans-serif; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+    .mx-hd { font-family:var(--font-body); font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border); }
     .mx-prox { display:flex; align-items:center; gap:14px; }
     .mx-prox-info { flex:1; min-width:0; }
-    .mx-prox-nome { font-family:'Sora',sans-serif; font-weight:700; font-size:15px; color:var(--text); }
+    .mx-prox-nome { font-family:var(--font-title); font-weight:700; font-size:15px; color:var(--text); }
     .mx-bar { height:10px; background:var(--surface2); border-radius:5px; overflow:hidden; margin-top:8px; border:1px solid var(--border); }
     .mx-bar-fill { height:100%; background:linear-gradient(90deg,var(--gold-dim),var(--gold)); border-radius:5px; transition:width .4s; }
     .mx-q { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
@@ -30,10 +30,10 @@
     .mx-q-body { flex:1; min-width:0; }
     .mx-q-tit { font-size:13px; color:var(--text); }
     .mx-q-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
-    .mx-q-xp { font-family:'Sora',sans-serif; font-size:12px; font-weight:700; color:var(--gold); flex-shrink:0; }
+    .mx-q-xp { font-family:var(--font-title); font-size:12px; font-weight:700; color:var(--gold); flex-shrink:0; }
     .mx-elig { background:linear-gradient(165deg, rgba(47,158,87,.18), var(--surface)); border:1px solid var(--success); color:var(--success-text);
       border-radius:6px; padding:12px 14px; font-size:13px; font-weight:600; margin-bottom:14px; text-align:center; }
-    .mx-xp-big { font-family:'Sora',sans-serif; font-size:26px; font-weight:700; color:var(--gold-light); text-shadow:0 0 12px var(--red-glow); }
+    .mx-xp-big { font-family:var(--font-title); font-size:26px; font-weight:700; color:var(--gold-light); text-shadow:0 0 12px var(--red-glow); }
     .mx-empty { color:var(--text-muted); font-size:12px; font-style:italic; padding:6px 0; }
     .mx-fila-item { background:var(--surface2); border:1px solid var(--border-wine); border-radius:6px; padding:10px 12px; margin-bottom:8px; }
     .mx-fila-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
@@ -42,6 +42,15 @@
     .mx-mini.ok { border-color:var(--success); color:var(--success-text); }
     .mx-mini.no { border-color:var(--danger); color:var(--danger-text); }
     .mx-mini.go { border-color:var(--gold); color:var(--gold-light); background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2)); }
+      /* Compacto no celular (21/10/2026) */
+    @media(max-width:639px){
+      .mx-card { padding:10px 12px; margin-bottom:8px; }
+      .mx-hd { margin-bottom:6px; padding-bottom:4px; }
+      .mx-q { padding:7px 0; }
+      .mx-elig { padding:8px 10px; margin-bottom:8px; }
+      .mx-xp-big { font-size:22px; }
+      .mx-fila-item { padding:8px 10px; margin-bottom:6px; }
+    }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -139,7 +148,7 @@ function questRow(q) {
   const t = document.createElement('div'); t.className = 'mx-q-tit'; t.textContent = q.titulo + (q.obrigatoria === false ? ' · opcional' : '');
   body.appendChild(t);
   if (q.descricao) { const d = document.createElement('div'); d.className = 'mx-q-sub'; d.textContent = q.descricao; body.appendChild(d); }
-  if (q.competencia) { const c = document.createElement('div'); c.className = 'mx-q-sub'; c.style.cssText = 'color:var(--gold);font-size:10px;margin-top:2px;font-weight:700;'; c.textContent = '💪 Trabalha: ' + q.competencia; body.appendChild(c); }
+  if (q.competencia) { const c = document.createElement('div'); c.className = 'mx-q-sub'; c.style.cssText = 'color:var(--gold);font-size:11px;margin-top:2px;font-weight:700;'; c.textContent = '💪 Trabalha: ' + q.competencia; body.appendChild(c); }
   // progresso cumulativo (missas/ensaios/funções distintas) → barra X/N
   if (q.alvo != null && q.atual != null) {
     const done = q.atual >= q.alvo;
@@ -147,14 +156,14 @@ function questRow(q) {
     const bar = document.createElement('div'); bar.style.cssText = 'flex:1;max-width:130px;height:5px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden;';
     const fill = document.createElement('div'); fill.style.cssText = 'height:100%;border-radius:3px;width:' + Math.min(100, Math.round(q.atual / q.alvo * 100)) + '%;background:' + (done ? 'var(--success-text)' : 'var(--gold)') + ';';
     bar.appendChild(fill);
-    const txt = document.createElement('span'); txt.style.cssText = 'font-size:10px;font-weight:700;color:' + (done ? 'var(--success-text)' : 'var(--gold-light)') + ';'; txt.textContent = q.atual + '/' + q.alvo;
+    const txt = document.createElement('span'); txt.style.cssText = 'font-size:11px;font-weight:700;color:' + (done ? 'var(--success-text)' : 'var(--gold-light)') + ';'; txt.textContent = q.atual + '/' + q.alvo;
     pg.append(bar, txt); body.appendChild(pg);
   }
   // claimable: reivindicada ("Já fiz") e aptidão de função ("Eu já faço"). Missas/ensaios são
   // automáticas de verdade (enchem pela chamada/presença) → NÃO têm botão.
   const claimable = ((q.validacao === 'reivindicada' || q.validacao === 'avaliada' || (q.validacao === 'automatica' && q.fonte === 'habilitacao')) && (q.status === 'pendente' || q.status === 'revisao'));
-  if (q.status === 'em_analise' || q.validacao === 'avaliada') { const h = document.createElement('div'); h.className = 'mx-q-sub'; h.style.cssText = 'color:var(--gold-dim);font-size:10px;margin-top:2px;'; h.textContent = subDe(q); body.appendChild(h); }
-  if (q.status === 'revisao' && revisoesMap[q.id] != null) { const rv = document.createElement('div'); rv.className = 'mx-q-sub'; rv.style.cssText = 'color:var(--danger-text);font-size:10px;margin-top:2px;font-weight:700;'; rv.textContent = '📝 Revisão: ' + (revisoesMap[q.id] || 'reenvie sua resposta'); body.appendChild(rv); }
+  if (q.status === 'em_analise' || q.validacao === 'avaliada') { const h = document.createElement('div'); h.className = 'mx-q-sub'; h.style.cssText = 'color:var(--gold-dim);font-size:11px;margin-top:2px;'; h.textContent = subDe(q); body.appendChild(h); }
+  if (q.status === 'revisao' && revisoesMap[q.id] != null) { const rv = document.createElement('div'); rv.className = 'mx-q-sub'; rv.style.cssText = 'color:var(--danger-text);font-size:11px;margin-top:2px;font-weight:700;'; rv.textContent = '📝 Revisão: ' + (revisoesMap[q.id] || 'reenvie sua resposta'); body.appendChild(rv); }
   row.appendChild(body);
   const xp = document.createElement('span'); xp.className = 'mx-q-xp'; xp.textContent = '+' + q.xp + ' XP'; row.appendChild(xp);
   if (claimable) {
@@ -200,7 +209,7 @@ async function renderBoard(main) {
     prox.appendChild(buildRankEmblem(data.proximo_nivel, 54));
     const info = document.createElement('div'); info.className = 'mx-prox-info';
     const nm = document.createElement('div'); nm.className = 'mx-prox-nome'; nm.textContent = 'Próximo: ' + nivelInfo(data.proximo_nivel).label;
-    const xpl = document.createElement('div'); xpl.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold-light);margin:3px 0 6px;text-shadow:0 0 8px var(--red-glow);'; xpl.textContent = '✦ ' + data.xp_total + ' XP adquiridos na Jornada Principal';
+    const xpl = document.createElement('div'); xpl.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:var(--gold-light);margin:3px 0 6px;text-shadow:0 0 8px var(--red-glow);'; xpl.textContent = '✦ ' + data.xp_total + ' XP adquiridos na Jornada Principal';
     const estl = document.createElement('div'); estl.style.cssText = 'font-size:13px;margin:0 0 6px;letter-spacing:1px;';
     try {
       const { data: ed } = await sb.rpc('acolitos_estrelas', { p_membro: ctx.membro.id });
@@ -208,9 +217,9 @@ async function renderBoard(main) {
         const n = Number(ed.estrelas) || 0;
         estl.innerHTML = (n > 0
           ? '<span style="font-size:17px;letter-spacing:2px;">' + '⭐'.repeat(Math.min(n, 5)) + '</span>' + (n > 5 ? ' <b style="color:var(--gold-light);font-size:13px;">×' + n + '</b>' : '')
-            + '<span style="display:block;font-size:10px;color:var(--gold-light);font-weight:700;margin-top:1px;">' + n + ' estrela' + (n > 1 ? 's' : '') + ' conquistada' + (n > 1 ? 's' : '') + ' neste nível</span>'
+            + '<span style="display:block;font-size:11px;color:var(--gold-light);font-weight:700;margin-top:1px;">' + n + ' estrela' + (n > 1 ? 's' : '') + ' conquistada' + (n > 1 ? 's' : '') + ' neste nível</span>'
           : '<span style="color:var(--gold-dim);font-style:italic;font-size:12px;">Primeira estrela a caminho ✨</span>')
-          + '<span style="display:block;font-size:9.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;">faltam ' + ed.xp_prox + ' XP pra próxima ⭐</span>';
+          + '<span style="display:block;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;">faltam ' + ed.xp_prox + ' XP pra próxima ⭐</span>';
       }
     } catch (e) {}
     const bar = document.createElement('div'); bar.className = 'mx-bar'; const fill = document.createElement('div'); fill.className = 'mx-bar-fill';
@@ -260,7 +269,7 @@ async function renderBoard(main) {
         if (pendSet.has(f.funcao)) {
           const tag = document.createElement('span'); tag.className = 'mx-q-sub'; tag.style.cssText = 'color:var(--gold-dim);font-size:11px;font-weight:700;flex:none;'; tag.textContent = '⏳ em análise'; r.appendChild(tag);
         } else {
-          if (revHabMap[f.funcao] != null) { const rv = document.createElement('div'); rv.className = 'mx-q-sub'; rv.style.cssText = 'color:var(--danger-text);font-size:10px;margin-top:2px;font-weight:700;'; rv.textContent = '📝 Revisão: ' + (revHabMap[f.funcao] || 'reenvie'); bd.appendChild(rv); }
+          if (revHabMap[f.funcao] != null) { const rv = document.createElement('div'); rv.className = 'mx-q-sub'; rv.style.cssText = 'color:var(--danger-text);font-size:11px;margin-top:2px;font-weight:700;'; rv.textContent = '📝 Revisão: ' + (revHabMap[f.funcao] || 'reenvie'); bd.appendChild(rv); }
           const b = document.createElement('button'); b.className = 'mx-mini go'; b.textContent = revHabMap[f.funcao] != null ? 'Reenviar' : 'Já faço';
           b.onclick = () => pedirHab(f); r.appendChild(b);
         }
@@ -345,7 +354,7 @@ async function abrirClaimModal(q) {
 }
 
 async function renderCoord(main) {
-  const head = document.createElement('h2'); head.style.cssText = 'font-family:Sora,sans-serif;font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 12px;';
+  const head = document.createElement('h2'); head.style.cssText = 'font-family:var(--font-title);font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 12px;';
   head.textContent = '⚙️ Coordenação'; main.appendChild(head);
 
   // Fila de aprovação

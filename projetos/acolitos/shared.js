@@ -363,7 +363,7 @@ function buildEngajamentoEl(membro) {
   const slug = membro.nivel || nivelFromRole(membro.role || 'aspirante');
   const h = document.createElement('div'); h.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;';
   h.appendChild(buildRankEmblem(slug, 48));
-  const hn = document.createElement('div'); hn.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold-light);'; hn.textContent = 'Próximo objetivo: ' + nivelInfo(slug).label;
+  const hn = document.createElement('div'); hn.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:var(--gold-light);'; hn.textContent = 'Próximo objetivo: ' + nivelInfo(slug).label;
   h.appendChild(hn); box.appendChild(h);
   const sec = (title) => { const t = document.createElement('div'); t.style.cssText = 'font-size:11px;font-weight:700;color:var(--text-muted);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.5px;'; t.textContent = title; box.appendChild(t); };
   const chips = (title, vals, map, done) => {
@@ -390,7 +390,7 @@ function buildEngajamentoEl(membro) {
           const lab = document.createElement('span'); lab.style.cssText = 'font-size:11px;color:var(--gold);min-width:110px;'; lab.textContent = c.label + (c.status === 'candidata' ? ' 🟡' : '');
           const bwp = document.createElement('div'); bwp.style.cssText = 'flex:1;height:6px;border-radius:3px;background:var(--surface2);overflow:hidden;';
           const bb = document.createElement('div'); const pct = Math.min(100, Math.round(100 * c.progresso / Math.max(1, c.limiar))); bb.style.cssText = 'height:100%;background:var(--gold);width:' + pct + '%;'; bwp.appendChild(bb);
-          const n = document.createElement('span'); n.style.cssText = 'font-size:10px;color:var(--text-muted);'; n.textContent = c.progresso + '/' + c.limiar;
+          const n = document.createElement('span'); n.style.cssText = 'font-size:11px;color:var(--text-muted);'; n.textContent = c.progresso + '/' + c.limiar;
           line.append(lab, bwp, n); w.appendChild(line);
         });
         box.appendChild(w);
@@ -419,18 +419,18 @@ function showMeuDesenvolvimento(membro) {
 function avisoEl(aviso, membro) {
   if (aviso && aviso.tipo === 'engajamento') {
     const wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:14px;padding:12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--gold);';
-    const t = document.createElement('div'); t.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; t.textContent = '🎯 Seu plano de evolução foi atualizado';
+    const t = document.createElement('div'); t.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; t.textContent = '🎯 Seu plano de evolução foi atualizado';
     wrap.append(t, buildEngajamentoEl(membro)); return wrap;
   }
   if (aviso && aviso.tipo === 'mensagem') {
     const wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:14px;padding:12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--gold);';
-    const t = document.createElement('div'); t.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; t.textContent = '💬 Mensagem da coordenação';
+    const t = document.createElement('div'); t.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; t.textContent = '💬 Mensagem da coordenação';
     const p = document.createElement('div'); p.style.cssText = 'font-size:14px;color:var(--text);line-height:1.6;'; p.textContent = aviso.texto || aviso.msg || '';
     wrap.append(t, p); return wrap;
   }
   if (aviso && aviso.tipo === 'quest_exclusiva') {
     const wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:14px;padding:12px;background:rgba(155,89,212,.1);border-radius:6px;border-left:3px solid #9b59d4;';
-    const t = document.createElement('div'); t.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:#cd9ef2;margin-bottom:6px;'; t.textContent = '✨ Quest Exclusiva';
+    const t = document.createElement('div'); t.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:#cd9ef2;margin-bottom:6px;'; t.textContent = '✨ Quest Exclusiva';
     const p = document.createElement('div'); p.style.cssText = 'font-size:14px;color:var(--text);line-height:1.5;'; p.textContent = aviso.titulo || aviso.msg || '';
     wrap.append(t, p); return wrap;
   }
@@ -574,12 +574,12 @@ function _celebInject() {
   .celeb-ring{position:absolute;top:50%;left:50%;width:20px;height:20px;border-radius:50%;transform:translate(-50%,-50%);z-index:1;box-shadow:0 0 0 0 var(--cring);animation:xpgRing .9s ease-out forwards}
   .celeb-rsparks{position:absolute;top:50%;left:50%;width:0;height:0;z-index:3}
   .celeb-rsparks i{position:absolute;top:0;left:0;width:9px;height:9px;border-radius:50%;background:radial-gradient(circle,#fff,var(--cspark) 60%,transparent);transform:translate(-50%,-50%) scale(.3);opacity:0;animation:xpgRspark .95s ease-out forwards}
-  .celeb-tag{position:relative;z-index:2;font-family:'Oxanium',sans-serif;font-weight:800;letter-spacing:3px;font-size:15px;color:var(--cg2);margin-top:14px;text-shadow:0 0 14px var(--cg);animation:xpgUp .5s ease .4s both}
+  .celeb-tag{position:relative;z-index:2;font-family:var(--font-title);font-weight:800;letter-spacing:3px;font-size:15px;color:var(--cg2);margin-top:14px;text-shadow:0 0 14px var(--cg);animation:xpgUp .5s ease .4s both}
   .celeb-hero{position:relative;z-index:2;font-family:'Sora',sans-serif;font-weight:800;font-size:21px;color:#fff;line-height:1.25;margin-top:8px;text-shadow:0 0 16px var(--cg);animation:xpgUp .5s ease .48s both}
   .celeb-sub{position:relative;z-index:2;font-size:13px;color:var(--text);margin-top:8px;line-height:1.5;animation:xpgUp .5s ease .56s both}
   .celeb-sub b{color:var(--cg2)}
   .celeb-actions{position:relative;z-index:2;display:flex;flex-direction:column;gap:9px;margin-top:20px;animation:xpgUp .5s ease .66s both}
-  .celeb-btn{font-family:'Oxanium',sans-serif;font-weight:700;letter-spacing:.5px;font-size:13px;padding:12px 20px;border-radius:10px;cursor:pointer;border:1px solid var(--border-wine);background:transparent;color:var(--text-muted)}
+  .celeb-btn{font-family:var(--font-title);font-weight:700;letter-spacing:.5px;font-size:13px;padding:12px 20px;border-radius:10px;cursor:pointer;border:1px solid var(--border-wine);background:transparent;color:var(--text-muted)}
   .celeb-btn.primary{border:none;color:#2a1a00;background:linear-gradient(180deg,var(--cg2),var(--cspark));box-shadow:0 4px 20px var(--cg)}
   .celeb-confetti{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
   .celeb-confetti i{position:absolute;top:-10px;width:7px;height:12px;border-radius:1px;opacity:.9;animation:xpgFall linear forwards}`;
@@ -651,7 +651,7 @@ function _boasVindasEstilo() {
     background:rgba(255,255,255,.05);border:1px solid var(--border-wine);
     border-left:3px solid var(--cg2);border-radius:7px;font-size:13px;line-height:1.6;
     color:var(--text);animation:xpgUp .5s ease .62s both}
-  .celeb-recado span{display:block;font-family:'Oxanium',sans-serif;font-size:9.5px;
+  .celeb-recado span{display:block;font-family:var(--font-title);font-size:9.5px;
     font-weight:800;letter-spacing:2px;color:var(--cg2);margin-bottom:5px;text-transform:uppercase}
   .celeb-icon.bv{color:var(--cg2)}`;
   document.head.appendChild(st);
@@ -900,11 +900,11 @@ function _xpgEnsureStyle() {
   .xpg-orb{position:relative;z-index:1;width:96px;height:96px;margin:6px auto 0;border-radius:50%;background:radial-gradient(circle at 38% 32%,#fff3d0,var(--gold) 42%,#7a3a12 100%);box-shadow:0 0 0 3px rgba(255,217,122,.65),0 0 34px 6px var(--red-glow),inset 0 -8px 18px rgba(122,40,12,.7);display:flex;align-items:center;justify-content:center;animation:xpgOrb 2.2s ease-in-out infinite;transition:opacity .4s ease,transform .4s ease}
   @keyframes xpgOrb{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
   .xpg-orb.gone{opacity:0;transform:scale(.4)}
-  .xpg-orb span{font-family:'Oxanium',sans-serif;font-size:46px;font-weight:800;color:#3a2102;text-shadow:0 1px 0 rgba(255,255,255,.5);line-height:1}
-  .xpg-tag{position:relative;z-index:1;font-family:'Oxanium',sans-serif;font-size:11px;font-weight:700;letter-spacing:4px;color:var(--gold-light);margin-top:16px;animation:xpgUp .5s ease .25s both}
-  .xpg-num{position:relative;z-index:1;font-family:'Oxanium',sans-serif;font-weight:800;font-size:62px;line-height:1;margin-top:2px;color:var(--gold-light);text-shadow:0 0 18px var(--red-glow),0 2px 0 #7a3a12;animation:xpgUp .5s ease .3s both}
+  .xpg-orb span{font-family:var(--font-title);font-size:46px;font-weight:800;color:#3a2102;text-shadow:0 1px 0 rgba(255,255,255,.5);line-height:1}
+  .xpg-tag{position:relative;z-index:1;font-family:var(--font-title);font-size:11px;font-weight:700;letter-spacing:4px;color:var(--gold-light);margin-top:16px;animation:xpgUp .5s ease .25s both}
+  .xpg-num{position:relative;z-index:1;font-family:var(--font-title);font-weight:800;font-size:62px;line-height:1;margin-top:2px;color:var(--gold-light);text-shadow:0 0 18px var(--red-glow),0 2px 0 #7a3a12;animation:xpgUp .5s ease .3s both}
   .xpg-num b{font-size:34px;vertical-align:super;opacity:.9}
-  .xpg-num small{font-family:'Oxanium',sans-serif;font-size:22px;font-weight:700;letter-spacing:2px;margin-left:6px;color:var(--gold)}
+  .xpg-num small{font-family:var(--font-title);font-size:22px;font-weight:700;letter-spacing:2px;margin-left:6px;color:var(--gold)}
   .xpg-num.punch{animation:xpgPunch .26s ease}
   @keyframes xpgPunch{0%{transform:scale(1)}40%{transform:scale(1.14)}100%{transform:scale(1)}}
   .xpg-quest{position:relative;z-index:1;font-size:13px;font-weight:600;color:var(--text);margin-top:8px;animation:xpgUp .5s ease .4s both}
@@ -916,8 +916,8 @@ function _xpgEnsureStyle() {
   @keyframes xpgShine{to{transform:translateX(220%)}}
   .xpg-bar.flash{animation:xpgFlash .5s ease}
   @keyframes xpgFlash{0%,100%{box-shadow:0 0 0 transparent}50%{box-shadow:0 0 18px 4px var(--gold-light)}}
-  .xpg-hint{font-family:'Oxanium',sans-serif;font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--gold-light);margin-top:7px;text-shadow:0 0 8px var(--red-glow)}
-  .xpg-btn{position:relative;z-index:1;margin-top:18px;font-family:'Oxanium',sans-serif;font-weight:700;letter-spacing:.5px;font-size:13px;padding:11px 26px;border-radius:10px;cursor:pointer;border:1px solid var(--border-wine);background:transparent;color:var(--text-muted);animation:xpgUp .5s ease .7s both}
+  .xpg-hint{font-family:var(--font-title);font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--gold-light);margin-top:7px;text-shadow:0 0 8px var(--red-glow)}
+  .xpg-btn{position:relative;z-index:1;margin-top:18px;font-family:var(--font-title);font-weight:700;letter-spacing:.5px;font-size:13px;padding:11px 26px;border-radius:10px;cursor:pointer;border:1px solid var(--border-wine);background:transparent;color:var(--text-muted);animation:xpgUp .5s ease .7s both}
   @keyframes xpgUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
   .xpg-sparks{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
   .xpg-sparks i{position:absolute;bottom:30%;width:7px;height:7px;border-radius:50%;opacity:0;background:radial-gradient(circle,#fff,var(--gold) 60%,transparent);animation:xpgSpark 1.4s ease-out forwards}
@@ -933,7 +933,7 @@ function _xpgEnsureStyle() {
   @keyframes xpgStarPulse{0%,100%{filter:drop-shadow(0 0 16px var(--gold-light))}50%{filter:drop-shadow(0 0 30px var(--gold-light))}}
   .xpg-rspark{position:absolute;top:54px;left:50%;width:9px;height:9px;border-radius:50%;background:radial-gradient(circle,#fff,var(--gold) 60%,transparent);transform:translate(-50%,-50%) scale(.3);opacity:0;animation:xpgRspark .95s ease-out forwards}
   @keyframes xpgRspark{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}18%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1)}}
-  .xpg-starlbl{position:absolute;top:104px;left:0;right:0;font-family:'Oxanium',sans-serif;font-weight:800;letter-spacing:2px;font-size:15px;color:var(--gold-light);text-shadow:0 0 14px var(--gold-light);opacity:0;animation:xpgUp .5s ease .5s both}
+  .xpg-starlbl{position:absolute;top:104px;left:0;right:0;font-family:var(--font-title);font-weight:800;letter-spacing:2px;font-size:15px;color:var(--gold-light);text-shadow:0 0 14px var(--gold-light);opacity:0;animation:xpgUp .5s ease .5s both}
   .xpg-confetti{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:hidden}
   .xpg-confetti i{position:absolute;top:-10px;width:7px;height:12px;border-radius:1px;opacity:.9;animation:xpgFall linear forwards}
   @keyframes xpgFall{to{transform:translateY(420px) rotate(540deg)}}
@@ -1088,7 +1088,7 @@ function showFotoConsertoPop(membro, done) {
   // Saída sempre visível: sem ela o convite vira parede.
   const depois = document.createElement('button'); depois.type = 'button';
   depois.style.cssText = 'display:block;width:100%;margin-top:10px;padding:8px;background:none;border:0;'
-    + "font-family:'Oxanium',sans-serif;font-weight:700;font-size:12px;letter-spacing:.8px;"
+    + "font-family:var(--font-title);font-weight:700;font-size:12px;letter-spacing:.8px;"
     + 'text-transform:uppercase;color:var(--text-muted);cursor:pointer;';
   depois.textContent = txt.depois;
   depois.onclick = () => { ov.remove(); if (typeof done === 'function') done(); };
@@ -1230,7 +1230,7 @@ function showCompletarCadastroForm(membro, done) {
       const seg = document.createElement('div'); seg.style.cssText = 'display:flex;gap:8px;';
       const mk = (val, txt) => {
         const b = document.createElement('button'); b.type = 'button'; b.textContent = txt;
-        const paint = () => { b.style.cssText = 'flex:1;padding:10px;border-radius:9px;font-family:Sora,sans-serif;font-weight:700;font-size:13px;cursor:pointer;border:1px solid ' + (estado === val ? 'var(--gold)' : 'var(--border-wine)') + ';background:' + (estado === val ? 'linear-gradient(165deg,rgba(232,185,74,.2),var(--surface2))' : 'var(--surface2)') + ';color:' + (estado === val ? 'var(--gold-light)' : 'var(--text)') + ';'; };
+        const paint = () => { b.style.cssText = 'flex:1;padding:10px;border-radius:9px;font-family:var(--font-title);font-weight:700;font-size:13px;cursor:pointer;border:1px solid ' + (estado === val ? 'var(--gold)' : 'var(--border-wine)') + ';background:' + (estado === val ? 'linear-gradient(165deg,rgba(232,185,74,.2),var(--surface2))' : 'var(--surface2)') + ';color:' + (estado === val ? 'var(--gold-light)' : 'var(--text)') + ';'; };
         paint(); b.onclick = () => { estado = val; seg.querySelectorAll('button').forEach(x => x._paint && x._paint()); wrap.style.outline = 'none'; };
         b._paint = paint; return b;
       };
@@ -1394,7 +1394,7 @@ function renderHeader(ctx, activePage) {
     sino.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>'; // ícone hardcoded — seguro
     const naoVistos = (ctx.membro.avisos || []).filter(a => a && !a.seen).length;
     const badge = document.createElement('span'); badge.id = 'sino-badge';
-    badge.style.cssText = 'position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;border-radius:8px;background:var(--red-soft);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 3px;' + (naoVistos ? '' : 'display:none;');
+    badge.style.cssText = 'position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;border-radius:8px;background:var(--red-soft);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 3px;' + (naoVistos ? '' : 'display:none;');
     badge.textContent = naoVistos > 9 ? '9+' : String(naoVistos);
     sino.appendChild(badge);
     sino.onclick = () => openNotificacoes(ctx.membro);
@@ -1961,7 +1961,7 @@ function mostrarParedeSenha(conta) {
   ic.textContent = '🔑';
 
   const tt = document.createElement('div');
-  tt.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:21px;color:var(--gold-light,#ffd97a);margin-bottom:10px;';
+  tt.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:21px;color:var(--gold-light,#ffd97a);margin-bottom:10px;';
   const primeiro = String(conta.apelido || conta.nome || '').trim().split(' ')[0];
   tt.textContent = primeiro ? primeiro + ', crie a sua senha' : 'Crie a sua senha';
 
@@ -2040,7 +2040,7 @@ function mostrarParedeNotificacoes(qual, userId) {
   sino.textContent = '🔔';
 
   const tt = document.createElement('div');
-  tt.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:21px;color:var(--gold-light,#ffd97a);margin-bottom:10px;';
+  tt.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:21px;color:var(--gold-light,#ffd97a);margin-bottom:10px;';
   tt.textContent = cfg.titulo;
 
   const p = document.createElement('p');
@@ -2616,6 +2616,76 @@ function _svgIcon(name) {
     'time-midia':             'M23 7l-7 5 7 5V7z M14 5H3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z',
     sliders:        'M21 4h-7 M10 4H3 M21 12h-9 M8 12H3 M21 20h-5 M12 20H3 M14 2v4 M8 10v4 M16 18v4',
     x:              'M18 6L6 18 M6 6l12 12',
+    // ── Ícones que substituem os emojis usados como ícone (21/10/2026). Mesmo traço (24×24,
+    // linha 1,9) dos de cima: um conjunto só no app inteiro. Quem liga emoji → ícone é o
+    // EMOJI_ICONE, logo abaixo.
+    check:          'M20 6L9 17l-5-5',
+    'check-circle': 'M22 11.08V12a10 10 0 1 1-5.93-9.14 M22 4L12 14.01l-3-3',
+    plus:           'M12 5v14 M5 12h14',
+    minus:          'M5 12h14',
+    trophy:         'M6 9H4.5a2.5 2.5 0 0 1 0-5H6 M18 9h1.5a2.5 2.5 0 0 0 0-5H18 M4 22h16 M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22 M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22 M18 2H6v7a6 6 0 0 0 12 0V2z',
+    sparkles:       'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z M5 2l.6 1.4L7 4l-1.4.6L5 6l-.6-1.4L3 4l1.4-.6z',
+    brilho:         'M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z',
+    lock:           'M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z M7 11V7a5 5 0 0 1 10 0v4',
+    bell:           'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9 M13.73 21a2 2 0 0 1-3.46 0',
+    'bell-off':     'M13.73 21a2 2 0 0 1-3.46 0 M18.63 13A17.89 17.89 0 0 1 18 8 M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14 M18 8a6 6 0 0 0-9.33-5 M1 1l22 22',
+    festa:          'M5.8 11.3L2 22l10.7-3.8 M4 3h.01 M22 8h.01 M15 2h.01 M22 20h.01 M22 2l-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10 M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2z',
+    printer:        'M6 9V2h12v7 M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2 M6 14h12v8H6z',
+    mao:            'M18 11V6a2 2 0 0 0-4 0v5 M14 10V4a2 2 0 0 0-4 0v6 M10 10.5V6a2 2 0 0 0-4 0v8 M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15',
+    igreja:         'M18 22V10l-6-4-6 4v12 M2 22h20 M12 2v4 M10 4h4 M10 22v-5a2 2 0 0 1 4 0v5',
+    arquivo:        'M21 8v13H3V8 M1 3h22v5H1z M10 12h4',
+    coracao:        'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z',
+    celular:        'M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z M12 18h.01',
+    refresh:        'M23 4v6h-6 M1 20v-6h6 M3.51 9a9 9 0 0 1 14.85-3.36L23 10 M1 14l4.64 4.36A9 9 0 0 0 20.49 15',
+    pin:            'M12 17v5 M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z',
+    alvo:           'M22 12A10 10 0 1 1 2 12a10 10 0 0 1 20 0z M18 12a6 6 0 1 1-12 0 6 6 0 0 1 12 0z M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0z',
+    pause:          'M6 4h4v16H6z M14 4h4v16h-4z',
+    play:           'M6 3l14 9-14 9z',
+    relogio:        'M22 12A10 10 0 1 1 2 12a10 10 0 0 1 20 0z M12 6v6l4 2',
+    ampulheta:      'M5 22h14 M5 2h14 M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22 M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2',
+    grafico:        'M18 20V10 M12 20V4 M6 20v-6',
+    vela:           'M9 10h6v12H9z M12 10V7 M12 1.5c1.2 1.6 1.6 2.8 0 4.5-1.6-1.7-1.2-2.9 0-4.5z',
+    borracha:       'M7 21l-4.3-4.3a1 1 0 0 1 0-1.4L13.3 4.7a1 1 0 0 1 1.4 0l5.6 5.6a1 1 0 0 1 0 1.4L11 21z M22 21H7 M5.5 12.5l6 6',
+    raio:           'M13 2L3 14h9l-1 8 10-12h-9z',
+    boia:           'M22 12A10 10 0 1 1 2 12a10 10 0 0 1 20 0z M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z M4.93 4.93l4.24 4.24 M14.83 14.83l4.24 4.24 M14.83 9.17l4.24-4.24 M4.93 19.07l4.24-4.24',
+    paleta:         'M12 22a10 10 0 1 1 10-10c0 2.2-1.8 3-3.5 3H16a2 2 0 0 0-1.5 3.3A2 2 0 0 1 12 22z M7.5 10.5h.01 M10.5 7h.01 M15 7.5h.01 M17 11h.01',
+    termometro:     'M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z',
+    aviao:          'M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z',
+    proibido:       'M22 12A10 10 0 1 1 2 12a10 10 0 0 1 20 0z M4.93 4.93l14.14 14.14',
+    dado:           'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M8 8h.01 M16 8h.01 M12 12h.01 M8 16h.01 M16 16h.01',
+    balanca:        'M12 3v18 M7 21h10 M3 7h18 M6 7l-3 7a3 3 0 0 0 6 0z M18 7l-3 7a3 3 0 0 0 6 0z',
+    desfazer:       'M9 14L4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11',
+    olho:           'M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
+    grade:          'M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z',
+    documento:      'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8',
+    pasta:          'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z',
+    livro:          'M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z',
+    chave:          'M21 2l-2 2 M15.5 7.5l3 3L22 7l-3-3 M11.39 11.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78z M11.39 11.61L15.5 7.5',
+    busca:          'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M21 21l-4.35-4.35',
+    formatura:      'M22 10L12 5 2 10l10 5 10-5z M6 12v5c3 3 9 3 12 0v-5',
+    mapa:           'M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z M8 2v16 M16 6v16',
+    usuario:        'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0z',
+    link:           'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71',
+    enviar:         'M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8 M16 6l-4-4-4 4 M12 2v13',
+    baixar:         'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3',
+    salvar:         'M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z M17 21v-8H7v8 M7 3v5h8',
+    bandeira:       'M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z M4 22v-7',
+    local:          'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z M15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
+    imagem:         'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M10 8.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z M21 15l-5-5L5 21',
+    'seta-cima':    'M12 19V5 M5 12l7-7 7 7',
+    'seta-baixo':   'M12 5v14 M19 12l-7 7-7-7',
+    coroa:          'M2 18h20 M3 18L2 7l6 4 4-7 4 7 6-4-1 11',
+    espadas:        'M14.5 17.5L3 6V3h3l11.5 11.5 M13 19l6-6 M16 16l4 4 M19 21l2-2 M9.5 17.5L21 6V3h-3L6.5 14.5 M11 19l-6-6 M8 16l-4 4 M5 21l-2-2',
+    megafone:       'M3 11l18-5v12L3 14v-3z M11.6 16.8a3 3 0 1 1-5.8-1.6',
+    chama:          'M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z',
+    lampada:        'M9 18h6 M10 22h4 M12 2a7 7 0 0 0-4 12.74V17h8v-2.26A7 7 0 0 0 12 2z',
+    ajuda:          'M22 12A10 10 0 1 1 2 12a10 10 0 0 1 20 0z M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3 M12 17h.01',
+    apontar:        'M9 11V5a2 2 0 0 1 4 0v6 M13 10V8a2 2 0 0 1 4 0v3 M17 11a2 2 0 0 1 4 0v3a8 8 0 0 1-8 8h-1a7 7 0 0 1-5.6-2.8L4 16a2 2 0 0 1 3-2.6L9 15',
+    cruz:           'M12 2v20 M6 8h12',
+    muda:           'M7 20h10 M12 20v-8 M12 12C12 8 9 6 5 6c0 4 3 6 7 6z M12 10c0-3 2-5 6-5 0 3-2 5-6 5z',
+    musculo:        'M7 14c-2 2-3 4-3 6h14c0-3-1-5-3-6 M9 4c-1 2-1 5 1 7l3 2 M12 6l3-2 2 3-3 2',
+    rosto:          'M22 12A10 10 0 1 1 2 12a10 10 0 0 1 20 0z M8 14s1.5 2 4 2 4-2 4-2 M9 9h.01 M15 9h.01',
+    palmas:         'M7 11V5a2 2 0 0 1 4 0v6 M11 10V4a2 2 0 0 1 4 0v7 M15 10V7a2 2 0 0 1 4 0v7a8 8 0 0 1-8 8h-1a7 7 0 0 1-5.6-2.8L2.6 16.6a2 2 0 0 1 3-2.6L7 15.5',
   };
   // A classe `ico` é o que faz o desenho ser TRAÇADO. Sem ela o SVG cai no padrão do navegador,
   // que é preencher — e o ícone vira uma mancha preta. Isso acontecia em todo lugar menos na
@@ -2815,8 +2885,9 @@ function renderModeSwitch(ctx) {
   document.body.classList.add('has-switch');
   bar.textContent = '';
   const seg = document.createElement('div'); seg.className = 'mode-seg';
-  [['jornada','✦ Minha Jornada'], ['coordenacao','⚙ Coordenação']].forEach(([mk, label]) => {
-    const b = document.createElement('button'); b.className = 'mode-btn' + (mode === mk ? ' active' : ''); b.textContent = label;
+  [['jornada','Minha Jornada','brilho'], ['coordenacao','Coordenação','settings']].forEach(([mk, label, ico]) => {
+    const b = document.createElement('button'); b.className = 'mode-btn' + (mode === mk ? ' active' : '');
+    b.innerHTML = _svgIcon(ico); b.append(label);  // SVG fixo do próprio app — seguro
     b.onclick = () => { if (mode !== mk) { localStorage.setItem('nav-mode', mk); window.location.href = 'index.html'; } };
     seg.appendChild(b);
   });
@@ -3153,8 +3224,14 @@ async function acEstrelasLote(ids) {
 function estrelaTag(n) {
   const el = document.createElement('span'); el.className = 'estrela-tag';
   n = Number(n) || 0;
-  if (n > 0) el.textContent = '⭐'.repeat(Math.min(n, 5)) + (n > 5 ? '×' + n : '');
+  if (n > 0) _desenharEstrelas(el, n);
   return el;
+}
+// Estrelas em SVG (mesmo traçado `star` do app), preenchidas de ouro. Antes eram emoji ⭐.
+function _desenharEstrelas(el, n) {
+  el.innerHTML = _svgIcon('star').replace('class="ico"', 'class="ico ico-estrela"').repeat(Math.min(n, 5)) + (n > 5 ? '×' + n : '');
+  const rotulo = n + (n === 1 ? ' estrela' : ' estrelas');
+  el.setAttribute('role', 'img'); el.setAttribute('aria-label', rotulo); el.title = rotulo;
 }
 // Atalho: já cria o badge e o preenche assincronamente a partir do cache/RPC.
 function estrelaTagAsync(membroId) {
@@ -3162,7 +3239,7 @@ function estrelaTagAsync(membroId) {
   if (membroId) (async () => {
     const mapa = await acEstrelasLote([membroId]);
     const n = mapa[membroId] || 0;
-    if (n > 0) el.textContent = '⭐'.repeat(Math.min(n, 5)) + (n > 5 ? '×' + n : '');
+    if (n > 0) _desenharEstrelas(el, n);
   })();
   return el;
 }
@@ -3188,7 +3265,9 @@ function buildAvatarEl(fotoUrl, role, size, opts) {
     }
     const placeholder = document.createElement('div');
     placeholder.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;background:var(--surface2);border:2px solid var(--border-wine);display:flex;align-items:center;justify-content:center;font-size:${Math.round(size/2.5)}px;`;
-    placeholder.textContent = '👤';
+    placeholder.innerHTML = _svgIcon('usuario');  // SVG fixo do próprio app — seguro
+    placeholder.setAttribute('role', 'img'); placeholder.setAttribute('aria-label', 'Sem foto');
+    placeholder.title = 'Sem foto';
     return placeholder;
   }
 
@@ -3234,7 +3313,7 @@ function buildAvatarEl(fotoUrl, role, size, opts) {
     badge.title = 'Trocar foto';
     badge.style.cssText = `display:inline-flex;align-items:center;justify-content:center;gap:6px;` +
       `margin-top:9px;padding:7px 12px;border-radius:8px;border:1px solid var(--border-wine);` +
-      `background:transparent;color:var(--text-muted);font-family:'Oxanium',sans-serif;` +
+      `background:transparent;color:var(--text-muted);font-family:var(--font-title);` +
       `font-weight:700;font-size:11px;letter-spacing:.8px;text-transform:uppercase;` +
       `cursor:pointer;-webkit-tap-highlight-color:transparent;`;
     // Ícone de traço, não o caractere de lápis: é a convenção do app para tudo que é ícone.
@@ -3370,7 +3449,7 @@ function buildPresencaChart(escalas) {
     const col = document.createElement('div');
     col.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:flex-end;';
     const num = document.createElement('div');
-    num.style.cssText = 'font-size:9px;font-weight:700;line-height:1;margin-bottom:2px;color:' + corNum + ';';
+    num.style.cssText = 'font-size:11px;font-weight:700;line-height:1;margin-bottom:2px;color:' + corNum + ';';
     num.textContent = val > 0 ? val : '';
     const bar = document.createElement('div');
     bar.style.cssText = 'width:11px;border-radius:2px 2px 0 0;min-height:2px;background:' + cor + ';height:' + (val / max * H) + 'px;';
@@ -3383,7 +3462,7 @@ function buildPresencaChart(escalas) {
     pair.style.cssText = 'display:flex;gap:3px;align-items:flex-end;height:88px;';
     pair.append(barCol(b.serv, 'var(--gold)', 'var(--gold-light)'), barCol(b.falt, 'var(--wine)', 'var(--wine-bright,#d45050)'));
     const lbl = document.createElement('div');
-    lbl.style.cssText = 'font-size:9px;color:var(--text-muted);font-family:Sora,sans-serif;margin-top:5px;text-transform:uppercase;';
+    lbl.style.cssText = 'font-size:11px;color:var(--text-muted);font-family:var(--font-body);margin-top:5px;text-transform:uppercase;';
     lbl.textContent = b.mes;
     g.append(pair, lbl); row.appendChild(g);
   });
@@ -3393,7 +3472,7 @@ function buildPresencaChart(escalas) {
   leg.style.cssText = 'display:flex;gap:16px;justify-content:center;margin-top:12px;';
   [['var(--gold)','Servidas'], ['var(--wine)','Faltas']].forEach(([col, txt]) => {
     const it = document.createElement('div');
-    it.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-muted);';
+    it.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);';
     const dot = document.createElement('span');
     dot.style.cssText = 'width:10px;height:10px;border-radius:2px;background:' + col + ';';
     const sp = document.createElement('span'); sp.textContent = txt;
@@ -3702,6 +3781,144 @@ if (!document.querySelector('script[data-escolha-app]')) {
       if (agendado) return; agendado = true;
       setTimeout(function () { agendado = false; rotular(document); }, 120);
     }).observe(document.body, { childList: true, subtree: true });
+  }
+  if (document.body) ligar(); else document.addEventListener('DOMContentLoaded', ligar);
+})();
+
+// ── Emoji usado como ÍCONE vira o SVG do próprio app (21/10/2026) ─────────────────────────────
+// Pedido do dono: nada de emoji fazendo papel de ícone (botão, rótulo, título, aba, selo). Emoji
+// depende da fonte do aparelho, muda de desenho entre Android e iPhone e não segue o tema. O
+// conjunto oficial é o de `_svgIcon` (traço 1,9, 24×24) — o mesmo da barra de baixo.
+//
+// São centenas de botões montados por JS em ~25 telas; trocar um a um deixaria metade para trás
+// na próxima tela nova. Este vigia faz a troca no lugar onde o emoji é ESTRUTURA:
+//   · dentro de botão, link, rótulo, título, aba, selo ou cabeçalho de tabela; ou
+//   · um emoji praticamente sozinho (o "ícone" de um card), ou abrindo um rótulo curto.
+// Emoji no meio de texto corrido (mensagem, aviso, descrição) fica: aquilo é conteúdo.
+// O vigia roda como microtarefa do MutationObserver — antes da tela pintar, então não pisca.
+// Emoji sem par no mapa fica como está e é anotado em window.__emojiSemIcone (a prova lê).
+const EMOJI_ICONE = {
+  '✓':['check','Feito'], '✔':['check','Feito'], '✅':['check-circle','Concluído'], '☑':['check','Marcado'],
+  '✕':['x','Remover'], '✖':['x','Remover'], '✗':['x','Não'], '❌':['x','Não'],
+  '➕':['plus','Adicionar'], '✚':['plus','Adicionar'], '➖':['minus','Remover'],
+  '🏆':['trophy','Troféu'], '🥇':['trophy','1º lugar'], '🥈':['award','2º lugar'], '🥉':['award','3º lugar'],
+  '🏅':['award','Medalha'], '🎖':['award','Conquista'], '🎓':['formatura','Formação'],
+  '✨':['sparkles','Destaque'], '🌟':['star','Destaque'], '⭐':['star','Estrela'], '★':['star','Estrela'],
+  '✦':['brilho','Luz'], '✵':['brilho','Luz'], '🆕':['sparkles','Novo'],
+  '⚠':['alerta','Atenção'], '🔒':['lock','Bloqueado'], '🔑':['chave','Acessos'],
+  '🔔':['bell','Notificações'], '🔕':['bell-off','Notificações desligadas'],
+  '📅':['calendar','Datas'], '🗓':['calendar-days','Calendário'], '📆':['calendar','Datas'],
+  '✏':['editar','Editar'], '✎':['editar','Editar'], '🖊':['editar','Editar'], '📝':['editar','Anotar'],
+  '🗑':['lixeira','Excluir'], '🗄':['arquivo','Arquivados'], '🗂':['pasta','Pasta'], '📁':['pasta','Pasta'],
+  '🎉':['festa','Comemorar'], '🖨':['printer','Imprimir'], '✋':['mao','Mão levantada'], '🙋':['mao','Disponível'],
+  '⛪':['igreja','Igreja'], '⚙':['settings','Configurações'], '🙏':['coracao','Oração'], '📲':['celular','Celular'],
+  '📱':['celular','Celular'], '🔄':['refresh','Trocar'], '🔁':['refresh','Repetir'], '♻':['refresh','Reaproveitar'],
+  '📌':['pin','Fixar'], '📍':['local','Local'], '💬':['message-circle','Mensagem'], '🎯':['alvo','Meta'],
+  '⏸':['pause','Suspender'], '▶':['play','Iniciar'], '🕓':['relogio','Histórico'], '🕑':['relogio','Horário'],
+  '⏰':['relogio','Horário'], '⏳':['ampulheta','Aguardando'], '⌛':['ampulheta','Aguardando'],
+  '📊':['grafico','Relatório'], '📈':['grafico','Evolução'], '🕯':['vela','Vela'], '🧹':['borracha','Limpar'],
+  '⚡':['raio','Rápido'], '🛟':['boia','Ajuda'], '📋':['tarefas','Lista'], '🎨':['paleta','Aparência'],
+  '🤒':['termometro','Doença'], '✈':['aviao','Viagem'], '👨‍👩‍👧':['users','Família'], '👪':['users','Família'],
+  '👥':['users','Pessoas'], '👤':['usuario','Pessoa'], '🚫':['proibido','Bloqueado'], '⛔':['proibido','Proibido'],
+  '🎲':['dado','Sorteio'], '⚖':['balanca','Equilíbrio'], '↩':['desfazer','Desfazer'], '👀':['olho','Ver'],
+  '👁':['olho','Ver'], '☰':['lista','Ver em lista'], '▦':['grade','Ver em cartões'], '📄':['documento','Relatório'],
+  '📖':['livro','Leitura'], '🔍':['busca','Buscar'], '🗺':['mapa','Mapa'], '🔗':['link','Link'],
+  '📤':['enviar','Enviar'], '⬇':['baixar','Baixar'], '⬆':['seta-cima','Subir'], '💾':['salvar','Salvar'],
+  '🏁':['bandeira','Fim'], '🖼':['imagem','Imagem'], '🛡':['shield','Escudo'], '👑':['coroa','Coroa'],
+  '⚔':['espadas','Disputa'], '📣':['megafone','Aviso'], '🔥':['chama','Sequência'], '💡':['lampada','Dica'],
+  '❔':['ajuda','Ajuda'], '❓':['ajuda','Ajuda'], '👆':['apontar','Toque aqui'], '✛':['cruz','Cruz'],
+  '🌱':['muda','Começo'], '💪':['musculo','Força'], '🙂':['rosto','Ok'], '😏':['rosto','Ok'],
+  '🙌':['palmas','Parabéns'], '👏':['palmas','Parabéns'], '💰':['dollar','Dinheiro'], '💵':['dollar','Dinheiro'],
+  '📢':['megafone','Aviso'], '🏠':['home','Início'], '📷':['imagem','Foto'], '📸':['imagem','Foto'],
+};
+// Bolinhas coloridas: a cor É a informação (legenda), então viram um ponto da mesma cor.
+const EMOJI_PONTO = { '🟢':['#2f9e57','verde'], '🔵':['#3a7bd5','azul'], '🟣':['#8e5bd0','roxo'],
+  '🟡':['#e0b030','amarelo'], '🔴':['#d33','vermelho'], '🟠':['#e07a20','laranja'], '⚪':['#ddd','branco'], '⚫':['#222','preto'] };
+(function () {
+  const chaves = Object.keys(EMOJI_ICONE).concat(Object.keys(EMOJI_PONTO))
+    .sort((a, b) => b.length - a.length)
+    .map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  // FE0F (variação "emoji") e tom de pele vêm grudados no glifo; somem junto.
+  const RE = new RegExp('(?:' + chaves.join('|') + ')[\\uFE0F\\u{1F3FB}-\\u{1F3FF}]*', 'gu');
+  const TESTE = new RegExp(RE.source, 'u');
+  const ESTRUTURA = 'button,a,label,h1,h2,h3,h4,h5,h6,th,summary,legend,[role="tab"],[role="button"],.badge,.tab,.chip,'
+    + '.kpi-label,.section-card-title,.modal-title,.page-title,.mode-btn,.form-toggle,.btn,.btn-sm,.status-pill';
+  const PULAR = 'script,style,textarea,option,select,svg,[contenteditable="true"],.sem-icone,#splash,.app-toast';
+  const semAnotar = window.__emojiSemIcone = window.__emojiSemIcone || [];
+
+  function pedaco(glifo) {
+    const base = glifo.replace(/[️\u{1F3FB}-\u{1F3FF}]/gu, '');
+    const ponto = EMOJI_PONTO[base];
+    if (ponto) {
+      const s = document.createElement('span'); s.className = 'ico-ponto';
+      s.style.setProperty('--cor', ponto[0]); s.setAttribute('role', 'img');
+      s.setAttribute('aria-label', ponto[1]); s.title = ponto[1];
+      return { el: s, rotulo: ponto[1] };
+    }
+    const par = EMOJI_ICONE[base];
+    if (!par) return null;
+    const t = document.createElement('template');
+    t.innerHTML = _svgIcon(par[0]).replace('class="ico"', 'class="ico ico-emj"');  // SVG fixo — seguro
+    return { el: t.content.firstChild, rotulo: par[1] };
+  }
+
+  function trocar(no) {
+    const texto = no.nodeValue;
+    if (!texto || !TESTE.test(texto)) return;
+    const pai = no.parentElement;
+    if (!pai || pai.closest(PULAR)) return;
+    const resto = texto.replace(RE, '').trim();
+    const curto = texto.trim().length <= 40 && (pai.textContent || '').trim().length <= 60;
+    const nasPontas = new RegExp('^\\s*(?:' + RE.source + ')|(?:' + RE.source + ')\\s*$', 'u').test(texto);
+    if (!(pai.closest(ESTRUTURA) || resto.replace(/[\s·•:|-]/g, '').length <= 3 || (curto && nasPontas))) return;
+
+    const frag = document.createDocumentFragment();
+    let ultimo = 0, primeiroRotulo = null, sobrouTexto = false, m;
+    RE.lastIndex = 0;
+    while ((m = RE.exec(texto))) {
+      const p = pedaco(m[0]);
+      if (!p) { semAnotar.push(m[0]); continue; }
+      const antes = texto.slice(ultimo, m.index);
+      if (antes) { frag.append(antes.replace(/\s+$/, ultimo === 0 && !antes.trim() ? '' : ' ')); if (antes.trim()) sobrouTexto = true; }
+      frag.append(p.el);
+      if (!primeiroRotulo) primeiroRotulo = p.rotulo;
+      ultimo = m.index + m[0].length;
+    }
+    if (!primeiroRotulo) return;
+    const depois = texto.slice(ultimo).replace(/^\s+/, '');
+    if (depois) { frag.append(depois); if (depois.trim()) sobrouTexto = true; }
+    no.replaceWith(frag);
+
+    // Botão que ficou só com o ícone: o nome vai para aria-label + title (leitor de tela e dica).
+    const alvo = pai.closest('button,a,[role="button"]');
+    if (alvo && !(alvo.textContent || '').trim()) {
+      if (!alvo.getAttribute('aria-label')) alvo.setAttribute('aria-label', primeiroRotulo);
+      if (!alvo.getAttribute('title')) alvo.title = alvo.getAttribute('aria-label');
+    } else if (!alvo && !sobrouTexto && !(pai.textContent || '').trim()) {
+      // Ícone sozinho fora de botão (o "ícone" de um card): imagem com nome.
+      const svg = pai.querySelector('svg.ico-emj');
+      if (svg) { svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', primeiroRotulo);
+        const tt = document.createElementNS('http://www.w3.org/2000/svg', 'title'); tt.textContent = primeiroRotulo; svg.prepend(tt); }
+    }
+  }
+  function varrer(raiz) {
+    if (!raiz) return;
+    if (raiz.nodeType === 3) { trocar(raiz); return; }
+    if (raiz.nodeType !== 1 || raiz.closest && raiz.closest(PULAR)) return;
+    if (!TESTE.test(raiz.textContent || '')) return;
+    const tw = document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT);
+    const nos = []; while (tw.nextNode()) nos.push(tw.currentNode);
+    nos.forEach(trocar);
+  }
+  window.iconizarEmojis = varrer;
+  function ligar() {
+    varrer(document.body);
+    new MutationObserver((lista) => {
+      for (const r of lista) {
+        if (r.type === 'characterData') trocar(r.target);
+        else r.addedNodes.forEach(varrer);
+      }
+    }).observe(document.body, { childList: true, subtree: true, characterData: true });
   }
   if (document.body) ligar(); else document.addEventListener('DOMContentLoaded', ligar);
 })();

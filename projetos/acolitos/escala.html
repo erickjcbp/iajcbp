@@ -17,7 +17,7 @@
     .aba-btn {
       padding:10px 20px; min-height:44px; background:var(--surface2);
       border:1px solid var(--border); color:var(--text-muted); border-radius:2px;
-      cursor:pointer; font-family:'Sora',sans-serif; font-size:11px; letter-spacing:1px;
+      cursor:pointer; font-family:var(--font-body); font-size:11px; letter-spacing:1px;
       text-transform:uppercase; transition:all .2s; -webkit-tap-highlight-color:transparent;
     }
     .aba-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,.08); }
@@ -53,14 +53,14 @@
     .mais-item {
       display:flex; align-items:center; gap:9px; width:100%;
       background:none; border:none; color:var(--text); cursor:pointer;
-      font-family:'Sora',sans-serif; font-size:12.5px; font-weight:600;
+      font-family:var(--font-body); font-size:12.5px; font-weight:600;
       text-align:left; padding:11px 12px; border-radius:7px; white-space:nowrap;
       -webkit-tap-highlight-color:transparent;
     }
     .mais-item:hover, .mais-item:focus { background:var(--surface3); outline:none; }
     .semana-grupo { margin-bottom:20px; }
     .semana-titulo {
-      font-family:'Sora',sans-serif; font-size:11px; color:var(--text-muted);
+      font-family:var(--font-title); font-size:11px; color:var(--text-muted);
       letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px;
       padding-bottom:6px; border-bottom:1px solid var(--border);
     }
@@ -79,31 +79,31 @@
     .celeb-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; gap:8px; }
     .celeb-chk { flex-shrink:0; width:16px; height:16px; margin-top:2px; accent-color:var(--gold); cursor:pointer; }
     .celeb-header-l { display:flex; gap:8px; align-items:flex-start; }
-    .celeb-data { font-family:'Sora',sans-serif; font-size:13px; color:var(--text); font-weight:600; }
+    .celeb-data { font-family:var(--font-title); font-size:13px; color:var(--text); font-weight:600; }
     .celeb-sub  { font-size:11px; color:var(--text-muted); margin-top:2px; }
     .status-pill {
       display:inline-block; padding:2px 8px; border-radius:10px;
-      font-size:9px; font-family:'Sora',sans-serif; letter-spacing:.5px; border:1px solid; flex-shrink:0;
+      font-size:11px; font-family:var(--font-body); letter-spacing:.5px; border:1px solid; flex-shrink:0;
     }
     .status-pill.completa { background:rgba(30,80,30,.2); color:var(--success-text); border-color:var(--success); }
     .status-pill.parcial  { background:rgba(120,80,0,.2); color:var(--warn-text); border-color:var(--warn); }
     .status-pill.critica  { background:rgba(100,10,10,.3); color:var(--danger-text); border-color:var(--danger); }
     .status-pill.vazia    { background:var(--surface2); color:var(--text-muted); border-color:var(--border); }
     .cobertura-row { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
-    .cobertura-label { color:var(--text-muted); width:72px; flex-shrink:0; font-size:10px; }
+    .cobertura-label { color:var(--text-muted); width:72px; flex-shrink:0; font-size:11px; }
     .cobertura-bar  { flex:1; height:4px; background:var(--surface2); border-radius:2px; overflow:hidden; }
     .cobertura-fill { height:100%; border-radius:2px; }
     .cobertura-fill.ok      { background:var(--success); }
     .cobertura-fill.parcial { background:var(--warn-text); }
     .cobertura-fill.critico { background:var(--danger-text); }
-    .cobertura-num { color:var(--text-muted); font-size:10px; width:32px; text-align:right; }
+    .cobertura-num { color:var(--text-muted); font-size:11px; width:32px; text-align:right; }
     .celeb-actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
     /* Planilha */
     .planilha-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--border-wine); border-radius:4px; }
     .planilha-table { border-collapse:collapse; font-size:12px; white-space:nowrap; width:100%; }
     .planilha-table th, .planilha-table td { padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
     .planilha-table th {
-      font-family:'Sora',sans-serif; font-size:9px; letter-spacing:1px; color:var(--text-muted);
+      font-family:var(--font-body); font-size:11px; letter-spacing:1px; color:var(--text-muted);
       text-transform:uppercase; background:var(--surface); position:sticky; top:0; z-index:2;
       border-bottom:1px solid var(--border-wine);
     }
@@ -128,12 +128,12 @@
     .rodizio-regua-nota { margin-top:4px; opacity:.75; }
     .rodizio-selo {
       display:inline-block; margin-top:3px; padding:1px 6px; border-radius:2px;
-      font-size:9px; letter-spacing:.5px; text-transform:uppercase;
+      font-size:11px; letter-spacing:.5px; text-transform:uppercase;
       background:color-mix(in srgb, var(--gold) 26%, transparent); color:var(--text);
     }
-    .rodizio-motivo { font-size:9.5px; line-height:1.3; color:var(--text-muted); white-space:normal; max-width:150px; }
+    .rodizio-motivo { font-size:11px; line-height:1.3; color:var(--text-muted); white-space:normal; max-width:150px; }
     .rod-painel { background:var(--surface2); border:1px solid var(--border-wine); border-radius:6px; padding:10px 12px; margin:0 0 14px; }
-    .rod-painel h3 { margin:0 0 8px; font-family:'Sora',sans-serif; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--gold-light); }
+    .rod-painel h3 { margin:0 0 8px; font-family:var(--font-title); font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--gold-light); }
     .rod-painel-dica { margin:-4px 0 8px; font-size:11px; line-height:1.4; color:var(--text-muted); }
     .rod-item { display:flex; align-items:center; gap:10px; padding:7px 0; border-top:1px solid var(--border); }
     .rod-item:first-of-type { border-top:0; }
@@ -144,15 +144,15 @@
     .rod-editar { flex:none; display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid var(--border-wine); border-radius:5px; background:var(--surface); color:var(--gold-light); cursor:pointer; }
     .rod-editar:hover, .rod-editar:focus-visible { background:var(--surface2); outline:2px solid var(--gold); outline-offset:1px; }
     @media(max-width:600px) { .rod-editar { width:44px; height:44px; } .rod-item .btn-sm { min-height:44px; } }
-    .rod-item-nome span { font-size:10.5px; color:var(--text-muted); }
+    .rod-item-nome span { font-size:11px; color:var(--text-muted); }
     .rod-item .btn-sm { flex:none; white-space:nowrap; padding:6px 10px; font-size:11px; }
-    .rodizio-susp { display:inline-block; margin-top:3px; padding:1px 6px; border-radius:2px; font-size:9px; letter-spacing:.5px; text-transform:uppercase; background:color-mix(in srgb, var(--red-soft) 28%, transparent); color:var(--text); }
+    .rodizio-susp { display:inline-block; margin-top:3px; padding:1px 6px; border-radius:2px; font-size:11px; letter-spacing:.5px; text-transform:uppercase; background:color-mix(in srgb, var(--red-soft) 28%, transparent); color:var(--text); }
     .rodizio-acoes { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
     .rodizio-acoes .btn-sm { flex:1 1 auto; justify-content:center; white-space:nowrap; }
     .rodizio-contagem { font-size:11px; color:var(--text-muted); margin:10px 0 0; }
     .escala-cell {
       display:inline-block; padding:2px 6px; border-radius:2px;
-      font-size:10px; font-family:'Sora',sans-serif;
+      font-size:11px; font-family:var(--font-body);
     }
     .escala-cell.escalado  { background:rgba(201,168,76,.12); color:var(--gold); }
     .escala-cell.presente  { background:rgba(30,80,30,.2); color:var(--success-text); }
@@ -162,13 +162,13 @@
     .montagem-cols { display:grid; grid-template-columns:1fr; gap:16px; }
     @media(min-width:600px){ .montagem-cols { grid-template-columns:1fr 1fr; } }
     .cat-titulo {
-      font-family:'Sora',sans-serif; font-size:10px; color:var(--gold);
+      font-family:var(--font-title); font-size:11px; color:var(--gold);
       letter-spacing:1px; text-transform:uppercase; padding:10px 0 4px;
       border-bottom:1px solid var(--border-wine); margin-bottom:2px;
     }
     .pos-item { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); }
     .pos-item:last-child { border-bottom:none; }
-    .pos-label { font-family:'Sora',sans-serif; font-size:11px; color:var(--text); flex:1; }
+    .pos-label { font-family:var(--font-body); font-size:11px; color:var(--text); flex:1; }
     .pos-select {
       flex:0 0 230px; padding:6px 8px; min-height:34px;
       background:var(--surface2); border:1px solid var(--border-wine);
@@ -179,8 +179,8 @@
     .mem-row { padding:8px 0; border-bottom:1px solid var(--border); }
     .mem-row:last-child { border-bottom:none; }
     .mem-nome { font-size:12px; color:var(--text); margin-bottom:3px; }
-    .mem-fns  { font-size:10px; color:var(--gold); }
-    .cell-ico { background:transparent; border:none; cursor:pointer; font-size:15px; padding:2px; line-height:1; -webkit-tap-highlight-color:transparent; }
+    .mem-fns  { font-size:11px; color:var(--gold); }
+    .cell-ico { color:var(--gold-light); background:transparent; border:none; cursor:pointer; font-size:15px; padding:2px; line-height:1; -webkit-tap-highlight-color:transparent; }
     /* Celular: modal de montagem cabe na tela — campos de nome iguais, label em cima, fontes menores */
     @media (max-width:599px){
       .montagem-cols { gap:12px; }
@@ -188,7 +188,7 @@
       .pos-item { flex-wrap:wrap; gap:6px; padding:7px 0; }
       .pos-label { flex:1 1 100%; font-size:11px; line-height:1.3; }
       .pos-select { flex:1 1 auto; min-width:0; max-width:none; font-size:16px; min-height:44px; }
-      .cat-titulo { font-size:10px; }
+      .cat-titulo { font-size:11px; }
       /* Coluna de nome congelada media o conteúdo (nome mais longo) em vez de largura fixa —
          no celular isso come quase tudo e não sobra espaço pras colunas seguintes. */
       .planilha-table td.sticky-left, .planilha-table th.sticky-left { max-width:118px; }
@@ -199,7 +199,33 @@
       #view-rodizio .planilha-table tr { border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:10px; background:var(--surface); }
       #view-rodizio .planilha-table td { display:block; position:static !important; max-width:none; padding:3px 0; border:none; text-align:left; }
       #view-rodizio .planilha-table td.sticky-left { padding-bottom:6px; margin-bottom:4px; border-bottom:1px solid var(--border-wine); background:none; }
-      #view-rodizio .planilha-table td[data-label]:not(.sticky-left)::before { content: attr(data-label) ': '; color:var(--text-muted); font-size:9px; text-transform:uppercase; letter-spacing:.5px; }
+      #view-rodizio .planilha-table td[data-label]:not(.sticky-left)::before { content: attr(data-label) ': '; color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:.3px; pointer-events:none; }
+      /* Compacto (21/10/2026): o cartão do rodízio vira nome em cima + números lado a lado e o
+         Suspender na mesma linha — antes cada número ocupava uma linha inteira, centralizado. */
+      #view-rodizio .planilha-table tr { display:flex; flex-wrap:wrap; align-items:center; gap:2px 12px; padding:6px 10px; margin-bottom:6px; }
+      #view-rodizio .planilha-table td.sticky-left { flex:1 1 100%; padding-bottom:4px; margin-bottom:2px; }
+      #view-rodizio .planilha-table td[data-label] { display:inline-flex; align-items:center; gap:3px; width:auto; padding:0; text-align:left !important; white-space:nowrap; }
+      #view-rodizio .planilha-table td:last-child { margin-left:auto; padding:0; }
+    }
+      /* Compacto no celular (21/10/2026) */
+    @media(max-width:639px){
+      .aba-toggle { gap:6px; margin-bottom:10px; }
+      .aba-btn { padding:0 10px; flex:1; }
+      .escala-toolbar .form-select { margin-bottom:6px; }
+      .escala-acoes { gap:6px; }
+      .semana-grupo { margin-bottom:12px; }
+      .semana-titulo { margin-bottom:6px; padding-bottom:4px; }
+      .semana-acoes { gap:6px !important; margin-bottom:8px !important; }
+      .celebracoes-grid { gap:8px; }
+      .celeb-card { padding:10px 12px; }
+      .celeb-header { margin-bottom:6px; }
+      .celeb-actions { margin-top:8px; gap:6px; }
+      .rodizio-regua { padding:7px 10px; margin-bottom:8px; line-height:1.4; }
+      .rod-painel { padding:8px 10px; margin-bottom:10px; }
+      .rodizio-acoes { margin-top:8px; gap:6px; }
+      .pos-item { padding:5px 0; }
+      .mem-row { padding:6px 0; }
+      .planilha-table th, .planilha-table td { padding:6px 8px; }
     }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
@@ -807,7 +833,7 @@ function abrirMontagem(celeb) {
 
   // Coluna posições
   const colPos=document.createElement('div');
-  const t1=document.createElement('div');t1.style.cssText='font-family:Sora,sans-serif;font-size:12px;color:var(--gold);margin-bottom:10px;';t1.textContent='Posições';colPos.appendChild(t1);
+  const t1=document.createElement('div');t1.style.cssText='font-family:var(--font-body);font-size:12px;color:var(--gold);margin-bottom:10px;';t1.textContent='Posições';colPos.appendChild(t1);
   // builder de UMA posição (modelo ou extra) — aninhado p/ usar o estado da celebração
   function criarPosicao(funcao, label, existMembroId, container, isExtra){
     const row=document.createElement('div');row.className='pos-item';
@@ -834,9 +860,9 @@ function abrirMontagem(celeb) {
     const trc=document.createElement('button');trc.type='button';trc.className='mini-del';trc.textContent='🔄';trc.title='Trocar por outra opção';trc.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';
     trc.onclick=()=>trocarPosicao(pe);
     const clr=document.createElement('button');clr.type='button';clr.className='mini-del';clr.textContent='✕';clr.title=isExtra?'Remover este campo extra':'Limpar esta função';clr.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';
-    const dm=document.createElement('div');dm.style.cssText='font-size:10px;margin:-4px 0 4px;padding-left:2px;font-weight:800;color:var(--danger-text);display:none;';
-    const dp=document.createElement('div');dp.style.cssText='font-size:10px;margin:-4px 0 4px;padding-left:2px;font-weight:700;color:var(--danger-text);display:none;';
-    const sp=document.createElement('div');sp.style.cssText='font-size:10px;margin:-4px 0 4px;padding-left:2px;font-weight:600;display:none;';
+    const dm=document.createElement('div');dm.style.cssText='font-size:11px;margin:-4px 0 4px;padding-left:2px;font-weight:800;color:var(--danger-text);display:none;';
+    const dp=document.createElement('div');dp.style.cssText='font-size:11px;margin:-4px 0 4px;padding-left:2px;font-weight:700;color:var(--danger-text);display:none;';
+    const sp=document.createElement('div');sp.style.cssText='font-size:11px;margin:-4px 0 4px;padding-left:2px;font-weight:600;display:none;';
     pe.atualizarAvisos=()=>{
       const mid=sel.value;
       const naOutra=mid&&pendingEdicao.some(p=>p!==pe&&p.sel.value===mid);
@@ -935,7 +961,7 @@ function abrirMontagem(celeb) {
 
   // Coluna membros
   const colMems=document.createElement('div');
-  const t2=document.createElement('div');t2.style.cssText='font-family:Sora,sans-serif;font-size:12px;color:var(--gold);margin-bottom:10px;';t2.textContent='Membros Aptos';colMems.appendChild(t2);
+  const t2=document.createElement('div');t2.style.cssText='font-family:var(--font-body);font-size:12px;color:var(--gold);margin-bottom:10px;';t2.textContent='Membros Aptos';colMems.appendChild(t2);
   const ml=document.createElement('div');ml.className='mems-list';
   membros.forEach(m=>{
     const habs=habMap[m.id]||{};
@@ -1656,7 +1682,7 @@ function renderPlanilha() {
     const d=new Date(c.data+'T00:00:00');
     const th=document.createElement('th');th.style.minWidth='66px';th.style.textAlign='center';
     const l1=document.createElement('div');l1.textContent=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
-    const l2=document.createElement('div');l2.style.cssText='color:var(--text-muted);font-size:8px;';l2.textContent=c.horario+' '+(c.comunidade==='matriz'?'M':'SA');
+    const l2=document.createElement('div');l2.style.cssText='color:var(--text-muted);font-size:11px;';l2.textContent=c.horario+' '+(c.comunidade==='matriz'?'M':'SA');
     th.append(l1,l2);hr.appendChild(th);
   });
   thead.appendChild(hr);table.appendChild(thead);
@@ -1696,7 +1722,7 @@ function renderPlanilha() {
     wrapN.appendChild(bFicha);
     wrapN.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30, { nivelSlug: m.nivel || nivelFromRole(patchRoleFromHabs(habs)), casaSlug: casaSlugDe(m) }));
     const nm=document.createElement('div'); nm.style.cssText='min-width:0;line-height:1.15;';
-    if((m.apelido||'').trim()){ const a=document.createElement('div'); a.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; a.textContent=m.apelido; const n=document.createElement('div'); n.style.cssText='font-size:9.5px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; n.textContent=m.nome; nm.append(a,n); }
+    if((m.apelido||'').trim()){ const a=document.createElement('div'); a.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; a.textContent=m.apelido; const n=document.createElement('div'); n.style.cssText='font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; n.textContent=m.nome; nm.append(a,n); }
     else { nm.style.cssText='font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; nm.textContent=m.nome; }
     wrapN.appendChild(nm);tdN.appendChild(wrapN);tr.appendChild(tdN);
 
@@ -1753,7 +1779,7 @@ function renderPlanilha() {
     // Função máxima
     let fnMax='—';
     for(const fn of['cred_credencia','cred_altar','missal','altar','turibulo','naveta','cruz','vela','sineta','sinao','apoio']){if(['apto','experiente','referencia'].includes(habs[fn])){fnMax=FUNCAO_LABEL[fn];break;}}
-    const tdMx=document.createElement('td');tdMx.style.cssText='font-size:10px;color:var(--gold);white-space:nowrap;';tdMx.textContent=fnMax;tr.appendChild(tdMx);
+    const tdMx=document.createElement('td');tdMx.style.cssText='font-size:11px;color:var(--gold);white-space:nowrap;';tdMx.textContent=fnMax;tr.appendChild(tdMx);
 
     // Colunas das datas
     celebracoes.forEach(c=>{
@@ -2237,7 +2263,7 @@ function pintarRodizio(lista){
     box.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30, { nivelSlug: m.nivel || nivelFromRole(patchRoleFromHabs(habs)), casaSlug: casaSlugDe(m) }));
     const nm=document.createElement('div'); nm.style.cssText='min-width:0;line-height:1.15;';
     const n1=document.createElement('div'); n1.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; n1.textContent=m.apelido||m.nome;
-    const n2=document.createElement('div'); n2.style.cssText='font-size:9.5px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+    const n2=document.createElement('div'); n2.style.cssText='font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
     n2.textContent=nivelInfo(m.nivel||'aspirante').label+' · '+_freqComLabel(m.comunidade);
     nm.append(n1,n2);
     const motivo=RodizioCore.rotuloDoMotivo(l.motivo);

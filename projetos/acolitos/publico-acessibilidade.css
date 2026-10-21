@@ -1,4 +1,9 @@
 /* Ajustes comuns das portas públicas: formulário legível e controles acessíveis. */
+/* As portas públicas não carregam shared.css: os papéis das fontes moram aqui também. */
+:root { --font-title: 'Sora', sans-serif; --font-body: 'Plus Jakarta Sans', 'Sora', sans-serif; }
+/* Ícones de traço no lugar dos emojis (mesmo desenho do app: 24×24, linha 1,9). */
+.ico { width: 1.15em; height: 1.15em; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9;
+  stroke-linecap: round; stroke-linejoin: round; vertical-align: -.2em; }
 body { min-height: 100dvh; }
 button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
   outline: 2px solid var(--gold-light, #ffd97a); outline-offset: 3px;

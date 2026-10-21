@@ -5,8 +5,8 @@
     .tc-aba-btn.tc-ativa { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,.08); }
     .tc-st-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:14px; margin-bottom:18px; }
     .tc-st-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; min-width:0; }
-    .tc-st-card h3 { font-family:Sora,sans-serif; font-size:14px; margin:0 0 10px; color:var(--gold-light); }
-    .tc-st-big { font-family:Sora,sans-serif; font-size:18px; font-weight:700; margin:2px 0 6px; overflow-wrap:anywhere; }
+    .tc-st-card h3 { font-family:var(--font-title); font-size:14px; margin:0 0 10px; color:var(--gold-light); }
+    .tc-st-big { font-family:var(--font-title); font-size:18px; font-weight:700; margin:2px 0 6px; overflow-wrap:anywhere; }
     .tc-st-muted { color:var(--text-muted); font-size:13px; line-height:1.5; }
     .tc-st-ok { color:var(--success-text,#7bd88f); } .tc-st-ruim { color:var(--danger-text,#ff9c9c); }
     .tc-st-acoes { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
@@ -26,7 +26,7 @@
     .tc-chip.tc-enviado { color:var(--success-text,#7bd88f); border-color:rgba(76,175,80,.5); }
     .tc-chip.tc-falhou, .tc-chip.tc-sem_numero { color:var(--danger-text,#ff9c9c); border-color:rgba(255,120,120,.45); }
     .tc-chip.tc-pendente, .tc-chip.tc-aguardando_arte, .tc-chip.tc-enviando { color:var(--gold-light); border-color:var(--gold-dim); }
-    .tc-secao { font-family:Sora,sans-serif; font-size:15px; font-weight:700; margin:22px 0 10px; }
+    .tc-secao { font-family:var(--font-body); font-size:15px; font-weight:700; margin:22px 0 10px; }
     .tc-grupo-sel { min-height:44px; font-size:16px; padding:6px 10px; border-radius:8px; border:1px solid var(--border);
       background:var(--surface2); color:var(--text); max-width:100%; }
     .tc-form-av label { display:block; font-weight:700; font-size:13px; margin:14px 0 6px; }

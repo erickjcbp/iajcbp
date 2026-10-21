@@ -15,7 +15,7 @@
   <style>
     .casa-box { background:linear-gradient(165deg, color-mix(in srgb, var(--c) 18%, var(--surface)), var(--surface)); border:1px solid var(--c); border-radius:14px; padding:16px; margin-bottom:16px; }
     .casa-hd { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
-    .casa-hd .nm { font-family:'Sora',sans-serif; font-weight:800; font-size:18px; letter-spacing:1.5px; color:#fff; text-transform:uppercase; }
+    .casa-hd .nm { font-family:var(--font-body); font-weight:800; font-size:18px; letter-spacing:1.5px; color:#fff; text-transform:uppercase; }
     .casa-hd .tg { font-size:11px; color:var(--gold-light); font-style:italic; }
     .casa-mem { display:flex; align-items:center; gap:8px; padding:6px 4px; border-bottom:1px solid rgba(255,255,255,.08); font-size:13px; }
     .casa-mem .nm2 { flex:1; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -26,11 +26,24 @@
     .pick-row:hover { background:var(--surface2); }
     .consilium-hd { display:flex; align-items:center; gap:14px; background:linear-gradient(165deg, color-mix(in srgb, var(--c) 28%, var(--surface)), var(--surface)); border:1px solid var(--c); border-radius:14px; padding:16px; margin-bottom:8px; }
     .org-wrap { display:flex; flex-direction:column; align-items:center; }
-    .org-top { background:var(--c); color:#fff; font-family:'Sora',sans-serif; font-weight:800; font-size:12px; letter-spacing:1px; text-transform:uppercase; padding:8px 18px; border-radius:8px; }
+    .org-top { background:var(--c); color:#fff; font-family:var(--font-body); font-weight:800; font-size:12px; letter-spacing:1px; text-transform:uppercase; padding:8px 18px; border-radius:8px; }
     .org-conn { width:2px; height:16px; background:var(--gold-dim); }
     .org-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; width:100%; }
     .org-card { background:var(--surface); border:1px solid var(--border); border-top:3px solid var(--c); border-radius:10px; padding:10px; }
-    .org-st { font-family:'Sora',sans-serif; font-weight:700; font-size:12px; color:var(--gold-light); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
+    .org-st { font-family:var(--font-body); font-weight:700; font-size:12px; color:var(--gold-light); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
+      /* Compacto no celular (21/10/2026) */
+    @media(max-width:639px){
+      .casa-box { padding:10px 12px !important; margin-bottom:8px !important; border-radius:12px; }
+      .casa-hd { margin-bottom:6px; gap:10px; }
+      .casa-hd .nm { font-size:16px; letter-spacing:1px; }
+      .casa-mem { padding:4px 4px; }
+      .casa-actions { margin-top:8px; gap:6px; }
+      .consilium-hd { padding:10px 12px !important; gap:10px; }
+      .org-conn { height:10px; }
+      .org-grid { gap:6px; }
+      .org-card { padding:8px; }
+      .pick-row { padding:6px 4px; }
+    }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -82,7 +95,7 @@ function render() {
   const consilium = casas.find(c => c.tipo === 'equipe');
   if (consilium) renderConsilium(main, consilium);
 
-  const subt = document.createElement('div'); subt.style.cssText = 'font-family:Sora,sans-serif;font-size:12px;color:var(--gold-light);letter-spacing:1px;text-transform:uppercase;margin:22px 0 10px;'; subt.textContent = 'Casas dos membros'; main.appendChild(subt);
+  const subt = document.createElement('div'); subt.style.cssText = 'font-family:var(--font-body);font-size:12px;color:var(--gold-light);letter-spacing:1px;text-transform:uppercase;margin:22px 0 10px;'; subt.textContent = 'Casas dos membros'; main.appendChild(subt);
 
   casas.filter(c => c.tipo !== 'equipe').forEach(casa => {
     const doCasa = membros.filter(m => m.casa_id === casa.id && m.serve!==false);
@@ -121,7 +134,7 @@ function renderConsilium(main, casa) {
   const hd = document.createElement('div'); hd.className = 'consilium-hd'; hd.style.setProperty('--c', cor);
   hd.appendChild(brasaoEl(casa.slug, 64));
   const info = document.createElement('div'); info.style.flex = '1'; info.style.minWidth = '0';
-  const nm = document.createElement('div'); nm.style.cssText = 'font-family:Sora,sans-serif;font-weight:800;font-size:16px;letter-spacing:1px;color:#fff;text-transform:uppercase;'; nm.textContent = casa.nome;
+  const nm = document.createElement('div'); nm.style.cssText = 'font-family:var(--font-title);font-weight:800;font-size:16px;letter-spacing:1px;color:#fff;text-transform:uppercase;'; nm.textContent = casa.nome;
   const lema = document.createElement('div'); lema.style.cssText = 'font-family:Lora,serif;font-style:italic;color:var(--gold-light);font-size:13px;'; lema.textContent = '"' + (casa.lema||'') + '" — ' + (casa.lema_pt||'');
   const mis = document.createElement('div'); mis.style.cssText = 'font-size:12px;color:var(--text-muted);margin-top:3px;'; mis.textContent = 'Missão: ' + (casa.tagline||'');
   info.append(nm, lema, mis);

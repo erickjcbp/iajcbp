@@ -70,7 +70,7 @@ async function provaRodizioMostraAsDuasContasSeparadas(provas) {
         esc('m4', 'presente', 0), esc('m4', 'presente', 0),   // hoje, duas vezes: cumpriu a regra do mês
       ] },
     },
-    passos: [{ chamar: 'setAba', args: ['rodizio'] }, { clicar: '➕ Ver detalhes' }],
+    passos: [{ chamar: 'setAba', args: ['rodizio'] }, { clicar: 'Ver detalhes' }],
     // Ler a TABELA célula a célula, não o texto da página: um "2 sem" solto passaria mesmo
     // se estivesse na linha errada, na coluna errada ou fora da tabela.
     avaliar: `

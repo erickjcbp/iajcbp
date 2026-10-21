@@ -72,16 +72,27 @@ const avaliar=`
  const outside=els.filter(e=>{const r=e.getBoundingClientRect();return (r.right>innerWidth+1||r.left< -1)&&!safe(e)}).map(e=>nome(e));
  const modals=[...document.querySelectorAll('.modal-overlay.open .modal')].filter(visible).map(e=>({width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height}));
  const main=document.querySelector('.main');
- return {overflow:document.documentElement.scrollWidth>innerWidth+1,small,fonts,outside,modals,mainWidth:main?.getBoundingClientRect().width, title:document.title};
+ // Emoji usado como ÍCONE (botão, rótulo, título, aba ou um emoji sozinho num span) — o de
+ // dentro de texto corrido não conta: ele é conteúdo, não estrutura.
+ const EP=/\\p{Extended_Pictographic}/gu, IGN=/[©®™]/;
+ const ESTRUTURA='button,a,label,h1,h2,h3,h4,h5,h6,th,summary,option,.badge,[role=tab],.tab,.kpi-label,.section-card-title,.modal-title,.page-title,.nav-item,.chip';
+ const emojis=[];const tw=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+ while(tw.nextNode()){const n=tw.currentNode,t=n.textContent,m=(t.match(EP)||[]).filter(c=>!IGN.test(c));if(!m.length)continue;const pe=n.parentElement;if(!pe||pe.closest('#splash,script,style')||!visible(pe))continue;const resto=t.replace(EP,'').replace(/[\\uFE0F\\u200D\\s]/g,'');if(pe.closest(ESTRUTURA)||resto.length<=3)emojis.push(t.trim().slice(0,30));}
+ // Cartões da mesma fileira com alturas diferentes (só filhos com cara de cartão: borda ou fundo).
+ const temCara=k=>{const c=getComputedStyle(k);return parseFloat(c.borderTopWidth)>0||c.backgroundImage!=='none'||!/rgba\\(0, 0, 0, 0\\)|transparent/.test(c.backgroundColor)};
+ const desiguais=[];for(const g of document.querySelectorAll('body *')){const c=getComputedStyle(g);if(!/grid/.test(c.display)||!visible(g)||g.closest('.modal-overlay:not(.open)'))continue;const kids=[...g.children].filter(k=>visible(k)&&temCara(k));if(kids.length<2)continue;const rows={};kids.forEach(k=>{const r=k.getBoundingClientRect();(rows[Math.round(r.top)]=rows[Math.round(r.top)]||[]).push(r.height)});if(Object.values(rows).some(h=>h.length>1&&Math.max(...h)-Math.min(...h)>2))desiguais.push((g.id?'#'+g.id:g.tagName.toLowerCase())+(g.classList.length?'.'+[...g.classList].join('.'):''));}
+ // Modal aberto no celular: as ações precisam ficar coladas no rodapé do diálogo.
+ const modalAcoes=[...document.querySelectorAll('.modal-overlay.open .modal')].filter(visible).map(md=>{const r=md.getBoundingClientRect();const a=[...md.querySelectorAll('.modal-actions')].filter(visible).pop();const ar=a&&a.getBoundingClientRect();const fim=Math.max(0,...[...md.children].filter(c=>visible(c)&&!c.matches('.modal-actions,.filtro-ver,.modal-rodape')&&getComputedStyle(c).position!=='sticky').map(c=>c.getBoundingClientRect().bottom-r.top+md.scrollTop));return {h:Math.round(r.height),sh:md.scrollHeight,conteudo:Math.round(fim),acoesFundo:ar?Math.round(r.bottom-ar.bottom):null,acoesVisiveis:ar?ar.bottom<=innerHeight+1&&ar.top>=0:null}});
+ return {overflow:document.documentElement.scrollWidth>innerWidth+1,small,fonts,outside,modals,modalAcoes,altura:document.documentElement.scrollHeight,alturaConteudo:Math.round(main?main.getBoundingClientRect().height:document.body.scrollHeight),emojis,desiguais,mainWidth:main?.getBoundingClientRect().width, title:document.title};
 `;
 const filtro=process.argv[2];const selected=filtro==='--pages'?scenarios.filter(s=>!s.steps.length):filtro==='--states'?scenarios.filter(s=>s.steps.length||s.theme):scenarios;
 const targets=process.env.PREFIXO_VISUAL?selected.filter(s=>s.id.startsWith(process.env.PREFIXO_VISUAL)):process.env.CENARIOS_VISUAL?selected.filter(s=>process.env.CENARIOS_VISUAL.split(',').includes(s.id)):selected;
 const provas=await iniciarProvas();const resultados=[];
 try{
  for(const s of targets)for(const [width,height] of (process.env.LARGURA_VISUAL?[[Number(process.env.LARGURA_VISUAL),844]]:[[390,844],[768,1024],[1366,900],[2560,1440]])){
-  const result=await provas.abrir(s.page+'.html',{papel:s.role||PAPEIS.admin,fontesReais:true,sessao:{user:{id:'u1',email:'maria@teste'}},apis:{'/api/acolito-admin':{usuario:'maria.clara'}},tabelas,rpcs:{acolitos_roster_substituicao:{data:[membro]},acolitos_membro_card:{data:{...membro,xp_total:35,funcoes:[],conquistas:[]}},acolitos_missoes_board:{data:{xp_total:35,proximo_nivel:'acolito_aspirante',capitulos:[],bonus:[]}}},largura:width,altura:height,passos:s.steps,avaliar:(s.theme?"document.documentElement.dataset.theme='light';":'')+avaliar,foto:{caminho:destino+'/'+s.id+'-'+width+'.png',viewport:s.page==='config'}});
+  const result=await provas.abrir(s.page+'.html',{papel:s.role||PAPEIS.admin,fontesReais:true,sessao:{user:{id:'u1',email:'maria@teste'}},apis:{'/api/acolito-admin':{usuario:'maria.clara'}},tabelas,rpcs:{acolitos_roster_substituicao:{data:[membro]},acolitos_membro_card:{data:{...membro,xp_total:35,funcoes:[],conquistas:[]}},acolitos_missoes_board:{data:{xp_total:35,proximo_nivel:'acolito_aspirante',capitulos:[],bonus:[]}}},largura:width,altura:height,passos:s.steps,avaliar:(s.theme?"document.documentElement.dataset.theme='light';":'')+avaliar,foto:[{caminho:destino+'/'+s.id+'-'+width+'.png',viewport:true},{caminho:destino+'/'+s.id+'-'+width+'-inteira.png'}]});
   const row={id:s.id,width,...result.avaliado,errors:result.erros,stepErrors:result.passosFalhos,evalError:result.erroAvaliar};resultados.push(row);
-  console.log(s.id,width,JSON.stringify({overflow:row.overflow,small:row.small?.length,fonts:row.fonts?.length,errors:[...row.errors,...row.stepErrors,row.evalError].filter(Boolean)}));
+  console.log(s.id,width,JSON.stringify({overflow:row.overflow,small:row.small?.length,fonts:row.fonts?.length,altura:row.altura,conteudo:row.alturaConteudo,emojis:row.emojis?.length,desiguais:row.desiguais?.length,errors:[...row.errors,...row.stepErrors,row.evalError].filter(Boolean)}));
   fs.writeFileSync(destino+'/metricas'+(process.env.PREFIXO_VISUAL?'-prefixo-'+process.env.PREFIXO_VISUAL:process.env.CENARIOS_VISUAL?'-extras'+(process.env.LARGURA_VISUAL||''):(filtro||''))+'.json',JSON.stringify(resultados,null,2));
  }
 }finally{await provas.encerrar();}

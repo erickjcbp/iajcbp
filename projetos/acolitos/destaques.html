@@ -14,18 +14,25 @@
   <script>window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__bip=e;});</script>
   <style>
     .dest-tabs { display:flex; gap:6px; margin-bottom:14px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    .dest-tab { flex:1; min-width:max-content; padding:9px 12px; background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); border-radius:18px; font-family:'Sora',sans-serif; font-size:11px; font-weight:700; white-space:nowrap; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .dest-tab { flex:1; min-width:max-content; padding:9px 12px; background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); border-radius:18px; font-family:var(--font-body); font-size:11px; font-weight:700; white-space:nowrap; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .dest-tab.active { border-color:var(--gold); color:var(--gold); background:rgba(232,185,74,.1); }
-    .dest-head { font-family:'Sora',sans-serif; font-size:13px; color:var(--gold-light); margin-bottom:4px; }
+    .dest-head { font-family:var(--font-title); font-size:13px; color:var(--gold-light); margin-bottom:4px; }
     .dest-desc { font-size:12px; color:var(--text-muted); margin-bottom:14px; }
     .rank-row { display:flex; align-items:center; gap:12px; padding:9px 8px; border-radius:10px; margin-bottom:6px; background:var(--surface); border:1px solid var(--border); }
     .rank-row.eu { border-color:var(--gold); background:rgba(232,185,74,.07); }
-    .rank-pos { width:30px; text-align:center; font-family:'Sora',sans-serif; font-weight:800; font-size:15px; color:var(--text-muted); flex:none; }
+    .rank-pos { width:30px; text-align:center; font-family:var(--font-title); font-weight:800; font-size:15px; color:var(--text-muted); flex:none; }
     .rank-info { flex:1; min-width:0; }
     .rank-nome { font-weight:700; font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .rank-nivel { font-size:11px; color:var(--text-muted); }
-    .rank-val { font-family:'Sora',sans-serif; font-weight:800; font-size:15px; color:var(--gold); flex:none; text-align:right; }
-    .rank-val small { display:block; font-size:9px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+    .rank-val { font-family:var(--font-title); font-weight:800; font-size:15px; color:var(--gold); flex:none; text-align:right; }
+    .rank-val small { display:block; font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+      /* Compacto no celular (21/10/2026) */
+    @media(max-width:639px){
+      .dest-tabs { margin-bottom:8px; }
+      .dest-tab { padding:6px 10px; }
+      .dest-desc { margin-bottom:8px; }
+      .rank-row { padding:6px 8px; margin-bottom:4px; gap:10px; }
+    }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -108,7 +115,7 @@ async function renderTemporada(corpo) {
   if (!(data.ligas||[]).length) { const e = document.createElement('span'); e.className = 'empty'; e.textContent = 'Ninguém pontuou ainda. Bora servir! 🕯️'; corpo.appendChild(e); return; }
   acEstrelasLote((data.ligas||[]).flatMap(lg => (lg.membros||[]).map(m => m.id)));
   (data.ligas||[]).forEach(lg => {
-    const lh = document.createElement('div'); lh.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:12px;color:var(--gold);margin:16px 0 6px;'; lh.textContent = LIGA_LABEL[lg.liga] || lg.liga; corpo.appendChild(lh);
+    const lh = document.createElement('div'); lh.style.cssText = 'font-family:var(--font-body);font-weight:700;font-size:12px;color:var(--gold);margin:16px 0 6px;'; lh.textContent = LIGA_LABEL[lg.liga] || lg.liga; corpo.appendChild(lh);
     let dist = 0, last = null;
     (lg.membros||[]).forEach(m => { const v = Number(m.xp); if (v!==last) { dist++; last = v; } corpo.appendChild(rankRow(m, eu, v, 'XP', dist)); });
   });
@@ -123,7 +130,7 @@ async function renderCampeoes(corpo) {
   acEstrelasLote(data.map(c => c.membro_id));
   const grupos = {}; data.forEach(c => { (grupos[c.temporada] = grupos[c.temporada] || []).push(c); });
   Object.keys(grupos).forEach(temp => {
-    const th = document.createElement('div'); th.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:12px;color:var(--gold);margin:16px 0 6px;'; th.textContent = '🏆 ' + temp; corpo.appendChild(th);
+    const th = document.createElement('div'); th.style.cssText = 'font-family:var(--font-body);font-weight:700;font-size:12px;color:var(--gold);margin:16px 0 6px;'; th.textContent = '🏆 ' + temp; corpo.appendChild(th);
     grupos[temp].forEach(c => corpo.appendChild(rankRow({ id:c.membro_id, nome:c.membro, foto_url:c.foto_url, nivel:c.nivel, casa_id:c.casa_id, subnivel:(LIGA_LABEL[c.liga]||c.liga) }, null, c.xp, 'XP', 1, '🏅')));
   });
 }
@@ -188,7 +195,7 @@ async function abrirCard(id) {
   const head = document.createElement('div'); head.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:14px;';
   head.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 84, { nivelSlug: m.nivel||'aspirante', casaSlug: casaSlugDe(m) }));
   const nmRow = document.createElement('div'); nmRow.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:6px;max-width:100%;';
-  const nm = document.createElement('div'); nm.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:15px;color:var(--text);text-align:center;min-width:0;'; nm.textContent = m.nome_completo || m.nome;
+  const nm = document.createElement('div'); nm.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:15px;color:var(--text);text-align:center;min-width:0;'; nm.textContent = m.nome_completo || m.nome;
   const stTag = estrelaTagAsync(id); stTag.style.fontSize = '14px';
   nmRow.append(nm, stTag);
   const nv = document.createElement('div'); nv.style.cssText = 'font-size:12px;color:var(--gold);font-style:italic;'; nv.textContent = nivelInfo(m.nivel||'aspirante').label + (nivelInfo(m.nivel||'aspirante').titulo ? ' · 🏆 ' + nivelInfo(m.nivel||'aspirante').titulo : '');
@@ -198,8 +205,8 @@ async function abrirCard(id) {
   const grid = document.createElement('div'); grid.style.cssText = 'display:flex;gap:8px;margin-bottom:14px;';
   [['Serviu', m.total_servido, 'vezes'], ['Funções', m.funcoes, 'que domina'], ['Comunidade', m.comunidade==='matriz'?'Matriz':'Sto. Antônio', '']].forEach(([l,v,s]) => {
     const c = document.createElement('div'); c.style.cssText = 'flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 6px;text-align:center;';
-    const vv = document.createElement('div'); vv.style.cssText = 'font-family:Sora,sans-serif;font-weight:800;font-size:15px;color:var(--gold);'; vv.textContent = v;
-    const ll = document.createElement('div'); ll.style.cssText = 'font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;'; ll.textContent = l + (s?' · '+s:'');
+    const vv = document.createElement('div'); vv.style.cssText = 'font-family:var(--font-title);font-weight:800;font-size:15px;color:var(--gold);'; vv.textContent = v;
+    const ll = document.createElement('div'); ll.style.cssText = 'font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;'; ll.textContent = l + (s?' · '+s:'');
     c.append(vv, ll); grid.appendChild(c);
   });
   modal.appendChild(grid);

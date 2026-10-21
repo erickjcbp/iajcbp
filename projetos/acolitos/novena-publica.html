@@ -26,7 +26,7 @@
     /* Header com brasão */
     .top{ text-align:center; padding:26px 0 18px; }
     .top .crest{ width:78px; height:78px; object-fit:contain; filter:drop-shadow(0 4px 14px rgba(0,0,0,.5)); }
-    h1{ font-family:'Sora',sans-serif; font-weight:800; font-size:21px; margin:12px 0 4px; letter-spacing:.2px; }
+    h1{ font-family:var(--font-title); font-weight:800; font-size:21px; margin:12px 0 4px; letter-spacing:.2px; }
     .sub{ font-size:13px; color:var(--muted); margin:0 auto; max-width:400px; line-height:1.5; }
 
     /* Card */
@@ -34,7 +34,7 @@
       border:1px solid var(--border-soft); border-radius:18px; padding:18px 16px 20px;
       box-shadow:0 18px 50px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,217,122,.06); }
 
-    label{ display:block; font-family:'Sora',sans-serif; font-size:12.5px; color:var(--gold-light);
+    label{ display:block; font-family:var(--font-body); font-size:12.5px; color:var(--gold-light);
       margin:18px 0 7px; font-weight:700; letter-spacing:.3px; }
     label:first-of-type{ margin-top:2px; }
     label .req{ color:var(--danger); font-weight:800; }
@@ -56,7 +56,7 @@
 
     /* Afordância de toque nos resultados */
     .results .rhint{ font-size:11px; color:var(--gold-light); padding:8px 13px 6px; background:#2a1520;
-      border-bottom:1px solid var(--border-soft); font-family:'Sora',sans-serif; letter-spacing:.2px; }
+      border-bottom:1px solid var(--border-soft); font-family:var(--font-body); letter-spacing:.2px; }
     .results .ini{ width:26px; height:26px; border-radius:50%; flex:none; display:flex; align-items:center;
       justify-content:center; font-size:12px; font-weight:700; color:#2a1500;
       background:linear-gradient(160deg,var(--gold-light),var(--gold)); }
@@ -111,18 +111,18 @@
     .cel-mes{ display:flex; align-items:center; justify-content:space-between; gap:10px;
       padding:10px 13px; background:#2a1520; border-bottom:1px solid var(--border-soft);
       position:sticky; top:0; z-index:2; }
-    .cel-mes .mtit{ font-family:'Sora',sans-serif; font-weight:800; font-size:13px; color:var(--gold-light); letter-spacing:.3px; }
+    .cel-mes .mtit{ font-family:var(--font-title); font-weight:800; font-size:13px; color:var(--gold-light); letter-spacing:.3px; }
     .cel-sem{ display:flex; align-items:center; justify-content:space-between; gap:10px;
       padding:7px 13px 7px 16px; background:#241019; border-bottom:1px solid var(--border-soft); }
     .cel-sem .stit{ font-size:11.5px; color:var(--muted); font-weight:600; }
     .mark-btn{ flex:none; border:1px solid var(--gold-dim); background:#3a1c24; color:var(--gold-light);
-      border-radius:20px; padding:5px 11px; font-size:11.5px; font-weight:700; cursor:pointer; font-family:'Sora',sans-serif; }
+      border-radius:20px; padding:5px 11px; font-size:11.5px; font-weight:700; cursor:pointer; font-family:var(--font-body); }
     .mark-btn:active{ background:#4a2430; }
     .mark-btn.on{ background:linear-gradient(160deg,var(--gold-light),var(--gold)); color:#2a1500; border-color:var(--gold-light); }
 
     .btn{ width:100%; margin-top:22px; padding:14px; border-radius:13px; border:none;
       background:linear-gradient(160deg,var(--gold-light),var(--gold)); color:#2a1500;
-      font-family:'Sora',sans-serif; font-weight:800; font-size:15.5px; cursor:pointer;
+      font-family:var(--font-body); font-weight:800; font-size:15.5px; cursor:pointer;
       box-shadow:0 8px 22px rgba(138,106,36,.35); }
     .btn:disabled{ opacity:.55; cursor:default; box-shadow:none; }
 
@@ -171,13 +171,32 @@
     .ov.show{ display:flex; }
     .dlg{ width:100%; max-width:400px; background:linear-gradient(180deg,var(--surface),#241019); border:1px solid var(--gold-dim);
       border-radius:18px; padding:20px 16px; box-shadow:0 20px 60px rgba(0,0,0,.6); }
-    .dlg h2{ font-family:'Sora',sans-serif; font-size:15px; margin:0 0 4px; }
+    .dlg h2{ font-family:var(--font-title); font-size:15px; margin:0 0 4px; }
     .dlg .lista{ margin:12px 0 0; max-width:none; }
     .dlg .row{ display:flex; gap:10px; margin-top:18px; }
-    .dlg .row button{ flex:1; padding:13px; border-radius:12px; font-family:'Sora',sans-serif; font-weight:800; font-size:14px; cursor:pointer; }
+    .dlg .row button{ flex:1; padding:13px; border-radius:12px; font-family:var(--font-body); font-weight:800; font-size:14px; cursor:pointer; }
     .dlg .voltar{ background:#3a1c24; color:var(--text); border:1px solid var(--border); }
     .dlg .ir{ border:none; color:#2a1500; background:linear-gradient(160deg,var(--gold-light),var(--gold)); }
     .dlg button:disabled{ opacity:.55; }
+      .ok-screen .big .ico { width:1em; height:1em; color:var(--ok); }
+    /* Compacto no celular (21/10/2026): brasão menor, rótulos e respiros enxutos. */
+    @media (max-width:639px){
+      body{ padding:0 12px 20px; }
+      .top{ padding:12px 0 10px; }
+      .top .crest{ width:54px; height:54px; }
+      h1{ font-size:19px; margin:6px 0 2px; }
+      .sub{ font-size:12.5px; line-height:1.4; }
+      .card{ padding:12px 12px 14px; border-radius:14px; }
+      label{ margin:12px 0 5px; font-size:12px; }
+      .help{ margin:-3px 0 5px; }
+      .point{ padding:8px 10px; line-height:1.4; }
+      .cel{ padding:9px 12px; }
+      .cel-mes{ padding:6px 12px; }
+      .cel-sem{ padding:4px 12px 4px 14px; }
+      .btn{ margin-top:14px; padding:12px; }
+      .footer{ margin-top:12px; }
+      .ok-screen{ padding:24px 12px; }
+    }
   </style>
   <link rel="stylesheet" href="publico-acessibilidade.css">
 </head>
@@ -212,7 +231,7 @@
 
     <div id="ok-screen" class="ok-screen" style="display:none;">
       <img class="crest" src="../../midia/logos/brasao-pastoral.png" alt="" onerror="this.style.display='none'">
-      <div class="big">✅</div>
+      <div class="big"><svg class="ico" viewBox="0 0 24 24" role="img" aria-label="Enviado"><title>Enviado</title><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14 M22 4L12 14.01l-3-3"/></svg></div>
       <h1>Você está na escala!</h1>
       <p class="sub" id="ok-txt"></p>
       <div id="ok-lista" class="lista"></div>
@@ -230,6 +249,10 @@
 
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js" onerror="window.__sbLoadFail=true"></script>
   <script>
+// Ícone de "marcado" (SVG fixo do app; nunca dado de fora).
+const ICO_CHECK='<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
+</script>
+<script>
     const SUPABASE_URL='https://fttjgsotuosjfrasttds.supabase.co';
     const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGpnc290dW9zamZyYXN0dGRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MzU3NjUsImV4cCI6MjA5NTExMTc2NX0.BvofcR2cIXP7Bc3r2V0VOgc-JXPefX7JGGwtzv0d_eA';
     const $ = id => document.getElementById(id);
@@ -331,7 +354,7 @@
         wrap.appendChild(row);
         const fns = c.funcoes||[];
         if(c.minha_funcao){
-          row.classList.add('mine'); row.querySelector('.box').textContent='✓';
+          row.classList.add('mine'); row.querySelector('.box').innerHTML=ICO_CHECK;
           const t=document.createElement('span'); t.className='tag ok'; t.textContent='Você: '+(FUNCOES[c.minha_funcao]||c.minha_funcao); row.appendChild(t);
           const alt=document.createElement('button'); alt.type='button'; alt.className='alt'; alt.textContent='Alterar'; row.appendChild(alt);
           const pn=document.createElement('div'); pn.className='fns alt-fns';
@@ -363,15 +386,15 @@
           wrap.appendChild(box);
           row.onclick=()=>{
             if(selCels.has(c.id)){ selCels.delete(c.id); wrap.classList.remove('on'); row.classList.remove('on'); row.querySelector('.box').textContent=''; box.querySelectorAll('.fn').forEach(x=>x.classList.remove('sel')); }
-            else { selCels.set(c.id,fns[0].funcao); wrap.classList.add('on'); row.classList.add('on'); row.querySelector('.box').textContent='✓'; box.querySelector('.fn').classList.add('sel'); }
-            const n=selCels.size, ja=missas.filter(x=>x.minha_funcao).length; atualizaBotao(); $('cels-meta').innerHTML = n ? '<b>'+n+'</b> missa(s) marcada(s)' : (ja ? '✓ Você já está em <b>'+ja+'</b> '+(ja===1?'missa':'missas')+'. Toque nas outras para entrar.' : '');
+            else { selCels.set(c.id,fns[0].funcao); wrap.classList.add('on'); row.classList.add('on'); row.querySelector('.box').innerHTML=ICO_CHECK; box.querySelector('.fn').classList.add('sel'); }
+            const n=selCels.size, ja=missas.filter(x=>x.minha_funcao).length; atualizaBotao(); $('cels-meta').innerHTML = n ? '<b>'+n+'</b> missa(s) marcada(s)' : (ja ? ICO_CHECK+' Você já está em <b>'+ja+'</b> '+(ja===1?'missa':'missas')+'. Toque nas outras para entrar.' : '');
           };
         }
         $('cels').appendChild(wrap);
       });
       atualizaBotao();
       const ja=missas.filter(c=>c.minha_funcao).length;
-      $('cels-meta').innerHTML = ja ? '✓ Você já está em <b>'+ja+'</b> '+(ja===1?'missa':'missas')+'. Toque nas outras para entrar.' : '';
+      $('cels-meta').innerHTML = ja ? ICO_CHECK+' Você já está em <b>'+ja+'</b> '+(ja===1?'missa':'missas')+'. Toque nas outras para entrar.' : '';
     }
 
     // ── ALTERAR / SAIR (missa em que a pessoa já está) ──
@@ -390,7 +413,7 @@
 
     function atualizaBotao(){
       const ja=missas.filter(c=>c.minha_funcao).length;
-      $('enviar').textContent = (!selCels.size && ja) ? 'Você já está na escala ✓' : 'Confirmar minha escala';
+      if (!selCels.size && ja) $('enviar').innerHTML = 'Você já está na escala '+ICO_CHECK; else $('enviar').textContent = 'Confirmar minha escala';
     }
 
     // ── ENVIO ──

@@ -17,31 +17,37 @@
     .view-btn {
       padding: 8px 18px; min-height: 40px; background: var(--surface2);
       border: 1px solid var(--border); color: var(--text-muted); border-radius: 2px;
-      cursor: pointer; font-family: 'Sora', sans-serif; font-size: 11px; letter-spacing: 1px;
+      cursor: pointer; font-family:var(--font-body); font-size: 11px; letter-spacing: 1px;
       text-transform: uppercase; transition: all .2s; -webkit-tap-highlight-color: transparent;
     }
     .view-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,.08); }
     .list-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 480px; }
     .list-table th {
-      text-align: left; padding: 9px 12px; font-family: 'Sora', sans-serif;
-      font-size: 10px; letter-spacing: 1.5px; color: var(--text-muted);
+      text-align: left; padding: 9px 12px; font-family:var(--font-body);
+      font-size:11px; letter-spacing: 1.5px; color: var(--text-muted);
       border-bottom: 1px solid var(--border-wine); white-space: nowrap; text-transform: uppercase;
     }
     .list-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
     .days-pill {
       display: inline-block; padding: 2px 8px; border-radius: 10px;
-      font-size: 10px; font-family: 'Sora', sans-serif; border: 1px solid;
+      font-size:11px; font-family:var(--font-body); border: 1px solid;
     }
     .days-pill.ok   { background: rgba(30,80,30,.2); color: var(--success-text); border-color: var(--success); }
     .days-pill.warn { background: rgba(120,60,0,.2); color: var(--warn-text); border-color: var(--warn); }
     .etapa-badge {
       display: inline-block; padding: 2px 8px; border-radius: 2px;
-      font-size: 10px; font-family: 'Sora', sans-serif; letter-spacing: .5px;
+      font-size:11px; font-family:var(--font-body); letter-spacing: .5px;
       background: rgba(201,168,76,.1); color: var(--gold); border: 1px solid var(--gold-dim);
     }
     .crm-wa { display:inline-block; margin-top:8px; padding:5px 10px; background:rgba(37,211,102,.14); border:1px solid #25d366; color:#25d366; border-radius:14px; font-size:11px; font-weight:700; text-decoration:none; -webkit-tap-highlight-color:transparent; }
     .crm-wa:active { background:rgba(37,211,102,.25); }
     .crm-wa.sm { margin-top:0; padding:4px 8px; font-size:14px; line-height:1; }
+      /* Compacto no celular (21/10/2026) */
+    @media(max-width:639px){
+      .view-toggle { margin-bottom:8px; gap:6px; }
+      .view-btn { min-height:44px; padding:0 14px; }
+      .list-table th, .list-table td { padding:7px 10px; }
+    }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -288,7 +294,7 @@ function renderPipeline() {
     const hdr = document.createElement('div'); hdr.className = 'crm-col-header';
     const htitle = document.createElement('span'); htitle.textContent = ETAPA_LABEL[etapa];
     const hcount = document.createElement('span');
-    hcount.style.cssText = 'background:var(--wine-dim);color:var(--text);border-radius:10px;padding:1px 7px;font-size:10px;';
+    hcount.style.cssText = 'background:var(--wine-dim);color:var(--text);border-radius:10px;padding:1px 7px;font-size:11px;';
     hcount.textContent = membros.length;
     hdr.append(htitle, hcount);
 

@@ -15,12 +15,12 @@
   <style>
     .rt-tabs { display:flex; gap:4px; background:var(--surface2); border:1px solid var(--border-wine); border-radius:11px; padding:3px; margin:0 0 14px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
     .rt-tabs::-webkit-scrollbar { display:none; }
-    .rt-tabs button { flex:0 0 auto; padding:8px 12px; border:none; background:transparent; color:var(--text-muted); font-family:'Sora',sans-serif; font-weight:700; font-size:12px; letter-spacing:.4px; border-radius:8px; cursor:pointer; white-space:nowrap; }
+    .rt-tabs button { flex:0 0 auto; padding:8px 12px; border:none; background:transparent; color:var(--text-muted); font-family:var(--font-body); font-weight:700; font-size:12px; letter-spacing:.4px; border-radius:8px; cursor:pointer; white-space:nowrap; }
     .rt-tabs button.on { background:linear-gradient(165deg, rgba(232,185,74,.18), var(--surface)); color:var(--gold-light); box-shadow:0 0 0 1px var(--gold-dim) inset; }
     .rt-card { background:var(--surface); border:1px solid var(--border-wine); border-radius:12px; padding:13px 14px; margin-bottom:10px; }
     .rt-card.clic { cursor:pointer; }
     .rt-card.atraso { border-color:var(--danger); }
-    .rt-tit { font-family:'Sora',sans-serif; font-weight:700; font-size:15px; color:var(--text); }
+    .rt-tit { font-family:var(--font-body); font-weight:700; font-size:15px; color:var(--text); }
     .rt-meta { font-size:12px; color:var(--text-muted); margin-top:3px; line-height:1.45; }
     .rt-meta.atraso { color:var(--danger-text); font-weight:700; }
     .rt-obs { font-size:12px; color:var(--text-muted); font-style:italic; margin-top:4px; white-space:pre-wrap; }
@@ -28,14 +28,14 @@
     .rt-barra > i { display:block; height:100%; background:var(--gold); }
     .rt-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
     .rt-mini { background:var(--surface); border:1px solid var(--border-wine); border-radius:8px; padding:10px 12px; }
-    .rt-mini .l { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
-    .rt-mini .v { font-family:'Oxanium',sans-serif; font-size:18px; font-weight:700; margin-top:3px; }
+    .rt-mini .l { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+    .rt-mini .v { font-family:var(--font-title); font-size:18px; font-weight:700; margin-top:3px; }
     .rt-mini .v.pos { color:var(--success-text); } .rt-mini .v.neg { color:var(--danger-text); }
     .rt-linha { display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; }
     .rt-corpo { flex:1; min-width:170px; }
     .rt-acoes { display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; width:100%; }
-    .rt-grupo { font-family:'Sora',sans-serif; font-weight:800; font-size:12px; color:var(--gold-light); letter-spacing:.6px; margin:16px 0 8px; text-transform:uppercase; }
-    .rt-tag { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.4px; padding:2px 8px; border-radius:999px; border:1px solid var(--border); color:var(--text-muted); margin-right:6px; }
+    .rt-grupo { font-family:var(--font-body); font-weight:800; font-size:12px; color:var(--gold-light); letter-spacing:.6px; margin:16px 0 8px; text-transform:uppercase; }
+    .rt-tag { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.4px; padding:2px 8px; border-radius:999px; border:1px solid var(--border); color:var(--text-muted); margin-right:6px; }
     .rt-tag.feito, .rt-tag.comprada { color:var(--success-text); border-color:var(--success); }
     .rt-tag.andamento, .rt-tag.cotando { color:var(--warn-text); border-color:var(--warn); }
     .rt-tag.aprovada { color:var(--gold-light); border-color:var(--gold-dim); }
@@ -43,16 +43,35 @@
     .rt-aviso { border:1px solid var(--warn); background:rgba(176,125,22,.14); color:var(--warn-text); border-radius:10px; padding:10px 12px; font-size:12.5px; line-height:1.45; margin-bottom:12px; }
     .rt-aviso.ruim { border-color:var(--danger); background:rgba(200,20,31,.14); color:var(--danger-text); }
     .rt-topo { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
-    .rt-voltar { background:none; border:none; color:var(--gold-light); font-family:'Sora',sans-serif; font-weight:700; font-size:13px; cursor:pointer; padding:6px 0; }
+    .rt-voltar { background:none; border:none; color:var(--gold-light); font-family:var(--font-body); font-weight:700; font-size:13px; cursor:pointer; padding:6px 0; }
     .rt-vazio { color:var(--text-muted); font-size:13px; padding:14px 0; }
     .rt-erro { color:var(--danger-text); font-weight:600; font-size:13px; padding:14px 0; }
     .rt-form-linha { display:flex; gap:8px; } .rt-form-linha > * { flex:1; min-width:0; }
     .rt-dica { font-size:11.5px; color:var(--text-muted); margin-top:4px; line-height:1.4; }
     .rt-cot { border-top:1px solid var(--border); padding:10px 0; }
     .rt-cot:first-child { border-top:none; }
-    .rt-valor { font-family:'Oxanium',sans-serif; font-weight:700; font-size:15px; white-space:nowrap; }
+    .rt-valor { font-family:var(--font-title); font-weight:700; font-size:15px; white-space:nowrap; }
     .rt-valor.ent { color:var(--success-text); } .rt-valor.sai { color:var(--danger-text); }
     .rt-modal-tall { max-height:88vh; overflow-y:auto; }
+      .rt-grid > .rt-mini { display:flex; flex-direction:column; }
+    /* Compacto no celular (21/10/2026) */
+    @media(max-width:639px){
+      .rt-tabs { margin:0 0 8px; }
+      .rt-tabs button { padding:6px 10px; }
+      .rt-card { padding:9px 12px; margin-bottom:6px; border-radius:10px; }
+      .rt-tit { font-size:14px; }
+      .rt-meta { margin-top:2px; line-height:1.35; }
+      .rt-barra { margin-top:6px; }
+      .rt-grid { gap:6px; margin-bottom:8px; }
+      .rt-mini { padding:6px 10px; }
+      .rt-mini .v { font-size:16px; margin-top:1px; }
+      .rt-acoes { margin-top:6px; }
+      .rt-grupo { margin:10px 0 6px; }
+      .rt-aviso { padding:7px 10px; margin-bottom:8px; line-height:1.35; }
+      .rt-topo { margin-bottom:6px; gap:8px; }
+      .rt-vazio, .rt-erro { padding:8px 0; }
+      .rt-cot { padding:7px 0; }
+    }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>

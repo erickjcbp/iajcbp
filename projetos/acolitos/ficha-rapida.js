@@ -84,7 +84,7 @@
     hdr.appendChild(buildAvatarEl(membro.foto_url, membro.role, 72, {
       casaSlug: casaSlugDe(membro), nivelSlug: membro.nivel || 'aspirante',
     }));
-    const nomeEl = document.createElement('div'); nomeEl.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:16px;text-align:center;';
+    const nomeEl = document.createElement('div'); nomeEl.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:16px;text-align:center;';
     nomeEl.textContent = membro.apelido || membro.nome;
     if (membro.apelido) { const sub = document.createElement('div'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);'; sub.textContent = membro.nome; hdr.appendChild(nomeEl); hdr.appendChild(sub); }
     else hdr.appendChild(nomeEl);

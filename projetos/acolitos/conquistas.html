@@ -12,25 +12,41 @@
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
   <style>
-    .cq-sec { font-family:'Sora',sans-serif; font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); margin:22px 0 4px; }
+    .cq-sec { font-family:var(--font-body); font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--gold); margin:22px 0 4px; }
     .cq-desc { font-size:12px; color:var(--text-muted); margin-bottom:12px; line-height:1.5; }
     .cq-resumo { display:flex; gap:8px; margin-bottom:6px; }
     .cq-stat { flex:1; background:var(--surface2); border:1px solid var(--border-wine); border-radius:8px; padding:10px 6px; text-align:center; }
-    .cq-stat b { display:block; font-family:'Sora',sans-serif; font-weight:800; font-size:20px; color:var(--gold); }
-    .cq-stat span { font-size:9.5px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+    .cq-stat b { display:block; font-family:var(--font-body); font-weight:800; font-size:20px; color:var(--gold); }
+    .cq-stat span { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
     .cq-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
     .cq-ins { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 6px; text-align:center; position:relative; transition:border-color .2s; }
     .cq-ins.ganha { border-color:var(--gold-dim); background:linear-gradient(165deg,rgba(232,185,74,.08),var(--surface)); }
     .cq-ins.locked .cq-patch { filter:grayscale(1) brightness(.45); opacity:.6; }
     .cq-patch { display:flex; justify-content:center; margin-bottom:6px; }
-    .cq-nome { font-family:'Sora',sans-serif; font-size:10.5px; font-weight:700; color:var(--text); line-height:1.2; }
+    .cq-nome { font-family:var(--font-title); font-size:11px; font-weight:700; color:var(--text); line-height:1.2; }
     .cq-ins.locked .cq-nome { color:var(--text-muted); }
     .cq-lock { position:absolute; top:6px; right:8px; font-size:12px; opacity:.6; }
     .cq-trofeu { display:flex; align-items:center; gap:12px; padding:11px 10px; border-radius:10px; margin-bottom:8px; background:linear-gradient(165deg,rgba(232,185,74,.1),var(--surface)); border:1px solid var(--gold-dim); }
     .cq-tro-ico { flex:none; width:42px; height:42px; }
     .cq-tro-info { flex:1; min-width:0; }
-    .cq-tro-tit { font-family:'Sora',sans-serif; font-weight:700; font-size:14px; color:var(--gold-light); }
+    .cq-tro-tit { font-family:var(--font-body); font-weight:700; font-size:14px; color:var(--gold-light); }
     .cq-tro-sub { font-size:11px; color:var(--text-muted); }
+      .cq-stat b { font-family:var(--font-title); }
+    .cq-grid > .cq-ins { display:flex; flex-direction:column; align-items:center; }
+    .cq-grid > .cq-ins > .cq-nome { margin-top:auto; }
+    /* Compacto no celular (21/10/2026): 4 insígnias por linha e respiros menores. */
+    @media(max-width:639px){
+      .cq-sec { margin:14px 0 2px; }
+      .cq-desc { margin-bottom:8px; line-height:1.4; }
+      .cq-stat { padding:6px 4px; }
+      .cq-stat b { font-size:18px; }
+      .cq-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; }
+      .cq-ins { padding:8px 3px; border-radius:8px; }
+      .cq-patch { margin-bottom:4px; }
+      .cq-nome { font-size:11px; overflow-wrap:anywhere; }
+      .cq-lock { top:3px; right:4px; }
+      .cq-trofeu { padding:8px 10px; margin-bottom:6px; }
+    }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -150,7 +166,7 @@ async function init() {
   NIVEIS.forEach((n, i) => {
     const ganha = i <= meuIdx;
     const cell = document.createElement('div'); cell.className = 'cq-ins' + (ganha ? ' ganha' : ' locked');
-    const patch = document.createElement('div'); patch.className = 'cq-patch'; patch.appendChild(buildRankEmblem(n.slug, 64));
+    const patch = document.createElement('div'); patch.className = 'cq-patch'; patch.appendChild(buildRankEmblem(n.slug, innerWidth < 640 ? 46 : 64));
     const nome = document.createElement('div'); nome.className = 'cq-nome'; nome.textContent = n.label;
     cell.append(patch, nome);
     if (!ganha) { const lk = document.createElement('div'); lk.className = 'cq-lock'; lk.textContent = '🔒'; cell.appendChild(lk); }
@@ -182,7 +198,7 @@ async function init() {
     badges.forEach(b => {
       const cell = document.createElement('div'); cell.className = 'cq-ins' + (b.ganho ? ' ganha' : ' locked');
       cell.style.cursor = 'pointer'; cell.onclick = () => abrirMedalha(b);
-      const ico = document.createElement('div'); ico.className = 'cq-patch'; ico.innerHTML = medalSvg(b.icone, b.tier || tierDe(b.nivel), 58);
+      const ico = document.createElement('div'); ico.className = 'cq-patch'; ico.innerHTML = medalSvg(b.icone, b.tier || tierDe(b.nivel), innerWidth < 640 ? 46 : 58);
       const nome = document.createElement('div'); nome.className = 'cq-nome'; nome.textContent = b.label;
       cell.append(ico, nome);
       if (!b.ganho) { const lk = document.createElement('div'); lk.className = 'cq-lock'; lk.textContent = '🔒'; cell.appendChild(lk); }
@@ -194,10 +210,10 @@ function abrirMedalha(b) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   const md = document.createElement('div'); md.className = 'modal'; md.style.cssText = 'max-width:360px;text-align:center;';
   const ico = document.createElement('div'); ico.style.cssText = 'display:flex;justify-content:center;margin:6px 0 4px;' + (b.ganho ? '' : 'filter:grayscale(1) opacity(.5);'); ico.innerHTML = medalSvg(b.icone, b.tier || tierDe(b.nivel), 92);
-  const nm = document.createElement('div'); nm.style.cssText = 'font-family:Sora,sans-serif;font-weight:800;font-size:18px;color:var(--gold-light);margin-top:6px;'; nm.textContent = b.label;
+  const nm = document.createElement('div'); nm.style.cssText = 'font-family:var(--font-title);font-weight:800;font-size:18px;color:var(--gold-light);margin-top:6px;'; nm.textContent = b.label;
   const st = document.createElement('div'); st.style.cssText = 'font-size:12px;font-weight:700;margin:4px 0 12px;color:' + (b.ganho ? 'var(--success-text)' : 'var(--text-muted)') + ';'; st.textContent = b.ganho ? '✓ Conquistada' : '🔒 Ainda não conquistada';
   const desc = document.createElement('div'); desc.style.cssText = 'font-size:13px;color:var(--text);line-height:1.5;margin-bottom:12px;'; desc.textContent = b.desc || '';
-  const reqL = document.createElement('div'); reqL.style.cssText = 'font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;'; reqL.textContent = 'Como ganhar';
+  const reqL = document.createElement('div'); reqL.style.cssText = 'font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;'; reqL.textContent = 'Como ganhar';
   const req = document.createElement('div'); req.style.cssText = 'font-size:13px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px;margin-bottom:14px;'; req.textContent = b.requisito || '';
   const btn = document.createElement('button'); btn.className = 'btn gold'; btn.style.width = '100%'; btn.textContent = 'Fechar'; btn.onclick = () => ov.remove();
   md.append(ico, nm, st, desc, reqL, req, btn); ov.appendChild(md); document.body.appendChild(ov);

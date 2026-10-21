@@ -20,13 +20,13 @@
       top:calc(var(--header-h) + 46px + env(safe-area-inset-top) + 14px);
       max-height:calc(100dvh - var(--header-h) - 46px - var(--nav-h) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 28px);
       overflow-y:auto; }
-    .cfg-item { position:relative; text-align:left; padding:11px 12px 11px 15px; background:linear-gradient(165deg, var(--surface2), var(--surface)); border:1px solid var(--border-wine); color:var(--text-muted); font-family:'Sora',sans-serif; font-weight:700; font-size:12.5px; letter-spacing:.4px; cursor:pointer; line-height:1.2; clip-path:polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px); transition:border-color .15s, color .15s, box-shadow .15s; }
+    .cfg-item { position:relative; text-align:left; padding:11px 12px 11px 15px; background:linear-gradient(165deg, var(--surface2), var(--surface)); border:1px solid var(--border-wine); color:var(--text-muted); font-family:var(--font-body); font-weight:700; font-size:12.5px; letter-spacing:.4px; cursor:pointer; line-height:1.2; clip-path:polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px); transition:border-color .15s, color .15s, box-shadow .15s; }
     .cfg-item::before { content:''; position:absolute; left:0; top:3px; bottom:3px; width:3px; background:transparent; }
     .cfg-item:hover { border-color:var(--gold-dim); color:var(--text); }
     .cfg-item.on { color:var(--gold-light); border-color:var(--gold); background:linear-gradient(165deg, rgba(232,185,74,.16), var(--surface)); box-shadow:0 0 14px var(--red-glow), inset 0 0 0 1px rgba(232,185,74,.12); }
     .cfg-item.on::before { background:linear-gradient(180deg, var(--gold), var(--red-soft)); box-shadow:0 0 8px var(--red-glow); }
     .cfg-body { flex:1; min-width:0; }
-    .cfg-voltar { display:none; align-items:center; gap:6px; background:none; border:0; color:var(--gold-light); font-family:'Sora',sans-serif; font-weight:700; font-size:12.5px; letter-spacing:.4px; cursor:pointer; padding:0 0 10px; }
+    .cfg-voltar { display:none; align-items:center; gap:6px; background:none; border:0; color:var(--gold-light); font-family:var(--font-body); font-weight:700; font-size:12.5px; letter-spacing:.4px; cursor:pointer; padding:0 0 10px; }
     /* Celular: o menu deixa de dividir a largura com o conteúdo. Vira a primeira tela — lista de
        seções em largura inteira — e a seção escolhida abre sozinha, com um voltar. Antes a coluna
        comia ~40% de uma tela de 390px, quebrava os rótulos em duas linhas e ainda espremia o
@@ -42,20 +42,32 @@
     /* sub-abas dentro de uma seção (continuam horizontais) */
     .cfg-nav { display:flex; gap:6px; overflow-x:auto; margin:-2px 0 12px; -webkit-overflow-scrolling:touch; }
     .cfg-nav::-webkit-scrollbar { display:none; }
-    .cfg-tab { padding:7px 12px; border-radius:20px; border:1px solid var(--border-wine); background:var(--surface2); color:var(--text-muted); font-family:'Sora',sans-serif; font-weight:700; font-size:12px; white-space:nowrap; cursor:pointer; }
+    .cfg-tab { padding:7px 12px; border-radius:20px; border:1px solid var(--border-wine); background:var(--surface2); color:var(--text-muted); font-family:var(--font-body); font-weight:700; font-size:12px; white-space:nowrap; cursor:pointer; }
     .cfg-tab.on { background:linear-gradient(165deg,rgba(232,185,74,.18),var(--surface)); color:var(--gold-light); border-color:var(--gold-dim); }
     /* cards ricos (Níveis, CRM, etc.) — visual Hextech */
     .cfg-card { position:relative; background:linear-gradient(165deg, var(--surface2), var(--surface)); border:1px solid var(--border-wine); border-radius:10px; padding:12px; margin-bottom:10px; clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px); }
     .cfg-card-hd { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
     .cfg-card-hd .nmwrap { flex:1; min-width:0; }
-    .cfg-card-hd .stp { font-size:10px; font-weight:700; color:var(--gold-dim); text-transform:uppercase; letter-spacing:1px; }
+    .cfg-card-hd .stp { font-size:11px; font-weight:700; color:var(--gold-dim); text-transform:uppercase; letter-spacing:1px; }
     .cfg-patch { width:48px; height:54px; flex:none; line-height:0; filter:drop-shadow(0 0 6px var(--red-glow)); }
     .cfg-fld { margin-top:8px; }
-    .cfg-fld > label { display:block; font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px; }
+    .cfg-fld > label { display:block; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px; }
     .cfg-mini { width:30px; height:30px; flex:none; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border-wine); background:var(--surface2); color:var(--gold); border-radius:7px; cursor:pointer; font-size:14px; font-weight:700; }
     .cfg-mini:hover:not(:disabled) { border-color:var(--gold); box-shadow:0 0 10px var(--red-glow); }
     .cfg-mini:disabled { opacity:.25; cursor:default; }
     .cfg-mini.danger { color:var(--danger-text); }
+      /* Compacto no celular (21/10/2026): a lista de seções vira um bloco contínuo (sem vão
+       entre os itens), cada item com 44px de toque; seções e cartões com respiro menor. */
+    @media(max-width:560px){
+      .cfg-side { gap:0; }
+      .cfg-item { padding:0 30px 0 15px; min-height:44px; display:flex; align-items:center; font-size:13px; border-bottom-width:0; clip-path:none; }
+      .cfg-item:last-child, .cfg-item:has(+ :not(.cfg-item)) { border-bottom-width:1px; }
+      .cfg-voltar { padding:0 0 6px; min-height:44px; }
+      .cfg-nav { margin:-2px 0 8px; }
+      .cfg-card { padding:10px; margin-bottom:8px; }
+      .cfg-fld { margin-top:6px; }
+    }
+      .cfg-niv-tg { margin-top:6px; }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -204,12 +216,15 @@ function render(){
   // computador as duas, lado a lado, como sempre.
   const soLista  = noCelular() && !secaoAtual;
   const soSecao  = noCelular() && !!secaoAtual;
+  // Celular com uma seção aberta: o "‹ Configuração" do voltar já diz onde a pessoa está, então
+  // o título grande some da VISTA (continua para o leitor de tela). Uma linha a menos.
+  if (soSecao) t.classList.add('so-leitor');
 
   if (!soSecao) {
     const side = document.createElement('div'); side.className='cfg-side';
     GRUPOS.forEach(([titulo,itens])=>{
       const h=document.createElement('div');
-      h.style.cssText='font-family:Sora,sans-serif;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text-muted);margin:14px 0 5px;padding-left:2px;';
+      h.style.cssText='font-family:var(--font-body);font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text-muted);margin:10px 0 4px;padding-left:2px;';
       h.textContent=titulo; side.appendChild(h);
       itens.forEach(([id,label])=>{ const b=document.createElement('button'); b.className='cfg-item'+(id===secaoAtual?' on':''); b.textContent=label; b.onclick=()=>abrirSecao(id); side.appendChild(b); });
     });
@@ -226,7 +241,7 @@ function render(){
       volta.onclick = () => { try { history.back(); } catch(e){ secaoAtual=null; render(); } };
       body.appendChild(volta);
       const tit = document.createElement('div');
-      tit.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:15px;letter-spacing:1px;text-transform:uppercase;color:var(--gold-light);margin:0 0 10px;';
+      tit.style.cssText='font-family:var(--font-title);font-weight:800;font-size:15px;letter-spacing:1px;text-transform:uppercase;color:var(--gold-light);margin:0 0 10px;';
       tit.textContent = (SECOES.find(([id]) => id === secaoAtual) || [,''])[1];
       body.appendChild(tit);
     }
@@ -485,8 +500,8 @@ async function renderAtividade(b){
   ].forEach(([rot,val,cor])=>{
     const k=document.createElement('div');
     k.style.cssText='flex:1 1 90px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 6px;text-align:center;';
-    const v=document.createElement('div'); v.style.cssText='font-family:Sora,sans-serif;font-weight:800;font-size:18px;color:'+cor+';'; v.textContent=val;
-    const r=document.createElement('div'); r.style.cssText='font-size:10px;color:var(--text-muted);margin-top:1px;'; r.textContent=rot;
+    const v=document.createElement('div'); v.style.cssText='font-family:var(--font-title);font-weight:800;font-size:18px;color:'+cor+';'; v.textContent=val;
+    const r=document.createElement('div'); r.style.cssText='font-size:11px;color:var(--text-muted);margin-top:1px;'; r.textContent=rot;
     k.append(v,r); resumo.appendChild(k);
   });
   box.appendChild(resumo);
@@ -530,11 +545,11 @@ async function renderAtividade(b){
       const info=document.createElement('div'); info.style.cssText='flex:1;min-width:0;';
       const nm=document.createElement('div'); nm.style.cssText='font-weight:700;font-size:13px;color:var(--text);'; nm.textContent=c.nome;
       const uso=document.createElement('div'); uso.style.cssText='font-size:11px;margin-top:1px;color:'+c._e.cor+';'; uso.textContent=c._e.texto;
-      const usr=document.createElement('div'); usr.style.cssText='font-size:10px;color:var(--text-muted);margin-top:1px;'; usr.textContent='usuário: '+(c.usuario||'—');
+      const usr=document.createElement('div'); usr.style.cssText='font-size:11px;color:var(--text-muted);margin-top:1px;'; usr.textContent='usuário: '+(c.usuario||'—');
       info.append(nm,uso,usr); row.appendChild(info);
 
       const sino=document.createElement('div');
-      sino.style.cssText='flex-shrink:0;text-align:right;font-size:10px;font-weight:700;line-height:1.4;';
+      sino.style.cssText='flex-shrink:0;text-align:right;font-size:11px;font-weight:700;line-height:1.4;';
       if(c.sino){
         sino.style.color='var(--success-text)';
         sino.innerHTML='🔔 ligado<br><span style="font-weight:400;color:var(--text-muted)">desde '
@@ -643,13 +658,13 @@ async function renderListaUnica(b, tipo){
   const itens = [...doSistema.filter(x => !jaTem.has(x.valor)), ...criados];
 
   itens.forEach(item=>{
-    const row=document.createElement('div'); row.style.cssText='padding:8px 2px;border-bottom:1px solid var(--border);';
+    const row=document.createElement('div'); row.style.cssText='padding:4px 2px;border-bottom:1px solid var(--border);';
     // `flex-wrap` e `min-width:0` são o conserto do conteúdo que estourava a tela: sem eles o
     // nome não encolhe nem deixa a fila quebrar, e empurra o apelido de sistema e a caixinha
     // "Maior" para fora da borda direita. Num celular de 390px o "Maior" saía cortado.
     const top=document.createElement('div'); top.style.cssText='display:flex;align-items:center;gap:8px;flex-wrap:wrap;';
     const nm=document.createElement('span'); nm.style.cssText='flex:1 1 140px;min-width:0;overflow-wrap:anywhere;'; nm.textContent=item.label||item.valor;
-    if (item.doSistema) { const et=document.createElement('span'); et.style.cssText='font-size:10px;color:var(--text-muted);margin-left:6px;white-space:nowrap;'; et.textContent='do sistema'; nm.appendChild(et); }
+    if (item.doSistema) { const et=document.createElement('span'); et.style.cssText='font-size:11px;color:var(--text-muted);margin-left:6px;white-space:nowrap;'; et.textContent='do sistema'; nm.appendChild(et); }
     top.appendChild(nm);
     if (conf.slug) { const sl=document.createElement('span'); sl.style.cssText='font-size:11px;color:var(--text-muted);'; sl.textContent=item.valor; top.appendChild(sl); }
 
@@ -772,7 +787,7 @@ async function renderGerador(b){
   mk('Janela do rodízio (dias) — quanto histórico o gerador considera');
   const iJ=document.createElement('input'); iJ.className='form-input'; iJ.type='number'; iJ.min='7'; iJ.value=ger.janela_dias||42; b.appendChild(iJ);
 
-  const sep=document.createElement('div'); sep.style.cssText='margin-top:20px;font-family:Sora,sans-serif;font-weight:700;color:var(--gold-light);font-size:12px;'; sep.textContent='Kits (funções com regra própria de quem pode servir)'; b.appendChild(sep);
+  const sep=document.createElement('div'); sep.style.cssText='margin-top:20px;font-family:var(--font-body);font-weight:700;color:var(--gold-light);font-size:12px;'; sep.textContent='Kits (funções com regra própria de quem pode servir)'; b.appendChild(sep);
   const dica=document.createElement('p'); dica.style.cssText='font-size:11px;color:var(--text-muted);margin:4px 0 10px;line-height:1.5;';
   dica.textContent='LIBERA: a idade já basta, mesmo sem habilitação. TRAVA: quem está fora do critério não serve, nem sendo apto — use para funções que exigem porte, como o kit processional.';
   b.appendChild(dica);
@@ -794,7 +809,7 @@ async function renderGerador(b){
     topo.append(iNome,bLiga,bDel); card.appendChild(topo);
 
     const linha=document.createElement('div'); linha.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;';
-    const campo=(rot,el)=>{ const w=document.createElement('div'); w.style.flex='1'; w.style.minWidth='120px'; const L=document.createElement('label'); L.style.cssText='display:block;font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;'; L.textContent=rot; w.append(L,el); linha.appendChild(w); };
+    const campo=(rot,el)=>{ const w=document.createElement('div'); w.style.flex='1'; w.style.minWidth='120px'; const L=document.createElement('label'); L.style.cssText='display:block;font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px;'; L.textContent=rot; w.append(L,el); linha.appendChild(w); };
 
     const sModo=document.createElement('select'); sModo.className='form-input';
     [['libera','LIBERA por idade'],['trava','TRAVA por idade']].forEach(([v,l])=>{ const o=document.createElement('option'); o.value=v; o.textContent=l; if(kit.modo===v)o.selected=true; sModo.appendChild(o); });
@@ -806,7 +821,7 @@ async function renderGerador(b){
     campo('Idade mínima', iIdade);
     card.appendChild(linha);
 
-    const lCom=document.createElement('label'); lCom.style.cssText='display:block;font-size:10px;color:var(--text-muted);text-transform:uppercase;margin:10px 0 4px;'; lCom.textContent='Comunidades onde vale'; card.appendChild(lCom);
+    const lCom=document.createElement('label'); lCom.style.cssText='display:block;font-size:11px;color:var(--text-muted);text-transform:uppercase;margin:10px 0 4px;'; lCom.textContent='Comunidades onde vale'; card.appendChild(lCom);
     const boxCom=document.createElement('div'); boxCom.style.cssText='display:flex;flex-wrap:wrap;gap:6px;';
     comunidades.forEach(([slug,label])=>{
       const on=kit.comunidades.includes(slug);
@@ -817,7 +832,7 @@ async function renderGerador(b){
     });
     card.appendChild(boxCom);
 
-    const lFun=document.createElement('label'); lFun.style.cssText='display:block;font-size:10px;color:var(--text-muted);text-transform:uppercase;margin:10px 0 4px;'; lFun.textContent='Funções do kit (slugs separados por vírgula)'; card.appendChild(lFun);
+    const lFun=document.createElement('label'); lFun.style.cssText='display:block;font-size:11px;color:var(--text-muted);text-transform:uppercase;margin:10px 0 4px;'; lFun.textContent='Funções do kit (slugs separados por vírgula)'; card.appendChild(lFun);
     const iFun=document.createElement('input'); iFun.className='form-input'; iFun.value=(kit.funcoes||[]).join(', ');
     iFun.oninput=()=>{ kit.funcoes=iFun.value.split(',').map(s=>s.trim()).filter(Boolean); };
     card.appendChild(iFun);
@@ -825,7 +840,7 @@ async function renderGerador(b){
     // Liberados: só faz sentido quando o kit PROÍBE. É a saída pra quem consegue
     // servir mas o sistema não sabe a idade (ou é mais novo e mesmo assim dá conta).
     if (kit.modo === 'trava') {
-      const lLib=document.createElement('label'); lLib.style.cssText='display:block;font-size:10px;color:var(--text-muted);text-transform:uppercase;margin:12px 0 4px;';
+      const lLib=document.createElement('label'); lLib.style.cssText='display:block;font-size:11px;color:var(--text-muted);text-transform:uppercase;margin:12px 0 4px;';
       lLib.textContent='Liberados nome a nome ('+kit.liberados.length+') — entram mesmo sem a idade';
       card.appendChild(lLib);
       const boxLib=document.createElement('div'); boxLib.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;';
@@ -872,7 +887,7 @@ function renderComunidades(b){
       const card=document.createElement('div'); card.style.cssText='border:1px solid var(--border-wine);border-radius:8px;padding:10px;margin-bottom:10px;background:var(--surface);';
       const top=document.createElement('div'); top.style.cssText='display:flex;gap:8px;align-items:center;';
       const lab=document.createElement('input'); lab.className='form-input'; lab.style.flex='1'; lab.value=c.label; lab.oninput=()=>{ c.label=lab.value; };
-      const sl=document.createElement('span'); sl.style.cssText='font-size:10px;color:var(--text-muted);'; sl.textContent=c.slug;
+      const sl=document.createElement('span'); sl.style.cssText='font-size:11px;color:var(--text-muted);'; sl.textContent=c.slug;
       const rm=document.createElement('button'); rm.className='mini-del'; rm.textContent='−'; rm.title='Remover'; rm.onclick=async()=>{ if(await uiConfirm('Remover comunidade "'+c.label+'"?')){ work.splice(ci,1); repaint(); } };
       top.append(lab,sl,rm); card.appendChild(top);
       const chips=document.createElement('div'); chips.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center;';
@@ -893,7 +908,7 @@ function renderCadastro(b){
   const itens = (typeof CAMPOS_OBRIGATORIOS!=='undefined' ? CAMPOS_OBRIGATORIOS.map(c=>[c.key,c.label,!!c.padrao]) : []).concat([['foto','Foto de perfil',true]]);
   const estado = {}; itens.forEach(([k,,padrao])=>{ estado[k] = (typeof campoExigido==='function') ? campoExigido(k, padrao) : padrao; });
   itens.forEach(([k,label])=>{
-    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
+    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:3px 2px;border-bottom:1px solid var(--border);';
     const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=label;
     const tg=document.createElement('button'); tg.className='btn-sm'; tg.style.minWidth='92px';
     const paint=()=>{ tg.textContent = estado[k]?'Exigir':'Não exigir'; tg.style.cssText='min-width:92px;'+(estado[k]?'background:linear-gradient(180deg,var(--gold-light),var(--gold-dim));border-color:var(--gold-light);color:#2a1400;':'background:var(--surface2);color:var(--text-muted);'); };
@@ -904,7 +919,7 @@ function renderCadastro(b){
 }
 async function renderAdmins(b){
   b.textContent='';
-  const titulo=(t)=>{ const h=document.createElement('div'); h.style.cssText='font-family:Sora,sans-serif;font-weight:800;color:var(--gold-light);font-size:13px;margin:6px 0;'; h.textContent=t; b.appendChild(h); };
+  const titulo=(t)=>{ const h=document.createElement('div'); h.style.cssText='font-family:var(--font-title);font-weight:800;color:var(--gold-light);font-size:13px;margin:6px 0;'; h.textContent=t; b.appendChild(h); };
   const linha=(t)=>{ const p=document.createElement('p'); p.style.cssText='font-size:12px;color:var(--text-muted);margin:0 0 8px;'; p.textContent=t; b.appendChild(p); };
   // ── Superadmins ──
   titulo('Superadmins (acesso ao Config)');
@@ -930,7 +945,7 @@ async function renderAdmins(b){
     const { data: pms } = await sb.from('pastoral_members').select('user_id,role').eq('module_id',mod.id).in('role',['coord_admin','subadmin']);
     if(!pms||!pms.length){ const e=document.createElement('div'); e.style.cssText='font-size:13px;color:var(--text-muted);font-style:italic;'; e.textContent='Nenhum admin ainda.'; listaAdmins.appendChild(e); }
     (pms||[]).forEach(pm=>{
-      const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
+      const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:3px 2px;border-bottom:1px solid var(--border);';
       const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=nomePorUser[pm.user_id]||'(sem nome)';
       const tag=document.createElement('span'); tag.style.cssText='font-size:11px;color:var(--gold);'; tag.textContent=pm.role==='coord_admin'?'Coord. Admin':'Subadmin';
       const dn=document.createElement('button'); dn.className='btn-sm gray'; dn.textContent='Rebaixar'; dn.onclick=async()=>{ if(!await uiConfirm('Rebaixar '+nm.textContent+' para equipe?'))return; const {error}=await sb.rpc('acolitos_set_admin_role',{p_user:pm.user_id,p_role:'membro_equipe'}); if(error){toast('Erro.','error');return;} toast('✓ Rebaixado.'); carregarAdmins(); };
@@ -968,7 +983,7 @@ function renderIdentidade(b){
   // ── Logo/brasão: ENVIAR a imagem (ou, se preferir, colar um link) ──
   mk('Logo/brasão');
   const caixaLogo=document.createElement('div'); caixaLogo.style.cssText='display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:12px;';
-  const prev=document.createElement('div'); prev.id='idn-logo-prev'; prev.style.cssText='width:72px;height:72px;border-radius:10px;background:var(--surface2);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:10px;color:var(--text-muted);text-align:center;flex:none;';
+  const prev=document.createElement('div'); prev.id='idn-logo-prev'; prev.style.cssText='width:72px;height:72px;border-radius:10px;background:var(--surface2);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:11px;color:var(--text-muted);text-align:center;flex:none;';
   const pintaPrev=()=>{ prev.textContent=''; if(estado.logo_url){ const im=document.createElement('img'); im.src=estado.logo_url; im.alt='Logo'; im.style.cssText='max-width:100%;max-height:100%;object-fit:contain;'; im.onerror=()=>{ prev.textContent='não abriu'; }; prev.appendChild(im); } else prev.textContent='sem logo'; };
   pintaPrev();
   const acoes=document.createElement('div'); acoes.style.cssText='flex:1;min-width:170px;display:flex;flex-direction:column;gap:8px;';
@@ -1012,7 +1027,7 @@ function renderIdentidade(b){
     const fam = f.familia ? "'"+f.familia+"',sans-serif" : "'Sora',sans-serif";
     const n=document.createElement('div'); n.style.cssText='font-family:'+fam+';font-weight:700;font-size:16px;'; n.textContent=f.rotulo;
     const ex=document.createElement('div'); ex.style.cssText='font-family:'+fam+';font-size:12.5px;margin-top:4px;line-height:1.4;'; ex.textContent='Escala das missas — Aa Bb 123';
-    const nt=document.createElement('div'); nt.style.cssText='font-size:10.5px;color:var(--text-muted);margin-top:4px;'; nt.textContent=f.nota;
+    const nt=document.createElement('div'); nt.style.cssText='font-size:11px;color:var(--text-muted);margin-top:4px;'; nt.textContent=f.nota;
     c.append(n,ex,nt); c.onclick=()=>{ estado.fonte=f.chave; marca(); }; cartoes[f.chave]=c; gradeF.appendChild(c);
   });
   marca(); b.appendChild(gradeF);
@@ -1063,7 +1078,7 @@ function renderNavOrdem(b){
   const repaint=()=>{
     list.textContent='';
     ordem.forEach((id,i)=>{
-      const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
+      const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:3px 2px;border-bottom:1px solid var(--border);';
       const num=document.createElement('span'); num.style.cssText='width:22px;color:var(--text-muted);font-size:12px;'; num.textContent=(i+1)+'.';
       const nm=document.createElement('span'); nm.style.flex='1'; nm.textContent=labelDe(id);
       const up=document.createElement('button'); up.className='mini-del'; up.textContent='↑'; up.disabled=(i===0); up.onclick=()=>{ const t=ordem[i-1]; ordem[i-1]=ordem[i]; ordem[i]=t; repaint(); };
@@ -1078,7 +1093,7 @@ function renderNavOrdem(b){
 // ── Seção Equipe & Permissões: quem é equipe, setor, e acessos por módulo ──
 function _toggleSimNao(inicial, onChange){
   const wrap=document.createElement('div'); wrap.style.cssText='display:flex;gap:8px;'; let v=inicial;
-  const mk=(val,txt)=>{ const btn=document.createElement('button'); btn.type='button'; const paint=()=>{ btn.style.cssText='flex:1;padding:9px;border-radius:8px;font-family:Sora,sans-serif;font-weight:700;font-size:12px;cursor:pointer;border:1px solid '+((v===val)?'var(--gold)':'var(--border-wine)')+';background:'+((v===val)?'linear-gradient(165deg,rgba(232,185,74,.2),var(--surface2))':'var(--surface2)')+';color:'+((v===val)?'var(--gold-light)':'var(--text)')+';'; }; btn.textContent=txt; paint(); btn._paint=paint; btn.onclick=()=>{ v=val; wrap.querySelectorAll('button').forEach(x=>x._paint&&x._paint()); onChange(v); }; return btn; };
+  const mk=(val,txt)=>{ const btn=document.createElement('button'); btn.type='button'; const paint=()=>{ btn.style.cssText='flex:1;padding:9px;border-radius:8px;font-family:var(--font-body);font-weight:700;font-size:12px;cursor:pointer;border:1px solid '+((v===val)?'var(--gold)':'var(--border-wine)')+';background:'+((v===val)?'linear-gradient(165deg,rgba(232,185,74,.2),var(--surface2))':'var(--surface2)')+';color:'+((v===val)?'var(--gold-light)':'var(--text)')+';'; }; btn.textContent=txt; paint(); btn._paint=paint; btn.onclick=()=>{ v=val; wrap.querySelectorAll('button').forEach(x=>x._paint&&x._paint()); onChange(v); }; return btn; };
   wrap.append(mk(true,'Sim'), mk(false,'Não')); return { el:wrap };
 }
 function _chipsMulti(opcoes, selSet){
@@ -1343,7 +1358,7 @@ async function renderMissoes(b){
     const grupos={}; miss.forEach(m=>{ const k=m.nivel_alvo||'__pool__'; (grupos[k]=grupos[k]||[]).push(m); });
     const ordem=[]; if(typeof NIVEIS!=='undefined') NIVEIS.forEach(n=>{ if(grupos[n.slug]) ordem.push(n.slug); }); if(grupos['__pool__']) ordem.push('__pool__');
     if(!ordem.length){ const e=document.createElement('div'); e.style.cssText='color:var(--text-muted);font-size:13px;padding:10px 0;'; e.textContent='Nenhuma missão cadastrada ainda. Use "+ Missão".'; cont.appendChild(e); }
-    ordem.forEach(k=>{ const t=document.createElement('div'); t.style.cssText='font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:var(--gold);margin:14px 0 6px;letter-spacing:.5px;'; t.textContent=k==='__pool__'?'🎲 Pool de bônus':('🎯 '+mxNivelLabel(k)); cont.appendChild(t); grupos[k].sort((a,b2)=>(a.capitulo||0)-(b2.capitulo||0)||(a.ordem||0)-(b2.ordem||0)).forEach(m=>cont.appendChild(mxRow(m))); });
+    ordem.forEach(k=>{ const t=document.createElement('div'); t.style.cssText='font-family:var(--font-title);font-weight:700;font-size:13px;color:var(--gold);margin:14px 0 6px;letter-spacing:.5px;'; t.textContent=k==='__pool__'?'🎲 Pool de bônus':('🎯 '+mxNivelLabel(k)); cont.appendChild(t); grupos[k].sort((a,b2)=>(a.capitulo||0)-(b2.capitulo||0)||(a.ordem||0)-(b2.ordem||0)).forEach(m=>cont.appendChild(mxRow(m))); });
   }
   pinta();
   const add=document.createElement('button'); add.className='btn'; add.textContent='+ Missão'; add.style.marginTop='14px';
@@ -1711,11 +1726,15 @@ function renderNiveis(b){
   const niv=(typeof NIVEIS!=='undefined')?NIVEIS:[];
   const work=niv.map(n=>({ slug:n.slug, label:n.label, base:n.base||'acolito', int:(n.int!=null?n.int:0), pips:(n.pips!=null?n.pips:0), titulo:n.titulo||'', intro:n.intro||'', missao:n.missao||'', desafio:n.desafio||'', proximo:n.proximo||'', patch:n._patch||null }));
   const cont=document.createElement('div'); b.appendChild(cont);
+  // Cada nível abre fechado: só o cabeçalho (patch, nome, ordem). Os seis textos ficam atrás de
+  // "Textos do nível" — antes os dez níveis abertos somavam ~6.000px no celular (21/10/2026).
+  const abertos=new Set();
   const repaint=()=>{
     cont.textContent='';
     work.forEach((w,i)=>{
       const card=document.createElement('div'); card.className='cfg-card';
       const hd=document.createElement('div'); hd.className='cfg-card-hd';
+      const det=document.createElement('div'); det.className='cfg-niv-det'; det.hidden=!abertos.has(w.slug);
       const patch=document.createElement('div'); patch.className='cfg-patch';
       const pinta=()=>{ patch.textContent=''; if(typeof buildRankEmblem==='function') patch.appendChild(buildRankEmblem(w.slug,48,w.patch||null)); };
       pinta();
@@ -1727,18 +1746,22 @@ function renderNiveis(b){
       const dn=document.createElement('button'); dn.className='cfg-mini'; dn.textContent='↓'; dn.disabled=(i===work.length-1); dn.onclick=()=>{ const t=work[i+1]; work[i+1]=work[i]; work[i]=t; repaint(); };
       const del=document.createElement('button'); del.className='cfg-mini danger'; del.textContent='×'; del.onclick=async()=>{ if(await uiConfirm('Excluir o nível "'+w.label+'"? Membros nele ficam sem nível válido.')){ work.splice(i,1); repaint(); } };
       hd.append(patch,nw,up,dn,del); card.appendChild(hd);
+      const tg=document.createElement('button'); tg.type='button'; tg.className='btn-sm gray cfg-niv-tg';
+      const rot=()=>{ tg.textContent=(det.hidden?'Textos do nível':'Fechar textos'); tg.setAttribute('aria-expanded', det.hidden?'false':'true'); };
+      tg.onclick=()=>{ det.hidden=!det.hidden; if(det.hidden) abertos.delete(w.slug); else abertos.add(w.slug); rot(); };
+      rot(); card.appendChild(tg); card.appendChild(det);
       const gp=document.createElement('button'); gp.className='btn-sm'; gp.style.cssText='margin-top:6px;background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2));border:1px solid var(--gold-dim);color:var(--gold-light);'; gp.textContent='🎨 Gerar patch';
-      gp.onclick=()=>abrirGeradorPatch(w.slug, w.patch || _specPadraoNivel(w.slug), (spec)=>{ w.patch=spec; pinta(); }); card.appendChild(gp);
+      gp.onclick=()=>abrirGeradorPatch(w.slug, w.patch || _specPadraoNivel(w.slug), (spec)=>{ w.patch=spec; pinta(); }); det.appendChild(gp);
       const baseRow=document.createElement('div'); baseRow.className='cfg-fld';
       const bl=document.createElement('label'); bl.textContent='Categoria (base)';
       const bs=document.createElement('select'); bs.className='form-input';
       [['aspirante','Aspirante'],['coroinha','Coroinha'],['acolito','Acólito'],['cerimonario','Cerimoniário']].forEach(([v,l])=>{ const o=document.createElement('option'); o.value=v; o.textContent=l; if(w.base===v)o.selected=true; bs.appendChild(o); });
-      bs.onchange=()=>{ w.base=bs.value; }; baseRow.append(bl,bs); card.appendChild(baseRow);
-      _cfgField(card,'Título', w.titulo, 'input', v=>{ w.titulo=v; });
-      _cfgField(card,'Introdução (texto do "O caminho")', w.intro, 'area', v=>{ w.intro=v; });
-      _cfgField(card,'Missão', w.missao, 'input', v=>{ w.missao=v; });
-      _cfgField(card,'Desafio', w.desafio, 'area', v=>{ w.desafio=v; });
-      _cfgField(card,'Próximo passo', w.proximo, 'input', v=>{ w.proximo=v; });
+      bs.onchange=()=>{ w.base=bs.value; }; baseRow.append(bl,bs); det.appendChild(baseRow);
+      _cfgField(det,'Título', w.titulo, 'input', v=>{ w.titulo=v; });
+      _cfgField(det,'Introdução (texto do "O caminho")', w.intro, 'area', v=>{ w.intro=v; });
+      _cfgField(det,'Missão', w.missao, 'input', v=>{ w.missao=v; });
+      _cfgField(det,'Desafio', w.desafio, 'area', v=>{ w.desafio=v; });
+      _cfgField(det,'Próximo passo', w.proximo, 'input', v=>{ w.proximo=v; });
       cont.appendChild(card);
     });
   };
