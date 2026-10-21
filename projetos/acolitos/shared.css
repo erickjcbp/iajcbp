@@ -83,7 +83,7 @@ body {
   border-bottom: 1px solid var(--border-wine);
   display: flex; align-items: center; justify-content: space-between;
   padding: env(safe-area-inset-top) 16px 0;
-  box-shadow: 0 2px 0 rgba(232,185,74,.12), 0 6px 24px rgba(0,0,0,.6), 0 0 26px rgba(224,18,40,.12) inset;
+  box-shadow: 0 1px 0 rgba(232,185,74,.12); /* sem sombra borrada: ela caía por cima da 1ª linha do conteúdo */
 }
 .app-header::after {
   content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
@@ -150,7 +150,7 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
   border-top: 1px solid var(--border-wine);
   display: flex; align-items: stretch;
   overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none;
-  box-shadow: 0 -2px 0 rgba(232,185,74,.1), 0 -6px 24px rgba(0,0,0,.6);
+  box-shadow: 0 -1px 0 rgba(232,185,74,.1); /* idem: sem sombra sobre o fim do conteúdo */
 }
 .app-nav::-webkit-scrollbar { display: none; }
 /* Setas indicando que há mais submódulos pra rolar no rodapé */
