@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="tarcisio-painel.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
   <link rel="icon" href="icon-192.png">
@@ -37,6 +38,7 @@
 <script src="shared.js"></script>
 <script src="servir-semanal-core.js"></script>
 <script src="gerador-substituto.js"></script>
+<script src="tarcisio-painel.js"></script>
 <script>
 const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 // FUNCAO_LABEL/dataLabel/comLabel copiados de ausencias.html — usados pelos cards da Caixa
@@ -454,6 +456,7 @@ async function renderCaixa() {
     const r = await renderCaixaSolicitacoes(box);   // { total, erro } — quantas pendências desenhou
     houve = r.total; erro = r.erro;
     houvePub = await renderPendentesPublicas(box);
+    houvePub += await TarcisioPainel.pendenciasCaixa(box);   // pedidos do assistente do WhatsApp
   } catch (e) {
     console.error('Caixa: carregar pendências falhou', e);
     erro = true;

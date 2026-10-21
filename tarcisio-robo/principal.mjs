@@ -1,7 +1,11 @@
-// Ponto de entrada do container: liga banco + Evolution e roda o robô a cada 5 s, sem sobrepor rodadas.
+// Ponto de entrada do container: liga banco + Evolution (+ IA, se houver chave), recebe as
+// mensagens da Evolution pela rede interna e roda o robô a cada 5 s, sem sobrepor rodadas.
+import http from 'node:http'
 import { createClient } from '@supabase/supabase-js'
-import { criarEvolution } from './evolution.mjs'
+import { criarEvolution, lerMensagemRecebida } from './evolution.mjs'
 import { criarRobo } from './robo.mjs'
+import { criarIA } from './ia.mjs'
+import { criarAssistente } from './assistente.mjs'
 
 const precisa = (nome) => {
   const v = process.env[nome]
@@ -11,10 +15,30 @@ const precisa = (nome) => {
 
 const db = createClient(precisa('SUPABASE_URL'), precisa('SUPABASE_SERVICE_KEY'), { auth: { persistSession: false } })
 const evo = criarEvolution({ url: precisa('EVOLUTION_URL'), chave: precisa('EVOLUTION_API_KEY'), instancia: process.env.EVOLUTION_INSTANCIA || 'SaoTarcisio' })
-const robo = criarRobo({ db, evo, supabaseUrl: process.env.SUPABASE_URL })
+const ia = process.env.ANTHROPIC_API_KEY ? criarIA({ chave: process.env.ANTHROPIC_API_KEY }) : null
+const assistente = criarAssistente({ db, evo, ia })
+const robo = criarRobo({ db, evo, ia, assistente, supabaseUrl: process.env.SUPABASE_URL })
 
+// Entrada das mensagens: só a Evolution, de dentro do compose, fala com esta porta (não é publicada).
+const PORTA = 3000
+http.createServer((req, res) => {
+  if (req.method !== 'POST' || req.url !== '/webhook') { res.writeHead(404); return res.end() }
+  let corpo = ''
+  req.on('data', (c) => { corpo += c; if (corpo.length > 2_000_000) req.destroy() })
+  req.on('end', async () => {
+    res.writeHead(200); res.end()
+    try {
+      const msg = lerMensagemRecebida(JSON.parse(corpo || '{}'))
+      if (!msg) return
+      const { error } = await db.from('tarcisio_mensagens').upsert({ ...msg, direcao: 'entrada' }, { onConflict: 'external_id', ignoreDuplicates: true })
+      if (error) console.error('guardar mensagem:', error.message)
+    } catch (e) { console.error('webhook:', e.message) }
+  })
+}).listen(PORTA, () => console.info(`entrada de mensagens na porta ${PORTA}`))
+
+try { await evo.configurarWebhook(`http://robo:${PORTA}/webhook`) } catch (e) { console.error('ligar webhook:', e.message) }
 await robo.iniciar()
-console.info('São Tarcísio no ar')
+console.info(`São Tarcísio no ar${ia ? ' (com IA)' : ' (sem chave da IA: não responde conversas)'}`)
 for (;;) {
   await robo.rodada()
   await new Promise((r) => setTimeout(r, 5_000))

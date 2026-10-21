@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict nfA8U9hh4crZSSsQGZFlYRttYEopYu3WTK5P4VxVNX2MKItdt3Jwj4utF0ocekI
+\restrict n451pAFAzfb8APMdG2N17CIZdmjCvzbUhjZbFeCfIMVYG2qLpioSUrwjOBlakXM
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.6
@@ -3465,6 +3465,35 @@ CREATE FUNCTION public.tarcisio_pode_gerir() RETURNS boolean
     AS $$ select acolitos_get_role(auth.uid()) in ('coord_admin','subadmin'); $$;
 
 
+--
+-- Name: tarcisio_vincular_numero(uuid, uuid, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.tarcisio_vincular_numero(p_pendencia uuid, p_membro uuid, p_relacao text) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $_$
+declare v_p tarcisio_pendencias%rowtype; v_num text;
+begin
+  if acolitos_get_role(auth.uid()) not in ('coord_admin','subadmin','membro_equipe') then
+    return jsonb_build_object('erro','sem_permissao');
+  end if;
+  select * into v_p from tarcisio_pendencias where id = p_pendencia and estado = 'aberta' for update;
+  if v_p.id is null then return jsonb_build_object('erro','pendencia_fechada'); end if;
+  if not exists (select 1 from acolitos_membros where id = p_membro) then return jsonb_build_object('erro','membro_invalido'); end if;
+  -- grava no formato que o app mostra: (DD) 9XXXX-XXXX
+  v_num := regexp_replace(v_p.numero, '^55(\d{2})(\d{5})(\d{4})$', '(\1) \2-\3');
+  if p_relacao = 'proprio' then
+    update acolitos_membros set telefone = v_num, telefone_whatsapp = true where id = p_membro;
+  else
+    update acolitos_membros set celular_recado = v_num where id = p_membro;
+  end if;
+  update tarcisio_pendencias set estado = 'resolvida', resolvido_por = auth.uid(), resolvido_em = now(),
+    dados = dados || jsonb_build_object('vinculado_a', p_membro, 'como', p_relacao) where id = p_pendencia;
+  return jsonb_build_object('ok', true);
+end; $_$;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -4647,6 +4676,13 @@ CREATE TABLE public.tarcisio_config (
     pedir_qr_em timestamp with time zone,
     pedir_grupos_em timestamp with time zone,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    respostas_ligadas boolean DEFAULT false NOT NULL,
+    variar_textos boolean DEFAULT false NOT NULL,
+    persona_nome text DEFAULT 'São Tarcísio'::text NOT NULL,
+    persona_tom text DEFAULT 'Acolhedor, simples e respeitoso, como um coordenador jovem da pastoral falando com famílias da paróquia. Frases curtas, sem gírias, no máximo um emoji.'::text NOT NULL,
+    persona_regras text DEFAULT 'Nunca invente horário, data ou função: use só o que as ferramentas devolvem. Se não souber, diga que vai passar para a coordenação. Não fale de outros servos além dos ligados a este número. Assuntos fora da pastoral: responda com gentileza que este número é só da pastoral.'::text NOT NULL,
+    ia_modelo text DEFAULT 'claude-sonnet-5-5'::text NOT NULL,
+    ia_disponivel boolean DEFAULT false NOT NULL,
     CONSTRAINT tarcisio_config_id_check CHECK ((id = 1)),
     CONSTRAINT tarcisio_config_teto_diario_check CHECK (((teto_diario >= 0) AND (teto_diario <= 1000)))
 );
@@ -4690,6 +4726,63 @@ CREATE TABLE public.tarcisio_grupos (
     papel text,
     visto_em timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT tarcisio_grupos_papel_check CHECK ((papel = ANY (ARRAY['pais'::text, 'acolitos'::text, 'cerimoniarios'::text, 'equipe'::text])))
+);
+
+
+--
+-- Name: tarcisio_ia_pedidos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tarcisio_ia_pedidos (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    tipo text DEFAULT 'rascunho_aviso'::text NOT NULL,
+    entrada text NOT NULL,
+    saida text,
+    estado text DEFAULT 'pedido'::text NOT NULL,
+    erro text,
+    criado_por uuid DEFAULT auth.uid(),
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT tarcisio_ia_pedidos_entrada_check CHECK (((length(entrada) >= 3) AND (length(entrada) <= 2000))),
+    CONSTRAINT tarcisio_ia_pedidos_estado_check CHECK ((estado = ANY (ARRAY['pedido'::text, 'pronto'::text, 'falhou'::text]))),
+    CONSTRAINT tarcisio_ia_pedidos_tipo_check CHECK ((tipo = 'rascunho_aviso'::text))
+);
+
+
+--
+-- Name: tarcisio_mensagens; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tarcisio_mensagens (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    numero text NOT NULL,
+    direcao text NOT NULL,
+    texto text,
+    midia text,
+    external_id text,
+    membro_ids uuid[] DEFAULT '{}'::uuid[] NOT NULL,
+    ferramentas jsonb,
+    respondida boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT tarcisio_mensagens_direcao_check CHECK ((direcao = ANY (ARRAY['entrada'::text, 'saida'::text])))
+);
+
+
+--
+-- Name: tarcisio_pendencias; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tarcisio_pendencias (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    tipo text NOT NULL,
+    numero text NOT NULL,
+    resumo text NOT NULL,
+    dados jsonb DEFAULT '{}'::jsonb NOT NULL,
+    estado text DEFAULT 'aberta'::text NOT NULL,
+    resolvido_por uuid,
+    resolvido_em timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT tarcisio_pendencias_estado_check CHECK ((estado = ANY (ARRAY['aberta'::text, 'resolvida'::text, 'descartada'::text]))),
+    CONSTRAINT tarcisio_pendencias_tipo_check CHECK ((tipo = ANY (ARRAY['vincular_numero'::text, 'coordenacao'::text])))
 );
 
 
@@ -5253,6 +5346,38 @@ ALTER TABLE ONLY public.tarcisio_grupos
 
 
 --
+-- Name: tarcisio_ia_pedidos tarcisio_ia_pedidos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarcisio_ia_pedidos
+    ADD CONSTRAINT tarcisio_ia_pedidos_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tarcisio_mensagens tarcisio_mensagens_external_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarcisio_mensagens
+    ADD CONSTRAINT tarcisio_mensagens_external_id_key UNIQUE (external_id);
+
+
+--
+-- Name: tarcisio_mensagens tarcisio_mensagens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarcisio_mensagens
+    ADD CONSTRAINT tarcisio_mensagens_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tarcisio_pendencias tarcisio_pendencias_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarcisio_pendencias
+    ADD CONSTRAINT tarcisio_pendencias_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: tools tools_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5531,6 +5656,27 @@ CREATE INDEX tarcisio_envios_recentes ON public.tarcisio_envios USING btree (cre
 --
 
 CREATE UNIQUE INDEX tarcisio_grupos_um_por_papel ON public.tarcisio_grupos USING btree (papel) WHERE (papel IS NOT NULL);
+
+
+--
+-- Name: tarcisio_mensagens_a_responder; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX tarcisio_mensagens_a_responder ON public.tarcisio_mensagens USING btree (created_at) WHERE ((direcao = 'entrada'::text) AND (NOT respondida));
+
+
+--
+-- Name: tarcisio_mensagens_numero; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX tarcisio_mensagens_numero ON public.tarcisio_mensagens USING btree (numero, created_at DESC);
+
+
+--
+-- Name: tarcisio_pendencias_abertas; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX tarcisio_pendencias_abertas ON public.tarcisio_pendencias USING btree (created_at) WHERE (estado = 'aberta'::text);
 
 
 --
@@ -6429,6 +6575,20 @@ CREATE POLICY "Coordenacao gere" ON public.tarcisio_grupos USING (public.tarcisi
 
 
 --
+-- Name: tarcisio_mensagens Coordenacao le; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Coordenacao le" ON public.tarcisio_mensagens FOR SELECT USING (public.tarcisio_pode_gerir());
+
+
+--
+-- Name: tarcisio_ia_pedidos Coordenacao pede; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Coordenacao pede" ON public.tarcisio_ia_pedidos USING (public.tarcisio_pode_gerir()) WITH CHECK (public.tarcisio_pode_gerir());
+
+
+--
 -- Name: acolitos_vinculo_tentativas Coordenação resolve as tentativas; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -6440,6 +6600,13 @@ CREATE POLICY "Coordenação resolve as tentativas" ON public.acolitos_vinculo_t
 --
 
 CREATE POLICY "Coordenação vê as tentativas" ON public.acolitos_vinculo_tentativas FOR SELECT USING ((public.acolitos_is_superadmin(auth.uid()) OR (public.acolitos_get_role(auth.uid()) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text, 'membro_equipe'::text]))));
+
+
+--
+-- Name: tarcisio_pendencias Equipe decide; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Equipe decide" ON public.tarcisio_pendencias USING ((public.acolitos_get_role(auth.uid()) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text, 'membro_equipe'::text]))) WITH CHECK ((public.acolitos_get_role(auth.uid()) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text, 'membro_equipe'::text])));
 
 
 --
@@ -7221,6 +7388,24 @@ ALTER TABLE public.tarcisio_envios ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.tarcisio_grupos ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: tarcisio_ia_pedidos; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.tarcisio_ia_pedidos ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: tarcisio_mensagens; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.tarcisio_mensagens ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: tarcisio_pendencias; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.tarcisio_pendencias ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: tools; Type: ROW SECURITY; Schema: public; Owner: -
@@ -8269,6 +8454,15 @@ GRANT ALL ON FUNCTION public.tarcisio_pode_gerir() TO service_role;
 
 
 --
+-- Name: FUNCTION tarcisio_vincular_numero(p_pendencia uuid, p_membro uuid, p_relacao text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.tarcisio_vincular_numero(p_pendencia uuid, p_membro uuid, p_relacao text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.tarcisio_vincular_numero(p_pendencia uuid, p_membro uuid, p_relacao text) TO authenticated;
+GRANT ALL ON FUNCTION public.tarcisio_vincular_numero(p_pendencia uuid, p_membro uuid, p_relacao text) TO service_role;
+
+
+--
 -- Name: TABLE access_requests; Type: ACL; Schema: public; Owner: -
 --
 
@@ -8749,6 +8943,30 @@ GRANT ALL ON TABLE public.tarcisio_grupos TO service_role;
 
 
 --
+-- Name: TABLE tarcisio_ia_pedidos; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.tarcisio_ia_pedidos TO authenticated;
+GRANT ALL ON TABLE public.tarcisio_ia_pedidos TO service_role;
+
+
+--
+-- Name: TABLE tarcisio_mensagens; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.tarcisio_mensagens TO authenticated;
+GRANT ALL ON TABLE public.tarcisio_mensagens TO service_role;
+
+
+--
+-- Name: TABLE tarcisio_pendencias; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.tarcisio_pendencias TO authenticated;
+GRANT ALL ON TABLE public.tarcisio_pendencias TO service_role;
+
+
+--
 -- Name: TABLE tools; Type: ACL; Schema: public; Owner: -
 --
 
@@ -8820,5 +9038,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON T
 -- PostgreSQL database dump complete
 --
 
-\unrestrict nfA8U9hh4crZSSsQGZFlYRttYEopYu3WTK5P4VxVNX2MKItdt3Jwj4utF0ocekI
+\unrestrict n451pAFAzfb8APMdG2N17CIZdmjCvzbUhjZbFeCfIMVYG2qLpioSUrwjOBlakXM
 

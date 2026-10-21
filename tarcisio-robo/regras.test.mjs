@@ -98,3 +98,52 @@ test('pausa entre envios fica entre 20 e 40 segundos', () => {
   assert.equal(pausaEntreEnvios(() => 0), 20_000)
   assert.equal(pausaEntreEnvios(() => 0.999), 39_980)
 })
+
+import { semanaDe, semanaConfirmada, membrosDoNumero, comIrmaosJuntos, candidatosPorNome, cumprimentoValido } from './regras.mjs'
+
+test('semana vai de segunda a domingo', () => {
+  assert.deepEqual(semanaDe('2026-10-25'), { inicio: '2026-10-19', fim: '2026-10-25' })   // domingo
+  assert.deepEqual(semanaDe('2026-10-19'), { inicio: '2026-10-19', fim: '2026-10-25' })   // segunda
+})
+
+test('semana confirmada pela chave que o botão grava (menor data das missas)', () => {
+  const mapa = { '2026-10-24': ['m1'] }   // sábado
+  assert.equal(semanaConfirmada('2026-10-25', mapa), true)
+  assert.equal(semanaConfirmada('2026-11-01', mapa), false)
+  assert.equal(semanaConfirmada('2026-10-25', null), false)
+})
+
+test('número liga o próprio servo e os filhos de quem é responsável', () => {
+  const ms = [
+    { id: 'a', telefone: '19 97777-1234' },
+    { id: 'b', celular_recado: '(19) 99876-5432' },
+    { id: 'c', celular_mae: '19998765432' },
+    { id: 'd', telefone: '19 90000-0000' },
+  ]
+  assert.deepEqual(membrosDoNumero('5519998765432', ms).map((m) => m.id), ['b', 'c'])
+  assert.deepEqual(membrosDoNumero('5519977771234', ms).map((m) => m.id), ['a'])
+  assert.deepEqual(membrosDoNumero('5511911112222', ms), [])
+})
+
+test('ausência puxa o irmão que serve junto', () => {
+  const ms = [{ id: 'a', grupo_irmaos: 'g', escalar_com_irmao: true }, { id: 'b', grupo_irmaos: 'g', escalar_com_irmao: true },
+    { id: 'c', grupo_irmaos: 'g', escalar_com_irmao: false }]
+  assert.deepEqual(comIrmaosJuntos(ms[0], ms).map((m) => m.id), ['a', 'b'])
+  assert.deepEqual(comIrmaosJuntos(ms[2], ms).map((m) => m.id), ['c'])
+})
+
+test('candidatos: todas as palavras do nome, sem acento; data de nascimento desempata', () => {
+  const ms = [{ id: 'a', nome: 'João Pedro Albuquerque', data_nascimento: '2014-05-01' },
+    { id: 'b', nome: 'João Pedro Silva', data_nascimento: '2013-01-01' }]
+  assert.deepEqual(candidatosPorNome('joao pedro', null, ms).map((m) => m.id), ['a', 'b'])
+  assert.deepEqual(candidatosPorNome('Joao Pedro Albuquerque', null, ms).map((m) => m.id), ['a'])
+  assert.deepEqual(candidatosPorNome('João Pedro', '2013-01-01', ms).map((m) => m.id), ['b'])
+  assert.deepEqual(candidatosPorNome('João', null, ms), [])   // só o primeiro nome não basta
+})
+
+test('cumprimento da IA sem número nem quebra de linha', () => {
+  assert.equal(cumprimentoValido('Paz e bem, família!'), true)
+  assert.equal(cumprimentoValido('Amanhã às 9h'), false)
+  assert.equal(cumprimentoValido('Oi\nvocê'), false)
+  assert.equal(cumprimentoValido(''), false)
+})

@@ -53,10 +53,33 @@ export function criarEvolution({ url, chave, instancia, fetchFn = fetch }) {
       const lista = await chamar(`/group/fetchAllGroups/${nome}?getParticipants=false`)
       return (Array.isArray(lista) ? lista : []).map((g) => ({ jid: g.id, nome: g.subject || g.id }))
     },
+    // Mensagens recebidas vão para o robô pela rede interna do compose (nada público).
+    configurarWebhook: (url) => chamar(`/webhook/set/${nome}`, { metodo: 'POST', corpo: { webhook: {
+      enabled: true, url, byEvents: false, base64: false, events: ['MESSAGES_UPSERT'] } } }),
     enviarTexto: (destino, texto) => chamar(`/message/sendText/${nome}`, { metodo: 'POST', corpo: { number: destino, text: texto } }),
     enviarImagem: (destino, url, legenda) => chamar(`/message/sendMedia/${nome}`, {
       metodo: 'POST',
       corpo: { number: destino, mediatype: 'image', mimetype: 'image/png', media: url, caption: legenda || '', fileName: 'sao-tarcisio.png' },
     }),
   }
+}
+
+// Lê um evento da Evolution (portado de parseEvolutionEvent, satorhub/_shared/evolution.ts).
+// Só interessa mensagem recebida, no privado. Grupo, status e o que o próprio número mandou: ignora.
+export function lerMensagemRecebida(corpo) {
+  const evento = String(corpo?.event || '').toLowerCase().replace(/_/g, '.')
+  if (evento !== 'messages.upsert') return null
+  const d = corpo?.data
+  const chave = d?.key
+  const jid = String(chave?.remoteJid || '')
+  if (!jid || chave?.fromMe || jid.endsWith('@g.us') || jid === 'status@broadcast') return null
+  // WhatsApp novo esconde o número atrás de um @lid; a Evolution às vezes manda o real ao lado
+  const real = jid.endsWith('@lid') ? String(chave?.remoteJidAlt || d?.senderPn || '') : jid
+  const numero = real.split('@')[0].replace(/\D/g, '')
+  if (!numero || !chave?.id) return null
+  const m = d?.message || {}
+  const texto = m.conversation || m.extendedTextMessage?.text || m.imageMessage?.caption || m.videoMessage?.caption || null
+  const midia = m.audioMessage ? 'audio' : m.imageMessage ? 'imagem' : m.videoMessage ? 'video' : m.documentMessage ? 'documento'
+    : m.stickerMessage ? 'figurinha' : (!texto ? 'outro' : null)
+  return { numero, external_id: String(chave.id), texto: texto ? String(texto).slice(0, 4000) : null, midia }
 }

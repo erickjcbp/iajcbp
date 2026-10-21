@@ -1,0 +1,54 @@
+/* São Tarcísio | JCBP — telas compartilhadas por tarcisio.html e config.html (tarcisio-painel.js). */
+    .tc-aba-toggle { display:flex; gap:8px; margin:0 0 16px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .tc-aba-btn { flex:none; min-height:44px; padding:0 16px; border-radius:10px; border:1px solid var(--border); background:var(--surface2);
+      color:var(--text-muted); font-weight:700; font-size:13.5px; cursor:pointer; touch-action:manipulation; }
+    .tc-aba-btn.tc-ativa { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,.08); }
+    .tc-st-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:14px; margin-bottom:18px; }
+    .tc-st-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; min-width:0; }
+    .tc-st-card h3 { font-family:Sora,sans-serif; font-size:14px; margin:0 0 10px; color:var(--gold-light); }
+    .tc-st-big { font-family:Sora,sans-serif; font-size:22px; font-weight:700; margin:2px 0 6px; overflow-wrap:anywhere; }
+    .tc-st-muted { color:var(--text-muted); font-size:13px; line-height:1.5; }
+    .tc-st-ok { color:var(--success-text,#7bd88f); } .tc-st-ruim { color:var(--danger-text,#ff9c9c); }
+    .tc-st-acoes { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+    .tc-st-acoes .btn-sm, .tc-linha .btn-sm { min-height:44px; touch-action:manipulation; }
+    .tc-qr { display:block; width:min(100%,280px); margin:12px auto 4px; background:#fff; border-radius:12px; padding:10px; }
+    .tc-regra { display:flex; align-items:center; gap:10px; min-height:44px; font-size:14px; }
+    .tc-regra input[type=checkbox] { width:22px; height:22px; accent-color:var(--gold); flex:none; }
+    .tc-regra input[type=number] { width:90px; min-height:44px; font-size:16px; padding:6px 10px; border-radius:8px;
+      border:1px solid var(--border); background:var(--surface2); color:var(--text); }
+    .tc-lista { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); gap:10px; }
+    .tc-linha { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px; display:flex;
+      gap:10px; align-items:flex-start; min-width:0; }
+    .tc-linha .tc-corpo { flex:1; min-width:0; }
+    .tc-linha .tc-tit { font-weight:700; font-size:14px; overflow-wrap:anywhere; }
+    .tc-linha .tc-sub { color:var(--text-muted); font-size:12.5px; line-height:1.5; margin-top:2px; overflow-wrap:anywhere; white-space:pre-line; }
+    .tc-chip { display:inline-block; font-size:11.5px; font-weight:700; padding:2px 8px; border-radius:20px; border:1px solid var(--border); margin-right:4px; }
+    .tc-chip.tc-enviado { color:var(--success-text,#7bd88f); border-color:rgba(76,175,80,.5); }
+    .tc-chip.tc-falhou, .tc-chip.tc-sem_numero { color:var(--danger-text,#ff9c9c); border-color:rgba(255,120,120,.45); }
+    .tc-chip.tc-pendente, .tc-chip.tc-aguardando_arte, .tc-chip.tc-enviando { color:var(--gold-light); border-color:var(--gold-dim); }
+    .tc-secao { font-family:Sora,sans-serif; font-size:15px; font-weight:700; margin:22px 0 10px; }
+    .tc-grupo-sel { min-height:44px; font-size:16px; padding:6px 10px; border-radius:8px; border:1px solid var(--border);
+      background:var(--surface2); color:var(--text); max-width:100%; }
+    .tc-form-av label { display:block; font-weight:700; font-size:13px; margin:14px 0 6px; }
+    #modal-aviso .tc-form-av input[type=text], #modal-aviso .tc-form-av input[type=datetime-local], #modal-aviso .tc-form-av input[type=date], #modal-aviso .tc-form-av select, #modal-aviso .tc-form-av textarea {
+      width:100%; min-height:44px; font-size:16px; padding:10px 12px; border-radius:10px; border:1px solid var(--border);
+      background:var(--surface2); color:var(--text); font-family:inherit; }
+    .tc-form-av textarea { min-height:120px; resize:vertical; }
+    .tc-marcas { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:6px; }
+    .tc-marcas label { display:flex; align-items:center; gap:8px; min-height:44px; font-weight:600; margin:0; }
+    .tc-marcas input { width:20px; height:20px; accent-color:var(--gold); }
+    .tc-prev-img { display:block; max-width:100%; max-height:200px; border-radius:10px; margin-top:8px; }
+    @media (max-width: 640px) {
+      #modal-aviso .modal { width:100vw; max-width:none; height:100dvh; max-height:none; border-radius:0; }
+    }
+  
+.tc-area { width:100%; min-height:120px; font-size:16px; padding:10px 12px; border-radius:10px; border:1px solid var(--border);
+  background:var(--surface2); color:var(--text); font-family:inherit; resize:vertical; }
+.tc-campo { width:100%; min-height:44px; font-size:16px; padding:10px 12px; border-radius:10px; border:1px solid var(--border);
+  background:var(--surface2); color:var(--text); font-family:inherit; }
+.tc-rotulo { display:block; font-weight:700; font-size:13px; margin:14px 0 6px; }
+.tc-conversa { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px; min-width:0; }
+.tc-bolha { max-width:85%; padding:8px 11px; border-radius:12px; margin:6px 0; font-size:13.5px; line-height:1.45; white-space:pre-wrap; overflow-wrap:anywhere; }
+.tc-bolha.tc-entrada { background:var(--surface2); border:1px solid var(--border); }
+.tc-bolha.tc-saida { background:rgba(201,168,76,.12); border:1px solid var(--gold-dim); margin-left:auto; }
+.tc-bolha small { display:block; color:var(--text-muted); font-size:11px; margin-top:3px; }

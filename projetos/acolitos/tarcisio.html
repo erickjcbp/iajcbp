@@ -13,51 +13,7 @@
   <link rel="apple-touch-icon" href="icon-192.png">
   <script>window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__bip=e;});</script>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
-  <style>
-    /* São Tarcísio | JCBP — o WhatsApp que só envia. Projeto: docs/superpowers/specs/2026-10-20-sao-tarcisio-whatsapp-design.md */
-    .aba-toggle { display:flex; gap:8px; margin:0 0 16px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    .aba-btn { flex:none; min-height:44px; padding:0 16px; border-radius:10px; border:1px solid var(--border); background:var(--surface2);
-      color:var(--text-muted); font-weight:700; font-size:13.5px; cursor:pointer; touch-action:manipulation; }
-    .aba-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,.08); }
-    .st-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:14px; margin-bottom:18px; }
-    .st-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; min-width:0; }
-    .st-card h3 { font-family:Sora,sans-serif; font-size:14px; margin:0 0 10px; color:var(--gold-light); }
-    .st-big { font-family:Sora,sans-serif; font-size:22px; font-weight:700; margin:2px 0 6px; overflow-wrap:anywhere; }
-    .st-muted { color:var(--text-muted); font-size:13px; line-height:1.5; }
-    .st-ok { color:var(--success-text,#7bd88f); } .st-ruim { color:var(--danger-text,#ff9c9c); }
-    .st-acoes { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-    .st-acoes .btn-sm, .linha .btn-sm { min-height:44px; touch-action:manipulation; }
-    .qr { display:block; width:min(100%,280px); margin:12px auto 4px; background:#fff; border-radius:12px; padding:10px; }
-    .regra { display:flex; align-items:center; gap:10px; min-height:44px; font-size:14px; }
-    .regra input[type=checkbox] { width:22px; height:22px; accent-color:var(--gold); flex:none; }
-    .regra input[type=number] { width:90px; min-height:44px; font-size:16px; padding:6px 10px; border-radius:8px;
-      border:1px solid var(--border); background:var(--surface2); color:var(--text); }
-    .lista { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); gap:10px; }
-    .linha { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px; display:flex;
-      gap:10px; align-items:flex-start; min-width:0; }
-    .linha .corpo { flex:1; min-width:0; }
-    .linha .tit { font-weight:700; font-size:14px; overflow-wrap:anywhere; }
-    .linha .sub { color:var(--text-muted); font-size:12.5px; line-height:1.5; margin-top:2px; overflow-wrap:anywhere; white-space:pre-line; }
-    .chip { display:inline-block; font-size:11.5px; font-weight:700; padding:2px 8px; border-radius:20px; border:1px solid var(--border); margin-right:4px; }
-    .chip.enviado { color:var(--success-text,#7bd88f); border-color:rgba(76,175,80,.5); }
-    .chip.falhou, .chip.sem_numero { color:var(--danger-text,#ff9c9c); border-color:rgba(255,120,120,.45); }
-    .chip.pendente, .chip.aguardando_arte, .chip.enviando { color:var(--gold-light); border-color:var(--gold-dim); }
-    .secao { font-family:Sora,sans-serif; font-size:15px; font-weight:700; margin:22px 0 10px; }
-    .grupo-sel { min-height:44px; font-size:16px; padding:6px 10px; border-radius:8px; border:1px solid var(--border);
-      background:var(--surface2); color:var(--text); max-width:100%; }
-    .form-av label { display:block; font-weight:700; font-size:13px; margin:14px 0 6px; }
-    #modal-aviso .form-av input[type=text], #modal-aviso .form-av input[type=datetime-local], #modal-aviso .form-av input[type=date], #modal-aviso .form-av select, #modal-aviso .form-av textarea {
-      width:100%; min-height:44px; font-size:16px; padding:10px 12px; border-radius:10px; border:1px solid var(--border);
-      background:var(--surface2); color:var(--text); font-family:inherit; }
-    .form-av textarea { min-height:120px; resize:vertical; }
-    .marcas { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:6px; }
-    .marcas label { display:flex; align-items:center; gap:8px; min-height:44px; font-weight:600; margin:0; }
-    .marcas input { width:20px; height:20px; accent-color:var(--gold); }
-    .prev-img { display:block; max-width:100%; max-height:200px; border-radius:10px; margin-top:8px; }
-    @media (max-width: 640px) {
-      #modal-aviso .modal { width:100vw; max-width:none; height:100dvh; max-height:none; border-radius:0; }
-    }
-  </style>
+  <link rel="stylesheet" href="tarcisio-painel.css">
 </head>
 <body>
 <div id="app-header"></div>
@@ -78,284 +34,35 @@
 <script src="rodizio-core.js"></script>
 <script src="identidade-core.js"></script>
 <script src="shared.js"></script>
+<script src="tarcisio-painel.js"></script>
 <script>
-const PAPEIS = { pais:'Pais', acolitos:'Acólitos', cerimoniarios:'Cerimoniários', equipe:'Equipe/coordenação' };
-const TIPOS = { escala:'Escala', lembrete:'Lembrete', aviso:'Aviso', aniversario:'Aniversário' };
-const ESTADOS = { aguardando_arte:'esperando a arte', pendente:'na fila', enviando:'enviando', enviado:'enviado', falhou:'falhou', cancelado:'cancelado', sem_numero:'sem número' };
-const REPETIR = { nao:'Uma vez', diario:'Todo dia', semanal:'Toda semana', mensal:'Todo mês' };
-let ctx = null, conf = null, aba = 'situacao', vigia = null;
-
-const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
-const quando = (iso) => iso ? new Date(iso).toLocaleString('pt-BR', { timeZone:'America/Sao_Paulo', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '—';
-const foneBonito = (n) => { const d = String(n || '').replace(/\D/g, ''); return d.length === 13 ? `(${d.slice(2,4)}) ${d.slice(4,9)}-${d.slice(9)}` : (n || ''); };
-const botao = (txt, cls, onclick) => { const b = el('button', 'btn-sm ' + cls, txt); b.type = 'button'; b.onclick = onclick; return b; };
-const erroBanco = (r, oque) => { if (r.error) { console.error(oque, r.error); toast('Não foi possível ' + oque + '.', 'error'); return true; } return false; };
-
-async function lerConfig() {
-  const r = await sb.from('tarcisio_config').select('*').eq('id', 1).single();
-  if (erroBanco(r, 'ler a configuração')) return null;
-  conf = r.data; return conf;
-}
-async function salvarConfig(mudancas, msg) {
-  const r = await sb.from('tarcisio_config').update({ ...mudancas, updated_at: new Date().toISOString() }).eq('id', 1);
-  if (erroBanco(r, 'salvar')) return false;
-  if (msg) toast(msg);
-  return true;
-}
-
-// ── SITUAÇÃO ──
-async function renderSituacao(box) {
-  if (!await lerConfig()) return;
-  const inicioDia = new Date(new Date().toLocaleDateString('en-CA', { timeZone:'America/Sao_Paulo' }) + 'T00:00:00-03:00').toISOString();
-  const [hoje, fila, recentes] = await Promise.all([
-    sb.from('tarcisio_envios').select('id', { count:'exact', head:true }).eq('estado', 'enviado').not('destino_numero', 'is', null).gte('enviado_em', inicioDia),
-    sb.from('tarcisio_envios').select('*').in('estado', ['pendente', 'aguardando_arte', 'enviando']).order('agendado_para').limit(40),
-    sb.from('tarcisio_envios').select('*').in('estado', ['enviado', 'falhou', 'cancelado']).order('created_at', { ascending:false }).limit(40),
-  ]);
-  if (erroBanco(fila, 'ler a fila') || erroBanco(recentes, 'ler os envios')) return;
-
-  const grid = el('div', 'st-grid');
-  // Conexão
-  const cCon = el('div', 'st-card'); cCon.append(el('h3', null, 'Número do WhatsApp'));
-  const aberto = conf.conexao === 'open';
-  const roboVivo = conf.robo_visto_em && (Date.now() - new Date(conf.robo_visto_em)) < 2 * 60_000;
-  cCon.append(el('div', 'st-big ' + (aberto ? 'st-ok' : 'st-ruim'), aberto ? '● Conectado' : '● Desconectado'));
-  cCon.append(el('div', 'st-muted', aberto ? 'Número: ' + foneBonito(conf.numero_conectado) : 'Conecte o chip do São Tarcísio lendo o QR Code com o WhatsApp do celular (Aparelhos conectados → Conectar aparelho).'));
-  if (!roboVivo) cCon.append(el('div', 'st-muted st-ruim', '⚠ O robô não responde desde ' + quando(conf.robo_visto_em) + '. Nada será enviado até ele voltar.'));
-  if (!aberto && conf.qr_code && conf.qr_em && (Date.now() - new Date(conf.qr_em)) < 60_000) {
-    const img = el('img', 'qr'); img.src = conf.qr_code; img.alt = 'QR Code para conectar o WhatsApp'; cCon.append(img);
-    cCon.append(el('div', 'st-muted', 'O código se renova sozinho a cada 20 segundos.'));
-  }
-  const acCon = el('div', 'st-acoes');
-  if (!aberto) acCon.append(botao('Mostrar QR Code', 'gold', async () => {
-    if (await salvarConfig({ pedir_qr_em: new Date().toISOString(), qr_code: null }, 'Pedindo o QR Code…')) vigiar(4000, 3 * 60_000);
-  }));
-  cCon.append(acCon); grid.append(cCon);
-
-  // Envios
-  const cEnv = el('div', 'st-card'); cEnv.append(el('h3', null, 'Envios'));
-  cEnv.append(el('div', 'st-big', conf.pausado ? '⏸ Pausado' : '▶ Enviando'));
-  cEnv.append(el('div', 'st-muted', `Hoje no privado: ${hoje.count ?? 0} de ${conf.teto_diario}. Na fila: ${fila.data.length}. Horário: ${String(conf.janela_inicio).slice(0,5)} às ${String(conf.janela_fim).slice(0,5)}.`));
-  const acEnv = el('div', 'st-acoes');
-  acEnv.append(botao(conf.pausado ? 'Retomar envios' : 'Pausar tudo', conf.pausado ? 'gold' : 'wine', async () => {
-    if (!conf.pausado && !await uiConfirm('Pausar todos os envios do São Tarcísio? A fila fica guardada.')) return;
-    if (await salvarConfig({ pausado: !conf.pausado }, conf.pausado ? 'Envios retomados.' : 'Envios pausados.')) desenhar();
-  }));
-  cEnv.append(acEnv); grid.append(cEnv);
-
-  // Regras
-  const cReg = el('div', 'st-card'); cReg.append(el('h3', null, 'Regras automáticas'));
-  const regra = (campo, texto) => {
-    const l = el('label', 'regra'); const c = el('input'); c.type = 'checkbox'; c.checked = !!conf[campo];
-    c.onchange = async () => { if (!await salvarConfig({ [campo]: c.checked }, 'Regra salva.')) c.checked = !c.checked; };
-    l.append(c, document.createTextNode(texto)); return l;
-  };
-  cReg.append(regra('escala_ligada', 'Arte da escala nos grupos ao confirmar a semana'));
-  cReg.append(regra('lembrete_ligado', `Lembrete no privado na véspera, às ${String(conf.hora_lembrete).slice(0,5)}`));
-  cReg.append(regra('aniversario_ligado', `Parabéns no privado no aniversário, às ${String(conf.hora_aniversario).slice(0,5)}`));
-  const lt = el('label', 'regra'); const nt = el('input'); nt.type = 'number'; nt.min = 0; nt.max = 1000; nt.value = conf.teto_diario;
-  nt.onchange = async () => { const v = Math.max(0, Math.min(1000, parseInt(nt.value, 10) || 0)); nt.value = v; await salvarConfig({ teto_diario: v }, 'Limite salvo.'); };
-  lt.append(document.createTextNode('Limite de mensagens no privado por dia:'), nt);
-  cReg.append(lt); grid.append(cReg);
-  box.append(grid);
-
-  box.append(el('div', 'secao', 'Próximos envios'));
-  box.append(listaEnvios(fila.data, true, 'Nada na fila.'));
-  box.append(el('div', 'secao', 'Últimos envios'));
-  box.append(listaEnvios(recentes.data, false, 'Nada enviado ainda.'));
-}
-
-function listaEnvios(linhas, comCancelar, vazio) {
-  const l = el('div', 'lista');
-  if (!linhas.length) { l.append(el('div', 'st-muted', vazio)); return l; }
-  linhas.forEach((e) => {
-    const r = el('div', 'linha'); const c = el('div', 'corpo');
-    const t = el('div', 'tit'); const chip = el('span', 'chip ' + e.estado, ESTADOS[e.estado] || e.estado);
-    t.append(chip, document.createTextNode(`${TIPOS[e.tipo] || e.tipo} → ${e.destino_nome || foneBonito(e.destino_numero) || '—'}`));
-    const linhaHora = e.estado === 'enviado' ? 'Enviado ' + quando(e.enviado_em) : 'Para ' + quando(e.agendado_para);
-    const texto = (e.texto || '').slice(0, 160) + ((e.texto || '').length > 160 ? '…' : '');
-    c.append(t, el('div', 'sub', [linhaHora, e.erro ? '⚠ ' + e.erro : '', texto].filter(Boolean).join('\n')));
-    r.append(c);
-    if (comCancelar && e.estado !== 'enviando') r.append(botao('Cancelar', 'gray', async () => {
-      const x = await sb.from('tarcisio_envios').update({ estado:'cancelado', erro:'Cancelado pela coordenação' }).eq('id', e.id).in('estado', ['pendente', 'aguardando_arte']);
-      if (!erroBanco(x, 'cancelar')) { toast('Cancelado.'); desenhar(); }
-    }));
-    l.append(r);
-  });
-  return l;
-}
-
-// ── GRUPOS ──
-async function renderGrupos(box) {
-  if (!await lerConfig()) return;
-  const r = await sb.from('tarcisio_grupos').select('*').order('nome');
-  if (erroBanco(r, 'ler os grupos')) return;
-  box.append(el('p', 'st-muted', 'Coloque o número do São Tarcísio nos 4 grupos do WhatsApp (como administrador, se o grupo só deixa administradores mandarem mensagem). Depois toque em "Buscar grupos" e diga qual grupo é qual.'));
-  const ac = el('div', 'st-acoes');
-  ac.append(botao('Buscar grupos do WhatsApp', 'gold', async () => {
-    if (conf.conexao !== 'open') { uiAlert('Conecte o número primeiro (aba Situação).'); return; }
-    if (await salvarConfig({ pedir_grupos_em: new Date().toISOString() }, 'Buscando os grupos…')) vigiar(4000, 40_000);
-  }));
-  box.append(ac);
-  const faltam = Object.keys(PAPEIS).filter((p) => !r.data.some((g) => g.papel === p));
-  if (faltam.length) box.append(el('p', 'st-muted st-ruim', 'Falta ligar: ' + faltam.map((p) => PAPEIS[p]).join(', ') + '.'));
-  const l = el('div', 'lista'); l.style.marginTop = '14px';
-  if (!r.data.length) l.append(el('div', 'st-muted', 'Nenhum grupo ainda.'));
-  r.data.forEach((g) => {
-    const linha = el('div', 'linha'); const c = el('div', 'corpo');
-    c.append(el('div', 'tit', g.nome), el('div', 'sub', 'Visto em ' + quando(g.visto_em)));
-    const s = el('select', 'grupo-sel'); s.setAttribute('aria-label', 'Papel do grupo ' + g.nome);
-    [['', '— não usar —'], ...Object.entries(PAPEIS)].forEach(([v, t]) => { const o = el('option', null, t); o.value = v; s.append(o); });
-    s.value = g.papel || '';
-    s.onchange = async () => {
-      // um grupo por papel: solta quem tinha esse papel antes
-      if (s.value) { const x = await sb.from('tarcisio_grupos').update({ papel:null }).eq('papel', s.value); if (erroBanco(x, 'trocar o grupo')) return; }
-      const y = await sb.from('tarcisio_grupos').update({ papel: s.value || null }).eq('jid', g.jid);
-      if (!erroBanco(y, 'salvar o grupo')) { toast('Grupo salvo.'); desenhar(); }
-    };
-    c.append(s); linha.append(c); l.append(linha);
-  });
-  box.append(l);
-}
-
-// ── AVISOS ──
-async function renderAvisos(box) {
-  const r = await sb.from('tarcisio_avisos').select('*').order('ativo', { ascending:false }).order('quando');
-  if (erroBanco(r, 'ler os avisos')) return;
-  const ac = el('div', 'st-acoes'); ac.style.marginTop = '0';
-  ac.append(botao('+ Novo aviso', 'gold', () => abrirAviso(null)));
-  box.append(ac);
-  const l = el('div', 'lista'); l.style.marginTop = '14px';
-  if (!r.data.length) l.append(el('div', 'st-muted', 'Nenhum aviso agendado.'));
-  r.data.forEach((a) => {
-    const linha = el('div', 'linha'); const c = el('div', 'corpo');
-    const t = el('div', 'tit'); t.append(el('span', 'chip ' + (a.ativo ? 'pendente' : 'cancelado'), a.ativo ? 'ativo' : 'encerrado'), document.createTextNode(a.titulo));
-    const destinos = [...a.grupos.map((p) => 'Grupo ' + PAPEIS[p]), ...a.privado.map((p) => 'Privado ' + PAPEIS[p])].join(', ');
-    c.append(t, el('div', 'sub', `${a.ativo ? 'Próximo: ' + quando(a.quando) : 'Último: ' + quando(a.quando)} · ${REPETIR[a.repetir]}${a.ate ? ' até ' + a.ate.split('-').reverse().join('/') : ''}\n${destinos}${a.imagem_url ? ' · 🖼 com imagem' : ''}`));
-    const acs = el('div', 'st-acoes');
-    acs.append(botao('Editar', 'gray', () => abrirAviso(a)));
-    if (a.ativo) {
-      acs.append(botao('Enviar agora', 'gold', async () => {
-        if (!await uiConfirm('Enviar "' + a.titulo + '" agora? Se ele se repete, a próxima vez conta a partir de hoje.')) return;
-        const x = await sb.from('tarcisio_avisos').update({ quando: new Date().toISOString() }).eq('id', a.id);
-        if (!erroBanco(x, 'enviar')) { toast('Na fila: sai em alguns segundos.'); desenhar(); }
-      }));
-      acs.append(botao('Encerrar', 'wine', async () => {
-        if (!await uiConfirm('Encerrar o aviso "' + a.titulo + '"? Ele não sai mais.')) return;
-        const x = await sb.from('tarcisio_avisos').update({ ativo:false }).eq('id', a.id);
-        if (!erroBanco(x, 'encerrar')) desenhar();
-      }));
-    }
-    c.append(acs); linha.append(c); l.append(linha);
-  });
-  box.append(l);
-}
-
-function paraCampoData(iso) {
-  const d = iso ? new Date(iso) : new Date(Date.now() + 60 * 60_000);
-  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone:'America/Sao_Paulo', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(d).map((x) => [x.type, x.value]));
-  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
-}
-
-function abrirAviso(a) {
-  const ov = el('div', 'modal-overlay open'); ov.id = 'modal-aviso';
-  const m = el('div', 'modal form-av'); m.style.overflowY = 'auto';
-  m.append(el('h2', 'modal-title', a ? 'Editar aviso' : 'Novo aviso'));
-  const campo = (rot, tipo, val) => { const l = el('label', null, rot); const i = el(tipo === 'textarea' ? 'textarea' : 'input'); if (tipo !== 'textarea') i.type = tipo; i.value = val || ''; m.append(l, i); return i; };
-  const fTit = campo('Título (só para a coordenação)', 'text', a?.titulo);
-  const fTxt = campo('Mensagem', 'textarea', a?.texto);
-  m.append(el('label', null, 'Imagem (opcional)'));
-  const fImg = el('input'); fImg.type = 'file'; fImg.accept = 'image/png,image/jpeg,image/webp'; m.append(fImg);
-  let imagemUrl = a?.imagem_url || null;
-  const prev = el('img', 'prev-img'); if (imagemUrl) prev.src = imagemUrl; else prev.style.display = 'none'; m.append(prev);
-  const tirar = botao('Tirar imagem', 'gray', () => { imagemUrl = null; prev.style.display = 'none'; tirar.style.display = 'none'; fImg.value = ''; }); if (!imagemUrl) tirar.style.display = 'none'; m.append(tirar);
-  fImg.onchange = () => { const f = fImg.files[0]; if (f) { prev.src = URL.createObjectURL(f); prev.style.display = ''; tirar.style.display = ''; } };
-  const marcas = (rot, sel) => {
-    m.append(el('label', null, rot)); const g = el('div', 'marcas'); const caixas = {};
-    Object.entries(PAPEIS).forEach(([k, t]) => { const l = el('label'); const c = el('input'); c.type = 'checkbox'; c.checked = (sel || []).includes(k); caixas[k] = c; l.append(c, document.createTextNode(t)); g.append(l); });
-    m.append(g); return () => Object.keys(caixas).filter((k) => caixas[k].checked);
-  };
-  const lerGrupos = marcas('Mandar nos grupos', a?.grupos);
-  const lerPrivado = marcas('Mandar no privado de (pais = responsável de cada menor)', a?.privado);
-  const fQuando = campo('Quando sai', 'datetime-local', paraCampoData(a?.quando));
-  m.append(el('label', null, 'Repetir'));
-  const fRep = el('select'); Object.entries(REPETIR).forEach(([k, t]) => { const o = el('option', null, t); o.value = k; fRep.append(o); }); fRep.value = a?.repetir || 'nao'; m.append(fRep);
-  const fAte = campo('Repetir até (opcional)', 'date', a?.ate);
-  const msg = el('div', 'msg'); m.append(msg);
-  const acs = el('div', 'modal-actions');
-  const fechar = () => ov.remove();
-  acs.append(botao('Cancelar', 'gray', fechar));
-  const salvar = botao('Salvar aviso', 'gold', async () => {
-    const grupos = lerGrupos(), privado = lerPrivado();
-    const erro = (t) => { msg.className = 'msg error'; msg.textContent = t; };
-    if (!fTit.value.trim()) return erro('Dê um título ao aviso.');
-    if (!fTxt.value.trim() && !imagemUrl && !fImg.files[0]) return erro('Escreva a mensagem ou escolha uma imagem.');
-    if (!grupos.length && !privado.length) return erro('Escolha ao menos um grupo ou um público no privado.');
-    if (!fQuando.value) return erro('Diga quando o aviso sai.');
-    if (privado.length && !await uiConfirm('Este aviso vai no PRIVADO de várias pessoas, aos poucos (uma a cada 20–40 s). Confirma?')) return;
-    salvar.disabled = true; salvar.textContent = 'Salvando…';
-    if (fImg.files[0]) {
-      const f = fImg.files[0];
-      const caminho = `avisos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${(f.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`;
-      const up = await sb.storage.from('tarcisio').upload(caminho, f, { contentType: f.type });
-      if (up.error) { salvar.disabled = false; salvar.textContent = 'Salvar aviso'; return erro('A imagem não subiu: ' + up.error.message); }
-      imagemUrl = sb.storage.from('tarcisio').getPublicUrl(caminho).data.publicUrl;
-    }
-    const dados = { titulo: fTit.value.trim(), texto: fTxt.value.trim() || null, imagem_url: imagemUrl, grupos, privado,
-      quando: new Date(fQuando.value + ':00-03:00').toISOString(), repetir: fRep.value, ate: fAte.value || null, ativo: true };
-    const r = a ? await sb.from('tarcisio_avisos').update(dados).eq('id', a.id) : await sb.from('tarcisio_avisos').insert(dados);
-    if (r.error) { salvar.disabled = false; salvar.textContent = 'Salvar aviso'; return erro('Não foi possível salvar: ' + r.error.message); }
-    fechar(); toast('Aviso salvo.'); desenhar();
-  });
-  acs.append(salvar); m.append(acs); ov.append(m); document.body.append(ov);
-  ov.addEventListener('click', (e) => { if (e.target === ov) fechar(); });
-  fTit.focus();
-}
-
-// ── SEM NÚMERO ──
-async function renderSemNumero(box) {
-  const desde = new Date(Date.now() - 60 * 24 * 60 * 60_000).toISOString();
-  const r = await sb.from('tarcisio_envios').select('membro_id,destino_nome,erro,created_at,tipo,estado')
-    .or('estado.eq.sem_numero,erro.eq."Número sem WhatsApp"').gte('created_at', desde).order('created_at', { ascending:false }).limit(500);
-  if (erroBanco(r, 'ler a lista')) return;
-  const porMembro = new Map();
-  r.data.forEach((e) => { const k = e.membro_id || e.destino_nome; if (k && !porMembro.has(k)) porMembro.set(k, e); });
-  box.append(el('p', 'st-muted', 'Quem deveria ter recebido algo nos últimos 60 dias e não recebeu por falta de WhatsApp. O app já pede o número do responsável ao abrir; para corrigir agora, edite o telefone de recado na ficha em Membros.'));
-  const l = el('div', 'lista'); l.style.marginTop = '14px';
-  if (!porMembro.size) l.append(el('div', 'st-muted st-ok', 'Ninguém sem número. 🎉'));
-  [...porMembro.values()].forEach((e) => {
-    const linha = el('div', 'linha'); const c = el('div', 'corpo');
-    c.append(el('div', 'tit', e.destino_nome || '—'), el('div', 'sub', `${e.erro || 'Sem número'} · ${TIPOS[e.tipo] || e.tipo} de ${quando(e.created_at)}`));
-    linha.append(c); l.append(linha);
-  });
-  box.append(l);
-}
-
-// ── tela ──
-const ABAS = [['situacao', 'Situação', renderSituacao], ['grupos', 'Grupos', renderGrupos], ['avisos', 'Avisos', renderAvisos], ['sem', 'Sem número', renderSemNumero]];
-async function desenhar() {
-  const main = document.getElementById('main-content'); main.textContent = '';
-  const t = el('h1', 'page-title', 'São Tarcísio | JCBP'); main.append(t);
-  main.append(el('p', 'st-muted', 'O WhatsApp da pastoral que só envia: arte da escala nos grupos, lembrete na véspera, avisos e aniversários.'));
-  const tg = el('div', 'aba-toggle'); tg.setAttribute('role', 'tablist');
-  ABAS.forEach(([k, rot]) => { const b = el('button', 'aba-btn' + (k === aba ? ' active' : ''), rot); b.type = 'button'; b.setAttribute('role', 'tab'); b.onclick = () => { aba = k; try { localStorage.setItem('tarcisio-aba', k); } catch (_) {} desenhar(); }; tg.append(b); });
-  main.append(tg);
-  const box = el('div'); main.append(box);
-  try { await ABAS.find((x) => x[0] === aba)[2](box); }
-  catch (e) { console.error('São Tarcísio: desenhar', e); box.append(el('p', 'st-muted st-ruim', 'Algo deu errado ao carregar. Recarregue a página.')); }
-}
-
-// Atualiza a tela por um tempo (QR, busca de grupos) — o robô responde pelo banco em segundos.
-function vigiar(cada, por) {
-  clearInterval(vigia);
-  const fim = Date.now() + por;
-  vigia = setInterval(() => { if (Date.now() > fim || document.hidden) { clearInterval(vigia); return; } if (!document.getElementById('modal-aviso')) desenhar(); }, cada);
-  desenhar();
-}
+// São Tarcísio | JCBP — o dia a dia da coordenação: avisos e quem está sem número.
+// WhatsApp, grupos, assistente de IA e conversas ficam em Configurações (superadmin).
+let ctx = null, aba = 'avisos';
+const ABAS = [['avisos', 'Avisos', () => TarcisioPainel.avisos], ['sem', 'Sem número', () => TarcisioPainel.semNumero]];
 
 function semAcesso() {
   const main = document.getElementById('main-content'); main.textContent = '';
-  main.append(el('p', 'empty', 'Esta tela é só do admin e do subadmin da coordenação.'));
+  const p = document.createElement('p'); p.className = 'empty'; p.textContent = 'Esta tela é só do admin e do subadmin da coordenação.';
+  main.appendChild(p);
+}
+
+async function desenhar() {
+  const main = document.getElementById('main-content'); main.textContent = '';
+  const t = document.createElement('h1'); t.className = 'page-title'; t.textContent = 'São Tarcísio | JCBP'; main.appendChild(t);
+  const p = document.createElement('p'); p.className = 'tc-st-muted';
+  p.textContent = 'Avisos que o WhatsApp da pastoral envia nos grupos e no privado.' + (isSuperadmin(ctx) ? ' Conexão, grupos e assistente de IA ficam em Configurações.' : '');
+  main.appendChild(p);
+  const tg = document.createElement('div'); tg.className = 'tc-aba-toggle'; tg.setAttribute('role', 'tablist');
+  ABAS.forEach(([k, rot]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'tc-aba-btn' + (k === aba ? ' tc-ativa' : '');
+    b.setAttribute('role', 'tab'); b.textContent = rot;
+    b.onclick = () => { aba = k; try { localStorage.setItem('tarcisio-aba', k); } catch (_) {} desenhar(); };
+    tg.appendChild(b);
+  });
+  main.appendChild(tg);
+  const box = document.createElement('div'); main.appendChild(box);
+  await ABAS.find((x) => x[0] === aba)[2]()(box);
 }
 
 async function init() {

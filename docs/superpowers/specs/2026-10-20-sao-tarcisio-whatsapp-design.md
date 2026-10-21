@@ -281,3 +281,55 @@ Tela São Tarcísio ───────────────▶  tarcisio_g
   - robot: `tarcisio-robo/`, `wa-tarcisio-robo-1` container, env `/opt/whatsapp/tarcisio/robo.env` (600);
   - screen: `projetos/acolitos/tarcisio.html`;
   - proof: `projetos/acolitos/provas/tarcisio.prova.mjs`.
+
+## Phase 2 — AI assistant and Settings (owner's decisions, 20/10)
+
+The owner reversed "only sends": São Tarcísio now **replies**, using AI.
+
+**Owner's decisions:**
+- **Settings (superadmins):** a "São Tarcísio | WhatsApp" group with these sections:
+  - **WhatsApp:** connection, QR, pause, rules, ceiling, texts, queue;
+  - **Grupos;**
+  - **Assistente de IA:** persona with name, tone and rules;
+  - **Conversas:** log of what arrived and what was answered.
+  Announcements stay on the coordination screen (admin/subadmin).
+- **The AI writes announcements:** the coordinator gives the idea, the AI drafts it, the
+  coordinator reviews and saves.
+- **The AI varies reminder/birthday texts:** the facts (name, date, time, place, function) are
+  checked in code. If anything is missing, the fixed template is used.
+- **The AI replies on WhatsApp:**
+  - It identifies the sender by number: the server's own number, or the guardian's
+    (`celular_recado`/`celular_responsavel`/`celular_mae`). A parent with several children can
+    talk about all of them.
+  - It answers from the app's data: schedule, time, place, function.
+  - **Absence:** in a week that is NOT confirmed, it records it in `acolitos_ausencias` (the 096
+    trigger swaps in someone else). In a confirmed week, nothing changes, and it replies "a
+    escala já está confirmada para os dias X e Y; as outras datas foram registradas".
+  - "Confirmed" = the week has an entry in `acolitos_config.escala_avisados` (written by
+    "Confirmar escala da semana").
+  - **Unknown number:**
+    - The AI collects as much as possible: the server's full name, age or date of birth, and who
+      is talking (father, mother, the server).
+    - It looks up the likely match in the records.
+    - It opens a pending item in the Caixa for the coordination to link the number. The AI never
+      links on its own, never shows a schedule and never records anything until then.
+- **Confirmed guesses:**
+  - The AI never makes things up. If it does not know, it hands over to the coordination
+    (pending item in the Caixa).
+  - A reply goes out at any time; the 08:00–21:00 window applies only to bulk sends.
+  - Audio/photo → asks for text.
+  - A switch for replies only.
+
+**Calls I made:**
+- Model: `claude-sonnet-5-5`, through the Anthropic API (the provider TENET already uses). Key
+  `ANTHROPIC_API_KEY` in `robo.env`.
+- Inbound messages: an Evolution webhook to `http://robo:3000/webhook` on the compose's
+  internal network. Nothing public.
+- Messages grouped per number for 8 s before answering, so the AI replies to the whole thought.
+- AI tools, each with its guard in code:
+  - `escala_dos_meus`;
+  - `registrar_ausencia` (refuses a past date, a confirmed week, or a server not linked to the
+    number);
+  - `identificar` (compares name + date of birth);
+  - `chamar_coordenacao`.
+- Each AI turn has at most 4 tool calls. Context: the last 20 messages of the number.

@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="tarcisio-painel.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
   <link rel="icon" href="icon-192.png">
@@ -76,6 +77,7 @@
 <script src="gerador-substituto.js"></script>
 <script src="identidade-core.js"></script>
 <script src="shared.js"></script>
+<script src="tarcisio-painel.js"></script>
 <script>
 // A seção inicial PRECISA existir em SECOES — senão o painel abre numa tela
 // que não tem botão no menu e, ao sair dela, não há como voltar sem recarregar.
@@ -100,6 +102,9 @@ const GRUPOS = [
   ['As pessoas',         [['pessoas','Pessoas & Times'], ['admins','Admins & superadmin'], ['logins','Logins (usuário/senha)'], ['barrados','Cadastros barrados'], ['atividade','Atividade & notificações'], ['cadastro','Campos do cadastro']]],
   ['Os módulos',         [['escala','Escala'], ['agenda','Agenda'], ['tesouraria','Tesouraria'], ['ausencias','Ausências'], ['jornada','Jornada'], ['crm','CRM']]],
   ['Como o app funciona',[['navegacao','Navegação'], ['gerador','Regras do gerador'], ['missoes','Missões & XP']]],
+  // São Tarcísio | JCBP (migrations 098–102): as telas moram em tarcisio-painel.js, a mesma
+  // fonte da tela de Avisos da coordenação — aqui só se escolhe qual delas abrir.
+  ['São Tarcísio | WhatsApp', [['tarcisio_whatsapp','WhatsApp'], ['tarcisio_grupos','Grupos'], ['tarcisio_ia','Assistente de IA'], ['tarcisio_conversas','Conversas']]],
 ];
 
 // O que cada seção tem DENTRO. Um item só entra direto no editor; mais de um ganha sub-abas,
@@ -134,6 +139,10 @@ const CONTEUDO = {
   navegacao:   [{ nome:'Navegação',            fn:renderNavOrdem }],
   gerador:     [{ nome:'Regras do gerador',    fn:renderGerador }],
   missoes:     [{ nome:'Missões & XP',         fn:renderMissoes }],
+  tarcisio_whatsapp:  [{ nome:'WhatsApp',          fn:(b) => TarcisioPainel.whatsapp(b) }],
+  tarcisio_grupos:    [{ nome:'Grupos',            fn:(b) => TarcisioPainel.grupos(b) }],
+  tarcisio_ia:        [{ nome:'Assistente de IA',  fn:(b) => TarcisioPainel.assistente(b) }],
+  tarcisio_conversas: [{ nome:'Conversas',         fn:(b) => TarcisioPainel.conversas(b) }],
 };
 // Qual sub-aba está aberta em cada seção — lembrada enquanto a tela não recarrega, para quem
 // vai e volta entre Entradas e Saídas não recomeçar do começo toda vez.

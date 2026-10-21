@@ -30,6 +30,17 @@ const tabelas = {
     { jid: '2@g.us', nome: 'Acólitos e Coroinhas — Paróquia Jesus Cristo Bom Pastor', papel: 'acolitos', visto_em: agora },
     { jid: '3@g.us', nome: 'Cerimoniários', papel: null, visto_em: agora },
   ] },
+  tarcisio_mensagens: { data: [
+    { id: 'x1', numero: '5519998765432', direcao: 'entrada', texto: 'Oi, o João não vai poder ir domingo dia 1º, vamos viajar', membro_ids: ['m1'], respondida: true, created_at: agora },
+    { id: 'x2', numero: '5519998765432', direcao: 'saida', texto: 'Tudo bem! Registrei a ausência do João em 01/11. A Maria, que serve junto, também ficou fora nesse dia. Boa viagem! 🙏', membro_ids: ['m1'], ferramentas: [{ ferramenta: 'registrar_ausencia' }], respondida: true, created_at: agora },
+    { id: 'x3', numero: '5511900000000', direcao: 'entrada', texto: 'Boa tarde, sou a mãe do Pedro', membro_ids: [], respondida: false, created_at: agora },
+  ] },
+  tarcisio_pendencias: { data: [
+    { id: 'p1', tipo: 'vincular_numero', numero: '5511900000000', resumo: 'Ligar número ao servo "Pedro Henrique Albuquerque Siqueira" (mae)', estado: 'aberta', created_at: agora,
+      dados: { relacao: 'mae', quem_fala: 'Ana', data_nascimento: '2014-05-01', candidatos: [{ id: 'm9', nome: 'Pedro Henrique Albuquerque Siqueira', data_nascimento: '2014-05-01' }] } },
+    { id: 'p2', tipo: 'coordenacao', numero: '5519998765432', resumo: 'Mãe pergunta se o João pode trocar de função para Cruz no retiro', estado: 'aberta', created_at: agora, dados: {} },
+  ] },
+  acolitos_membros: { data: [{ id: 'm1', nome: 'João Pedro Albuquerque' }] },
   tarcisio_avisos: { data: [
     { id: 'a1', titulo: 'Reunião de formação', texto: 'Segunda às 19h30 no salão.', imagem_url: null, grupos: ['acolitos', 'pais'], privado: [],
       quando: agora, repetir: 'semanal', ate: '2026-12-20', ativo: true },
@@ -51,15 +62,19 @@ const avaliar = `
   const modal = document.querySelector('#modal-aviso .modal');
   return { rolagemLateral: document.documentElement.scrollWidth > innerWidth + 1, pequenos, letra, fora,
     larguraMain: document.querySelector('.main')?.getBoundingClientRect().width, larguraModal: modal ? modal.getBoundingClientRect().width : null,
-    parede: !!document.getElementById('parede-whatsapp'), abas: [...document.querySelectorAll('.aba-btn')].map((b) => b.textContent) };
+    parede: !!document.getElementById('parede-whatsapp'), abas: [...document.querySelectorAll('.tc-aba-btn')].map((b) => b.textContent),
+    textoTc: document.querySelectorAll('.tc-st-card, .tc-linha, .tc-conversa, .tc-st-muted').length };
 `;
 
 const cenarios = [
-  { id: 'situacao', passos: [] },
-  { id: 'grupos', passos: [{ clicar: 'Grupos' }] },
-  { id: 'avisos', passos: [{ clicar: 'Avisos' }] },
-  { id: 'aviso-novo', passos: [{ clicar: 'Avisos' }, { chamar: 'abrirAviso', args: [null] }] },
-  { id: 'sem-numero', passos: [{ clicar: 'Sem número' }] },
+  { id: 'avisos', tela: 'tarcisio.html', passos: [], abas: 2 },
+  { id: 'aviso-novo', tela: 'tarcisio.html', passos: [{ clicar: '+ Novo aviso' }], abas: 2 },
+  { id: 'sem-numero', tela: 'tarcisio.html', passos: [{ clicar: 'Sem número' }], abas: 2 },
+  { id: 'config-whatsapp', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_whatsapp'] }] },
+  { id: 'config-grupos', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_grupos'] }] },
+  { id: 'config-ia', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_ia'] }] },
+  { id: 'config-conversas', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_conversas'] }] },
+  { id: 'caixa-pendencias', tela: 'caixa.html', passos: [] },
 ];
 const larguras = [[375, 812], [768, 1024], [1366, 900], [2560, 1440]];
 const falhas = [];
@@ -69,13 +84,14 @@ const provas = await iniciarProvas();
 try {
   // 1) A tela, como admin, em todas as larguras
   for (const c of cenarios) for (const [largura, altura] of larguras) {
-    const r = await provas.abrir('tarcisio.html', { papel: PAPEIS.admin, tabelas, largura, altura, passos: c.passos, avaliar,
+    const r = await provas.abrir(c.tela, { papel: PAPEIS.admin, tabelas, largura, altura, passos: c.passos, avaliar,
       foto: { caminho: `${destino}/${c.id}-${largura}.png`, viewport: true } });
     const a = r.avaliado || {};
     const id = `${c.id} @${largura}`;
     exigir(!r.erros.length, `${id}: erros ${r.erros.join(' | ')}`);
     exigir(!(r.passosFalhos || []).length, `${id}: passo não achou o alvo ${JSON.stringify(r.passosFalhos)}`);
-    exigir(a.abas?.length === 4, `${id}: as 4 abas não apareceram`);
+    if (c.abas) exigir(a.abas?.length === c.abas, `${id}: as abas não apareceram`);
+    exigir(a.textoTc > 0, `${id}: a tela do São Tarcísio não desenhou`);
     exigir(!a.rolagemLateral, `${id}: rolagem lateral`);
     exigir(!a.pequenos?.length, `${id}: alvo menor que 44px: ${a.pequenos}`);
     exigir(!a.letra, `${id}: campo com letra < 16px`);

@@ -4,7 +4,7 @@
 // Só envia: não lê resposta de ninguém. Projeto: docs/superpowers/specs/2026-10-20-sao-tarcisio-whatsapp-design.md
 import {
   agoraSP, somarDias, hmCurto, dentroDaJanela, montarLembretes, montarAniversarios,
-  publicoPrivado, proximaVez, pausaEntreEnvios, imagemPermitida,
+  publicoPrivado, proximaVez, pausaEntreEnvios, imagemPermitida, cumprimentoValido,
 } from './regras.mjs'
 
 const CAMPOS_MEMBRO = 'id,nome,apelido,nivel,user_id,data_nascimento,telefone,celular_recado,celular_responsavel,celular_mae'
@@ -17,7 +17,7 @@ const exigir = ({ data, error }, onde) => {
   return data
 }
 
-export function criarRobo({ db, evo, supabaseUrl, relogio = () => new Date(), rnd = Math.random, log = console }) {
+export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, relogio = () => new Date(), rnd = Math.random, log = console }) {
   const st = { proximoEnvioEm: 0, lembreteEm: null, anivEm: null, estadoEm: 0, conexao: 'desconhecida', gruposPedidoEm: null }
 
   async function inserirNaFila(linhas) {
@@ -38,6 +38,7 @@ export function criarRobo({ db, evo, supabaseUrl, relogio = () => new Date(), rn
       st.conexao = await evo.estado()
       mudancas.conexao = st.conexao
       mudancas.robo_visto_em = agora.toISOString()
+      if (cfg.ia_disponivel !== !!ia) mudancas.ia_disponivel = !!ia
       if (st.conexao === 'open') {
         if (cfg.qr_code) mudancas.qr_code = null
         if (!cfg.numero_conectado) mudancas.numero_conectado = await evo.numeroConectado()
@@ -185,8 +186,9 @@ export function criarRobo({ db, evo, supabaseUrl, relogio = () => new Date(), rn
       return
     }
     try {
-      if (item.imagem_url) await evo.enviarImagem(destino, item.imagem_url, item.texto)
-      else await evo.enviarTexto(destino, item.texto)
+      const texto = await talvezVariar(cfg, item)
+      if (item.imagem_url) await evo.enviarImagem(destino, item.imagem_url, texto)
+      else await evo.enviarTexto(destino, texto)
       exigir(await db.from('tarcisio_envios').update({ estado: 'enviado', enviado_em: agora.toISOString(), erro: null }).eq('id', item.id), 'marcar enviado')
     } catch (e) {
       const tentativas = item.tentativas + 1
@@ -198,6 +200,56 @@ export function criarRobo({ db, evo, supabaseUrl, relogio = () => new Date(), rn
       log.warn(`envio ${item.id} (${item.tipo}) falhou: ${e.message}`)
     }
     st.proximoEnvioEm = +agora + pausaEntreEnvios(rnd)
+  }
+
+  // A IA varia SÓ o cumprimento do lembrete/parabéns (ajuda o chip a não parecer robô). Os fatos
+  // (data, hora, local, função) seguem do texto fixo; cumprimento com número ou fora do padrão cai fora.
+  async function talvezVariar(cfg, item) {
+    if (!ia || !cfg.variar_textos || !['lembrete', 'aniversario'].includes(item.tipo) || !item.texto) return item.texto
+    try {
+      const c = await ia.texto({ modelo: cfg.ia_modelo, maxTokens: 60,
+        sistema: `Você é ${cfg.persona_nome}, da pastoral dos coroinhas. Tom: ${cfg.persona_tom}`,
+        pedido: `Escreva UMA saudação curta e diferente (até 80 caracteres, sem números, sem datas, sem horários) para abrir esta mensagem de ${item.tipo === 'lembrete' ? 'lembrete de escala' : 'aniversário'}. Responda só a saudação.` })
+      const limpo = String(c || '').trim().replace(/^["“]|["”]$/g, '')
+      if (!cumprimentoValido(limpo)) return item.texto
+      return limpo + ' ' + item.texto.replace(/^Olá!\s*/, '')
+    } catch (e) {
+      log.warn(`variar texto: ${e.message}`)
+      return item.texto
+    }
+  }
+
+  // Conversas: responde quem escreveu (depois de 8 s de silêncio, para pegar a ideia inteira).
+  // Mensagem com mais de 30 min sem resposta (respostas desligadas, robô fora) não é respondida tarde.
+  async function cuidarConversas(cfg, agora) {
+    if (!assistente) return
+    const velho = new Date(+agora - 30 * MINUTO).toISOString()
+    exigir(await db.from('tarcisio_mensagens').update({ respondida: true }).eq('direcao', 'entrada').eq('respondida', false).lt('created_at', velho), 'arquivar velhas')
+    if (!cfg.respostas_ligadas || st.conexao !== 'open') return
+    const novas = exigir(await db.from('tarcisio_mensagens').select('numero,created_at').eq('direcao', 'entrada').eq('respondida', false)
+      .order('created_at', { ascending: false }).limit(200), 'ler conversas')
+    const ultimaPorNumero = new Map()
+    for (const m of novas) if (!ultimaPorNumero.has(m.numero)) ultimaPorNumero.set(m.numero, m.created_at)
+    const prontos = [...ultimaPorNumero].filter(([, t]) => +agora - new Date(t) >= 8_000).map(([n]) => n).slice(0, 3)
+    for (const numero of prontos) {
+      try { await assistente.responder(cfg, numero, !!ia) } catch (e) { log.error(`[conversa ${numero.slice(-4)}] ${e.message}`) }
+    }
+  }
+
+  // Rascunho de aviso pedido pela tela: a IA escreve, a coordenação revisa antes de salvar.
+  async function cuidarRascunhos(cfg) {
+    const pedidos = exigir(await db.from('tarcisio_ia_pedidos').select('id,entrada').eq('estado', 'pedido').order('created_at').limit(3), 'ler rascunhos')
+    for (const p of pedidos) {
+      if (!ia) { exigir(await db.from('tarcisio_ia_pedidos').update({ estado: 'falhou', erro: 'IA sem chave configurada' }).eq('id', p.id), 'rascunho'); continue }
+      try {
+        const saida = await ia.texto({ modelo: cfg.ia_modelo, maxTokens: 600,
+          sistema: `Você é ${cfg.persona_nome}, o WhatsApp da Pastoral dos Coroinhas e Acólitos da Paróquia Jesus Cristo Bom Pastor (JCBP), Limeira. Tom: ${cfg.persona_tom}\nRegras: ${cfg.persona_regras}`,
+          pedido: `Escreva um aviso de WhatsApp para os grupos da pastoral a partir desta ideia da coordenação. Use só as informações dadas, não invente data, hora nem lugar. Texto curto, sem markdown, no máximo dois emojis.\n\nIdeia: ${p.entrada}` })
+        exigir(await db.from('tarcisio_ia_pedidos').update({ estado: 'pronto', saida }).eq('id', p.id), 'rascunho pronto')
+      } catch (e) {
+        exigir(await db.from('tarcisio_ia_pedidos').update({ estado: 'falhou', erro: e.message.slice(0, 300) }).eq('id', p.id), 'rascunho falhou')
+      }
+    }
   }
 
   // Mensagem velha não sai: lembrete de missa que passou, parabéns de ontem, arte da semana errada.
@@ -227,6 +279,8 @@ export function criarRobo({ db, evo, supabaseUrl, relogio = () => new Date(), rn
       ['avisos', () => gerarAvisos(cfg, agora, sp)],
       ['escala', () => cuidarEscala(agora)],
       ['validade', () => expirar(agora)],
+      ['conversas', () => cuidarConversas(cfg, agora)],
+      ['rascunhos', () => cuidarRascunhos(cfg)],
       ['envio', () => enviarProximo(cfg, agora, sp)],
     ]
     for (const [nome, fazer] of etapas) {

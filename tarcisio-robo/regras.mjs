@@ -182,3 +182,53 @@ export function imagemPermitida(url, supabaseUrl) {
   const base = String(supabaseUrl || '').replace(/\/$/, '') + '/storage/v1/object/public/'
   return ['tarcisio/', 'artes-escala/'].some((pasta) => String(url).startsWith(base + pasta))
 }
+
+// ── Fase 2: o assistente ─────────────────────────────────────────────────────────────
+
+// Segunda a domingo da semana de `data` (texto AAAA-MM-DD).
+export function semanaDe(data) {
+  const d = new Date(data + 'T12:00:00Z')
+  const seg = new Date(d); seg.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7))
+  const dom = new Date(seg); dom.setUTCDate(seg.getUTCDate() + 6)
+  return { inicio: seg.toISOString().slice(0, 10), fim: dom.toISOString().slice(0, 10) }
+}
+
+// A semana está confirmada quando "Confirmar escala da semana" gravou a chave dela em
+// acolitos_config.escala_avisados (a chave é a menor data das missas daquela semana).
+export function semanaConfirmada(data, mapaAvisados) {
+  const { inicio, fim } = semanaDe(data)
+  return Object.keys(mapaAvisados || {}).some((k) => k >= inicio && k <= fim)
+}
+
+// Servos ligados a um número: o próprio (telefone) ou de quem ele é responsável.
+export function membrosDoNumero(numero, membros) {
+  return membros.filter((m) => [m.telefone, m.celular_recado, m.celular_responsavel, m.celular_mae]
+    .some((t) => normalizarNumero(t) === numero))
+}
+
+// Irmãos que servem JUNTO entram na mesma ausência — mesma regra das telas do app.
+export function comIrmaosJuntos(membro, membros) {
+  if (!membro.grupo_irmaos || !membro.escalar_com_irmao) return [membro]
+  return membros.filter((m) => m.id === membro.id || (m.grupo_irmaos === membro.grupo_irmaos && m.escalar_com_irmao))
+}
+
+// Comparação de nome sem acento, caixa ou espaço duplo.
+export const nomeLimpo = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+
+// Candidatos para um número desconhecido: todas as palavras do nome batem; data confere se veio.
+export function candidatosPorNome(nomeCompleto, nascimento, membros) {
+  const partes = nomeLimpo(nomeCompleto).split(' ').filter((p) => p.length > 1)
+  if (partes.length < 2) return []
+  return membros.filter((m) => {
+    const nome = nomeLimpo(m.nome)
+    if (!partes.every((p) => nome.includes(p))) return false
+    return !nascimento || !m.data_nascimento || m.data_nascimento === nascimento
+  })
+}
+
+// Cumprimento variado da IA: curto, sem número nenhum (data, hora e função vêm do texto fixo).
+// Qualquer coisa fora disso é descartada e o texto sai só com o modelo.
+export function cumprimentoValido(t) {
+  const s = String(t || '').trim()
+  return s.length >= 3 && s.length <= 90 && !/\d/.test(s) && !/[\n{}]/.test(s)
+}
