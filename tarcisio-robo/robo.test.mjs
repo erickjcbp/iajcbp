@@ -119,6 +119,7 @@ function cenarioAusencia({ cfg = {}, grupos, hora = '2026-10-18T12:00:00Z', fila
   const db = {
     from(tabela) {
       let upserted = null
+      let opcoes = null
       const q = new Proxy({}, {
         get(_, nome) {
           if (nome === 'then') {
@@ -126,13 +127,14 @@ function cenarioAusencia({ cfg = {}, grupos, hora = '2026-10-18T12:00:00Z', fila
             if (tabela === 'tarcisio_config') r = { data: { ...CFG, ausencia_horas: ['09:00'], ausencia_ultimo: '15:00', ausencia_texto: null, ...cfg }, error: null }
             if (tabela === 'tarcisio_grupos') r = { data: grupos, error: null }
             if (tabela === 'tarcisio_envios' && upserted) {
+              assert.deepEqual(opcoes, { onConflict: 'chave_unica', ignoreDuplicates: true })
               const novas = upserted.filter((l) => !fila.has(l.chave_unica))
               novas.forEach((l) => fila.set(l.chave_unica, l))
               r = { data: novas.map((l, i) => ({ id: i })), error: null }
             }
             return (ok, erro) => Promise.resolve(r).then(ok, erro)
           }
-          return (...args) => { if (nome === 'upsert') upserted = args[0]; return q }
+          return (...args) => { if (nome === 'upsert') { upserted = args[0]; opcoes = args[1] }; return q }
         },
       })
       return q
@@ -171,4 +173,45 @@ test('um grupo não ligado vira linha falhou e os outros recebem', async () => {
   assert.equal(falhou.estado, 'falhou')
   assert.equal(falhou.erro, 'Grupo não ligado na aba Grupos')
   assert.equal(fila.get('ausencia:2026-10-18:09:00:grupo:equipe').destino_jid, 'equipe@g.us')
+})
+
+test('rodada às 9h10 com o robô parado às 9h00 enfileira uma vez e a seguinte nada acrescenta', async () => {
+  const fila = new Map()
+  const a = cenarioAusencia({ grupos: GRUPOS, fila, hora: '2026-10-18T12:10:00Z' })
+  await a.robo.rodada()
+  assert.equal(fila.size, 4)
+  assert.ok([...fila.keys()].every((k) => k.startsWith('ausencia:2026-10-18:09:00:grupo:')))
+  await a.robo.rodada()
+  assert.equal(fila.size, 4)
+})
+
+test('linha de ausência pendente há mais de 3 horas é expirada', async () => {
+  const chamadas = []
+  const db = bancoFalso((tabela, ops) => {
+    if (tabela === 'tarcisio_config') return op(ops, 'single') ? { data: { ...CFG, lembrete_ligado: false } } : { data: null }
+    if (tabela === 'tarcisio_envios' && op(ops, 'like')) chamadas.push(ops)
+    return { data: [] }
+  })
+  const evo = { estado: async () => 'close', numeroConectado: async () => null }
+  const agora = new Date('2026-10-20T20:00:00Z')
+  await criarRobo({ db, evo, supabaseUrl: 'https://p.supabase.co', relogio: () => agora, rnd: () => 0, log: silencioso }).rodada()
+  assert.equal(chamadas.length, 1)
+  assert.equal(op(chamadas[0], 'like')[2], 'ausencia:%')
+  assert.equal(op(chamadas[0], 'update')[1].estado, 'cancelado')
+  assert.equal(op(chamadas[0], 'lt')[2], new Date(+agora - 3 * 3600_000).toISOString())
+})
+
+test('tentativa de enviar lembrete de ausência na terça 18h01 cancela a linha', async () => {
+  const AUS = { ...ITEM, tipo: 'aviso', chave_unica: 'ausencia:2026-10-20:15:00:grupo:pais', destino_jid: 'p@g.us' }
+  const { robo, enviados, updates } = cenario({ item: AUS, hora: '2026-10-20T21:01:00Z' })
+  await robo.rodada()
+  assert.equal(enviados.length, 0)
+  assert.equal(updates.at(-1).estado, 'cancelado')
+})
+
+test('lembrete de ausência dentro do prazo (terça 17h) é enviado normalmente', async () => {
+  const AUS = { ...ITEM, tipo: 'aviso', chave_unica: 'ausencia:2026-10-20:15:00:grupo:pais', destino_jid: 'p@g.us' }
+  const { robo, enviados } = cenario({ item: AUS, hora: '2026-10-20T20:00:00Z' })
+  await robo.rodada()
+  assert.equal(enviados.length, 1)
 })

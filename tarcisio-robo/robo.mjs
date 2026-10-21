@@ -4,7 +4,7 @@
 // Só envia: não lê resposta de ninguém. Projeto: docs/superpowers/specs/2026-10-20-sao-tarcisio-whatsapp-design.md
 import {
   agoraSP, somarDias, hmCurto, dentroDaJanela, montarLembretes, montarAniversarios,
-  publicoPrivado, proximaVez, lembreteAusenciaAgora, pausaEntreEnvios, imagemPermitida, cumprimentoValido,
+  publicoPrivado, proximaVez, lembreteAusenciaAgora, ausenciaVencida, pausaEntreEnvios, imagemPermitida, cumprimentoValido,
 } from './regras.mjs'
 
 const CAMPOS_MEMBRO = 'id,nome,apelido,nivel,user_id,data_nascimento,telefone,celular_recado,celular_responsavel,celular_mae'
@@ -193,6 +193,12 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
       if (error) throw new Error(`contar envios do dia: ${error.message}`)
       if (count >= cfg.teto_diario) return
     }
+    // lembrete de ausência depois do prazo (terça 18h) não sai nunca
+    if (String(item.chave_unica || '').startsWith('ausencia:') && ausenciaVencida(sp)) {
+      exigir(await db.from('tarcisio_envios').update({ estado: 'cancelado', erro: 'Passou do prazo de ausências: não foi enviado' })
+        .eq('id', item.id).eq('estado', 'pendente'), 'cancelar ausência vencida')
+      return
+    }
     // reserva a linha: se outra coisa mexeu nela (cancelou), não envia
     const reservada = exigir(await db.from('tarcisio_envios').update({ estado: 'enviando' })
       .eq('id', item.id).eq('estado', 'pendente').select('id'), 'reservar envio')
@@ -278,6 +284,9 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
       exigir(await db.from('tarcisio_envios').update({ estado: 'cancelado', erro: 'Passou da hora: não foi enviado' })
         .eq('estado', 'pendente').eq('tipo', tipo).lt('created_at', new Date(+agora - horas * 60 * MINUTO).toISOString()), 'expirar')
     }
+    // lembrete de ausência vale poucas horas: o texto fala de um prazo que passa
+    exigir(await db.from('tarcisio_envios').update({ estado: 'cancelado', erro: 'Passou da hora: não foi enviado' })
+      .eq('estado', 'pendente').like('chave_unica', 'ausencia:%').lt('created_at', new Date(+agora - 3 * 60 * MINUTO).toISOString()), 'expirar ausência')
   }
 
   async function iniciar() {

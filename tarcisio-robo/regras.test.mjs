@@ -189,6 +189,28 @@ test('texto personalizado da config substitui o padrão', () => {
   assert.equal(r.texto, 'Mande suas ausências!')
 })
 test('horário que não está na lista devolve null', () => {
-  assert.equal(lembreteAusenciaAgora(sp('2026-10-18T12:01:00Z'), CFG_AUS), null)
+  assert.equal(lembreteAusenciaAgora(sp('2026-10-18T11:59:00Z'), CFG_AUS), null) // 8h59, antes do slot
   assert.equal(lembreteAusenciaAgora(sp('2026-10-19T18:00:00Z'), CFG_AUS), null) // 15h só vale na terça
+})
+
+test('domingo 9h20 ainda dispara, com a chave do horário 09:00', () => {
+  assert.equal(lembreteAusenciaAgora(sp('2026-10-18T12:20:00Z'), CFG_AUS).chave, 'ausencia:2026-10-18:09:00')
+})
+test('domingo 9h30 devolve null', () => {
+  assert.equal(lembreteAusenciaAgora(sp('2026-10-18T12:30:00Z'), CFG_AUS), null)
+})
+test('terça 15h10 dispara como o último lembrete', () => {
+  const r = lembreteAusenciaAgora(sp('2026-10-20T18:10:00Z'), CFG_AUS)
+  assert.equal(r.chave, 'ausencia:2026-10-20:15:00')
+  assert.match(r.texto, /último/i)
+})
+test('terça 17h59 com slot às 15h está fora da janela de 30 min', () => {
+  assert.equal(lembreteAusenciaAgora(sp('2026-10-20T20:59:00Z'), CFG_AUS), null)
+})
+test('o texto padrão cumprimenta sem hora, fala dos pais e põe o último lembrete antes do obrigado', () => {
+  const t = lembreteAusenciaAgora(sp('2026-10-20T18:00:00Z'), CFG_AUS).texto
+  assert.match(t, /^Paz e bem, pessoal!/)
+  assert.doesNotMatch(t, /Bom dia/)
+  assert.match(t, /você ou seu filho\(a\)/)
+  assert.ok(t.indexOf('18h') < t.indexOf('último lembrete') && t.indexOf('último lembrete') < t.indexOf('Obrigado'))
 })

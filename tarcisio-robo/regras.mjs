@@ -239,24 +239,38 @@ export const PRAZO_AUSENCIA = '18:00'
 
 export function textoPadraoAusencia(ultimo) {
   const linhas = [
-    'Bom dia, pessoal! Quem não puder servir no próximo fim de semana, por favor avise as ausências.',
+    'Paz e bem, pessoal! Se você ou seu filho(a) não puder servir no próximo fim de semana, por favor avise as ausências.',
     `Pode ser pelo link ${LINK_AUSENCIAS} ou direto no app dos Acólitos.`,
-    'O prazo é até terça-feira, 18h. Obrigado!',
+    'O prazo é até terça-feira, 18h.',
   ]
   if (ultimo) linhas.push('Este é o último lembrete.')
+  linhas.push('Obrigado!')
   return linhas.join('\n')
 }
 
-// sp = agoraSP(...). Devolve { texto, chave } só no minuto exato de um horário configurado.
+const minutos = (hm) => Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3, 5))
+export const JANELA_RECUPERACAO_MIN = 30
+
+// Depois da terça 18h o prazo acabou: nada de ausência sai.
+export function ausenciaVencida(sp) {
+  const dia = new Date(sp.data + 'T12:00:00Z').getUTCDay()
+  return dia > 2 || (dia === 2 && sp.hm > PRAZO_AUSENCIA)
+}
+
+// sp = agoraSP(...). Dispara no horário configurado ou até 30 min depois (robô reiniciado,
+// pausa que acabou). A chave usa o horário do SLOT, então cada slot sai uma única vez.
 export function lembreteAusenciaAgora(sp, cfg) {
-  const dia = new Date(sp.data + 'T12:00:00Z').getUTCDay() // 0 dom, 1 seg, 2 ter
-  if (dia > 2) return null
-  if (dia === 2 && sp.hm > PRAZO_AUSENCIA) return null
-  const horas = (cfg.ausencia_horas || []).map(hmCurto)
-  const ultimo = dia === 2 && sp.hm === hmCurto(cfg.ausencia_ultimo)
-  if (!ultimo && !horas.includes(sp.hm)) return null
+  if (ausenciaVencida(sp)) return null
+  const dia = new Date(sp.data + 'T12:00:00Z').getUTCDay()
+  const slots = (cfg.ausencia_horas || []).map(hmCurto).map((hm) => ({ hm, ultimo: false }))
+  if (dia === 2 && cfg.ausencia_ultimo) slots.push({ hm: hmCurto(cfg.ausencia_ultimo), ultimo: true })
+  const agora = minutos(sp.hm)
+  const vale = slots.filter((x) => minutos(x.hm) <= agora && agora - minutos(x.hm) < JANELA_RECUPERACAO_MIN)
+    .sort((a, b) => minutos(b.hm) - minutos(a.hm))
+  const slot = vale.find((x) => x.ultimo) || vale[0]
+  if (!slot) return null
   return {
-    texto: cfg.ausencia_texto || textoPadraoAusencia(ultimo),
-    chave: `ausencia:${sp.data}:${sp.hm}`,
+    texto: cfg.ausencia_texto || textoPadraoAusencia(slot.ultimo),
+    chave: `ausencia:${sp.data}:${slot.hm}`,
   }
 }
