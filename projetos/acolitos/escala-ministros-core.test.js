@@ -47,7 +47,7 @@ test('adoração não vira missa', () => {
   assert.deepStrictEqual(LIDOS.filter((l) => l.data === '2026-10-04').map((l) => l.horario), ['7h', '9h', '19h']);
 });
 
-test('11 de novembro... 1/nov vira 2026-11-01', () => {
+test('1/nov vira 2026-11-01', () => {
   const dia = LIDOS.filter((l) => l.data === '2026-11-01');
   assert.deepStrictEqual(dia.map((l) => l.horario), ['7h', '9h', '19h']);
   assert.deepStrictEqual(dia[0].nomes.slice(0, 2), ['Claudia S.', 'Janaina']);
@@ -156,4 +156,58 @@ test('memória de pai que mudou de nome é ignorada', () => {
   const trocou = membros.map((m) => (m.id === 'm1' ? { ...m, nome_pai_ministro: 'Paulo Prado' } : m));
   const r3 = casarNomes(lido(['Luís']), trocou, ap3);
   assert.deepStrictEqual(r3.casados.map((c) => [c.membro_id, c.pai_ou_mae]), [['m2', 'pai']]);
+});
+
+// ---------- Fix round 1: travas de mês ilegível, inicial, maiúsculas, sim com dois pais ----------
+const LINHAS = TEXTO.split('\n');
+const semLinha = (n) => LINHAS.filter((_, i) => i !== n - 1).join('\n');   // n = número da linha no arquivo
+
+test('bloco a menos desloca as datas e devolve []', () => {
+  // tira o bloco do domingo 4/out (linha 43): 10 blocos para 11 títulos
+  assert.deepStrictEqual(lerEscalaMinistros(semLinha(43), 2026), []);
+  // sem o ÚLTIMO bloco (domingo 1/nov, linha 57) os 10 primeiros dias até batem com o dia da
+  // semana — só a contagem de blocos × títulos pega
+  assert.deepStrictEqual(lerEscalaMinistros(semLinha(57), 2026), []);
+});
+
+test('bloco a mais devolve []', () => {
+  const extra = LINHAS.slice(0, 41).concat(['', LINHAS[40]], LINHAS.slice(41)).join('\n');   // repete o bloco do sábado 3
+  assert.deepStrictEqual(lerEscalaMinistros(extra, 2026), []);
+  // um bloco a mais no FIM (repete o domingo 1/nov) não desloca nenhum dia: só a contagem pega
+  const noFim = LINHAS.slice(0, 57).concat(['', LINHAS[56]], LINHAS.slice(57)).join('\n');
+  assert.deepStrictEqual(lerEscalaMinistros(noFim, 2026), []);
+});
+
+test('sábado cujo primeiro horário é 7h devolve []', () => {
+  const troca = LINHAS.map((l, i) => (i === 40 ? '7:00h Fulano Beltrano 9:00h Ciclano 19:00h Beltrana' : l)).join('\n');
+  assert.deepStrictEqual(lerEscalaMinistros(troca, 2026), []);
+  // e domingo que começa às 17h também
+  const dom = LINHAS.map((l, i) => (i === 42 ? '17:00h Fulano 18:30h Ciclano' : l)).join('\n');
+  assert.deepStrictEqual(lerEscalaMinistros(dom, 2026), []);
+});
+
+test("nome em maiúsculas no meio do bloco ('JB') fica", () => {
+  const t = TEXTO.replace('17:00H Adriana Acisio', '17:00H Adriana JB Acisio');
+  const m = lerEscalaMinistros(t, 2026).find((l) => l.data === '2026-10-03' && l.horario === '17h');
+  assert.deepStrictEqual(m.nomes.slice(0, 3), ['Adriana', 'JB', 'Acisio']);
+  assert.strictEqual(m.comunidade, 'matriz');
+});
+
+test("'Rita de Cássia' casa com 'Rita D.' e com 'Rita C.'", () => {
+  const ms = [{ id: 'm9', nome: 'Bia', nome_pai_ministro: '', nome_mae_ministro: 'Rita de Cássia', tem_pai_ministro: false, tem_mae_ministro: true }];
+  const r = casarNomes(lido(['Rita D.', 'Rita C.', 'Rita E.']), ms, []);
+  assert.deepStrictEqual(r.casados.map((c) => [c.membro_id, c.pai_ou_mae, c.nome]), [['m9', 'mae', 'Rita D.'], ['m9', 'mae', 'Rita C.']]);
+  assert.deepStrictEqual(r.ignorados, ['Rita E.']);
+});
+
+test('sim lembrado para um dos dois pais de mesmo primeiro nome casa só aquele', () => {
+  // pai e mãe do mesmo acólito com o mesmo primeiro nome: sem memória é dúvida;
+  // a memória diz qual dos dois (pai_ou_mae) e só esse casa
+  const ms = [{ id: 'm8', nome: 'Davi', nome_pai_ministro: 'Alex Lima', nome_mae_ministro: 'Alex Rosa', tem_pai_ministro: true, tem_mae_ministro: true }];
+  const sem = casarNomes(lido(['Alex']), ms, []);
+  assert.deepStrictEqual(sem.duvidas[0].opcoes.map((o) => o.pai_ou_mae), ['pai', 'mae']);
+  const ap = [{ nome_pdf: 'alex', membro_id: 'm8', pai_ou_mae: 'mae', resposta: 'sim' }];
+  const r = casarNomes(lido(['Alex']), ms, ap);
+  assert.deepStrictEqual(r.duvidas, []);
+  assert.deepStrictEqual(r.casados.map((c) => [c.membro_id, c.pai_ou_mae]), [['m8', 'mae']]);
 });

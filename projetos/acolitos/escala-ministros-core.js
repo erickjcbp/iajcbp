@@ -41,14 +41,15 @@
     return datas;
   }
 
+  // Só usado logo depois da hora (nome de lugar); no meio dos nomes, "JB" é gente.
   function maiuscula(tok) { return /^[A-ZÀ-Ý]{2,}$/.test(tok); }   // "MORRO", "ALTO", "EXPOR"
 
-  // Nomes de um trecho: palavra com ponto ("E.", "Bot.", "S.R") é a inicial de quem veio antes.
+  // Nomes de um trecho (a adoração, com EXPOR/RETIRAR, já foi cortada antes): palavra com ponto ("E.", "Bot.", "S.R") é a inicial de quem veio antes.
   function nomesDe(toks) {
     var nomes = [];
     toks.forEach(function (t) {
       t.split('/').forEach(function (p) {
-        if (!p || maiuscula(p)) return;
+        if (!p) return;
         if (p.indexOf('.') >= 0 && nomes.length && nomes[nomes.length - 1].indexOf(' ') < 0) nomes[nomes.length - 1] += ' ' + p;
         else if (/^[A-Za-zÀ-ÿ]/.test(p)) nomes.push(p);
       });
@@ -71,7 +72,7 @@
           var min = (+h[1]) * 60 + (+h[2]);
           if (anterior >= 0 && min < anterior) { grupo = []; grupos.push(grupo); }
           anterior = min;
-          atual = { horario: (+h[1]) + 'h' + (h[2] === '00' ? '' : h[2]), comunidade: h[2] === '30' && +h[1] === 18 ? 'santo_antonio' : 'matriz', toks: [], lugar: true };
+          atual = { min: min, horario: (+h[1]) + 'h' + (h[2] === '00' ? '' : h[2]), comunidade: h[2] === '30' && +h[1] === 18 ? 'santo_antonio' : 'matriz', toks: [], lugar: true };
           grupo.push(atual);
           return;
         }
@@ -84,14 +85,26 @@
     return grupos;
   }
 
+  // Sábado começa às 17h ou depois; domingo começa antes do meio-dia. Dia de semana
+  // (feriado, como 12/out numa segunda) não é conferido.
+  function diaConfere(data, min) {
+    var p = String(data || '').split('-'), dow = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])).getUTCDay();
+    if (dow === 6) return min >= 17 * 60;
+    if (dow === 0) return min < 12 * 60;
+    return true;
+  }
+
   function lerEscalaMinistros(texto, ano) {
     try {
       if (typeof texto !== 'string' || !texto.trim()) return [];
       ano = +ano || new Date().getFullYear();
       var linhas = texto.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
       var datas = titulos(linhas, ano), grupos = gruposDeDia(linhas), saida = [];
+      // Travas de mês ilegível: o casamento dia↔bloco é por ORDEM, então um bloco a menos
+      // ou a mais desloca todas as datas seguintes sem ninguém ver. Na dúvida, nada.
+      if (datas.length !== grupos.length) return [];
+      for (var i = 0; i < grupos.length; i++) if (!diaConfere(datas[i], grupos[i][0].min)) return [];
       grupos.forEach(function (g, i) {
-        if (i >= datas.length) return;   // dia sem título: não se adivinha a data
         g.forEach(function (m) {
           var nomes = nomesDe(m.toks);
           if (nomes.length) saida.push({ data: datas[i], horario: m.horario, comunidade: m.comunidade, nomes: nomes });
@@ -107,10 +120,13 @@
     var p = nomeLimpo(nome).split(' ');
     return { primeiro: p[0] || '', inicial: (p[1] || '').replace(/[^a-z]/g, '').charAt(0) };
   }
+  // Iniciais aceitas do pai/mãe: a 1ª letra da 2ª palavra CRUA e a da 1ª palavra que não é
+  // partícula (de/da/do/das/dos/e). "Rita de Cássia" aceita "Rita D." e "Rita C.".
   function partesDoPai(nome) {
     var p = nomeLimpo(nome).split(' ').filter(Boolean);
     var resto = p.slice(1).filter(function (x) { return !PARTICULAS[x]; });
-    return { primeiro: p[0] || '', inicial: (resto[0] || '').charAt(0) };
+    var iniciais = [(p[1] || '').charAt(0), (resto[0] || '').charAt(0)].filter(Boolean);
+    return { primeiro: p[0] || '', iniciais: iniciais };
   }
   function nomeDoPai(m, pm) { return pm === 'pai' ? m.nome_pai_ministro : m.nome_mae_ministro; }
   function temPai(m, pm) { return pm === 'pai' ? m.tem_pai_ministro === true : m.tem_mae_ministro === true; }
@@ -124,7 +140,7 @@
         if (!temPai(m, pm) || !nomeDoPai(m, pm)) return;
         var pai = partesDoPai(nomeDoPai(m, pm));
         if (pai.primeiro !== pdf.primeiro) return;
-        if (pdf.inicial && pai.inicial && pai.inicial !== pdf.inicial) return;
+        if (pdf.inicial && pai.iniciais.length && pai.iniciais.indexOf(pdf.inicial) < 0) return;
         saida.push({ membro_id: m.id, pai_ou_mae: pm, rotulo: (pm === 'pai' ? 'pai de ' : 'mãe de ') + m.nome });
       });
     });
