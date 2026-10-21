@@ -1,5 +1,5 @@
 // Portão do tipo escalado_robo (e do segredo do robô) em api/enviar-push.js.
-// Roda com: node --test api/enviar-push.test.mjs
+// Roda com: node --test testes-api/enviar-push.test.mjs
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
@@ -16,7 +16,7 @@ import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 const aqui = fileURLToPath(new URL('.', import.meta.url))
 const copia = aqui + '_enviar-push.copia.mjs'
-fs.copyFileSync(aqui + 'enviar-push.js', copia)
+fs.copyFileSync(aqui + '../api/enviar-push.js', copia)
 let handler
 try { ({ default: handler } = await import('./_enviar-push.copia.mjs')) } finally { fs.rmSync(copia, { force: true }) }
 
