@@ -127,3 +127,44 @@ test('com todos acima do mínimo e vaga cheia nada muda', () => {
   assert.deepEqual(r.vazias, []);
   assert.deepEqual(r.alemDoMinimo, []);
 });
+
+// ---- Task 5: filho de ministro na mesma missa ----
+const min = (celeb, id) => ({ data: celeb.data, horario: celeb.horario, comunidade: celeb.comunidade, membro_id: id });
+test('filho entra na missa em que a mãe serve', () => {
+  const e = mundo(['a', 'b', 'c', 'filho'], { celebs: [SAB, DOM], extra: { ministros: [min(DOM, 'filho')] } });
+  const r = gerarSemana(e);
+  const n = r.novas.find(x => x.membro_id === 'filho');
+  assert.equal(n && n.celebracao_id, 'dom');
+  assert.deepEqual(r.semVagaFilhoDeMinistro, []);
+});
+test('mãe em duas missas do fim de semana: filho na primeira em que cabe, uma só vez', () => {
+  const e = mundo(['a', 'b', 'c', 'filho'], { celebs: [SAB, DOM], extra: { ministros: [min(SAB, 'filho'), min(DOM, 'filho')] } });
+  const r = gerarSemana(e);
+  const meus = r.novas.filter(x => x.membro_id === 'filho');
+  assert.equal(meus.length, 1);
+  assert.equal(meus[0].celebracao_id, 'sab');
+});
+test('filho ausente não é escalado e aparece em semVagaFilhoDeMinistro', () => {
+  const e = mundo(['a', 'b', 'filho'], { celebs: [DOM], extra: { ministros: [min(DOM, 'filho')], ausencias: { dom: new Set(['filho']) } } });
+  const r = gerarSemana(e);
+  assert.ok(!ids(r).includes('filho'));
+  assert.deepEqual(r.semVagaFilhoDeMinistro, [{ membro_id: 'filho', motivo: 'ausente' }]);
+});
+test('filho sem habilitação para nenhuma vaga aberta não é forçado', () => {
+  const e = mundo(['a', 'b', 'filho'], { celebs: [DOM], semHab: ['filho'], extra: { ministros: [min(DOM, 'filho')] } });
+  const r = gerarSemana(e);
+  assert.ok(!ids(r).includes('filho'));
+  assert.equal(r.semVagaFilhoDeMinistro.length, 1);
+  assert.equal(r.semVagaFilhoDeMinistro[0].motivo, 'sem_vaga_compativel');
+});
+test('sem ministros o resultado é igual ao de antes (e a lista vem vazia)', () => {
+  const base = gerarSemana(mundo(['a', 'b', 'c'], { celebs: [SAB, DOM] }));
+  const com = gerarSemana(mundo(['a', 'b', 'c'], { celebs: [SAB, DOM], extra: { ministros: [] } }));
+  assert.deepEqual(com.novas, base.novas);
+  assert.deepEqual(com.semVagaFilhoDeMinistro, []);
+});
+test('missa fora da geração não força o filho em outra missa', () => {
+  const e = mundo(['a', 'b', 'filho'], { celebs: [SAB], extra: { ministros: [min(DOM, 'filho')] } });
+  const r = gerarSemana(e);
+  assert.deepEqual(r.semVagaFilhoDeMinistro, [{ membro_id: 'filho', motivo: 'missa_fora_da_geracao' }]);
+});

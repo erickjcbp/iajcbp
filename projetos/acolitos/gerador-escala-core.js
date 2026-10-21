@@ -239,6 +239,34 @@
       const pools = new Map(slots.map(s => [s, new Set(candsDe(s).map(m => m.id))]));
       SemanalCore.reservar(membros, slots, (m, s) => pools.get(s).has(m.id)).forEach(({ slot, membro }) => colocar(slot, membro));
     }
+    // FILHO DE MINISTRO: entrada.ministros = [{data, horario, comunidade, membro_id}] (membro_id = o FILHO).
+    // Reserva antes do greedy, na missa em que o pai/mãe serve; as regras duras continuam valendo.
+    // Quem não couber não é forçado: volta em semVagaFilhoDeMinistro.
+    const semVagaFilhoDeMinistro = [];
+    const casaMissa = (e, c) => e.data === c.data && compararHorario(e.horario, c.horario) === 0
+      && e.comunidade !== 'outra' && (!e.comunidade || !c.comunidade || e.comunidade === c.comunidade);
+    const porFilho = new Map();
+    (entrada.ministros || []).forEach(e => { if (e && e.membro_id) { if (!porFilho.has(e.membro_id)) porFilho.set(e.membro_id, []); porFilho.get(e.membro_id).push(e); } });
+    const membroPorId = {}; membros.forEach(m => { membroPorId[m.id] = m; });
+    porFilho.forEach((lista, id) => {
+      if (usadoFds.has(id)) return;                      // já escalado no fim de semana: nada a reservar
+      if (!membroPorId[id]) { semVagaFilhoDeMinistro.push({ membro_id: id, motivo: 'fora_da_lista' }); return; }
+      const missas = ordc.filter(c => lista.some(e => casaMissa(e, c)));
+      if (!missas.length) { semVagaFilhoDeMinistro.push({ membro_id: id, motivo: 'missa_fora_da_geracao' }); return; }
+      if (missas.every(c => (ausFresh[c.id] || new Set()).has(id))) { semVagaFilhoDeMinistro.push({ membro_id: id, motivo: 'ausente' }); return; }
+      let melhor = null, melhorN = 0;
+      for (const c of missas) {
+        for (const s of slots) {
+          if (s.filled || s.c.id !== c.id) continue;
+          const cs = candsDe(s);
+          if (!cs.some(m => m.id === id)) continue;
+          if (melhor === null || cs.length < melhorN) { melhor = s; melhorN = cs.length; }
+        }
+        if (melhor) break;                               // primeira missa em que cabe
+      }
+      if (melhor) colocar(melhor, membroPorId[id]);
+      else semVagaFilhoDeMinistro.push({ membro_id: id, motivo: 'sem_vaga_compativel' });
+    });
     // GREEDY GLOBAL: preenche sempre a vaga com MENOS candidatos primeiro (reserva os "frescos" p/ onde há pouca opção)
     // 1ª passada: só quem ainda está ABAIXO do mínimo do mês (minimo_mes, padrão 2).
     // 2ª passada (sem o teto do mês): as vagas que sobraram vazias, com quem já cumpriu o mínimo —
@@ -280,7 +308,7 @@
     const alemDoMinimo = [];
     const porId = {}; membros.forEach(m => { porId[m.id] = m; });
     Object.keys(novasPor).forEach(id => { const v = vezes(id); if (v > minimoDe(porId[id])) alemDoMinimo.push({ membro_id: id, vezes: v }); });
-    return { novas: novas, vazias: vazias, alemDoMinimo: alemDoMinimo, semanalPendentes: semanalPendentes };
+    return { novas: novas, vazias: vazias, alemDoMinimo: alemDoMinimo, semanalPendentes: semanalPendentes, semVagaFilhoDeMinistro: semVagaFilhoDeMinistro };
   }
 
   var api = { gerarSemana: gerarSemana, planejarVagas: planejarVagas, elegivelFuncao: elegivelFuncao, MAIORES_PADRAO: MAIORES_PADRAO };
