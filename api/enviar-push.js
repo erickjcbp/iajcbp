@@ -6,6 +6,8 @@
 //   troca    (qualquer membro, VALIDADO) → "convite de troca"; alvo_membro_id (o servidor confere o convite real)
 //   arte            (SÓ o robô do cron)  → "arte da escala pronta"; vai pra coordenação; texto montado aqui
 //   escala_pendente (SÓ o robô do cron)  → "a escala do fim de semana não foi montada"; idem
+//   escalado_robo   (SÓ o robô, segredo)  → o MESMO "você foi escalado" do tipo escalado, para o
+//                                          robô do WhatsApp confirmar a semana; membros[] (uuid) obrigatório
 import webpush from 'web-push';
 import crypto from 'node:crypto';
 
@@ -14,6 +16,11 @@ const EQUIPE = ['coord_admin', 'subadmin', 'membro_equipe', 'cerimonario'];
 const URLBASE_MEMBRO = '/projetos/acolitos/escalas-membro.html';
 const URLBASE_ESCALA = '/projetos/acolitos/escala.html';
 const URLBASE_CRM = '/projetos/acolitos/crm.html';
+// Texto do aviso de escalado. O robô (escalado_robo) não manda texto: usa exatamente este, que é
+// o que a tela manda no tipo escalado — assim o segredo não vira megafone.
+const ESCALADO_TITULO = 'Você foi escalado ⛪';
+const ESCALADO_TEXTO = 'Você está na escala deste fim de semana. Confira suas missas no app.';
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Compara segredos sem vazar tempo. Falso se qualquer um estiver vazio.
 function segredoConfere(recebido, esperado) {
@@ -42,10 +49,10 @@ export default async function handler(req, res) {
   // ⚠️ 'arte_faltando' FALTAVA nesta lista (achado em 18/09/2026): o vigia da arte mandava esse
   // tipo e levava 400 "Tipo inválido" — o alarme que existe para a falha não passar calada
   // estava, ele mesmo, calado. Quem mexer aqui: esta lista e TIPOS_CRON têm de andar juntas.
-  if (!['aviso', 'teste', 'escalado', 'ausencia', 'troca', 'boas_vindas', 'arte', 'escala_pendente', 'arte_faltando', 'crm'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
+  if (!['aviso', 'teste', 'escalado', 'ausencia', 'troca', 'boas_vindas', 'arte', 'escala_pendente', 'arte_faltando', 'crm', 'escalado_robo'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
 
   // O robô do cron não tem login: entra pelo segredo compartilhado, e SÓ para os tipos dele.
-  const TIPOS_CRON = ['arte', 'escala_pendente', 'arte_faltando', 'crm'];
+  const TIPOS_CRON = ['arte', 'escala_pendente', 'arte_faltando', 'crm', 'escalado_robo'];
   const viaCron = segredoConfere(req.headers['x-cron-secret'], process.env.CRON_SECRET);
   if (viaCron && !TIPOS_CRON.includes(tipo)) return res.status(403).json({ error: 'Segredo do cron só vale para os avisos do robô' });
   if (TIPOS_CRON.includes(tipo) && !viaCron) return res.status(403).json({ error: 'Acesso negado' });
@@ -108,6 +115,14 @@ export default async function handler(req, res) {
     title = 'Convite de troca 🔁';
     body = ((me.apelido || me.nome || 'Um colega') + ' quer trocar de missa com você. Veja no app.').slice(0, 180);
     alvoMembros = [alvo_membro_id];
+
+  } else if (tipo === 'escalado_robo') {
+    // Só o robô chega aqui (checado lá em cima, igual ao tipo arte). O texto é o do escalado.
+    if (!Array.isArray(membros) || !membros.length) return res.status(400).json({ error: 'Sem destinatários' });
+    if (!membros.every((m) => typeof m === 'string' && UUID.test(m))) return res.status(400).json({ error: 'Destinatário inválido' });
+    title = ESCALADO_TITULO;
+    body = ESCALADO_TEXTO;
+    alvoMembros = membros;
 
   } else if (TIPOS_CRON.includes(tipo)) {
     // Só o cron chega aqui (checado lá em cima). Nada de texto livre: a mensagem é montada
@@ -175,6 +190,7 @@ export default async function handler(req, res) {
   webpush.setVapidDetails(VSUB, VPUB, VPRIV);
   tag = tipo + '-' + Date.now() + '-' + Math.round(Math.random() * 1e6); // única → não colapsa, re-alerta
   const url = tipo === 'crm' ? URLBASE_CRM
+    : tipo === 'escalado_robo' ? URLBASE_MEMBRO   // o mesmo destino do escalado
     : TIPOS_CRON.includes(tipo) ? URLBASE_ESCALA   // arte e escala pendente: os dois resolvem na Escala
     // boas-vindas cai na HOME: é lá que a festa do time acontece. Sem esta linha ela iria
     // parar nas escalas do membro, que não têm nada a ver com o assunto.

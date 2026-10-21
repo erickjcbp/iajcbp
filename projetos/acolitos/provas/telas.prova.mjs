@@ -3442,6 +3442,49 @@ async function provaIdentidadeUploadEFonte(provas) {
     'salvar grava a fonte escolhida e o endereço do logo enviado', JSON.stringify(r.gravacoes));
 }
 
+// Confirmar a escala da semana, pela tela, agora que a regra mora em confirmar-semana-core.js
+// (a mesma que o robô usa). Prova o caminho da PESSOA: pergunta antes, avisa só quem falta,
+// grava os avisados e pede a arte; e, com o envio falhando, ninguém é marcado.
+async function provaConfirmarEscalaDaSemana(provas) {
+  console.log('\n\x1b[1mConfirmar escala da semana: avisa só quem falta e pede a arte uma vez\x1b[0m');
+  const abrir = (push) => provas.abrir('escala.html', {
+    tabelas: { acolitos_config: { data: [{ valor: { '2026-10-24': ['m-a'] } }] } },
+    rpcs: { tarcisio_pedir_escala: { data: { ok: true, novo: true } } },
+    avaliar: `
+      const ditos = [], enviados = [];
+      window.uiConfirm = async (t) => { ditos.push('confirm:' + t); return true; };
+      window.uiAlert = async (t) => { ditos.push('alert:' + t); };
+      window.toast = (t) => { ditos.push('toast:' + t); };
+      window.apiPost = async (rota, corpo) => { enviados.push({ rota, corpo }); return rota === '/api/enviar-push' ? { ok: ${push} } : { ok: true }; };
+      membros = [{ id: 'm-a', nome: 'Ana' }, { id: 'm-b', nome: 'Bruno' }, { id: 'm-c', nome: 'Caio' }];
+      escalasMap = { c1: [{ membro_id: 'm-a' }, { membro_id: 'm-b' }], c2: [{ membro_id: 'm-c' }] };
+      const btn = document.createElement('button'); btn.textContent = 'Confirmar escala da semana';
+      await confirmarEscalaSemana([{ id: 'c1', data: '2026-10-24' }, { id: 'c2', data: '2026-10-25' }], '2026-10-24', btn);
+      return { ditos, enviados, botao: btn.textContent, travado: btn.disabled };`,
+  });
+  const ok = await abrir(true);
+  const a = ok.avaliado || {};
+  exigir(!ok.erroAvaliar, 'a confirmação roda na tela', ok.erroAvaliar || '');
+  exigir((a.ditos || []).some((d) => /^confirm:Avisar 2 pessoas/.test(d) && /Bruno, Caio/.test(d)), 'pergunta antes, só com quem falta avisar', JSON.stringify(a.ditos));
+  const pushes = (a.enviados || []).filter((e) => e.rota === '/api/enviar-push');
+  exigir(pushes.length === 2 && pushes.every((e) => e.corpo.tipo === 'escalado' && e.corpo.membros.length === 1 && e.corpo.texto === 'Você está na escala deste fim de semana. Confira suas missas no app.'),
+    'um aviso tipo escalado por pessoa nova, com o texto de sempre', JSON.stringify(pushes));
+  const up = (ok.gravacoes || []).find((g) => g.tabela === 'acolitos_config' && g.acao === 'upsert');
+  exigir(up && up.dados.chave === 'escala_avisados' && JSON.stringify(up.dados.valor['2026-10-24'].slice().sort()) === JSON.stringify(['m-a', 'm-b', 'm-c']),
+    'grava os avisados da semana (os de antes e os novos)', JSON.stringify(ok.gravacoes));
+  const rpc = (ok.gravacoes || []).find((g) => g.tabela === 'rpc:tarcisio_pedir_escala');
+  exigir(rpc && rpc.dados.p_domingo === '2026-10-25', 'pede a arte do domingo do fim de semana', JSON.stringify(rpc));
+  exigir((a.enviados || []).some((e) => e.rota === '/api/regenerar-arte'), 'arte nova na fila: dispara a geração', JSON.stringify(a.enviados));
+  exigir((a.ditos || []).some((d) => d === 'toast:✓ 2 pessoas avisadas'), 'diz quantos foram avisados', JSON.stringify(a.ditos));
+  exigir(a.botao === 'Confirmar escala da semana' && !a.travado, 'o botão volta ao normal', JSON.stringify([a.botao, a.travado]));
+
+  const falhou = await abrir(false);
+  const f = falhou.avaliado || {};
+  exigir(!(falhou.gravacoes || []).some((g) => g.tabela === 'acolitos_config'), 'envio falhou: ninguém é marcado como avisado', JSON.stringify(falhou.gravacoes));
+  exigir(!(falhou.gravacoes || []).some((g) => g.tabela === 'rpc:tarcisio_pedir_escala'), 'envio falhou: a arte não é pedida', JSON.stringify(falhou.gravacoes));
+  exigir((f.ditos || []).some((d) => /^alert:Não foi possível enviar os avisos\. Ninguém foi marcado/.test(d)), 'e a pessoa lê o motivo', JSON.stringify(f.ditos));
+}
+
 // ── Partida ──────────────────────────────────────────────────────────────────
 const filtro = process.argv[2] || null;
 const provas = await iniciarProvas();
@@ -3449,6 +3492,7 @@ const comecou = Date.now();
 try {
   if (filtro === '--seletores') { await provaChamadaFiltra(provas); await provaTesourariaVinculaARetiro(provas); await provaAvisaQuandoATravaAnulaAMarcacao(provas); }
   else if (filtro === '--retiros') { await provaRetiros(provas); await provaTesourariaVinculaARetiro(provas); await provaEquipesDoRetiro(provas); await provaIdentidadeUploadEFonte(provas); }   // só a prova da aba Retiros
+  else if (filtro === '--confirmar') { await provaFumaca(provas, 'escala.html'); await provaConfirmarEscalaDaSemana(provas); }
   else await provaFumaca(provas, filtro);
   if (!filtro) {
     await provaBarraAcendeSecao(provas);
@@ -3499,6 +3543,7 @@ try {
     await provaTesourariaVinculaARetiro(provas);
     await provaEquipesDoRetiro(provas);
     await provaIdentidadeUploadEFonte(provas);
+    await provaConfirmarEscalaDaSemana(provas);
   }
 } finally {
   await provas.encerrar();
