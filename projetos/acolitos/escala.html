@@ -214,6 +214,7 @@
         <div class="escala-mais-menu" id="escala-mais-menu" role="menu">
           <button class="mais-item" role="menuitem" onclick="maisAcao(abrirModelos)">⚙️ Modelos</button>
           <button class="mais-item" role="menuitem" onclick="maisAcao(function(){ location.href='ausencias.html'; })">Ausências</button>
+          <button class="mais-item" role="menuitem" id="btn-tarcisio" style="display:none" onclick="maisAcao(function(){ location.href='tarcisio.html'; })">📲 São Tarcísio (WhatsApp)</button>
           <button class="mais-item" role="menuitem" onclick="maisAcao(function(){ setAba('rodizio'); })">📊 Rodízio e frequência</button>
           <button class="mais-item" role="menuitem" onclick="maisAcao(escalaPDF)">🖨 Escala PDF</button>
           <button class="mais-item" role="menuitem" id="btn-arte-semana" style="display:none" onclick="maisAcao(arteSemana)">🎨 Arte da semana</button>
@@ -474,7 +475,7 @@ async function init() {
   if (!ctx) return;
   renderHeader(ctx, 'escala');
   renderBottomNav(ctx, 'escala');
-  if (navCaps(ctx).isAdmin) { const _ba = document.getElementById('btn-arte-semana'); if (_ba) _ba.style.display = ''; } // arte: só coordenação (override/regenerar)
+  if (navCaps(ctx).isAdmin) { const _ba = document.getElementById('btn-arte-semana'); if (_ba) _ba.style.display = ''; const _bt = document.getElementById('btn-tarcisio'); if (_bt) _bt.style.display = ''; } // arte: só coordenação (override/regenerar)
   mergeTiposLabel(TIPO_LABEL); // tipos customizados do Config entram no rótulo + select
   mergeFuncoesConfig();        // funções próprias + "maiores" configuráveis
   popularTipos();
@@ -1179,6 +1180,27 @@ async function trocarPosicao(pe) {
 // Guarda quem já foi avisado em acolitos_config, chave 'escala_avisados', no formato
 // { 'AAAA-MM-DD da semana': [membro_id, ...] }. Não há coluna no banco para isto e não houve
 // como aplicar migration nesta sessão; a lista é podada para não crescer para sempre.
+// São Tarcísio | JCBP (migration 098): a 1ª confirmação da semana põe a arte na fila dos 4 grupos
+// do WhatsApp e pede uma arte nova; o robô espera ela ficar pronta e envia. Confirmar de novo
+// (para avisar quem entrou depois) não reenvia: a escala confirmada é a que vale (decisão do dono).
+// Só admin/subadmin passam no banco; para os demais a função responde sem_permissao e nada muda.
+async function pedirArteNosGrupos(celebs) {
+  const datas = (celebs || []).map(c => c.data).sort();
+  if (!datas.length) return;
+  const d = new Date(datas[datas.length - 1] + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + ((7 - d.getUTCDay()) % 7));   // o domingo do fim de semana
+  try {
+    const { data: r, error } = await sb.rpc('tarcisio_pedir_escala', { p_domingo: d.toISOString().slice(0, 10) });
+    if (error) throw error;
+    if (!r || !r.novo) return;
+    await apiPost('/api/regenerar-arte', { formato: 'automatico' });
+    toast('A arte vai para os grupos do WhatsApp assim que ficar pronta.');
+  } catch (e) {
+    console.error('São Tarcísio: pedir a arte nos grupos falhou', e);
+    toast('A escala foi confirmada, mas a arte não entrou na fila do WhatsApp. Veja em São Tarcísio.', 'error');
+  }
+}
+
 async function confirmarEscalaSemana(celebs, chaveSemana, btnEl) {
   const ids = (celebs || []).map(c => c.id);
   const escalados = [];
@@ -1223,6 +1245,7 @@ async function confirmarEscalaSemana(celebs, chaveSemana, btnEl) {
   const { error: errSalvar } = await sb.from('acolitos_config')
     .upsert({ chave: 'escala_avisados', valor: podado, updated_at: new Date().toISOString() }, { onConflict: 'chave' });
   if (btnEl) { btnEl.disabled = false; btnEl.textContent = txt0; }
+  await pedirArteNosGrupos(celebs);
   if (errSalvar) {
     console.error('Confirmar escala: gravar avisados falhou', errSalvar);
     await uiAlert('Os avisos foram enviados, mas não consegui registrar quem já recebeu. Se apertar Confirmar de novo, essas pessoas receberão o aviso outra vez.');

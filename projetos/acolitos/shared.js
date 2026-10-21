@@ -192,6 +192,24 @@ showSplash();
 //   Sem isto, a barra de baixo escondia o botão mas a URL continuava aberta —
 //   quem não tinha o módulo entrava digitando o endereço.
 // opts.livres: papéis que entram mesmo sem a permissão (ex.: cerimoniário na Chamada).
+// Carrega whatsapp-responsavel.js só quando o portão roda (não pesa em quem já informou).
+// Falhar ao carregar NÃO tranca o app: o portão é para completar cadastro, não é segurança.
+async function whatsappResponsavelFaltando(conta, grupoIrmaos) {
+  try {
+    if (!window.WhatsappResponsavel) {
+      await new Promise((ok, falha) => {
+        const s = document.createElement('script');
+        s.src = '/projetos/acolitos/whatsapp-responsavel.js'; s.onload = ok; s.onerror = falha;
+        document.head.appendChild(s);
+      });
+    }
+    return WhatsappResponsavel.faltando([conta, ...(grupoIrmaos || [])], hojeLocal());
+  } catch (e) {
+    console.error('Portão do WhatsApp do responsável não carregou', e);
+    return [];
+  }
+}
+
 async function initModulo(requiredRoles = null, opts = null) {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return null; }
@@ -301,6 +319,16 @@ async function initModulo(requiredRoles = null, opts = null) {
     mostrarParedeNotificacoes(_portao.parede, session.user.id);
     hideSplash();
     return null;   // as 19 telas param no `if (!ctx) return` — nada carrega atrás da parede
+  }
+
+  // PORTÃO DO WHATSAPP DO RESPONSÁVEL (São Tarcísio | JCBP, migration 098) — menor que serve e
+  // não tem celular de responsável só segue depois de informar: o lembrete da véspera vai SÓ
+  // para esse número. Depois do sino pelo mesmo motivo do sino: um portão de cada vez.
+  const _semZap = await whatsappResponsavelFaltando(conta, grupoIrmaos);
+  if (_semZap.length) {
+    WhatsappResponsavel.mostrarParede(_semZap, sb, () => location.reload());
+    hideSplash();
+    return null;
   }
 
   queueNotificacoes(membro);

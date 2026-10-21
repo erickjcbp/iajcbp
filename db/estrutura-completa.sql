@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict leN8sXVZoTDQIPrppJi2L0hGiw4hr240BgifoiaILEHahsXFMY22gRWr1IBSgqo
+\restrict 0GZq1bjzE2q5Ij7HwFcgXzrKohrY8Gqcd9ZSsTs8t2MipOQdrtQMgm7fMgLOT69
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.6
@@ -3434,6 +3434,37 @@ CREATE FUNCTION public.is_central_admin() RETURNS boolean
 $$;
 
 
+--
+-- Name: tarcisio_pedir_escala(date); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.tarcisio_pedir_escala(p_domingo date) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_n int;
+begin
+  if not tarcisio_pode_gerir() then return jsonb_build_object('erro','sem_permissao'); end if;
+  if p_domingo is null or extract(dow from p_domingo) <> 0 then return jsonb_build_object('erro','domingo_invalido'); end if;
+  if not (select escala_ligada from tarcisio_config where id = 1) then return jsonb_build_object('ok', true, 'desligado', true); end if;
+  insert into tarcisio_envios (tipo, estado, domingo_data, chave_unica, destino_nome)
+  values ('escala', 'aguardando_arte', p_domingo, 'escala:' || p_domingo, 'Grupos')
+  on conflict (chave_unica) do nothing;
+  get diagnostics v_n = row_count;
+  return jsonb_build_object('ok', true, 'novo', v_n > 0);
+end; $$;
+
+
+--
+-- Name: tarcisio_pode_gerir(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.tarcisio_pode_gerir() RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$ select acolitos_get_role(auth.uid()) in ('coord_admin','subadmin'); $$;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -4567,6 +4598,100 @@ CREATE TABLE public.profiles (
 
 
 --
+-- Name: tarcisio_avisos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tarcisio_avisos (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    titulo text NOT NULL,
+    texto text,
+    imagem_url text,
+    grupos text[] DEFAULT '{}'::text[] NOT NULL,
+    privado text[] DEFAULT '{}'::text[] NOT NULL,
+    quando timestamp with time zone NOT NULL,
+    repetir text DEFAULT 'nao'::text NOT NULL,
+    ate date,
+    ativo boolean DEFAULT true NOT NULL,
+    criado_por uuid DEFAULT auth.uid(),
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT tarcisio_avisos_check CHECK (((texto IS NOT NULL) OR (imagem_url IS NOT NULL))),
+    CONSTRAINT tarcisio_avisos_check1 CHECK (((cardinality(grupos) + cardinality(privado)) > 0)),
+    CONSTRAINT tarcisio_avisos_repetir_check CHECK ((repetir = ANY (ARRAY['nao'::text, 'diario'::text, 'semanal'::text, 'mensal'::text])))
+);
+
+
+--
+-- Name: tarcisio_config; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tarcisio_config (
+    id integer DEFAULT 1 NOT NULL,
+    pausado boolean DEFAULT false NOT NULL,
+    teto_diario integer DEFAULT 150 NOT NULL,
+    janela_inicio time without time zone DEFAULT '08:00:00'::time without time zone NOT NULL,
+    janela_fim time without time zone DEFAULT '21:00:00'::time without time zone NOT NULL,
+    hora_lembrete time without time zone DEFAULT '19:00:00'::time without time zone NOT NULL,
+    hora_aniversario time without time zone DEFAULT '08:00:00'::time without time zone NOT NULL,
+    escala_ligada boolean DEFAULT true NOT NULL,
+    lembrete_ligado boolean DEFAULT true NOT NULL,
+    aniversario_ligado boolean DEFAULT true NOT NULL,
+    texto_lembrete text DEFAULT 'Olá! Amanhã ({dia}) {itens}. Chegar 20 min antes. — São Tarcísio | JCBP'::text NOT NULL,
+    texto_aniversario text DEFAULT 'Hoje é aniversário de {nome}! 🎉 A Pastoral dos Coroinhas e Acólitos da JCBP deseja muitas bênçãos. — São Tarcísio | JCBP'::text NOT NULL,
+    rodape text DEFAULT 'Este número só envia avisos; dúvidas, fale com a coordenação.'::text NOT NULL,
+    conexao text DEFAULT 'desconhecida'::text NOT NULL,
+    numero_conectado text,
+    qr_code text,
+    qr_em timestamp with time zone,
+    robo_visto_em timestamp with time zone,
+    pedir_qr_em timestamp with time zone,
+    pedir_grupos_em timestamp with time zone,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT tarcisio_config_id_check CHECK ((id = 1)),
+    CONSTRAINT tarcisio_config_teto_diario_check CHECK (((teto_diario >= 0) AND (teto_diario <= 1000)))
+);
+
+
+--
+-- Name: tarcisio_envios; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tarcisio_envios (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    tipo text NOT NULL,
+    destino_jid text,
+    destino_numero text,
+    destino_nome text,
+    texto text,
+    imagem_url text,
+    agendado_para timestamp with time zone DEFAULT now() NOT NULL,
+    estado text DEFAULT 'pendente'::text NOT NULL,
+    erro text,
+    tentativas integer DEFAULT 0 NOT NULL,
+    enviado_em timestamp with time zone,
+    aviso_id uuid,
+    membro_id uuid,
+    domingo_data date,
+    chave_unica text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT tarcisio_envios_estado_check CHECK ((estado = ANY (ARRAY['aguardando_arte'::text, 'pendente'::text, 'enviando'::text, 'enviado'::text, 'falhou'::text, 'cancelado'::text, 'sem_numero'::text]))),
+    CONSTRAINT tarcisio_envios_tipo_check CHECK ((tipo = ANY (ARRAY['escala'::text, 'lembrete'::text, 'aviso'::text, 'aniversario'::text])))
+);
+
+
+--
+-- Name: tarcisio_grupos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tarcisio_grupos (
+    jid text NOT NULL,
+    nome text NOT NULL,
+    papel text,
+    visto_em timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT tarcisio_grupos_papel_check CHECK ((papel = ANY (ARRAY['pais'::text, 'acolitos'::text, 'cerimoniarios'::text, 'equipe'::text])))
+);
+
+
+--
 -- Name: tools; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5086,6 +5211,46 @@ ALTER TABLE ONLY public.profiles
 
 
 --
+-- Name: tarcisio_avisos tarcisio_avisos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarcisio_avisos
+    ADD CONSTRAINT tarcisio_avisos_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tarcisio_config tarcisio_config_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarcisio_config
+    ADD CONSTRAINT tarcisio_config_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tarcisio_envios tarcisio_envios_chave_unica_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarcisio_envios
+    ADD CONSTRAINT tarcisio_envios_chave_unica_key UNIQUE (chave_unica);
+
+
+--
+-- Name: tarcisio_envios tarcisio_envios_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarcisio_envios
+    ADD CONSTRAINT tarcisio_envios_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tarcisio_grupos tarcisio_grupos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarcisio_grupos
+    ADD CONSTRAINT tarcisio_grupos_pkey PRIMARY KEY (jid);
+
+
+--
 -- Name: tools tools_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5343,6 +5508,27 @@ CREATE INDEX idx_solic_status ON public.acolitos_solicitacoes USING btree (statu
 --
 
 CREATE INDEX ix_xp_temp ON public.acolitos_xp_temporada USING btree (temporada_id, membro_id);
+
+
+--
+-- Name: tarcisio_envios_fila; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX tarcisio_envios_fila ON public.tarcisio_envios USING btree (agendado_para) WHERE (estado = ANY (ARRAY['pendente'::text, 'aguardando_arte'::text]));
+
+
+--
+-- Name: tarcisio_envios_recentes; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX tarcisio_envios_recentes ON public.tarcisio_envios USING btree (created_at DESC);
+
+
+--
+-- Name: tarcisio_grupos_um_por_papel; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX tarcisio_grupos_um_por_papel ON public.tarcisio_grupos USING btree (papel) WHERE (papel IS NOT NULL);
 
 
 --
@@ -5982,6 +6168,22 @@ ALTER TABLE ONLY public.profiles
 
 
 --
+-- Name: tarcisio_envios tarcisio_envios_aviso_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarcisio_envios
+    ADD CONSTRAINT tarcisio_envios_aviso_id_fkey FOREIGN KEY (aviso_id) REFERENCES public.tarcisio_avisos(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tarcisio_envios tarcisio_envios_membro_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarcisio_envios
+    ADD CONSTRAINT tarcisio_envios_membro_id_fkey FOREIGN KEY (membro_id) REFERENCES public.acolitos_membros(id) ON DELETE SET NULL;
+
+
+--
 -- Name: pastoral_members Admin altera roles pastorais; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -6194,6 +6396,34 @@ CREATE POLICY "Cerimonario gerencia ausencias" ON public.acolitos_ausencias USIN
 --
 
 CREATE POLICY "Conta confirma presenca propria" ON public.acolitos_evento_presencas USING (public.acolitos_controla_membro(membro_id)) WITH CHECK (public.acolitos_controla_membro(membro_id));
+
+
+--
+-- Name: tarcisio_avisos Coordenacao gere; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Coordenacao gere" ON public.tarcisio_avisos USING (public.tarcisio_pode_gerir()) WITH CHECK (public.tarcisio_pode_gerir());
+
+
+--
+-- Name: tarcisio_config Coordenacao gere; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Coordenacao gere" ON public.tarcisio_config USING (public.tarcisio_pode_gerir()) WITH CHECK (public.tarcisio_pode_gerir());
+
+
+--
+-- Name: tarcisio_envios Coordenacao gere; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Coordenacao gere" ON public.tarcisio_envios USING (public.tarcisio_pode_gerir()) WITH CHECK (public.tarcisio_pode_gerir());
+
+
+--
+-- Name: tarcisio_grupos Coordenacao gere; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Coordenacao gere" ON public.tarcisio_grupos USING (public.tarcisio_pode_gerir()) WITH CHECK (public.tarcisio_pode_gerir());
 
 
 --
@@ -6965,6 +7195,30 @@ CREATE POLICY solic_select ON public.acolitos_solicitacoes FOR SELECT USING (((m
    FROM public.acolitos_membros
   WHERE (acolitos_membros.user_id = auth.uid()))) OR (public.acolitos_get_role(auth.uid()) = ANY (ARRAY['coord_admin'::text, 'subadmin'::text, 'membro_equipe'::text, 'cerimonario'::text]))));
 
+
+--
+-- Name: tarcisio_avisos; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.tarcisio_avisos ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: tarcisio_config; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.tarcisio_config ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: tarcisio_envios; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.tarcisio_envios ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: tarcisio_grupos; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.tarcisio_grupos ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: tools; Type: ROW SECURITY; Schema: public; Owner: -
@@ -7995,6 +8249,24 @@ GRANT ALL ON FUNCTION public.is_central_admin() TO service_role;
 
 
 --
+-- Name: FUNCTION tarcisio_pedir_escala(p_domingo date); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.tarcisio_pedir_escala(p_domingo date) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.tarcisio_pedir_escala(p_domingo date) TO authenticated;
+GRANT ALL ON FUNCTION public.tarcisio_pedir_escala(p_domingo date) TO service_role;
+
+
+--
+-- Name: FUNCTION tarcisio_pode_gerir(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.tarcisio_pode_gerir() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.tarcisio_pode_gerir() TO authenticated;
+GRANT ALL ON FUNCTION public.tarcisio_pode_gerir() TO service_role;
+
+
+--
 -- Name: TABLE access_requests; Type: ACL; Schema: public; Owner: -
 --
 
@@ -8443,6 +8715,38 @@ GRANT ALL ON TABLE public.profiles TO service_role;
 
 
 --
+-- Name: TABLE tarcisio_avisos; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.tarcisio_avisos TO authenticated;
+GRANT ALL ON TABLE public.tarcisio_avisos TO service_role;
+
+
+--
+-- Name: TABLE tarcisio_config; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.tarcisio_config TO authenticated;
+GRANT ALL ON TABLE public.tarcisio_config TO service_role;
+
+
+--
+-- Name: TABLE tarcisio_envios; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.tarcisio_envios TO authenticated;
+GRANT ALL ON TABLE public.tarcisio_envios TO service_role;
+
+
+--
+-- Name: TABLE tarcisio_grupos; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.tarcisio_grupos TO authenticated;
+GRANT ALL ON TABLE public.tarcisio_grupos TO service_role;
+
+
+--
 -- Name: TABLE tools; Type: ACL; Schema: public; Owner: -
 --
 
@@ -8514,5 +8818,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON T
 -- PostgreSQL database dump complete
 --
 
-\unrestrict leN8sXVZoTDQIPrppJi2L0hGiw4hr240BgifoiaILEHahsXFMY22gRWr1IBSgqo
+\unrestrict 0GZq1bjzE2q5Ij7HwFcgXzrKohrY8Gqcd9ZSsTs8t2MipOQdrtQMgm7fMgLOT69
 

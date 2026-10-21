@@ -1,0 +1,13 @@
+{
+  "name": "tarcisio-robo",
+  "private": true,
+  "type": "module",
+  "description": "Robô do São Tarcísio | JCBP: envia escala, lembretes, avisos e aniversários pelo WhatsApp (Evolution).",
+  "scripts": {
+    "test": "node --test",
+    "start": "node principal.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}

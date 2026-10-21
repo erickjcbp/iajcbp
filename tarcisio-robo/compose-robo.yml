@@ -1,0 +1,14 @@
+# Instalado como /opt/whatsapp/tarcisio/docker-compose.override.yml (projeto wa-tarcisio).
+# O robô fala com a Evolution pela rede interna do compose; nada fica exposto.
+services:
+  robo:
+    build: ./robo
+    image: sao-tarcisio/robo:1
+    restart: unless-stopped
+    env_file: robo.env
+    environment:
+      EVOLUTION_URL: http://evolution:8080
+      EVOLUTION_INSTANCIA: SaoTarcisio
+    depends_on:
+      - evolution
+    mem_limit: 256m

@@ -1,6 +1,6 @@
 # São Tarcísio | JCBP — the WhatsApp of the altar servers app
 
-Date: 2026-10-20 · Status: design · Owner: Erick (coordination of the altar servers, JCBP Limeira)
+Date: 2026-10-20 · Status: built (waiting for the SIM card) · Owner: Erick (coordination of the altar servers, JCBP Limeira)
 
 ## Intent
 
@@ -254,3 +254,30 @@ Tela São Tarcísio ───────────────▶  tarcisio_g
     in `*-core.js` with `node --test`, as the project does;
   - the robot with a fake Evolution;
   - a screen proof through `npm run provar-telas` in the 4 widths.
+
+## What changed during the build (20/10)
+
+- **No public API and no DNS.** The app and the robot talk only through the `tarcisio_*` tables:
+  - the screen writes `pedir_qr_em` / `pedir_grupos_em`;
+  - every 5 s the robot answers with `qr_code`, `conexao` and `tarcisio_grupos`.
+  - The `wa-tarcisio` Evolution listens only on `127.0.0.1:8103`. The Caddy route that
+    `new-client.sh` creates was moved to `/opt/whatsapp/tarcisio/desligado/`.
+  - The `tarcisio.wa…` host is not used. The gateway was created with the name
+    `zap.jcbplimeira.com.br`, but nothing points at it.
+- **Guardian number** follows the app rule (`telefoneDeRecado`, telefones-core.js):
+  `celular_recado` → `celular_responsavel` → `celular_mae`. The number the app asks for is saved
+  in `celular_recado`. An adult uses `telefone`, even without `telefone_whatsapp`; if it is not
+  WhatsApp, the send fails with "Número sem WhatsApp" and goes on the "Sem número" list.
+  - Measured: 86 of the 152 minors already had a guardian number (not 45, as the first
+    measurement said: it did not look at `celular_recado`).
+- **Expiry:** a pending item past its time is cancelled instead of sent late. Limits: reminder
+  and birthday 12 h, announcement 24 h, art 72 h. This protects the period while the number is
+  disconnected.
+- **Menu:** "📲 São Tarcísio (WhatsApp)" in the Escala's "⋯ Mais" menu, admin/subadmin only.
+- **Guardian WhatsApp gate:** sits in `initModulo` (shared.js), right after the bell gate. The
+  logic lives in `whatsapp-responsavel.js`.
+- **Images:** the public `tarcisio` bucket (migration 099). Only the coordination writes to it.
+- **Where things are:**
+  - robot: `tarcisio-robo/`, `wa-tarcisio-robo-1` container, env `/opt/whatsapp/tarcisio/robo.env` (600);
+  - screen: `projetos/acolitos/tarcisio.html`;
+  - proof: `projetos/acolitos/provas/tarcisio.prova.mjs`.
