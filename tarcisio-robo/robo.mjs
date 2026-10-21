@@ -17,7 +17,7 @@ const exigir = ({ data, error }, onde) => {
   return data
 }
 
-export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, relogio = () => new Date(), rnd = Math.random, log = console }) {
+export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, escalaAuto = null, relogio = () => new Date(), rnd = Math.random, log = console }) {
   const st = { proximoEnvioEm: 0, lembreteEm: null, anivEm: null, estadoEm: 0, conexao: 'desconhecida', gruposPedidoEm: null }
 
   async function inserirNaFila(linhas) {
@@ -306,6 +306,7 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
       ['avisos', () => gerarAvisos(cfg, agora, sp)],
       ['ausência', () => gerarLembreteAusencia(cfg, agora, sp)],
       ['escala', () => cuidarEscala(agora)],
+      ['escala automática', () => escalaAuto?.cuidar(agora, cfg)],
       ['validade', () => expirar(agora)],
       ['conversas', () => cuidarConversas(cfg, agora)],
       ['rascunhos', () => cuidarRascunhos(cfg)],

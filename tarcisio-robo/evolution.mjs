@@ -57,6 +57,13 @@ export function criarEvolution({ url, chave, instancia, fetchFn = fetch }) {
     configurarWebhook: (url) => chamar(`/webhook/set/${nome}`, { metodo: 'POST', corpo: { webhook: {
       enabled: true, url, byEvents: false, base64: false, events: ['MESSAGES_UPSERT'] } } }),
     enviarTexto: (destino, texto) => chamar(`/message/sendText/${nome}`, { metodo: 'POST', corpo: { number: destino, text: texto } }),
+    // Botões de resposta (Evolution 2.x, /message/sendButtons). botoes: [{ id, texto }].
+    // A resposta do toque volta pelo webhook com o `id` (lida na Task 9).
+    enviarBotoes: (destino, texto, botoes, titulo = 'São Tarcísio | JCBP') => chamar(`/message/sendButtons/${nome}`, {
+      metodo: 'POST',
+      corpo: { number: destino, title: titulo, description: texto, footer: 'Responda 1 = Confirmar, 2 = Revisar',
+        buttons: botoes.map((b) => ({ type: 'reply', displayText: b.texto, id: b.id })) },
+    }),
     enviarImagem: (destino, url, legenda) => chamar(`/message/sendMedia/${nome}`, {
       metodo: 'POST',
       corpo: { number: destino, mediatype: 'image', mimetype: 'image/png', media: url, caption: legenda || '', fileName: 'sao-tarcisio.png' },

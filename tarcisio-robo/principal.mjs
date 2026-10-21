@@ -1,11 +1,15 @@
 // Ponto de entrada do container: liga banco + Evolution (+ IA, se houver chave), recebe as
 // mensagens da Evolution pela rede interna e roda o robô a cada 5 s, sem sobrepor rodadas.
 import http from 'node:http'
+import path from 'node:path'
+import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
 import { criarEvolution, lerMensagemRecebida } from './evolution.mjs'
 import { criarRobo } from './robo.mjs'
 import { criarIA } from './ia.mjs'
 import { criarAssistente } from './assistente.mjs'
+import { criarEscalaAuto, criarCarregarEntrada } from './escala-auto.mjs'
 
 const precisa = (nome) => {
   const v = process.env[nome]
@@ -17,7 +21,22 @@ const db = createClient(precisa('SUPABASE_URL'), precisa('SUPABASE_SERVICE_KEY')
 const evo = criarEvolution({ url: precisa('EVOLUTION_URL'), chave: precisa('EVOLUTION_API_KEY'), instancia: process.env.EVOLUTION_INSTANCIA || 'SaoTarcisio' })
 const ia = process.env.ANTHROPIC_API_KEY ? criarIA({ chave: process.env.ANTHROPIC_API_KEY }) : null
 const assistente = criarAssistente({ db, evo, ia })
-const robo = criarRobo({ db, evo, ia, assistente, supabaseUrl: process.env.SUPABASE_URL })
+// Escala automática de terça: o gerador e os núcleos puros são os MESMOS da tela (projetos/acolitos),
+// lidos só na hora de usar. Se faltarem na imagem, a geração falha, o estado vira 'falhou' e o dono
+// é avisado; o resto do robô segue. Na VPS, ACOLITOS_CORE_DIR aponta para a cópia desses arquivos.
+const PASTA_NUCLEOS = process.env.ACOLITOS_CORE_DIR || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../projetos/acolitos')
+const exigirNucleo = createRequire(import.meta.url)
+let nucleos = null
+const lerNucleos = () => (nucleos ??= (() => {
+  const ler = (arquivo) => exigirNucleo(path.join(PASTA_NUCLEOS, arquivo))
+  const g = ler('gerador-escala-core.js')
+  return { Gerador: g.gerarSemana ? g : g.GeradorEscalaCore, RodizioCore: ler('rodizio-core.js'),
+    SemanalCore: ler('servir-semanal-core.js'), lerTudo: ler('paginar-core.js').lerTudo }
+})())
+const escalaAuto = criarEscalaAuto({ db, evo, log: console,
+  gerarSemana: (entrada) => lerNucleos().Gerador.gerarSemana(entrada),
+  carregarEntrada: (banco, sabado) => criarCarregarEntrada(lerNucleos())(banco, sabado) })
+const robo = criarRobo({ db, evo, ia, assistente, escalaAuto, supabaseUrl: process.env.SUPABASE_URL })
 
 // Entrada das mensagens: só a Evolution, de dentro do compose, fala com esta porta (não é publicada).
 const PORTA = 3000
