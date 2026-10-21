@@ -14,9 +14,9 @@ DRY=0; [ "${1:-}" = "--dry" ] && DRY=1
 
 ROBO_ARQUIVOS=(Dockerfile package.json package-lock.json regras.mjs evolution.mjs robo.mjs ia.mjs
   assistente.mjs escala-auto.mjs ministros-pdf.mjs entrada-dono.mjs principal.mjs verificar-cores.mjs)
-# Núcleos que o robô carrega (principal.mjs). Nenhum deles tem require() interno (UMD sem dependências).
+# Núcleos que o robô carrega (principal.mjs) e o que eles exigem entre si (gerador→kits,horario,rodizio,servir; confirmar-semana→confirmar-escala).
 NUCLEOS=(gerador-escala-core.js rodizio-core.js servir-semanal-core.js paginar-core.js
-  escala-ministros-core.js kits-core.js horario-core.js)
+  escala-ministros-core.js kits-core.js horario-core.js confirmar-semana-core.js confirmar-escala-core.js)
 OBRIGATORIOS_NO_DEPLOY=1
 
 mkdir -p "$STAGING/robo/cores"

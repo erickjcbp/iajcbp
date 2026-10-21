@@ -269,6 +269,17 @@ export function criarCarregarEntrada({ RodizioCore, SemanalCore, lerTudo }) {
     })
   }
 
+  // Vezes EXATAS no mês (para o teto de 2× do gerador): escalas gravadas nas missas do mês do sábado.
+  async function vezesDoMes(db, ref) {
+    const cels = await tudo(() => db.from('acolitos_celebracoes').select('id').gte('data', ref.slice(0, 7) + '-01').lte('data', fimDoMes(ref)), 'ler missas do mês')
+    const ids = cels.map((c) => c.id)
+    if (!ids.length) return {}
+    const escalas = await tudo(() => db.from('acolitos_escalas').select('membro_id,celebracao_id').in('celebracao_id', ids), 'ler escalas do mês')
+    const n = {}
+    for (const e of escalas) n[e.membro_id] = (n[e.membro_id] || 0) + 1
+    return n
+  }
+
   return async function carregarEntrada(db, sabado) {
     const domingo = somarDias(sabado, 1)
     const appConfig = Object.fromEntries(exigir(await db.from('acolitos_config').select('chave,valor'), 'ler config do app')
@@ -328,8 +339,11 @@ export function criarCarregarEntrada({ RodizioCore, SemanalCore, lerTudo }) {
     return {
       celebracoes, membros, habMap, dispMap, escalasExistentes, ausencias, historicoSemanal,
       carga: await carga(db, datas[0], gerador),
+      vezesNoMes: await vezesDoMes(db, datas[0]),
       config: { gerador, funcoes_maiores: appConfig.funcoes_maiores ?? null, minimo_mes: gerador.minimo_mes ?? appConfig.minimo_mes },
-      appConfig, modeloFor, ministros,
+      appConfig, modeloFor,
+      // membro_id = o FILHO; quem marcou "não escalar junto com os pais" (explicitamente false) fica de fora.
+      ministros: ministros.filter((r) => membros.find((m) => m.id === r.membro_id)?.escalar_com_pais !== false),
       semMinistros: temFilhoDeMinistro && !ministrosMes.length,
     }
   }

@@ -33,7 +33,8 @@ const lerNucleos = () => (nucleos ??= (() => {
   const ler = (arquivo) => exigirNucleo(path.join(PASTA_NUCLEOS, arquivo))
   const g = ler('gerador-escala-core.js')
   return { Gerador: g.gerarSemana ? g : g.GeradorEscalaCore, RodizioCore: ler('rodizio-core.js'),
-    SemanalCore: ler('servir-semanal-core.js'), lerTudo: ler('paginar-core.js').lerTudo }
+    SemanalCore: ler('servir-semanal-core.js'), lerTudo: ler('paginar-core.js').lerTudo,
+    Confirmar: ler('confirmar-semana-core.js') }
 })())
 const escalaAuto = criarEscalaAuto({ db, evo, log: console,
   gerarSemana: (entrada) => lerNucleos().Gerador.gerarSemana(entrada),
@@ -42,10 +43,29 @@ const escalaAuto = criarEscalaAuto({ db, evo, log: console,
 // O núcleo dos ministros é o MESMO da tela (projetos/acolitos/escala-ministros-core.js).
 const ministros = criarMinistrosPdf({ db, evo, log: console,
   nucleo: () => exigirNucleo(path.join(PASTA_NUCLEOS, 'escala-ministros-core.js')) })
-// PROVISÓRIO até a Task 6 (regra única de confirmar, confirmar-escala-core.js): o toque em
-// Confirmar NÃO confirma nada ainda; o dono recebe o aviso abaixo, a semana volta para
-// 'aguardando' e ele confirma pelo app. Trocar por confirmarSemana real quando a Task 6 entrar.
-const confirmarSemana = async () => ({ ok: false, erro: 'confirmação automática ainda não ligada' })
+// Confirmar a semana = a MESMA regra do botão da tela (confirmar-semana-core.js): avisa por push só
+// quem ainda não foi avisado e pede a arte dos grupos uma vez. O push passa por /api/enviar-push com
+// o segredo do robô (tipo escalado_robo); PUSH_URL e CRON_SECRET vêm do robo.env.
+const enviarPushEscalado = async (membros) => {
+  const url = process.env.PUSH_URL, segredo = process.env.CRON_SECRET
+  if (!url || !segredo) throw new Error('faltam PUSH_URL e CRON_SECRET no robo.env')
+  const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'x-cron-secret': segredo },
+    body: JSON.stringify({ tipo: 'escalado_robo', membros }) })
+  if (!r.ok) throw new Error(`push respondeu ${r.status}`)
+  return { ok: true }
+}
+const confirmarSemana = async (sabado) => {
+  try {
+    const domingo = new Date(sabado + 'T12:00:00Z'); domingo.setUTCDate(domingo.getUTCDate() + 1)
+    const cels = await db.from('acolitos_celebracoes').select('id,data').gte('data', sabado).lte('data', domingo.toISOString().slice(0, 10))
+    if (cels.error) throw cels.error
+    const esc = await db.from('acolitos_escalas').select('celebracao_id,membro_id').in('celebracao_id', cels.data.map((c) => c.id))
+    if (esc.error) throw esc.error
+    const C = lerNucleos().Confirmar
+    const r = await C.confirmarSemana({ sb: db, enviarPush: enviarPushEscalado, celebracoes: cels.data, escalas: esc.data, pedirArte: C.pedirArtePeloServico })
+    return r.ok ? { ok: true } : { ok: false, erro: r.erro || r.motivo || 'não consegui confirmar' }
+  } catch (e) { return { ok: false, erro: e.message } }
+}
 const entradaDono = criarEntradaDono({ db, evo, ministros, confirmarSemana, log: console })
 const robo = criarRobo({ db, evo, ia, assistente, escalaAuto, supabaseUrl: process.env.SUPABASE_URL })
 

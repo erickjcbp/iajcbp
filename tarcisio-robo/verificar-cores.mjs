@@ -15,6 +15,8 @@ const NUCLEOS = {
   'escala-ministros-core.js': (m) => typeof m.lerEscalaMinistros === 'function' && typeof m.casarNomes === 'function',
   'kits-core.js': (m) => m && typeof m === 'object',
   'horario-core.js': (m) => m && typeof m === 'object',
+  'confirmar-semana-core.js': (m) => typeof m.confirmarSemana === 'function' && typeof m.pedirArtePeloServico === 'function',
+  'confirmar-escala-core.js': (m) => typeof m.aNotificar === 'function',
 }
 let falhas = 0
 for (const [arq, ok] of Object.entries(NUCLEOS)) {
