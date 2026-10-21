@@ -11,7 +11,7 @@ const precisa = (nome) => {
 
 const db = createClient(precisa('SUPABASE_URL'), precisa('SUPABASE_SERVICE_KEY'), { auth: { persistSession: false } })
 const evo = criarEvolution({ url: precisa('EVOLUTION_URL'), chave: precisa('EVOLUTION_API_KEY'), instancia: process.env.EVOLUTION_INSTANCIA || 'SaoTarcisio' })
-const robo = criarRobo({ db, evo })
+const robo = criarRobo({ db, evo, supabaseUrl: process.env.SUPABASE_URL })
 
 await robo.iniciar()
 console.info('São Tarcísio no ar')

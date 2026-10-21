@@ -48,7 +48,7 @@ function cenario({ item, enviadosHoje = 0, cfg = {}, falha = null, hora = '2026-
     enviarTexto: async (d, t) => { if (falha) throw falha; enviados.push({ d, t }) },
     enviarImagem: async (d, u) => { if (falha) throw falha; enviados.push({ d, u }) },
   }
-  const robo = criarRobo({ db, evo, relogio: () => new Date(hora), rnd: () => 0, log: silencioso })
+  const robo = criarRobo({ db, evo, supabaseUrl: 'https://p.supabase.co', relogio: () => new Date(hora), rnd: () => 0, log: silencioso })
   return { robo, enviados, updates }
 }
 
@@ -77,9 +77,9 @@ test('teto do dia segura o privado, mas grupo não conta', async () => {
   const privado = cenario({ item: ITEM, enviadosHoje: 2 })
   await privado.robo.rodada()
   assert.equal(privado.enviados.length, 0)
-  const grupo = cenario({ item: { ...ITEM, destino_numero: null, destino_jid: '123@g.us', imagem_url: 'https://x/arte.png' }, enviadosHoje: 2 })
+  const grupo = cenario({ item: { ...ITEM, destino_numero: null, destino_jid: '123@g.us', imagem_url: 'https://p.supabase.co/storage/v1/object/public/artes-escala/a.png' }, enviadosHoje: 2 })
   await grupo.robo.rodada()
-  assert.deepEqual(grupo.enviados, [{ d: '123@g.us', u: 'https://x/arte.png' }])
+  assert.deepEqual(grupo.enviados, [{ d: '123@g.us', u: 'https://p.supabase.co/storage/v1/object/public/artes-escala/a.png' }])
 })
 
 test('erro passageiro volta para a fila em 5 min; na 3ª tentativa desiste', async () => {
@@ -104,4 +104,11 @@ test('depois de enviar, espera a pausa antes do próximo', async () => {
   await robo.rodada()
   await robo.rodada()
   assert.equal(enviados.length, 1)
+})
+
+test('imagem de fora da pasta do projeto não é enviada (a Evolution não busca endereço interno)', async () => {
+  const { robo, enviados, updates } = cenario({ item: { ...ITEM, imagem_url: 'http://127.0.0.1:8101/instance/fetchInstances' } })
+  await robo.rodada()
+  assert.equal(enviados.length, 0)
+  assert.equal(updates.at(-1).estado, 'falhou')
 })

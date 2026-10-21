@@ -4,7 +4,7 @@
 // Só envia: não lê resposta de ninguém. Projeto: docs/superpowers/specs/2026-10-20-sao-tarcisio-whatsapp-design.md
 import {
   agoraSP, somarDias, hmCurto, dentroDaJanela, montarLembretes, montarAniversarios,
-  publicoPrivado, proximaVez, pausaEntreEnvios,
+  publicoPrivado, proximaVez, pausaEntreEnvios, imagemPermitida,
 } from './regras.mjs'
 
 const CAMPOS_MEMBRO = 'id,nome,apelido,nivel,user_id,data_nascimento,telefone,celular_recado,celular_responsavel,celular_mae'
@@ -17,7 +17,7 @@ const exigir = ({ data, error }, onde) => {
   return data
 }
 
-export function criarRobo({ db, evo, relogio = () => new Date(), rnd = Math.random, log = console }) {
+export function criarRobo({ db, evo, supabaseUrl, relogio = () => new Date(), rnd = Math.random, log = console }) {
   const st = { proximoEnvioEm: 0, lembreteEm: null, anivEm: null, estadoEm: 0, conexao: 'desconhecida', gruposPedidoEm: null }
 
   async function inserirNaFila(linhas) {
@@ -179,6 +179,11 @@ export function criarRobo({ db, evo, relogio = () => new Date(), rnd = Math.rand
       .eq('id', item.id).eq('estado', 'pendente').select('id'), 'reservar envio')
     if (!reservada.length) return
     const destino = item.destino_jid || item.destino_numero
+    if (!imagemPermitida(item.imagem_url, supabaseUrl)) {
+      exigir(await db.from('tarcisio_envios').update({ estado: 'falhou', erro: 'Imagem fora da pasta do São Tarcísio: não enviada' }).eq('id', item.id), 'recusar imagem')
+      log.warn(`envio ${item.id}: imagem recusada (${item.imagem_url})`)
+      return
+    }
     try {
       if (item.imagem_url) await evo.enviarImagem(destino, item.imagem_url, item.texto)
       else await evo.enviarTexto(destino, item.texto)

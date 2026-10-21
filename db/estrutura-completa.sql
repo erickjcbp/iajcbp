@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 0GZq1bjzE2q5Ij7HwFcgXzrKohrY8Gqcd9ZSsTs8t2MipOQdrtQMgm7fMgLOT69
+\restrict nfA8U9hh4crZSSsQGZFlYRttYEopYu3WTK5P4VxVNX2MKItdt3Jwj4utF0ocekI
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.6
@@ -4616,6 +4616,7 @@ CREATE TABLE public.tarcisio_avisos (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT tarcisio_avisos_check CHECK (((texto IS NOT NULL) OR (imagem_url IS NOT NULL))),
     CONSTRAINT tarcisio_avisos_check1 CHECK (((cardinality(grupos) + cardinality(privado)) > 0)),
+    CONSTRAINT tarcisio_avisos_imagem_do_projeto CHECK (((imagem_url IS NULL) OR (imagem_url ~~ 'https://fttjgsotuosjfrasttds.supabase.co/storage/v1/object/public/tarcisio/%'::text))),
     CONSTRAINT tarcisio_avisos_repetir_check CHECK ((repetir = ANY (ARRAY['nao'::text, 'diario'::text, 'semanal'::text, 'mensal'::text])))
 );
 
@@ -4674,6 +4675,7 @@ CREATE TABLE public.tarcisio_envios (
     chave_unica text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT tarcisio_envios_estado_check CHECK ((estado = ANY (ARRAY['aguardando_arte'::text, 'pendente'::text, 'enviando'::text, 'enviado'::text, 'falhou'::text, 'cancelado'::text, 'sem_numero'::text]))),
+    CONSTRAINT tarcisio_envios_imagem_do_projeto CHECK (((imagem_url IS NULL) OR (imagem_url ~~ 'https://fttjgsotuosjfrasttds.supabase.co/storage/v1/object/public/tarcisio/%'::text) OR (imagem_url ~~ 'https://fttjgsotuosjfrasttds.supabase.co/storage/v1/object/public/artes-escala/%'::text))),
     CONSTRAINT tarcisio_envios_tipo_check CHECK ((tipo = ANY (ARRAY['escala'::text, 'lembrete'::text, 'aviso'::text, 'aniversario'::text])))
 );
 
@@ -8818,5 +8820,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON T
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 0GZq1bjzE2q5Ij7HwFcgXzrKohrY8Gqcd9ZSsTs8t2MipOQdrtQMgm7fMgLOT69
+\unrestrict nfA8U9hh4crZSSsQGZFlYRttYEopYu3WTK5P4VxVNX2MKItdt3Jwj4utF0ocekI
 

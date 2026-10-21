@@ -173,3 +173,12 @@ export function proximaVez(quandoIso, repetir, ate) {
 
 // Pausa entre envios: 20–40 s, sorteada, para o número não parecer robô em rajada.
 export const pausaEntreEnvios = (rnd = Math.random) => 20_000 + Math.floor(rnd() * 20_000)
+
+// Imagem só das pastas do próprio projeto (avisos e artes da escala). A Evolution baixa o link de
+// DENTRO da VPS: um link livre a faria buscar endereços internos (a Evolution da SATOR ou da Pink).
+// O banco tem a mesma trava (migration 100); esta é a segunda.
+export function imagemPermitida(url, supabaseUrl) {
+  if (!url) return true
+  const base = String(supabaseUrl || '').replace(/\/$/, '') + '/storage/v1/object/public/'
+  return ['tarcisio/', 'artes-escala/'].some((pasta) => String(url).startsWith(base + pasta))
+}
