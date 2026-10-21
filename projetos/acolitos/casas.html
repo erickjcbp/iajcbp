@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Casas — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700;800&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
@@ -121,7 +121,7 @@ function renderConsilium(main, casa) {
   const hd = document.createElement('div'); hd.className = 'consilium-hd'; hd.style.setProperty('--c', cor);
   hd.appendChild(brasaoEl(casa.slug, 64));
   const info = document.createElement('div'); info.style.flex = '1'; info.style.minWidth = '0';
-  const nm = document.createElement('div'); nm.style.cssText = 'font-family:Sora,sans-serif;font-weight:800;font-size:20px;letter-spacing:2px;color:#fff;text-transform:uppercase;'; nm.textContent = casa.nome;
+  const nm = document.createElement('div'); nm.style.cssText = 'font-family:Sora,sans-serif;font-weight:800;font-size:16px;letter-spacing:1px;color:#fff;text-transform:uppercase;'; nm.textContent = casa.nome;
   const lema = document.createElement('div'); lema.style.cssText = 'font-family:Lora,serif;font-style:italic;color:var(--gold-light);font-size:13px;'; lema.textContent = '"' + (casa.lema||'') + '" — ' + (casa.lema_pt||'');
   const mis = document.createElement('div'); mis.style.cssText = 'font-size:12px;color:var(--text-muted);margin-top:3px;'; mis.textContent = 'Missão: ' + (casa.tagline||'');
   info.append(nm, lema, mis);

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Escala — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
@@ -25,6 +25,15 @@
     .escala-toolbar .form-select { width:100%; margin-bottom:8px; }
     .escala-acoes { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
     .escala-acoes .btn-sm { white-space:nowrap; padding:8px 10px; font-size:11px; gap:5px; }
+    /* Celular compacto (20/10/2026): 3 ações na MESMA linha e ações da semana em grade 2x2 com a mesma altura */
+    @media(max-width:639px){
+      .escala-toolbar { margin-bottom:10px; }
+      .escala-acoes { grid-template-columns:1.25fr 1.25fr .8fr; }
+      .escala-acoes .escala-mais { grid-column:auto; }
+      .escala-acoes .escala-mais > .btn-sm, .escala-acoes > .btn-sm { padding:6px 8px; white-space:nowrap; }
+      .semana-acoes { display:grid !important; grid-template-columns:1fr 1fr; width:100%; }
+      .semana-acoes .btn-sm { width:100%; justify-content:center; text-align:center; white-space:normal; line-height:1.2; padding:6px 8px; }
+    }
     @media(min-width:640px){
       .escala-toolbar { display:flex; align-items:center; gap:8px; }
       .escala-toolbar .form-select { width:auto; flex:1; max-width:220px; margin-bottom:0; }
@@ -214,7 +223,7 @@
         <div class="escala-mais-menu" id="escala-mais-menu" role="menu">
           <button class="mais-item" role="menuitem" onclick="maisAcao(abrirModelos)">⚙️ Modelos</button>
           <button class="mais-item" role="menuitem" onclick="maisAcao(function(){ location.href='ausencias.html'; })">Ausências</button>
-          <button class="mais-item" role="menuitem" id="btn-tarcisio" style="display:none" onclick="maisAcao(function(){ location.href='tarcisio.html'; })">📲 São Tarcísio (WhatsApp)</button>
+          <button class="mais-item" role="menuitem" id="btn-tarcisio" style="display:none" onclick="maisAcao(function(){ location.href='config.html#tarcisio_avisos'; })">📲 WhatsApp</button>
           <button class="mais-item" role="menuitem" onclick="maisAcao(function(){ setAba('rodizio'); })">📊 Rodízio e frequência</button>
           <button class="mais-item" role="menuitem" onclick="maisAcao(escalaPDF)">🖨 Escala PDF</button>
           <button class="mais-item" role="menuitem" id="btn-arte-semana" style="display:none" onclick="maisAcao(arteSemana)">🎨 Arte da semana</button>
@@ -691,7 +700,7 @@ function renderCards() {
     const grp=document.createElement('div');grp.className='semana-grupo';
     const head=document.createElement('div');head.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap;';
     const tit=document.createElement('div');tit.className='semana-titulo';tit.style.margin='0';tit.textContent=sem.label;
-    const acoesSem=document.createElement('div');acoesSem.style.cssText='display:flex;gap:6px;flex-wrap:wrap;';
+    const acoesSem=document.createElement('div');acoesSem.className='semana-acoes';acoesSem.style.cssText='display:flex;gap:6px;flex-wrap:wrap;';
     // Seleção de quais missas da semana entram no "Gerar": todas marcadas por padrão
     // (um clique continua gerando a semana inteira), e quem quiser deixa alguma de fora.
     const selSemana=new Set(sem.items.map(c=>c.id));

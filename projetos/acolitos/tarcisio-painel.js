@@ -1,6 +1,6 @@
 // São Tarcísio | JCBP — as telas, num lugar só. Usadas por:
 //   config.html  (superadmin): WhatsApp, Grupos, Assistente de IA, Conversas
-//   tarcisio.html (admin/subadmin): Avisos, Sem número
+//   config.html › São Tarcísio (admin/subadmin: Avisos, Sem número; superadmin: tudo)
 // Cada função recebe a caixa onde desenhar e sabe se redesenhar sozinha. O app e o robô
 // conversam só pelas tabelas tarcisio_* (migrations 098–102). Precisa de shared.js (sb, toast…).
 (function (global) {

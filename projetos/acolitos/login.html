@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Acólitos & Coroinhas — JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Oxanium:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700;800&family=Oxanium:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
   <link rel="icon" href="icon-192.png">
@@ -421,18 +421,18 @@
       var ic=document.createElement('img'); ic.src='icon-192.png'; ic.width=34; ic.height=34; ic.style.cssText='border-radius:8px;flex:none;';
       var tx=document.createElement('div'); tx.style.cssText='flex:1;font-size:12.5px;color:#f7ebe7;line-height:1.35;'; tx.textContent=texto;
       b.appendChild(ic); b.appendChild(tx);
-      if(onBtn){ var bt=document.createElement('button'); bt.textContent=btnLabel; bt.style.cssText='flex:none;background:linear-gradient(160deg,#ffd97a,#8a6a24);color:#2a1500;border:none;border-radius:8px;padding:8px 12px;font-weight:800;font-size:12px;cursor:pointer;'; bt.onclick=onBtn; b.appendChild(bt); }
-      var cl=document.createElement('button'); cl.textContent='×'; cl.style.cssText='flex:none;background:none;border:none;color:#b88a8f;font-size:20px;line-height:1;cursor:pointer;'; cl.onclick=function(){ localStorage.setItem('pwa-dismiss','1'); b.remove(); }; b.appendChild(cl);
+      if(onBtn){ var bt=document.createElement('button'); bt.textContent=btnLabel; bt.style.cssText='flex:none;min-height:44px;background:linear-gradient(160deg,#ffd97a,#8a6a24);color:#2a1500;border:none;border-radius:8px;padding:8px 12px;font-weight:800;font-size:13px;cursor:pointer;'; bt.onclick=onBtn; b.appendChild(bt); }
+      var cl=document.createElement('button'); cl.textContent='×'; cl.setAttribute('aria-label','Fechar'); cl.style.cssText='flex:none;width:44px;height:44px;background:none;border:none;color:#b88a8f;font-size:24px;line-height:1;cursor:pointer;'; cl.onclick=function(){ localStorage.setItem('pwa-dismiss','1'); b.remove(); }; b.appendChild(cl);
       document.body.appendChild(b);
     }
     function showInstall(){ var ev=window.__bip; if(!ev) return; var old=document.getElementById('pwa-banner'); if(old) old.remove(); banner('Instale o app na sua tela inicial.','Instalar',function(){ ev.prompt(); ev.userChoice.finally(function(){ window.__bip=null; var el=document.getElementById('pwa-banner'); if(el) el.remove(); }); }); }
     var ua=navigator.userAgent||'';
-    var isIOS=/iphone|ipad|ipod/i.test(ua), isSafari=/safari/i.test(ua) && !/crios|fxios|chrome|android/i.test(ua), isAndroidChrome=/android/i.test(ua) && /chrome/i.test(ua);
+    var isIOS=/iphone|ipad|ipod/i.test(ua) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1), isSafari=/safari/i.test(ua) && !/crios|fxios|chrome|android/i.test(ua), isAndroidChrome=/android/i.test(ua) && /chrome/i.test(ua);
     if(window.__bip) showInstall();
     window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); window.__bip=e; showInstall(); });
     window.addEventListener('appinstalled', function(){ var el=document.getElementById('pwa-banner'); if(el) el.remove(); });
-    if(isIOS && isSafari) setTimeout(function(){ banner('Para instalar: toque em Compartilhar e depois “Adicionar à Tela de Início”.', null, null); }, 1500);
-    else if(isAndroidChrome) setTimeout(function(){ if(!document.getElementById('pwa-banner')) banner('Para instalar: abra o menu (⋮) do Chrome e toque em “Instalar app”.', null, null); }, 3000);
+    if(isIOS) setTimeout(function(){ banner('Instale o app na tela inicial e acesse com um toque.', 'Como instalar', function(){ var b=document.getElementById('pwa-banner'); var p=document.createElement('ol'); p.style.cssText='grid-column:2 / -1;margin:0;padding:0 0 0 20px;color:#f7ebe7;font-size:13px;line-height:1.6;'; p.innerHTML='<li>Toque em <strong>Compartilhar</strong> no Safari.</li><li>Escolha <strong>Adicionar à Tela de Início</strong>.</li><li>Toque em <strong>Adicionar</strong>.</li>'; b.style.flexWrap='wrap'; b.appendChild(p); }); }, 1500);
+    else if(isAndroidChrome) setTimeout(function(){ if(!document.getElementById('pwa-banner')) banner('Instale o app na tela inicial e acesse com um toque.', 'Como instalar', function(){ var b=document.getElementById('pwa-banner'); var p=document.createElement('ol'); p.style.cssText='grid-column:2 / -1;margin:0;padding:0 0 0 20px;color:#f7ebe7;font-size:13px;line-height:1.6;'; p.innerHTML='<li>Toque no menu <strong>⋮</strong> do Chrome.</li><li>Escolha <strong>Instalar app</strong>.</li><li>Confirme em <strong>Instalar</strong>.</li>'; b.style.flexWrap='wrap'; b.appendChild(p); }); }, 1800);
   } catch(e){}
 })();
 </script>

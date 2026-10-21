@@ -46,18 +46,37 @@ const sbAdmin = sb; // alias — todas as operações elevadas são via RLS com 
       const ic = document.createElement('img'); ic.src = 'icon-192.png'; ic.width = 34; ic.height = 34; ic.style.cssText = 'border-radius:8px;flex:none;';
       const tx = document.createElement('div'); tx.style.cssText = 'flex:1;font-size:12.5px;color:#f7ebe7;line-height:1.35;'; tx.textContent = texto;
       b.append(ic, tx);
-      if (onBtn) { const bt = document.createElement('button'); bt.textContent = btnLabel; bt.style.cssText = 'flex:none;background:linear-gradient(160deg,#ffd97a,#8a6a24);color:#2a1500;border:none;border-radius:8px;padding:8px 12px;font-weight:800;font-size:12px;cursor:pointer;'; bt.onclick = onBtn; b.appendChild(bt); }
-      const cl = document.createElement('button'); cl.textContent = '×'; cl.title = 'Dispensar'; cl.style.cssText = 'flex:none;background:none;border:none;color:#b88a8f;font-size:20px;line-height:1;cursor:pointer;'; cl.onclick = () => { localStorage.setItem('pwa-dismiss', '1'); b.remove(); }; b.appendChild(cl);
+      if (onBtn) { const bt = document.createElement('button'); bt.textContent = btnLabel; bt.setAttribute('aria-label', btnLabel); bt.style.cssText = 'min-height:44px;flex:none;background:linear-gradient(160deg,#ffd97a,#8a6a24);color:#2a1500;border:none;border-radius:8px;padding:10px 14px;font-weight:800;font-size:14px;cursor:pointer;'; bt.onclick = onBtn; b.appendChild(bt); }
+      const cl = document.createElement('button'); cl.textContent = '×'; cl.title = 'Dispensar'; cl.setAttribute('aria-label','Dispensar convite para instalar'); cl.style.cssText = 'flex:none;width:44px;height:44px;background:none;border:none;color:#b88a8f;font-size:24px;line-height:1;cursor:pointer;'; cl.onclick = () => { localStorage.setItem('pwa-dismiss', '1'); b.remove(); }; b.appendChild(cl);
       document.body.appendChild(b);
     }
+    function mostrarPassos(passos) {
+      const b = document.getElementById('pwa-banner'); if (!b) return;
+      const anterior = b.querySelector('.pwa-passos');
+      if (anterior) { anterior.remove(); b.style.flexWrap = ''; return; }
+      const ol = document.createElement('ol'); ol.className = 'pwa-passos';
+      ol.style.cssText = 'width:100%;flex:0 0 100%;margin:4px 0 0;padding-left:22px;color:#f7ebe7;font-size:14px;line-height:1.5;';
+      passos.forEach((passo) => { const li = document.createElement('li'); li.textContent = passo; ol.appendChild(li); });
+      b.style.flexWrap = 'wrap'; b.appendChild(ol);
+    }
+    const passosIOS = () => mostrarPassos([
+      'Abra esta página no Safari.',
+      'Toque em Compartilhar e depois em “Adicionar à Tela de Início”.',
+      'Confirme em “Adicionar” e abra o app pelo ícone.'
+    ]);
+    const passosAndroid = () => mostrarPassos([
+      'Toque no menu do navegador (⋮).',
+      'Escolha “Instalar app” ou “Adicionar à tela inicial”.',
+      'Confirme para colocar o ícone na tela.'
+    ]);
     function showInstall() { const ev = window.__bip; if (!ev) return; const old = document.getElementById('pwa-banner'); if (old) old.remove(); banner('Instale o app na sua tela inicial.', 'Instalar', () => { ev.prompt(); ev.userChoice.finally(() => { window.__bip = null; const el = document.getElementById('pwa-banner'); if (el) el.remove(); }); }); }
     const ua = navigator.userAgent || '';
     const isIOS = /iphone|ipad|ipod/i.test(ua), isSafari = /safari/i.test(ua) && !/crios|fxios|chrome|android/i.test(ua), isAndroidChrome = /android/i.test(ua) && /chrome/i.test(ua);
     if (window.__bip) showInstall(); // evento já capturado no <head>
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); window.__bip = e; showInstall(); });
     window.addEventListener('appinstalled', () => { const el = document.getElementById('pwa-banner'); if (el) el.remove(); });
-    if (isIOS && isSafari) setTimeout(() => banner('Para instalar: toque em Compartilhar e depois “Adicionar à Tela de Início”.', null, null), 1500);
-    else if (isAndroidChrome) setTimeout(() => { if (!document.getElementById('pwa-banner')) banner('Para instalar: abra o menu (⋮) do Chrome e toque em “Instalar app”.', null, null); }, 3000);
+    if (isIOS) setTimeout(() => { if (!document.getElementById('pwa-banner')) banner('Instale o app na tela inicial e abra com um toque.', 'Como instalar', passosIOS); }, 1500);
+    else if (isAndroidChrome) setTimeout(() => { if (!document.getElementById('pwa-banner')) banner('Instale o app na tela inicial para abrir sem o navegador.', 'Como instalar', passosAndroid); }, 3000);
   } catch (e) { /* PWA é progressivo — falha não quebra o app */ }
 })();
 
@@ -1060,7 +1079,7 @@ function showFotoConsertoPop(membro, done) {
   const msg = document.createElement('div'); msg.className = 'msg'; modal.appendChild(msg);
 
   const input = document.createElement('input');
-  input.type = 'file'; input.accept = 'image/*'; input.style.display = 'none';
+  input.type = 'file'; input.accept = 'image/*'; input.dataset.photoSkip='true'; input.style.display = 'none';
 
   const btn = document.createElement('button'); btn.className = 'btn gold';
   btn.style.marginTop = '14px'; btn.textContent = txt.botao;
@@ -3203,7 +3222,7 @@ function buildAvatarEl(fotoUrl, role, size, opts) {
     const camSize = Math.max(16, Math.round(size * 0.24));
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*';
+    input.accept = 'image/*'; input.dataset.photoSkip='true';
     // sem 'capture': no celular abre o seletor nativo (galeria/Fotos + câmera)
     input.style.display = 'none';
 
@@ -3299,77 +3318,9 @@ async function uploadAvatar(file, membro) {
 }
 
 // ── CROPPER DE FOTO (recorte circular antes do upload) ───────
-function openCropper(file, onConfirm) {
-  const objUrl = URL.createObjectURL(file);
-  const ov = document.createElement('div');
-  ov.style.cssText = 'position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;';
-  const title = document.createElement('div');
-  title.style.cssText = "font-family:'Sora',sans-serif;font-weight:700;color:var(--gold-light,#ffd97a);letter-spacing:1.5px;text-transform:uppercase;font-size:13px;";
-  title.textContent = 'Ajuste a foto';
-  const hint = document.createElement('div');
-  hint.style.cssText = 'font-size:12px;color:#b88a8f;font-weight:600;margin-top:-10px;';
-  hint.textContent = 'Arraste para posicionar · use o zoom';
-
-  const F = Math.min(300, window.innerWidth - 56, window.innerHeight - 240);
-  const frame = document.createElement('div');
-  frame.style.cssText = `position:relative;width:${F}px;height:${F}px;overflow:hidden;border-radius:50%;border:2px solid var(--gold,#e8b94a);box-shadow:0 0 30px rgba(255,38,54,.5);touch-action:none;background:#000;cursor:grab;`;
-  const img = document.createElement('img');
-  img.style.cssText = 'position:absolute;will-change:left,top;pointer-events:none;-webkit-user-drag:none;';
-  img.src = objUrl; frame.appendChild(img);
-
-  const zoomWrap = document.createElement('div'); zoomWrap.style.cssText = `display:flex;align-items:center;gap:10px;width:${F}px;`;
-  const zi = document.createElement('span'); zi.textContent = '🔍'; zi.style.fontSize = '14px';
-  const zoom = document.createElement('input'); zoom.type = 'range'; zoom.min = '1'; zoom.max = '3'; zoom.step = '0.01'; zoom.value = '1';
-  zoom.style.cssText = 'flex:1;accent-color:var(--red-soft,#ff4654);';
-  zoomWrap.append(zi, zoom);
-
-  const btns = document.createElement('div'); btns.style.cssText = 'display:flex;gap:10px;';
-  const cancel = document.createElement('button'); cancel.className = 'btn-sm gray'; cancel.textContent = 'Cancelar';
-  const ok = document.createElement('button'); ok.className = 'btn-sm gold'; ok.textContent = 'Cortar e enviar';
-  btns.append(cancel, ok);
-  ov.append(title, hint, frame, zoomWrap, btns); document.body.appendChild(ov);
-
-  let nw = 0, nh = 0, base = 1, scale = 1, tx = 0, ty = 0, dragging = false, sx = 0, sy = 0, stx = 0, sty = 0;
-  const dims = () => ({ dw: nw * scale, dh: nh * scale });
-  function clamp() { const { dw, dh } = dims(); tx = Math.min(0, Math.max(F - dw, tx)); ty = Math.min(0, Math.max(F - dh, ty)); }
-  function apply() { const { dw, dh } = dims(); img.style.width = dw + 'px'; img.style.height = dh + 'px'; img.style.left = tx + 'px'; img.style.top = ty + 'px'; }
-
-  img.onload = () => {
-    nw = img.naturalWidth; nh = img.naturalHeight;
-    base = Math.max(F / nw, F / nh); scale = base;
-    zoom.min = String(base); zoom.max = String(base * 3); zoom.step = String((base * 2) / 100); zoom.value = String(base);
-    const { dw, dh } = dims(); tx = (F - dw) / 2; ty = (F - dh) / 2; apply();
-  };
-  zoom.oninput = () => {
-    const ns = parseFloat(zoom.value), cx = F / 2, cy = F / 2;
-    tx = cx - (cx - tx) * (ns / scale); ty = cy - (cy - ty) * (ns / scale);
-    scale = ns; clamp(); apply();
-  };
-  const onStart = (x, y) => { dragging = true; sx = x; sy = y; stx = tx; sty = ty; frame.style.cursor = 'grabbing'; };
-  const onMove = (x, y) => { if (!dragging) return; tx = stx + (x - sx); ty = sty + (y - sy); clamp(); apply(); };
-  const onEnd = () => { dragging = false; frame.style.cursor = 'grab'; };
-  function mm(e) { if (e.touches) { const t = e.touches[0]; if (t) onMove(t.clientX, t.clientY); } else onMove(e.clientX, e.clientY); }
-  frame.addEventListener('mousedown', e => onStart(e.clientX, e.clientY));
-  frame.addEventListener('touchstart', e => { const t = e.touches[0]; if (t) onStart(t.clientX, t.clientY); }, { passive: true });
-  window.addEventListener('mousemove', mm); window.addEventListener('mouseup', onEnd);
-  window.addEventListener('touchmove', mm, { passive: true }); window.addEventListener('touchend', onEnd);
-
-  function cleanup() {
-    URL.revokeObjectURL(objUrl); ov.remove();
-    window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', onEnd);
-    window.removeEventListener('touchmove', mm); window.removeEventListener('touchend', onEnd);
-  }
-  cancel.onclick = cleanup;
-  ok.onclick = () => {
-    const target = 400, canvas = document.createElement('canvas');
-    canvas.width = target; canvas.height = target;
-    const c = canvas.getContext('2d');
-    c.drawImage(img, -tx / scale, -ty / scale, F / scale, F / scale, 0, 0, target, target);
-    canvas.toBlob(blob => {
-      cleanup();
-      if (blob) onConfirm(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
-    }, 'image/jpeg', 0.9);
-  };
+async function openCropper(file, onConfirm) {
+  try { await recorteEditorPronto; const cortada=await window.recortarFoto(file,{aspect:1,fixo:true,max:400,tipo:'image/jpeg'});if(cortada)onConfirm(cortada); }
+  catch(e){alert(e.message || 'Não foi possível abrir a foto.');}
 }
 
 // ── PATCH POR HABILITAÇÃO ────────────────────────────────────
@@ -3714,9 +3665,43 @@ function baixarCSV(nomeBase, linhas){
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
 })();
 
+// Recorte compartilhado para fotos de perfil e imagens da identidade.
+const recorteLoader=document.createElement('script');recorteLoader.src='/editor-foto-loader.js';
+const recorteEditorPronto=new Promise((ok,no)=>{recorteLoader.onload=ok;recorteLoader.onerror=no;});document.head.append(recorteLoader);
+
 // Controles de escolha com a identidade do app, sem menu nativo do sistema.
 if (!document.querySelector('script[data-escolha-app]')) {
   const escolhaScript = document.createElement('script');
   escolhaScript.src = '/projetos/acolitos/escolha-app.js';
   escolhaScript.dataset.escolhaApp = '1'; document.head.appendChild(escolhaScript);
 }
+
+// ── Rótulo de acessibilidade em todo botão que é só ícone (20/10/2026) ───────────────────────
+// Botão de ícone sem texto precisa de `aria-label` (leitor de tela) e `title` (dica no
+// computador). Em vez de caçar centenas de botões montados por JS em cada tela, este vigia
+// o DOM e completa o que faltar: um copia o outro; sem nenhum dos dois, usa o glifo.
+(function () {
+  var GLIFOS = { '‹': 'Voltar', '›': 'Avançar', '✕': 'Remover', '×': 'Fechar', '🗑': 'Excluir', '✏️': 'Editar', '✏': 'Editar',
+    '+': 'Adicionar', '−': 'Remover', '-': 'Remover', '↑': 'Subir', '↓': 'Descer', '⋯': 'Mais ações', '⏻': 'Sair',
+    '🔄': 'Trocar', '📅': 'Escolher datas', '▦': 'Ver em cartões', '☰': 'Ver em lista', '🗄': 'Arquivados', '⚙': 'Configurações' };
+  function rotular(raiz) {
+    var bs = (raiz.querySelectorAll ? raiz.querySelectorAll('button,[role="button"]') : []);
+    for (var i = 0; i < bs.length; i++) {
+      var b = bs[i], t = (b.textContent || '').trim();
+      if (/[A-Za-zÀ-ÿ0-9]/.test(t) && t.length > 1) continue;
+      var nome = b.getAttribute('aria-label') || b.getAttribute('title') || GLIFOS[t.replace(/️/g, '')] || GLIFOS[t];
+      if (!nome) continue;
+      if (!b.getAttribute('aria-label')) b.setAttribute('aria-label', nome);
+      if (!b.getAttribute('title')) b.setAttribute('title', nome);
+    }
+  }
+  function ligar() {
+    rotular(document);
+    var agendado = false;
+    new MutationObserver(function () {
+      if (agendado) return; agendado = true;
+      setTimeout(function () { agendado = false; rotular(document); }, 120);
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+  if (document.body) ligar(); else document.addEventListener('DOMContentLoaded', ligar);
+})();

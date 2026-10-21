@@ -94,6 +94,11 @@ NÃO estão com a senha da folha** (conta criada por outro caminho): para elas �
 Agenda, CRM, Chamada e Ausências (17/09) estão feitos. Falta **Tarefas** — e ela hoje tem
 ZERO tarefas cadastradas, então o filtro lá não terá o que mostrar até alguém criar a primeira.
 
+**Conferência local em 10/10/2026:** `tarefas.html` já contém os filtros e a
+ordenação, apoiados em `tarefas-visao-core.js`. Os testes de tarefas/rodízio
+passaram (92 no total). Não reimplementar com base no parágrafo histórico acima;
+o encerramento visual e o estado de produção ainda precisam de conferência.
+
 **A função antiga de faltas (`acolitos_faltas_recentes`) ficou sem uso.** A tela nova usa a
 `acolitos_faltas_filtradas`. Apagar a antiga numa migration futura, só depois de confirmar que
 nenhum celular ficou com a versão velha do app aberta.

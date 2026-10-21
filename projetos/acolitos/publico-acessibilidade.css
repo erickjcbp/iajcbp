@@ -18,3 +18,9 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
     padding: calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
   }
 }
+
+/* Fonte dupla (20/10/2026): Sora nos títulos/números; Plus Jakarta Sans no corpo, rótulos,
+   botões e campos. A Pastoral tem identidade editorial própria e fica de fora. */
+body:not(.pastoral) { font-family: 'Plus Jakarta Sans', 'Sora', sans-serif; }
+body:not(.pastoral) button, body:not(.pastoral) input, body:not(.pastoral) select,
+body:not(.pastoral) textarea, body:not(.pastoral) label { font-family: 'Plus Jakarta Sans', 'Sora', sans-serif !important; }

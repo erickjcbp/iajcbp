@@ -6,7 +6,7 @@
     .tc-st-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:14px; margin-bottom:18px; }
     .tc-st-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; min-width:0; }
     .tc-st-card h3 { font-family:Sora,sans-serif; font-size:14px; margin:0 0 10px; color:var(--gold-light); }
-    .tc-st-big { font-family:Sora,sans-serif; font-size:22px; font-weight:700; margin:2px 0 6px; overflow-wrap:anywhere; }
+    .tc-st-big { font-family:Sora,sans-serif; font-size:18px; font-weight:700; margin:2px 0 6px; overflow-wrap:anywhere; }
     .tc-st-muted { color:var(--text-muted); font-size:13px; line-height:1.5; }
     .tc-st-ok { color:var(--success-text,#7bd88f); } .tc-st-ruim { color:var(--danger-text,#ff9c9c); }
     .tc-st-acoes { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { iniciarProvas, PAPEIS } from './abrir-tela.mjs';
-const destino=process.env.FOTOS_VISUAL || '/Users/erickmartins/arquivos/auditoria-visual-coroinhas-2026-10-10/depois';
+const destino=process.env.FOTOS_VISUAL || '/Users/erickmartins/arquivos/auditorias/coroinhas/2026-10/auditoria-visual-coroinhas-2026-10-10/depois';
 fs.mkdirSync(destino,{recursive:true});
 const membro={id:'m1',nome:'Maria Clara de Oliveira Santos',apelido:'Maria Clara',nivel:'coroinha',comunidade:'matriz',status:'ativo',serve:true,role:'membro',user_id:'u1',data_nascimento:'2012-05-11',email:'maria@teste',eh_equipe:false};
 const celeb={id:'c1',data:'2026-10-11',horario:'10:00',minutos:600,comunidade:'matriz',tipo:'missa_comum',observacoes:'Missa das crianças e acolhida das famílias'};

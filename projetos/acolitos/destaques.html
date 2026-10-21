@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Destaques — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
@@ -188,7 +188,7 @@ async function abrirCard(id) {
   const head = document.createElement('div'); head.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:14px;';
   head.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 84, { nivelSlug: m.nivel||'aspirante', casaSlug: casaSlugDe(m) }));
   const nmRow = document.createElement('div'); nmRow.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:6px;max-width:100%;';
-  const nm = document.createElement('div'); nm.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:17px;color:var(--text);text-align:center;min-width:0;'; nm.textContent = m.nome_completo || m.nome;
+  const nm = document.createElement('div'); nm.style.cssText = 'font-family:Sora,sans-serif;font-weight:700;font-size:15px;color:var(--text);text-align:center;min-width:0;'; nm.textContent = m.nome_completo || m.nome;
   const stTag = estrelaTagAsync(id); stTag.style.fontSize = '14px';
   nmRow.append(nm, stTag);
   const nv = document.createElement('div'); nv.style.cssText = 'font-size:12px;color:var(--gold);font-style:italic;'; nv.textContent = nivelInfo(m.nivel||'aspirante').label + (nivelInfo(m.nivel||'aspirante').titulo ? ' · 🏆 ' + nivelInfo(m.nivel||'aspirante').titulo : '');

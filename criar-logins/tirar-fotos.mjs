@@ -16,7 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
-const require = createRequire('/Users/erickmartins/iajcbp/package.json');
+const require = createRequire(import.meta.url);
 const pup = require('puppeteer-core');
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PASTA_APP = path.join(RAIZ, 'projetos', 'acolitos');

@@ -67,9 +67,9 @@ const avaliar = `
 `;
 
 const cenarios = [
-  { id: 'avisos', tela: 'tarcisio.html', passos: [], abas: 2 },
-  { id: 'aviso-novo', tela: 'tarcisio.html', passos: [{ clicar: '+ Novo aviso' }], abas: 2 },
-  { id: 'sem-numero', tela: 'tarcisio.html', passos: [{ clicar: 'Sem número' }], abas: 2 },
+  { id: 'avisos', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_avisos'] }] },
+  { id: 'aviso-novo', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_avisos'] }, { clicar: '+ Novo aviso' }] },
+  { id: 'sem-numero', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_sem'] }] },
   { id: 'config-whatsapp', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_whatsapp'] }] },
   { id: 'config-grupos', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_grupos'] }] },
   { id: 'config-ia', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_ia'] }] },
@@ -90,7 +90,6 @@ try {
     const id = `${c.id} @${largura}`;
     exigir(!r.erros.length, `${id}: erros ${r.erros.join(' | ')}`);
     exigir(!(r.passosFalhos || []).length, `${id}: passo não achou o alvo ${JSON.stringify(r.passosFalhos)}`);
-    if (c.abas) exigir(a.abas?.length === c.abas, `${id}: as abas não apareceram`);
     exigir(a.textoTc > 0, `${id}: a tela do São Tarcísio não desenhou`);
     exigir(!a.rolagemLateral, `${id}: rolagem lateral`);
     exigir(!a.pequenos?.length, `${id}: alvo menor que 44px: ${a.pequenos}`);
@@ -102,8 +101,8 @@ try {
   }
   // 2) Quem não é admin/subadmin não vê nada
   for (const papel of [PAPEIS.membro, PAPEIS.cerimonario, PAPEIS.equipe]) {
-    const r = await provas.abrir('tarcisio.html', { papel, tabelas, avaliar });
-    exigir(!r.avaliado?.abas?.length && /só do admin/.test(r.texto), `${papel.nome}: deveria ver "só do admin" e viu outra coisa`);
+    const r = await provas.abrir('config.html', { papel, tabelas, avaliar: `await abrirSecao('tarcisio_avisos');` + avaliar });
+    exigir(!r.avaliado || r.avaliado.textoTc === 0, `${papel.nome}: não deveria ver a tela de Configuração do São Tarcísio`);
   }
   // 3) Portão do WhatsApp do responsável. O motor de provas troca o initModulo por um falso,
   //    então o portão é chamado aqui do mesmo jeito que o initModulo de verdade chama.

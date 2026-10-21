@@ -855,3 +855,50 @@ body { touch-action: pan-x pan-y; }
 .filtro-painel .form-toggle { flex: 1 1 auto; min-width: 0; white-space: nowrap; }
 .filtro-painel-busca { width: 100%; margin-bottom: 8px; }
 .filtro-painel-dica { font-size: 12px; color: var(--text-muted); font-style: italic; padding: 4px 2px; }
+
+/* ── FONTE DUPLA + MODO COMPACTO (20/10/2026) ────────────────────
+   Sora = títulos e números (identidade); Plus Jakarta Sans = corpo, rótulos, botões e campos
+   (mesma geometria da Sora, mas aberta e legível em 11–13px). Este bloco fica por último de
+   propósito: ajusta o tamanho sem reescrever cada tela. */
+:root { --font-title: 'Sora', sans-serif; --font-body: 'Plus Jakarta Sans', 'Sora', sans-serif; }
+body { font-family: var(--font-body); }
+button, input, select, textarea, label, .btn, .btn-sm, .form-label, .form-toggle, .badge, .msg,
+.nav-item, .mode-btn, .nav-badge, .app-toast { font-family: var(--font-body) !important; }
+.page-title, .modal-title, .kpi-value, .cal-mes, h1, h2, h3 { font-family: var(--font-title); }
+.form-label { font-size: 11px; letter-spacing: .6px; }
+.cards-grid { align-items: stretch; }
+.cards-grid > * { height: 100%; }
+.modal-title { font-size: 14px; letter-spacing: 1px; margin-bottom: 12px; }
+.btn { letter-spacing: 1px; }
+@media (min-width: 640px) {
+  .modal { padding: 18px 20px; }
+  .btn { min-height: 44px; padding: 11px; }
+  .form-input, .form-select, .form-textarea { min-height: 42px; padding: 9px 12px; font-size: 14px; }
+  .form-group { margin-bottom: 12px; }
+  .modal-actions { margin-top: 14px; padding-top: 12px; }
+}
+@media (max-width: 639px) {
+  :root { --header-h: 48px; --nav-h: 58px; }
+  .mode-switch { height: 44px; }
+  .mode-btn { height: 44px; font-size: 11px; }
+  body.has-switch { padding-top: calc(var(--header-h) + 44px + env(safe-area-inset-top)); }
+  .main { padding: 12px clamp(12px, 3.4vw, 20px); }
+  .page-title { font-size: 16px; letter-spacing: 1px; margin-bottom: 12px; padding-bottom: 8px; }
+  .page-title::before { bottom: 8px; }
+  .modal { padding: 12px 14px calc(14px + env(safe-area-inset-bottom)); }
+  .modal-title { font-size: 13px; margin-bottom: 10px; }
+  .form-group { margin-bottom: 10px; }
+  .form-label { margin-bottom: 4px; }
+  .form-input, .form-select, .form-textarea { min-height: 44px; padding: 9px 12px; }
+  .form-textarea { min-height: 72px; }
+  .btn { min-height: 44px; padding: 9px 12px; font-size: 12px; }
+  .btn-sm { padding: 6px 12px; font-size: 11px; letter-spacing: .4px; }
+  .modal-actions { margin-top: 12px; padding-top: 10px; gap: 8px; }
+  .kpi-grid { gap: 8px; margin-bottom: 12px; }
+  .kpi-card { padding: 10px; }
+  .kpi-value { font-size: 22px; }
+  .cards-grid { gap: 8px; }
+  .member-card { padding: 10px 8px; }
+  .nav-item { min-width: 64px; gap: 2px; padding: 4px 2px; }
+  .nav-item svg { width: 21px; height: 21px; }
+}

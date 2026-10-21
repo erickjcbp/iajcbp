@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Agenda — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700;800&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
@@ -458,7 +458,7 @@ function abrirEvento(e) {
 
   const head = document.createElement('div'); head.style.cssText = 'display:flex;align-items:flex-start;gap:10px;';
   const tg = document.createElement('span'); tg.className = 'ag-tag'; tg.style.background = info.cor; tg.textContent = info.label;
-  const tt = document.createElement('h2'); tt.style.cssText = 'flex:1;font-family:Sora,sans-serif;font-size:18px;margin:0;color:var(--text);'; tt.textContent = e.titulo;
+  const tt = document.createElement('h2'); tt.style.cssText = 'flex:1;font-family:Sora,sans-serif;font-size:15px;margin:0;color:var(--text);'; tt.textContent = e.titulo;
   const x = document.createElement('button'); x.className = 'btn-icon'; x.textContent = '✕'; x.onclick = () => ov.remove();
   head.append(tt, x); m.appendChild(head);
   const tgl = document.createElement('div'); tgl.style.margin = '6px 0 2px'; tgl.appendChild(tg); m.appendChild(tgl);
@@ -538,7 +538,7 @@ function abrirFormEvento(ev) {
   const editando = !!ev;
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   const m = document.createElement('div'); m.className = 'modal evt-form'; m.style.setProperty('--modal-max', '440px');
-  const h = document.createElement('h2'); h.style.cssText = 'font-family:Sora,sans-serif;font-size:18px;margin:0 0 4px;color:var(--text);'; h.textContent = editando ? 'Editar evento' : 'Novo evento';
+  const h = document.createElement('h2'); h.style.cssText = 'font-family:Sora,sans-serif;font-size:15px;margin:0 0 4px;color:var(--text);'; h.textContent = editando ? 'Editar evento' : 'Novo evento';
   m.appendChild(h);
 
   const mk = (lbl, el) => { const L = document.createElement('label'); L.textContent = lbl; m.append(L, el); return el; };
@@ -706,7 +706,7 @@ async function abrirChamadaEnsaio(e) {
   const presentes = new Set(lista.filter(x => x.presente).map(x => x.id));
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e2) => { if (e2.target === ov) ov.remove(); };
   const m = document.createElement('div'); m.className = 'modal'; m.style.setProperty('--modal-max', '440px');
-  const h = document.createElement('h2'); h.style.cssText = 'font-family:Sora,sans-serif;font-size:18px;margin:0 0 2px;color:var(--text);'; h.textContent = 'Chamada — ' + e.titulo; m.appendChild(h);
+  const h = document.createElement('h2'); h.style.cssText = 'font-family:Sora,sans-serif;font-size:15px;margin:0 0 2px;color:var(--text);'; h.textContent = 'Chamada — ' + e.titulo; m.appendChild(h);
   const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0 0 10px;'; sub.textContent = lista.length + ' convocados · toque pra marcar presença'; m.appendChild(sub);
   const box = document.createElement('div'); box.style.cssText = 'max-height:55vh;overflow-y:auto;'; m.appendChild(box);
   lista.forEach(x => {
