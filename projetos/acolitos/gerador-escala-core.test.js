@@ -168,3 +168,20 @@ test('missa fora da geração não força o filho em outra missa', () => {
   const r = gerarSemana(e);
   assert.deepEqual(r.semVagaFilhoDeMinistro, [{ membro_id: 'filho', motivo: 'missa_fora_da_geracao' }]);
 });
+
+// ---- fim de semana que cruza o mês (31/10 e 01/11): cada missa conta no mês dela ----
+test('fim de semana que cruza o mês: a missa de novembro não herda as vezes de outubro', () => {
+  const S31 = { id: 's31', data: '2026-10-31', horario: '19h', comunidade: 'matriz', tipo: 'missa_comum' };
+  const D01 = { id: 'd01', data: '2026-11-01', horario: '9h', comunidade: 'matriz', tipo: 'missa_comum' };
+  const e = mundo(['a', 'b'], { celebs: [S31, D01], extra: { vezesNoMes: { '2026-10': { a: 2, b: 2 }, '2026-11': {} } } });
+  const r = gerarSemana(e);
+  assert.equal(r.novas.length, 2);
+  assert.equal(r.alemDoMinimo.length, 1, 'só quem serviu o sábado de outubro passou de 2×');
+  assert.equal(r.alemDoMinimo[0].vezes, 3);
+  const dom = r.novas.find(n => n.celebracao_id === 'd01').membro_id;
+  assert.ok(!r.alemDoMinimo.some(x => x.membro_id === dom));
+});
+test('vezesNoMes simples (sem meses) continua valendo para todas as missas', () => {
+  const e = mundo(['a', 'b'], { celebs: [SAB, DOM], extra: { vezesNoMes: { a: 2, b: 2 } } });
+  assert.equal(gerarSemana(e).alemDoMinimo.length, 2);
+});

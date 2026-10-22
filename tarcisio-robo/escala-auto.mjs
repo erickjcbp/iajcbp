@@ -297,15 +297,21 @@ export function criarCarregarEntrada({ RodizioCore, SemanalCore, lerTudo }) {
     })
   }
 
-  // Vezes EXATAS no mês (para o teto de 2× do gerador): escalas gravadas nas missas do mês do sábado.
-  async function vezesDoMes(db, ref) {
-    const cels = await tudo(() => db.from('acolitos_celebracoes').select('id').gte('data', ref.slice(0, 7) + '-01').lte('data', fimDoMes(ref)), 'ler missas do mês')
-    const ids = cels.map((c) => c.id)
-    if (!ids.length) return {}
-    const escalas = await tudo(() => db.from('acolitos_escalas').select('membro_id,celebracao_id').in('celebracao_id', ids), 'ler escalas do mês')
-    const n = {}
-    for (const e of escalas) n[e.membro_id] = (n[e.membro_id] || 0) + 1
-    return n
+  // Vezes EXATAS por mês (teto de 2× do gerador): { 'AAAA-MM': { membro_id: n } } para cada mês em que há
+  // missa nesta semana — um fim de semana 31/10 + 01/11 conta cada missa no mês dela.
+  async function vezesPorMes(db, datas) {
+    const saida = {}
+    for (const mes of [...new Set(datas.map((d) => d.slice(0, 7)))]) {
+      const cels = await tudo(() => db.from('acolitos_celebracoes').select('id').gte('data', mes + '-01').lte('data', fimDoMes(mes + '-01')), 'ler missas do mês')
+      const ids = cels.map((c) => c.id)
+      const n = {}
+      if (ids.length) {
+        const escalas = await tudo(() => db.from('acolitos_escalas').select('membro_id,celebracao_id').in('celebracao_id', ids), 'ler escalas do mês')
+        for (const e of escalas) n[e.membro_id] = (n[e.membro_id] || 0) + 1
+      }
+      saida[mes] = n
+    }
+    return saida
   }
 
   return async function carregarEntrada(db, sabado) {
@@ -367,7 +373,7 @@ export function criarCarregarEntrada({ RodizioCore, SemanalCore, lerTudo }) {
     return {
       celebracoes, membros, habMap, dispMap, escalasExistentes, ausencias, historicoSemanal,
       carga: await carga(db, datas[0], gerador),
-      vezesNoMes: await vezesDoMes(db, datas[0]),
+      vezesNoMes: await vezesPorMes(db, datas),
       config: { gerador, funcoes_maiores: appConfig.funcoes_maiores ?? null, minimo_mes: gerador.minimo_mes ?? appConfig.minimo_mes },
       appConfig, modeloFor,
       // membro_id = o FILHO; quem marcou "não escalar junto com os pais" (explicitamente false) fica de fora.

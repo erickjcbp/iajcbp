@@ -258,3 +258,20 @@ test('pedirArtePeloServico revive o pedido que FALHOU (arte não ficou pronta): 
   assert.deepStrictEqual(await C.pedirArtePeloServico(sb, '2026-11-01'), { ok: true, novo: false });
   assert.strictEqual(fila.get('escala:2026-11-01').estado, 'enviado');
 });
+
+test('avisadosDaSemana: a chave do robô (sábado) e a da tela (outro dia da mesma semana) valem juntas', () => {
+  const { avisadosDaSemana } = require('./confirmar-semana-core.js');
+  const mapa = { '2026-10-24': ['a', 'b'], '2026-10-23': ['c'], '2026-10-17': ['z'] };
+  assert.deepEqual(avisadosDaSemana(mapa, '2026-10-25').sort(), ['a', 'b', 'c']);   // domingo: mesma semana segunda–domingo
+  assert.deepEqual(avisadosDaSemana(mapa, '2026-10-24').sort(), ['a', 'b', 'c']);
+  assert.deepEqual(avisadosDaSemana(mapa, '2026-10-17'), ['z']);                    // semana anterior não se mistura
+  assert.deepEqual(avisadosDaSemana(null, '2026-10-24'), []);
+});
+
+test('robô avisou sob a chave do sábado; a tela confirma com outra chave da mesma semana: ninguém é avisado de novo', async () => {
+  const sb = bancoFalso({ avisados: { '2026-10-24': ['a', 'b', 'c'] } });
+  const push = pushFalso();
+  const r = await rodar(sb, push, { chaveSemana: '2026-10-23' });
+  assert.deepStrictEqual(push.recebidos, []);
+  assert.strictEqual(r.jaTodosAvisados, true);
+});

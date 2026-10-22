@@ -1161,6 +1161,39 @@ async function confirmarEscalaSemana(celebs, chaveSemana, btnEl) {
 }
 
 
+// Vezes exatas por mês (teto de 2× do gerador; fim de semana que cruza o mês conta cada missa no mês dela)
+// e filhos de ministros do fim de semana (escala dos ministros). É a MESMA entrada que o robô monta em
+// tarcisio-robo/escala-auto.mjs: a escala gerada na tela e a da terça seguem a mesma regra.
+// Se a leitura falhar, gera como sempre (sem o teto exato e sem a reserva) — nunca bloqueia a geração.
+async function carregarVezesEMinistros(ordc){
+  const extras = {};
+  try {
+    const vezesNoMes = {};
+    for (const mes of [...new Set(ordc.map(c => String(c.data).slice(0,7)))]) {
+      const [a, m] = mes.split('-').map(Number);
+      const fim = new Date(Date.UTC(a, m, 0)).toISOString().slice(0,10);
+      const cels = await lerTudo(() => sb.from('acolitos_celebracoes').select('id').gte('data', mes + '-01').lte('data', fim));
+      if (cels.error) throw cels.error;
+      const ids = cels.data.map(c => c.id), n = {};
+      if (ids.length) {
+        const esc = await lerTudo(() => sb.from('acolitos_escalas').select('membro_id,celebracao_id').in('celebracao_id', ids));
+        if (esc.error) throw esc.error;
+        esc.data.forEach(e => { n[e.membro_id] = (n[e.membro_id] || 0) + 1; });
+      }
+      vezesNoMes[mes] = n;
+    }
+    extras.vezesNoMes = vezesNoMes;
+  } catch (e) { console.warn('Escala: vezes do mês indisponíveis, gerando sem o teto exato', e); }
+  try {
+    const datas = ordc.map(c => c.data).sort();
+    const r = await sb.from('acolitos_escala_ministros').select('data,horario,comunidade,membro_id').gte('data', datas[0]).lte('data', datas[datas.length - 1]);
+    if (r.error) throw r.error;
+    // "Escalar junto com os pais" desmarcado explicitamente (false) tira o filho da reserva
+    extras.ministros = (r.data || []).filter(x => (membros.find(m => m.id === x.membro_id) || {}).escalar_com_pais !== false);
+  } catch (e) { console.warn('Escala: escala dos ministros indisponível, gerando sem a reserva dos filhos', e); }
+  return extras;
+}
+
 // `todosDaSemana`: as missas do fim de semana INTEIRO, mesmo as não selecionadas para
 // gerar agora — a regra "ninguém repete no fim de semana" precisa delas para não escalar
 // em dobro quem já está numa missa que ficou de fora da seleção. Sem isso, selecionar só
@@ -1176,9 +1209,10 @@ async function gerarEscalaSemana(celebs, btnEl, todosDaSemana) {
   try { if(membros.some(m=>m.servir_toda_semana))historico=await SemanalCore.carregar(sb,lerTudo,ordc.map(c=>c.data)); }
   catch(e){await uiAlert('Não consegui conferir o plano semanal. Nenhuma escala foi gerada. Tente novamente.');if(btnEl){btnEl.disabled=false;btnEl.textContent=txt0;}return;}
   const ausFresh = await carregarAusenciasFresh(ordc);
+  const extras = await carregarVezesEMinistros(ordc);   // MESMOS dados que o robô de terça usa
   const r = GeradorEscalaCore.gerarSemana({
     ...dadosDoGerador(), celebracoes: celebs, todosDaSemana, escalasExistentes: escalasMap, ausencias: ausFresh,
-    historicoSemanal: historico, carga, modeloFor,
+    historicoSemanal: historico, carga, modeloFor, ...extras,
   });
   const novas = r.novas.map(n => ({ ...n, created_by: ctx.user.id }));
   if (novas.length) {

@@ -202,11 +202,16 @@
     // (a carga é peso de rodízio — "frequente" tira meia vez — e não serve de contagem dura).
     // Sem elas a geração é a de sempre (paridade com o código antigo) e a conta de
     // alemDoMinimo usa a parte "mês" da carga.
+    // Pode vir POR MÊS ({ '2026-10': {id: n}, '2026-11': {...} }): um fim de semana que cruza o mês
+    // (31/10 e 01/11) conta cada missa no mês dela. Chave simples { id: n } vale para todas as missas.
     var vezesBase = (entrada.vezesNoMes && typeof entrada.vezesNoMes === 'object') ? entrada.vezesNoMes : null;
-    var novasPor = {}, semTeto = !vezesBase;
+    var porMes = !!vezesBase && Object.keys(vezesBase).some(function (k) { return /^\d{4}-\d{2}$/.test(k); });
+    const mesDe = c => String((c && c.data) || '').slice(0, 7);
+    var novasPorMes = {}, semTeto = !vezesBase;
+    const novasDe = (id, mes) => ((novasPorMes[mes] || {})[id] || 0);
     // quem tem "Servir toda semana" segue a regra própria (4×, SemanalCore): o mínimo dele é 4.
     const minimoDe = m => m && m.servir_toda_semana ? Math.max(minimoMes, RodizioCore.metaDoMembro(m)) : minimoMes;
-    const vezes = id => (vezesBase ? (vezesBase[id] || 0) : Math.floor(((entrada.carga || {})[id] || 0) / RodizioCore.PESO_MES)) + (novasPor[id] || 0);
+    const vezes = (id, mes) => (vezesBase ? ((porMes ? (vezesBase[mes] || {}) : vezesBase)[id] || 0) : Math.floor(((entrada.carga || {})[id] || 0) / RodizioCore.PESO_MES)) + novasDe(id, mes);
     // pool DURO de candidatos p/ uma vaga, no estado atual
     const candsDe = s => {
       const aus = ausFresh[s.c.id] || new Set();
@@ -215,7 +220,7 @@
         && SemanalCore.pode(m, s.funcao, s.c.data, historico, habMap)
         && (!s.hk || (dispMap[m.id] || []).includes(s.hk))
         && !usadoFds.has(m.id) && !usadosMissa[s.c.id].has(m.id) && !aus.has(m.id)
-        && (semTeto || vezes(m.id) < minimoDe(m)));
+        && (semTeto || vezes(m.id, mesDe(s.c)) < minimoDe(m)));
     };
     // escolha dentro do pool: comunidade → reserva cerimoniário (nas menores) → RODÍZIO → aleatório
     const escolher = (s, pool) => {
@@ -225,14 +230,14 @@
       const tiers = menor ? [comPool.filter(m => !ehCerimo(m)), comPool] : [comPool];
       const grupo = tiers.find(t => t.length).slice();
       // 2ª passada (além do mínimo): o MENOS servido no mês primeiro; depois o rodízio de sempre.
-      if (semTeto && vezesBase) grupo.sort((a, b) => (vezes(a.id) - vezes(b.id)) || ((carga[a.id] || 0) - (carga[b.id] || 0)) || (rnd() - 0.5));
+      if (semTeto && vezesBase) grupo.sort((a, b) => (vezes(a.id, mesDe(s.c)) - vezes(b.id, mesDe(s.c))) || ((carga[a.id] || 0) - (carga[b.id] || 0)) || (rnd() - 0.5));
       else grupo.sort((a, b) => ((carga[a.id] || 0) - (carga[b.id] || 0)) || (rnd() - 0.5));
       return grupo[0];
     };
     const novas = [];
     const colocar = (s, m) => {
       s.filled = true; usadoFds.add(m.id); usadosMissa[s.c.id].add(m.id); carga[m.id] = (carga[m.id] || 0) + RodizioCore.PESO_MES + 1;
-      novas.push({ celebracao_id: s.c.id, membro_id: m.id, funcao: s.funcao }); novasPor[m.id] = (novasPor[m.id] || 0) + 1;
+      novas.push({ celebracao_id: s.c.id, membro_id: m.id, funcao: s.funcao }); (novasPorMes[mesDe(s.c)] = novasPorMes[mesDe(s.c)] || {})[m.id] = novasDe(m.id, mesDe(s.c)) + 1;
       historico.push({ celebracao_id: s.c.id, membro_id: m.id, funcao: s.funcao, data: s.c.data });
     };
     if (membros.some(m => m.servir_toda_semana)) {
@@ -307,7 +312,9 @@
     // quem terminou ACIMA do mínimo do mês nesta geração (as vezes do mês + as novas)
     const alemDoMinimo = [];
     const porId = {}; membros.forEach(m => { porId[m.id] = m; });
-    Object.keys(novasPor).forEach(id => { const v = vezes(id); if (v > minimoDe(porId[id])) alemDoMinimo.push({ membro_id: id, vezes: v }); });
+    const maxVezes = {};
+    Object.keys(novasPorMes).forEach(mes => Object.keys(novasPorMes[mes]).forEach(id => { const v = vezes(id, mes); if (v > minimoDe(porId[id]) && v > (maxVezes[id] || 0)) maxVezes[id] = v; }));
+    Object.keys(maxVezes).forEach(id => alemDoMinimo.push({ membro_id: id, vezes: maxVezes[id] }));
     return { novas: novas, vazias: vazias, alemDoMinimo: alemDoMinimo, semanalPendentes: semanalPendentes, semVagaFilhoDeMinistro: semVagaFilhoDeMinistro };
   }
 

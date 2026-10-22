@@ -58,6 +58,23 @@
     return saida;
   }
 
+  // Segunda-feira (AAAA-MM-DD) da semana de uma data. A tela e o robô podem guardar a lista de avisados
+  // sob chaves diferentes da MESMA semana (a da tela muda com filtros/dias úteis; a do robô é o sábado):
+  // quem foi avisado sob qualquer chave da semana segunda–domingo já foi avisado.
+  function segundaDe(chave) {
+    var d = new Date(String(chave).slice(0, 10) + 'T12:00:00Z');
+    if (isNaN(d)) return null;
+    d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+    return d.toISOString().slice(0, 10);
+  }
+  function avisadosDaSemana(mapa, chave) {
+    var seg = segundaDe(chave), vistos = {}, lista = [];
+    Object.keys(mapa || {}).forEach(function (k) {
+      if (k !== chave && (seg === null || segundaDe(k) !== seg)) return;
+      (Array.isArray(mapa[k]) ? mapa[k] : []).forEach(function (id) { if (!vistos[id]) { vistos[id] = true; lista.push(id); } });
+    });
+    return lista;
+  }
   function hojeSP() {
     try {
       return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -155,7 +172,7 @@
     }
     var valor = lido.data && lido.data.valor;
     var mapa = (valor && typeof valor === 'object' && !Array.isArray(valor)) ? Object.assign({}, valor) : {};
-    var novos = nucleo.aNotificar({ escalados: escalados, jaAvisados: mapa[chave] || [] });
+    var novos = nucleo.aNotificar({ escalados: escalados, jaAvisados: avisadosDaSemana(mapa, chave) });
     base.novos = novos;
 
     var avisados = [];
@@ -180,7 +197,7 @@
       }
 
       // 3. Só marca DEPOIS de o envio dar certo: marcar antes faria a pessoa nunca receber.
-      mapa[chave] = (mapa[chave] || []).concat(avisados);
+      mapa[chave] = (mapa[chave] || []).concat(avisados);   // a leitura já soma todas as chaves da semana
       var podado = nucleo.podarAvisados({ mapa: mapa, hoje: o.hoje || hojeSP() });
       var gravado;
       try {
@@ -214,7 +231,7 @@
 
   var api = {
     confirmarSemana: confirmarSemana, chaveDaSemana: chaveDaSemana, domingoDaSemana: domingoDaSemana,
-    escaladosDaSemana: escaladosDaSemana, pedirArtePeloServico: pedirArtePeloServico,
+    escaladosDaSemana: escaladosDaSemana, pedirArtePeloServico: pedirArtePeloServico, avisadosDaSemana: avisadosDaSemana,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else global.ConfirmarSemanaCore = api;
