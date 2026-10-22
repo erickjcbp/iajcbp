@@ -26,9 +26,9 @@
 @media(max-width:639px){
 .matriz-table th:nth-child(2),.matriz-table th:nth-child(3),.matriz-table td:nth-child(2):not([colspan]),.matriz-table td:nth-child(3):not([colspan]){display:none;}
 .matriz-table .matriz-action{display:none;}
-.matriz-member-name{display:block;min-width:0;width:58px;max-width:58px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;line-height:1.15;cursor:pointer;}
-.matriz-table td:first-child{width:92px;min-width:92px;max-width:92px;padding:2px 4px !important;}
-.matriz-table th:first-child{min-width:92px !important;max-width:92px;padding:4px !important;font-size:10px;}
+.matriz-member-name{display:block;min-width:0;width:auto;max-width:none;white-space:nowrap;overflow:visible;text-overflow:clip;font-size:11px;line-height:1.15;cursor:pointer;}
+.matriz-table td:first-child{width:112px;min-width:112px;max-width:112px;padding:2px 4px !important;}
+.matriz-table th:first-child{min-width:112px !important;max-width:112px;padding:4px !important;font-size:10px;}
 .matriz-select{min-width:30px;min-height:30px;margin-right:2px;}
 .matriz-select input{width:16px;height:16px;}
 .matriz-table .matriz-prof{width:30px;height:30px;margin:1px auto;}

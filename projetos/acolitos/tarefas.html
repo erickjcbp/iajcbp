@@ -316,7 +316,7 @@ function etiquetaDoTime(t) {
 function nomeResponsavel(t) {
   // Nunca em branco: sem responsável, a linha diz "do time" — em branco a pessoa não
   // sabe se a tarefa é dela ou se ninguém pegou ainda.
-  if (t.responsavel) return t.responsavel.apelido || t.responsavel.nome;
+  if (t.responsavel) return nomeExibir(t.responsavel);
   return 'do time';
 }
 
