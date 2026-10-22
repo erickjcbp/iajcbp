@@ -64,7 +64,7 @@ export function montarTextoDosItens(paginas) {
 }
 
 // Extração real (pdfjs-dist, build legacy para Node). Carregada só na hora de usar.
-export async function extrairTextoPdf(buffer, carregar = () => import('pdfjs-dist/legacy/build/pdf.mjs')) {
+export async function extrairTextoPdf(buffer, carregar = () => import('pdfjs-dist/legacy/build/pdf.mjs'), montar = montarTextoDosItens) {
   const pdfjs = await carregar()
   const tarefa = pdfjs.getDocument({ data: new Uint8Array(buffer), isEvalSupported: false, disableFontFace: true, useSystemFonts: false, verbosity: 0 })
   try {
@@ -74,7 +74,7 @@ export async function extrairTextoPdf(buffer, carregar = () => import('pdfjs-dis
       const c = await (await doc.getPage(p)).getTextContent()
       paginas.push(c.items.map((i) => ({ str: i.str, x: i.transform?.[4], y: i.transform?.[5] })))
     }
-    return montarTextoDosItens(paginas)
+    return montar(paginas)
   } finally { await tarefa.destroy() }
 }
 
@@ -222,7 +222,8 @@ export function criarMinistrosPdf({ db, evo, nucleo, extrairTexto = extrairTexto
       const arq = await evo.baixarMidia(external_id)
       const buf = Buffer.from(arq.base64, 'base64')
       if (!buf.length || buf.length > LIMITE_BYTES) throw new Error(`arquivo com ${buf.length} bytes`)
-      texto = await extrairTexto(buf)
+      // a montagem do texto é a do núcleo compartilhado (a mesma da tela); a cópia local só cobre núcleo antigo
+      texto = await extrairTexto(buf, undefined, nucleo().montarTextoDosItens)
     } catch (e) { log.warn(`PDF dos ministros: ${e.message}`) }
     const { lerEscalaMinistros, casarNomes } = nucleo()
     const ano = anoDoTexto(texto, relogio())
