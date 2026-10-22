@@ -21,3 +21,17 @@
    (antes quebravam em três linhas de botões). A página continua sem rolagem lateral. */
 @media(max-width:639px){.matriz-lote-bar {flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:6px 0;padding-bottom:2px;}
 .matriz-lote-bar::-webkit-scrollbar {display:none;}.matriz-lote-bar > * {flex:none;white-space:nowrap;}}
+/* Celular (22/10/2026): nome primeiro, quadradinhos à vista. Idade/tempo e botões de ação saem
+   da linha (o toque no nome abre a ficha); quadradinhos de 30px; nomes em 2 linhas. */
+@media(max-width:639px){
+.matriz-table th:nth-child(2),.matriz-table th:nth-child(3),.matriz-table td:nth-child(2):not([colspan]),.matriz-table td:nth-child(3):not([colspan]){display:none;}
+.matriz-table .matriz-action{display:none;}
+.matriz-member-name{min-width:0;max-width:74px;white-space:normal;overflow:hidden;font-size:11px;line-height:1.15;cursor:pointer;overflow-wrap:anywhere;}
+.matriz-table td:first-child{max-width:112px;padding:3px 4px !important;}
+.matriz-table th:first-child{min-width:0 !important;max-width:112px;padding:4px !important;font-size:10px;}
+.matriz-select{min-width:30px;min-height:30px;}
+.matriz-select input{width:16px;height:16px;}
+.matriz-table .matriz-prof{width:30px;height:30px;margin:1px auto;}
+.matriz-table th{padding:4px 2px !important;font-size:10px;}
+.matriz-scroll{max-height:70vh !important;}
+}

@@ -227,6 +227,26 @@
       .mem-row { padding:6px 0; }
       .planilha-table th, .planilha-table td { padding:6px 8px; }
     }
+    /* Compacto 2 (22/10/2026): planilha e rodízio no celular em pé */
+    @media(max-width:639px){
+      .planilha-table { font-size:10.5px; }
+      #view-planilha .planilha-table th, #view-planilha .planilha-table td { padding:3px 4px; }
+      #view-planilha .planilha-table th { font-size:10px; }
+      #view-planilha .planilha-table td.sticky-left, #view-planilha .planilha-table th.sticky-left { max-width:86px; min-width:78px; }
+      .pl-nome { gap:4px !important; }
+      .pl-nome > :nth-child(1), .pl-nome > :nth-child(2) { display:none !important; }
+      .pl-nome > div { white-space:normal !important; overflow:visible !important; text-overflow:clip !important; font-size:10.5px !important; line-height:1.15; overflow-wrap:anywhere; cursor:pointer; }
+      .pl-nome > div > div { white-space:normal !important; overflow:visible !important; font-size:10px !important; }
+      #view-planilha .planilha-table tr.nivel-group td { padding:3px 6px; }
+      #view-planilha .planilha-table button, #view-planilha .planilha-table .cell-ico { min-width:28px !important; min-height:28px !important; }
+      #view-rodizio .planilha-table tr { padding:4px 8px; margin-bottom:4px; gap:0 10px; border-radius:6px; }
+      #view-rodizio .planilha-table td { font-size:11px; }
+      #view-rodizio .planilha-table td.sticky-left { flex:1 1 100%; padding:0 0 2px; margin:0 0 2px; font-size:12px; }
+      #view-rodizio .planilha-table td.sticky-left > * { white-space:normal; }
+      .rodizio-motivo { font-size:10px; max-width:none; line-height:1.2; }
+      #view-rodizio .planilha-table td [class*="btn"] { min-height:34px !important; padding:2px 8px; }
+      .rodizio-regua, .rod-painel { font-size:11px; }
+    }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -1556,7 +1576,7 @@ function renderPlanilha() {
 
     // Membro (sticky): avatar + patch + nome
     const tdN=document.createElement('td');tdN.className='sticky-left';
-    const wrapN=document.createElement('div');wrapN.style.cssText='display:flex;align-items:center;gap:8px;';
+    const wrapN=document.createElement('div');wrapN.className='pl-nome';wrapN.style.cssText='display:flex;align-items:center;gap:8px;';
     const bFicha=document.createElement('button');bFicha.type='button';bFicha.title='Editar ficha';
     bFicha.style.cssText='border:none;background:none;cursor:pointer;font-size:13px;padding:2px;flex:none;';
     comIcone(bFicha, 'editar', '', 'Editar');bFicha.onclick=()=>abrirFichaRapida(m,{aoMudar:aoFichaRapidaMudou});
@@ -1565,7 +1585,7 @@ function renderPlanilha() {
     const nm=document.createElement('div'); nm.style.cssText='min-width:0;line-height:1.15;';
     if((m.apelido||'').trim()){ const a=document.createElement('div'); a.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; a.textContent=m.apelido; const n=document.createElement('div'); n.style.cssText='font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; n.textContent=m.nome; nm.append(a,n); }
     else { nm.style.cssText='font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; nm.textContent=m.nome; }
-    wrapN.appendChild(nm);tdN.appendChild(wrapN);tr.appendChild(tdN);
+    nm.onclick=()=>abrirFichaRapida(m,{aoMudar:aoFichaRapidaMudou});wrapN.appendChild(nm);tdN.appendChild(wrapN);tr.appendChild(tdN);
 
     // Idade
     const tdI=document.createElement('td');tdI.style.cssText='text-align:center;font-size:11px;';tdI.textContent=m.data_nascimento?calcIdade(m.data_nascimento):'—';tr.appendChild(tdI);

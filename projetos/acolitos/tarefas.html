@@ -176,6 +176,40 @@
       .tf-board-date { padding-top:8px; }
       .tf-form label { margin:8px 0 3px; }
     }
+    /* Compacto 2 (22/10/2026): tabela, quadro, lista e áreas bem mais baixas no celular */
+    @media(max-width:639px){
+      .tf-board-table tr { display:flex;flex-wrap:wrap;align-items:center;gap:0 6px;padding:5px 8px; }
+      .tf-board-table td { padding:0;flex:none; }
+      .tf-board-table td::before { display:none !important; }
+      .tf-board-table td:nth-child(1) { flex:1 1 0;min-width:0;order:0; }
+      .tf-board-table td:nth-child(5) { order:1; }
+      .tf-board-table td:nth-child(3) { order:2;flex:1 1 100px; }
+      .tf-board-table td:nth-child(2) { order:3;flex:1 1 auto;min-width:0; }
+      .tf-board-table td:nth-child(4) { order:4; }
+      .tf-board-title { min-height:34px;font-size:13px;line-height:1.2; }
+      .tf-board-person,.tf-board-date { min-height:0;padding:0;font-size:11px; }
+      .tf-board-avatar { width:20px;height:20px;font-size:10px; }
+      .tf-board-status { min-height:36px;padding:3px 6px;font-size:16px; }
+      .tf-board-heading { padding:4px 10px; }
+      .tf-obs,.tf-card-obs { margin-top:2px;font-size:11px; }
+      .tf-item { padding:6px 8px;margin-bottom:5px;gap:6px; }
+      .tf-body { min-width:120px; }
+      .tf-tit { font-size:13px;line-height:1.2; }
+      .tf-meta { margin-top:1px;font-size:11px; }
+      .tf-col-head { padding:2px 4px 6px; }
+      .tf-col-body { gap:5px; }
+      .tf-card { padding:6px 8px; }
+      .tf-card-top { display:flex;align-items:center;justify-content:space-between;gap:6px; }
+      .tf-area-cab { padding:6px 10px; }
+      .tf-area-stats { margin-top:3px; }
+      .tf-area-barra { margin:4px 0 3px; }
+      .tf-area-corpo { padding:0 8px 8px; }
+      .tf-acoes-extra { margin-top:3px; }
+      .tf-grupo-titulo { margin:10px 0 5px; }
+      .view-tabs { margin:-2px 0 8px; }
+      .view-tabs button { padding:4px;min-height:40px; }
+      .tf-mais { padding:0 8px; }
+    }
   </style>
   <link rel="stylesheet" href="tarefas-workspace.css">
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>

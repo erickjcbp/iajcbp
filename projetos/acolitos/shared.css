@@ -1077,3 +1077,20 @@ a.btn-sm { text-decoration: none; }
 }
 /* O X de fechar (44×44 no canto) cobria o fim da 1ª/2ª linha de texto do modal. */
 .modal > :nth-child(-n+3):is(h1, h2, h3, p, .modal-title, .page-title):not(.modal-close) { padding-right: 46px; }
+
+/* ── COMPACTO 3 (22/10/2026) ─────────────────────────────────────
+   Celular: modal vira folha do tamanho do conteúdo, colada embaixo (alta só quando o conteúdo
+   pede); sem sombra vermelha escorrendo do topo. */
+@media (max-width: 639px) {
+  .modal-overlay { align-items: flex-end; }
+  .modal { height: auto; max-height: 100%; max-height: 100dvh; border-radius: 14px 14px 0 0; }
+  .modal-overlay > .modal { margin-top: auto; }
+  body { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.014) 0 2px, transparent 2px 9px); }
+  [data-theme="light"] body { background-image: repeating-linear-gradient(135deg, rgba(0,0,0,.015) 0 2px, transparent 2px 9px); }
+  .app-header, .app-nav, .mode-switch { box-shadow: none; }
+  .app-header::after { display: none; }
+  .page-title::before, .page-title::after { box-shadow: none; }
+  .modal { box-shadow: 0 -6px 24px rgba(0,0,0,.5); }
+  .modal-title { margin-bottom: 6px; }
+  .modal p, .modal .form-hint { line-height: 1.35; }
+}

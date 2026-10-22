@@ -641,7 +641,7 @@ function renderMatriz(container){
     sep.appendChild(sc); tbody.appendChild(sep);
     membros.forEach(m=>{
       const tr=document.createElement('tr');
-      const nmtd=document.createElement('td'); const nome=document.createElement('span');nome.className='matriz-member-name';nome.title=m.nome;nome.textContent=m.apelido||m.nome;
+      const nmtd=document.createElement('td'); const nome=document.createElement('span');nome.className='matriz-member-name';nome.title=m.nome;nome.textContent=m.apelido||m.nome;nome.onclick=()=>abrirFichaRapida(m,{aoMudar:()=>renderAll()});
       const acoes=document.createElement('div');acoes.style.cssText='display:flex;gap:4px;';
       const editar=document.createElement('button');editar.type='button';editar.className='matriz-action';comIcone(editar, 'editar', '', 'Editar');editar.title='Editar ficha de '+(m.apelido||m.nome);editar.setAttribute('aria-label',editar.title);
       editar.onclick=()=>abrirFichaRapida(m,{aoMudar:()=>renderAll()});
@@ -742,7 +742,7 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
   const LIGAS = LIGAS_DEV;
   const mk = (txt, primary, onClick) => {
     const b = document.createElement('button'); b.textContent = txt;
-    b.style.cssText = 'flex:1;font-family:var(--font-title);font-weight:700;font-size:12px;letter-spacing:.3px;padding:9px 6px;border-radius:8px;cursor:pointer;white-space:nowrap;' +
+    b.style.cssText = 'flex:1;font-family:var(--font-title);font-weight:700;font-size:12px;letter-spacing:.3px;padding:8px 6px;border-radius:8px;cursor:pointer;white-space:normal;line-height:1.15;min-width:0;overflow-wrap:anywhere;' +
       (primary ? 'border:none;background:linear-gradient(180deg,var(--gold),#9a7a1e);color:#2a1a00;box-shadow:0 2px 12px var(--red-glow);' : 'background:transparent;border:1px solid var(--gold-dim);color:var(--gold-light);');
     b.onclick = onClick; return b;
   };
@@ -766,7 +766,7 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
     mais.style.cssText = 'flex:none;padding:4px 10px;font-size:16px;line-height:1;';
     top.appendChild(mais);
     // 4 botões: quebram em 2 linhas no celular (min-width) em vez de espremer tudo numa só
-    const btns = document.createElement('div'); btns.style.cssText = 'display:flex;gap:7px;flex-wrap:wrap;';
+    const btns = document.createElement('div'); btns.style.cssText = 'display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;';
     // renderAll (e não só desenha): mudar o nível mexe em "Promoções pendentes" e
     // "Quase lá" — mesmo comportamento do botão ⬆ Promover, pra não deixar card velho na tela.
     const bNivel = mk('⬆ Nível', false, () => abrirSeletorNivel(m, { onSalvo: (nv) => {
@@ -774,9 +774,8 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
       renderAll();
     } }));
     btns.append(mk('📊 Panorama', true, () => abrirPanorama(m)), mk('⚙ Funções', false, () => abrirFuncoesEditor(m)), mk('🎯 Competências', false, () => abrirCompetenciasEditor(m, desenha)), bNivel);
-    Array.prototype.forEach.call(btns.children, b => { b.style.minWidth = '108px'; });
     btns.style.display = 'none';
-    mais.onclick = () => { btns.style.display = btns.style.display === 'none' ? 'flex' : 'none'; };
+    mais.onclick = () => { btns.style.display = btns.style.display === 'none' ? 'grid' : 'none'; };
     row.append(top, btns); return row;
   }
   function desenha() {

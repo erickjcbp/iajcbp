@@ -418,23 +418,23 @@ function showMeuDesenvolvimento(membro) {
 // Elemento de UM aviso (engajamento rico ou texto simples)
 function avisoEl(aviso, membro) {
   if (aviso && aviso.tipo === 'engajamento') {
-    const wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:14px;padding:12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--gold);';
+    const wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:8px;padding:8px 10px;background:var(--surface);border-radius:6px;border-left:3px solid var(--gold);';
     const t = document.createElement('div'); t.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; comIcone(t, 'alvo', 'Seu plano de evolução foi atualizado');
     wrap.append(t, buildEngajamentoEl(membro)); return wrap;
   }
   if (aviso && aviso.tipo === 'mensagem') {
-    const wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:14px;padding:12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--gold);';
+    const wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:8px;padding:8px 10px;background:var(--surface);border-radius:6px;border-left:3px solid var(--gold);';
     const t = document.createElement('div'); t.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; comIcone(t, 'message-circle', 'Mensagem da coordenação');
-    const p = document.createElement('div'); p.style.cssText = 'font-size:14px;color:var(--text);line-height:1.6;'; p.textContent = aviso.texto || aviso.msg || '';
+    const p = document.createElement('div'); p.style.cssText = 'font-size:13px;color:var(--text);line-height:1.4;'; p.textContent = aviso.texto || aviso.msg || '';
     wrap.append(t, p); return wrap;
   }
   if (aviso && aviso.tipo === 'quest_exclusiva') {
-    const wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:14px;padding:12px;background:rgba(155,89,212,.1);border-radius:6px;border-left:3px solid #9b59d4;';
+    const wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:8px;padding:8px 10px;background:rgba(155,89,212,.1);border-radius:6px;border-left:3px solid #9b59d4;';
     const t = document.createElement('div'); t.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:#cd9ef2;margin-bottom:6px;'; comIcone(t, 'sparkles', 'Quest Exclusiva');
     const p = document.createElement('div'); p.style.cssText = 'font-size:14px;color:var(--text);line-height:1.5;'; p.textContent = aviso.titulo || aviso.msg || '';
     wrap.append(t, p); return wrap;
   }
-  const p = document.createElement('div'); p.style.cssText = 'font-size:14px;line-height:1.6;color:var(--text);margin-bottom:12px;padding:12px;background:var(--surface);border-left:3px solid var(--gold);border-radius:4px;';
+  const p = document.createElement('div'); p.style.cssText = 'font-size:14px;line-height:1.4;color:var(--text);margin-bottom:8px;padding:8px 10px;background:var(--surface);border-left:3px solid var(--gold);border-radius:4px;';
   p.textContent = (aviso && aviso.msg) ? aviso.msg : String(aviso);
   return p;
 }
@@ -1043,7 +1043,7 @@ function showAvisoUnico(aviso, membro, done) {
   const handle = document.createElement('div'); handle.className = 'modal-handle';
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Aviso da Coordenação';
   modal.append(handle, tt, avisoEl(aviso, membro));
-  const btn = document.createElement('button'); btn.className = 'btn gold'; btn.style.marginTop = '8px';
+  const btn = document.createElement('button'); btn.className = 'btn gold'; btn.style.marginTop = '4px';
   btn.textContent = precisaLogout ? 'Entendi — sair e entrar de novo' : 'Entendi';
   btn.onclick = async () => {
     if (precisaLogout) { try { await sb.auth.signOut(); } catch (e) {} esquecerSplash(); window.location.href = 'login.html'; return; }
