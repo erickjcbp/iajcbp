@@ -117,7 +117,9 @@ export async function iniciarProvas() {
   await new Promise((ok) => servidor.listen(0, '127.0.0.1', ok));
   const porta = servidor.address().port;
 
-  const navegador = await pup.launch({ executablePath: chrome, headless: 'new', args: ['--no-sandbox'] });
+  // 2 min para o Chrome subir: com a máquina carregada (outra janela fotografando telas) os 30 s
+  // padrão estouravam antes de a prova começar.
+  const navegador = await pup.launch({ executablePath: chrome, headless: 'new', args: ['--no-sandbox'], timeout: 120_000 });
 
   return {
     porta,
@@ -143,7 +145,18 @@ export async function iniciarProvas() {
  *   passos     o que fazer depois do init, em ordem. Cada passo é
  *                { chamar:'abrirSecao', args:['navegacao'] }  → chama a função global pelo nome
  *                { clicar:'Modelos de escala' }               → clica pelo texto, só no conteúdo
- * @returns {Promise<object>} { texto, vazia, erros, barra, gravacoes, passosFalhos }
+ *                { responder:'Confirmar' }                    → clica no botão do diálogo aberto
+ *                { preencher:'Rótulo do campo', valor:'x' }   → escreve no campo daquele rótulo
+ *                { marcar:'Texto da opção' }                  → marca o radio/checkbox do rótulo
+ *                { anexar:'#seletor', arquivo:'/caminho' }    → põe o arquivo no <input type=file>
+ *                { esperarTexto:'…', ate:8000 }               → espera o texto aparecer
+ *                { esperarDito:'toast:Salvo', ate:8000 }      → espera a tela dizer (ver `ditos`)
+ *   bancoVivo  true: as tabelas viram memória (filtros filtram, gravações mudam as linhas)
+ *   falhar     { 'tabela:acao': { message } } → aquela operação responde erro
+ *   dialogos   'aceitar' | 'recusar': uiConfirm/uiAlert respondem sozinhos
+ *   apis       { '/api/rota': resposta } (resposta.__status simula falha)
+ * @returns {Promise<object>} { texto, vazia, erros, barra, gravacoes, passosFalhos, ditos,
+ *   estadoFinal (só com bancoVivo), chamadasApi }
  *   passosFalhos vem preenchido quando um passo não achou o alvo — trate como falha da
  *   prova, senão você conclui sobre uma tela que nunca chegou a abrir.
  */
@@ -180,10 +193,19 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
     if (texto.includes('net::ERR_FAILED')) return;
     erros.push('console: ' + texto.slice(0, 140));
   });
+  // Cada chamada a uma API de mentira (opcoes.apis) fica anotada com o corpo enviado, para a
+  // prova contar quem foi avisado. A resposta pode ter `__status` (ex.: 500) para simular falha.
+  const chamadasApi = [];
   await pagina.setRequestInterception(true);
   pagina.on('request', (r) => {
-    const api = opcoes.apis && opcoes.apis[new URL(r.url()).pathname];
-    if (api) return r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify(api) });
+    const rota = new URL(r.url()).pathname;
+    const api = opcoes.apis && opcoes.apis[rota];
+    if (api) {
+      let corpo = null; try { corpo = JSON.parse(r.postData() || 'null'); } catch (e) { corpo = r.postData() || null; }
+      chamadasApi.push({ rota, corpo });
+      const { __status, ...resposta } = api;
+      return r.respond({ status: __status || 200, contentType: 'application/json', body: JSON.stringify(resposta) });
+    }
     if (r.url().split('?')[0] === url) {
       return r.respond({ status: 200, contentType: 'text/html; charset=utf-8', body: html });
     }
@@ -261,19 +283,88 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
       // `count` é o TOTAL, como o Supabase responde com count exato — não o da fatia.
       return { data: fatia, error: null, count: Array.isArray(todas) ? todas.length : 0 };
     };
+    // ── Banco VIVO (opcoes.bancoVivo) ─────────────────────────────────────────
+    // O banco acima responde sempre a mesma lista: serve para provar o que a tela MOSTRA,
+    // mas não um fluxo que grava e depois lê o que gravou (subir o PDF → guardar as respostas
+    // → ler de novo → gravar o mês → tirar as linhas velhas). Com bancoVivo as tabelas viram
+    // memória: os filtros (eq/neq/in/gte/lte/gt/lt/is) filtram, insert/upsert/update/delete
+    // mudam as linhas, e `estadoFinal` devolve as tabelas no fim. Desligado por padrão: as
+    // provas antigas continuam medindo exatamente o que mediam.
+    // opcoes.falhar: { 'tabela:acao': { message } } faz essa operação responder erro (acao =
+    // select/insert/upsert/update/delete) — para provar o caminho de falha de cada passo.
+    const vivo = opcoes.bancoVivo ? {} : null;
+    if (vivo) for (const [t, v] of Object.entries(opcoes.tabelas || {})) vivo[t] = JSON.parse(JSON.stringify(v.data || []));
+    let seqVivo = 0;
+    const passaFiltro = (r, [f, col, v]) => f === 'eq' ? r[col] === v : f === 'neq' ? r[col] !== v
+      : f === 'in' ? (v || []).includes(r[col]) : f === 'gte' ? r[col] >= v : f === 'lte' ? r[col] <= v
+      : f === 'gt' ? r[col] > v : f === 'lt' ? r[col] < v : f === 'is' ? (r[col] ?? null) === v : true;
+    const executarVivo = (tabela, q) => {
+      const linhas = (vivo[tabela] ||= []);
+      const casa = (r) => q.filtros.every((f) => passaFiltro(r, f));
+      const copia = (x) => JSON.parse(JSON.stringify(x));
+      if (q.mut && q.mut.acao === 'delete') {
+        const fora = linhas.filter(casa); vivo[tabela] = linhas.filter((r) => !fora.includes(r));
+        return { data: copia(fora), error: null, count: fora.length };
+      }
+      if (q.mut && q.mut.acao === 'insert') {
+        const novos = [].concat(q.mut.dados).map((x) => ({ id: 'novo-' + (++seqVivo), ...x }));
+        linhas.push(...novos); return { data: copia(novos), error: null, count: novos.length };
+      }
+      if (q.mut && q.mut.acao === 'upsert') {
+        const chaves = String((q.mut.op && q.mut.op.onConflict) || 'id').split(',').map((s) => s.trim());
+        const saida = [];
+        for (const n of [].concat(q.mut.dados)) {
+          const ja = linhas.find((r) => chaves.every((k) => r[k] === n[k]));
+          if (ja) { if (!(q.mut.op && q.mut.op.ignoreDuplicates)) { Object.assign(ja, n); saida.push(ja); } }
+          else { const x = { id: 'novo-' + (++seqVivo), ...n }; linhas.push(x); saida.push(x); }
+        }
+        return { data: copia(saida), error: null, count: saida.length };
+      }
+      if (q.mut && q.mut.acao === 'update') {
+        const alvo = linhas.filter(casa); alvo.forEach((r) => Object.assign(r, q.mut.dados));
+        return { data: copia(alvo), error: null, count: alvo.length };
+      }
+      let achados = linhas.filter(casa);
+      for (const [col, o] of q.ordem.slice().reverse()) {
+        const desc = o && o.ascending === false;
+        achados = achados.slice().sort((a, b) => (a[col] < b[col] ? -1 : a[col] > b[col] ? 1 : 0) * (desc ? -1 : 1));
+      }
+      const total = achados.length;
+      if (q.recorte) achados = achados.slice(q.recorte[0], q.recorte[1] + 1);
+      if (q.limite != null) achados = achados.slice(0, q.limite);
+      return { data: copia(achados), error: null, count: total };
+    };
     const cadeia = (tabela) => {
       let recorte = null, umSo = false;
+      const q = { filtros: [], ordem: [], limite: null, recorte: null, mut: null };
+      const responder = () => {
+        const acao = q.mut ? q.mut.acao : 'select';
+        const erro = (opcoes.falhar || {})[tabela + ':' + acao];
+        if (erro) return { data: null, error: erro, count: 0 };
+        return vivo ? executarVivo(tabela, q) : respostaDe(tabela, recorte);
+      };
       const c = new Proxy({}, { get: (_alvo, chave) => {
-        if (chave === 'then') return (f) => Promise.resolve(respostaDe(tabela, recorte)).then((r) =>
+        if (chave === 'then') return (f, rej) => Promise.resolve(responder()).then((r) =>
           // `.maybeSingle()`/`.single()` devolvem a LINHA, não a lista: sem isto a tela
           // recebia um array e lia `arte.png_url` como undefined.
-          umSo && !r.error ? { ...r, data: r.data[0] || null } : r).then(f);
-        if (chave === 'range') return (de, ate) => { recorte = [de, ate]; return c; };
+          umSo && !r.error ? { ...r, data: (r.data || [])[0] || null } : r).then(f, rej);
+        if (chave === 'range') return (de, ate) => { recorte = [de, ate]; q.recorte = [de, ate]; return c; };
         if (chave === 'maybeSingle' || chave === 'single') return () => { umSo = true; return c; };
+        if (chave === 'order') return (col, o) => { q.ordem.push([col, o]); return c; };
+        if (chave === 'limit') return (n) => { q.limite = n; return c; };
+        if (['eq', 'neq', 'in', 'gte', 'lte', 'gt', 'lt', 'is'].includes(chave)) {
+          return (col, v) => { q.filtros.push([chave, col, v]); return c; };
+        }
         // grava o que a tela MANDARIA para o banco: às vezes a tela está certa e o
-        // botão de salvar é que deixa coisa de fora (foi o caso dos Modelos de escala)
+        // botão de salvar é que deixa coisa de fora (foi o caso dos Modelos de escala).
+        // `filtros` (o .eq/.in que veio depois) e `op` (o onConflict do upsert) vão junto:
+        // "apagou" sem dizer O QUÊ não prova nada.
         if (chave === 'insert' || chave === 'upsert' || chave === 'update' || chave === 'delete') {
-          return (dados) => { gravacoes.push({ tabela, acao: chave, dados }); return c; };
+          return (dados, op) => {
+            q.mut = { acao: chave, dados, op };
+            gravacoes.push({ tabela, acao: chave, dados, op: op || null, filtros: q.filtros });
+            return c;
+          };
         }
         return () => c;
       } });
@@ -290,6 +381,27 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
 
     if (opcoes.config) _APP_CONFIG = opcoes.config;
     if (opcoes.sessao) sb.auth.getSession = async () => ({ data: { session: opcoes.sessao }, error: null });
+
+    // ── O que a tela DISSE ──────────────────────────────────────────────────
+    // toast/uiAlert/uiConfirm continuam os de verdade (o modal abre e espera o clique); só
+    // ficam anotados em `ditos`, como 'toast:…', 'alert:…', 'confirm:…'. Com
+    // opcoes.dialogos = 'aceitar' | 'recusar' o uiConfirm responde sozinho e o uiAlert fecha
+    // sozinho — para fluxos que esperam a resposta dentro de um `chamar` (ali não há como
+    // clicar no meio). Sem a opção, responda com o passo { responder: 'Confirmar' }.
+    const ditos = [];
+    const embrulhar = (nome, marca, auto) => {
+      const original = window[nome];
+      if (typeof original !== 'function') return;
+      window[nome] = function (msg, ...resto) {
+        ditos.push(marca + ':' + msg);
+        if (auto) return auto();
+        return original.call(this, msg, ...resto);
+      };
+    };
+    const modo = opcoes.dialogos;
+    embrulhar('toast', 'toast');
+    embrulhar('uiAlert', 'alert', modo ? () => Promise.resolve() : null);
+    embrulhar('uiConfirm', 'confirm', modo ? () => Promise.resolve(modo === 'aceitar') : null);
 
     await init();
     await new Promise((s) => setTimeout(s, 350));
@@ -318,6 +430,51 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
         // que não quer dizer nada: a prova segue e conclui sobre uma tela que nunca abriu.
         if (!botao) { passosFalhos.push('não achei o botão "' + alvo + '"'); continue; }
         botao.click();
+      } else if (passo.responder) {
+        // Clica num botão do diálogo aberto (uiConfirm/uiAlert): o modal mora fora do conteúdo.
+        const caixa = [...document.querySelectorAll('.modal-overlay.open')].pop();
+        const botao = caixa && [...caixa.querySelectorAll('button')].find((x) => x.textContent.trim() === passo.responder);
+        if (!botao) { passosFalhos.push('não achei "' + passo.responder + '" num diálogo aberto'); continue; }
+        botao.click();
+      } else if (passo.preencher) {
+        // Pelo RÓTULO que a pessoa lê: o controle é o do htmlFor, o de dentro do rótulo ou o
+        // logo depois dele. Dispara input e change, como o teclado.
+        const rotulo = [...dentro().querySelectorAll('label')].find((l) => l.textContent.includes(passo.preencher));
+        let campo = rotulo && (rotulo.htmlFor ? document.getElementById(rotulo.htmlFor) : rotulo.querySelector('input,textarea,select'));
+        if (rotulo && !campo && rotulo.nextElementSibling && /^(INPUT|TEXTAREA|SELECT)$/.test(rotulo.nextElementSibling.tagName)) campo = rotulo.nextElementSibling;
+        if (!campo) { passosFalhos.push('não achei o campo "' + passo.preencher + '"'); continue; }
+        campo.value = passo.valor;
+        campo.dispatchEvent(new Event('input', { bubbles: true }));
+        campo.dispatchEvent(new Event('change', { bubbles: true }));
+      } else if (passo.marcar) {
+        // Marca a opção (radio/checkbox) cujo rótulo tem este texto.
+        const rotulo = [...dentro().querySelectorAll('label')].find((l) => l.textContent.trim() === passo.marcar)
+          || [...dentro().querySelectorAll('label')].find((l) => l.textContent.includes(passo.marcar));
+        const opcao = rotulo && (rotulo.htmlFor ? document.getElementById(rotulo.htmlFor) : rotulo.querySelector('input'));
+        if (!opcao) { passosFalhos.push('não achei a opção "' + passo.marcar + '"'); continue; }
+        opcao.click();
+      } else if (passo.anexar) {
+        // Põe um arquivo no <input type=file> (o conteúdo vem do disco, lido pela prova em
+        // base64) e dispara o change — o mesmo que escolher o arquivo na janela do sistema.
+        const campo = document.querySelector(passo.anexar);
+        if (!campo) { passosFalhos.push('não achei o campo de arquivo ' + passo.anexar); continue; }
+        const bytes = Uint8Array.from(atob(passo.base64), (ch) => ch.charCodeAt(0));
+        const dt = new DataTransfer();
+        dt.items.add(new File([bytes], passo.nome || 'arquivo', { type: passo.tipo || 'application/octet-stream' }));
+        campo.files = dt.files;
+        campo.dispatchEvent(new Event('change', { bubbles: true }));
+      } else if (passo.esperarDito) {
+        // Espera a tela DIZER algo (toast/alert/confirm que começa com este texto): o fim de
+        // um salvamento assíncrono. Na máquina carregada, 400 ms não bastam.
+        const tem = () => ditos.some((d) => d.startsWith(passo.esperarDito));
+        const fim = Date.now() + (passo.ate || 8000);
+        while (!tem() && Date.now() < fim) await new Promise((s) => setTimeout(s, 100));
+        if (!tem()) passosFalhos.push('a tela não disse "' + passo.esperarDito + '"');
+      } else if (passo.esperarTexto) {
+        // Espera (até `ate` ms) o texto aparecer na tela: leitura de PDF, chamada lenta.
+        const fim = Date.now() + (passo.ate || 8000);
+        while (!(document.body.innerText || '').includes(passo.esperarTexto) && Date.now() < fim) await new Promise((s) => setTimeout(s, 100));
+        if (!(document.body.innerText || '').includes(passo.esperarTexto)) passosFalhos.push('o texto "' + passo.esperarTexto + '" não apareceu');
       }
       await new Promise((s) => setTimeout(s, 400));
     }
@@ -354,6 +511,8 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
       passosFalhos,
       avaliado,
       erroAvaliar,
+      ditos,
+      estadoFinal: vivo,
     };
   };
 
@@ -362,9 +521,12 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
   // medição morre — mas não é defeito: é a tranca funcionando. Aqui vira uma resposta
   // ("foi mandada para X") em vez de um estouro, e quem escreve a prova decide se aquilo
   // era esperado. Tratar tranca como erro ensinaria a ignorar o vermelho.
+  // Passo { anexar, arquivo: caminho } → o conteúdo vai em base64 para dentro da tela.
+  const opcoesTela = { ...opcoes, passos: [].concat(opcoes.passos || []).map((p) => (p && p.anexar && p.arquivo && !p.base64)
+    ? { ...p, base64: fs.readFileSync(p.arquivo).toString('base64'), nome: p.nome || path.basename(p.arquivo) } : p) };
   let resultado;
   try {
-    resultado = await pagina.evaluate(medir, papel, opcoes);
+    resultado = await pagina.evaluate(medir, papel, opcoesTela);
   } catch (e) {
     // O endereço só muda quando a navegação assenta: perguntar no instante do estouro
     // devolvia a página velha, e a tranca aparecia como erro em vez de tranca.
@@ -395,5 +557,5 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
     } catch (e) { erros.push('foto: ' + e.message); }
   }
   await pagina.close();
-  return { redirecionou: null, ...resultado, erros: [...new Set(erros)], arquivo, papel: papel.nome };
+  return { redirecionou: null, ...resultado, chamadasApi, erros: [...new Set(erros)], arquivo, papel: papel.nome };
 }
