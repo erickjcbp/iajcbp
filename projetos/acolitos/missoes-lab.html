@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Missões (lab) — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
@@ -129,7 +129,7 @@ function capCard(c) {
   hd.textContent = 'Capítulo ' + c.capitulo + (c.completo ? ' ✓ concluído' : c.desbloqueado ? '' : ' 🔒 bloqueado');
   card.appendChild(hd);
   if (!c.desbloqueado) {
-    const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = '🔒 Conclua o capítulo anterior pra desbloquear.'; card.appendChild(e);
+    const e = document.createElement('div'); e.className = 'mx-empty'; comIcone(e, 'lock', 'Conclua o capítulo anterior pra desbloquear.'); card.appendChild(e);
   } else {
     (c.missoes || []).forEach(q => card.appendChild(questRow(q)));
   }
@@ -140,7 +140,7 @@ async function renderBoard(main) {
   const { data, error } = await sb.rpc('acolitos_missoes_board', { p_membro: ctx.membro.id, p_niveis: NIVEIS_SLUGS() });
   if (error || !data || data.erro) { const e = document.createElement('p'); e.className = 'mx-empty'; e.textContent = 'Não foi possível carregar (' + (data?.erro || error?.message) + ').'; main.appendChild(e); return; }
 
-  if (data.elegivel) { const el = document.createElement('div'); el.className = 'mx-elig'; el.textContent = '🎉 Pronto pra subir de nível! Aguardando a coordenação confirmar.'; main.appendChild(el); }
+  if (data.elegivel) { const el = document.createElement('div'); el.className = 'mx-elig'; comIcone(el, 'festa', 'Pronto pra subir de nível! Aguardando a coordenação confirmar.'); main.appendChild(el); }
 
   // Próximo nível + XP + capítulos (barra enche por missão obrigatória concluída)
   const caps = data.capitulos || [];
@@ -163,7 +163,7 @@ async function renderBoard(main) {
     if (caps.length) caps.forEach(c => main.appendChild(capCard(c)));
     else { const e = document.createElement('div'); e.className = 'mx-empty'; e.style.padding = '8px 2px'; e.textContent = 'Nenhum capítulo cadastrado pra este nível ainda.'; main.appendChild(e); }
   } else {
-    const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = '🏆 Você está no topo da jornada com ' + data.xp_total + ' XP!'; card.appendChild(e);
+    const e = document.createElement('div'); e.className = 'mx-empty'; comIcone(e, 'trophy', 'Você está no topo da jornada com ' + data.xp_total + ' XP!'); card.appendChild(e);
     main.appendChild(card);
   }
 
@@ -185,7 +185,7 @@ async function reivindicar(missaoId) {
 
 async function renderCoord(main) {
   const head = document.createElement('h2'); head.style.cssText = 'font-family:var(--font-title);font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 12px;';
-  head.textContent = '⚙️ Coordenação'; main.appendChild(head);
+  comIcone(head, 'settings', 'Coordenação'); main.appendChild(head);
 
   // Fila de aprovação
   const { data: fila } = await sb.rpc('acolitos_missoes_fila');
@@ -214,7 +214,7 @@ async function renderCoord(main) {
     const it = document.createElement('div'); it.className = 'mx-fila-item';
     const top = document.createElement('div'); top.className = 'mx-fila-top';
     const lbl = document.createElement('div'); lbl.style.fontSize = '13px'; lbl.innerHTML = '<b>' + escHtml(p.membro) + '</b> → ' + escHtml(nivelInfo(p.proximo).label);
-    const go = document.createElement('button'); go.className = 'mx-mini go'; go.textContent = '⬆ Promover'; go.onclick = () => promover(p.membro_id, p.proximo, p.membro);
+    const go = document.createElement('button'); go.className = 'mx-mini go'; comIcone(go, 'seta-cima', 'Promover'); go.onclick = () => promover(p.membro_id, p.proximo, p.membro);
     top.append(lbl, go); it.appendChild(top); pc.appendChild(it);
   });
   else { const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = 'Ninguém elegível no momento.'; pc.appendChild(e); }

@@ -131,7 +131,7 @@
     ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;';
     var card = document.createElement('div');
     card.style.cssText='background:#241019;border:1px solid #5a3a3f;border-radius:16px;max-width:440px;width:100%;padding:18px;color:#f7ebe7;max-height:80vh;overflow:auto;';
-    var h = document.createElement('div'); h.textContent='⚡ Trocas por ausência ('+trocas.length+')';
+    var h = document.createElement('div'); comIcone(h, 'raio', 'Trocas por ausência ('+trocas.length+')');
     h.style.cssText='font-weight:800;font-size:16px;margin-bottom:10px;color:#ffd97a;'; card.appendChild(h);
     trocas.forEach(function(t){
       var row = document.createElement('div');

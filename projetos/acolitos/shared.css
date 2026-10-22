@@ -1,6 +1,6 @@
 /* shared.css — módulo Acólitos e Coroinhas
    Tema "Hextech Sacro": menu de RPG/MOBA litúrgico — vermelho vivo + ouro,
-   painéis angulares, brilho, tipografia Sora/Sora/Oxanium. */
+   painéis angulares, brilho, tipografia Sora (títulos) e Plus Jakarta Sans (texto). */
 
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Oxanium:wght@600;700;800&display=swap');
 
@@ -906,6 +906,7 @@ button, input, select, textarea, label, .btn, .btn-sm, .form-label, .form-toggle
 /* ── ÍCONES NO LUGAR DOS EMOJIS (21/10/2026) ─────────────────────
    O vigia de shared.js (EMOJI_ICONE) troca o emoji estrutural pelo SVG do app. */
 .ico-emj { vertical-align: -.18em; margin-inline-end: .32em; }
+.ico-emj.ico-so { margin-inline-end: 0; }
 button > .ico-emj, .btn > .ico-emj, .btn-sm > .ico-emj, .mode-btn > .ico, a > .ico-emj { vertical-align: -.2em; }
 .mode-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .mode-btn .ico { width: 15px; height: 15px; }
@@ -921,7 +922,7 @@ button > .ico-emj, .btn > .ico-emj, .btn-sm > .ico-emj, .mode-btn > .ico, a > .i
 .member-card-subname, .jornada-label, .kpi-label, .nivel-lbl, .nivelsel-lbl, .nav-badge,
 .badge, .kpi-sub, .crm-card-days, .jor-status, .nav-item, .nivelsel-num, .jor-num { font-size: 11px; }
 .nav-item { letter-spacing: 0; }
-.nivel-lbl, .nivelsel-lbl { letter-spacing: 0; line-height: 1.15; text-transform: none; hyphens: manual; overflow-wrap: anywhere; }
+.nivel-lbl, .nivelsel-lbl { letter-spacing: 0; line-height: 1.15; text-transform: none; -webkit-hyphens: auto; hyphens: auto; overflow-wrap: anywhere; }
 .kpi-label { letter-spacing: .6px; }
 .badge { letter-spacing: .4px; padding: 2px 8px; }
 .kpi-value, .nivel-cnt, .jor-num, .nivelsel-num, .rank-name, .levelup-rank { font-family: var(--font-title); }
@@ -931,6 +932,10 @@ button > .ico-emj, .btn > .ico-emj, .btn-sm > .ico-emj, .mode-btn > .ico, a > .i
 .cards-grid > .member-card, .celebracoes-grid > .celeb-card { display: flex; flex-direction: column; }
 .celebracoes-grid > .celeb-card > .celeb-actions { margin-top: auto; padding-top: 10px; }
 .cards-grid > .member-card > :last-child { margin-top: auto; }
+/* 21/10: mesma regra nas demais grades de cartões (casas, retiros, tesouraria, conquistas, minha casa, ficha). */
+.cards-grid, .rt-grid, .mini-grid, .cq-grid, .org-grid, .colegas, .outras, .casas-wrap, .hab-grid { align-items: stretch; }
+.rt-grid > *, .mini-grid > *, .cq-grid > *, .org-grid > *, .colegas > *, .outras > *, .casas-wrap > * { display: flex; flex-direction: column; }
+.rt-grid > * > :last-child:not(:first-child), .org-grid > * > :last-child:not(:first-child), .casas-wrap > * > :last-child:not(:first-child) { margin-top: auto; }
 
 @media (max-width: 639px) {
   body { font-size: 14px; line-height: 1.4; }

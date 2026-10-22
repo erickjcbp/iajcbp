@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Administrar Jornada — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="stylesheet" href="matriz-lote.css">
   <link rel="manifest" href="manifest.json">
@@ -144,7 +144,7 @@ async function renderFilas(box) {
     const xp = document.createElement('span'); xp.className = 'mx-q-xp'; xp.textContent = '+' + item.xp + ' XP';
     top.append(lbl, xp); it.appendChild(top);
     if (item.evidencia) { const ev = document.createElement('div'); ev.className = 'mx-q-sub'; ev.textContent = '“' + item.evidencia + '”'; it.appendChild(ev); }
-    if (item.envolvidos) { const en = document.createElement('div'); en.className = 'mx-q-sub'; en.style.color = 'var(--gold-light)'; en.textContent = '👥 Com: ' + item.envolvidos + ' (ganham XP ao aprovar)'; it.appendChild(en); }
+    if (item.envolvidos) { const en = document.createElement('div'); en.className = 'mx-q-sub'; en.style.color = 'var(--gold-light)'; comIcone(en, 'users', 'Com: ' + item.envolvidos + ' (ganham XP ao aprovar)'); it.appendChild(en); }
     const acts = document.createElement('div'); acts.className = 'mx-fila-acts';
     const ok = document.createElement('button'); ok.className = 'mx-mini ok'; ok.textContent = '✓ Aprovar'; ok.onclick = () => decidir(item.missao_id, item.membro_id, 'aprovar');
     const rev = document.createElement('button'); rev.className = 'mx-mini'; rev.textContent = '✎ Revisar'; rev.onclick = () => abrirRevisar(item.titulo, (msg) => decidir(item.missao_id, item.membro_id, 'revisar', msg));
@@ -181,7 +181,7 @@ async function renderFilas(box) {
     const it = document.createElement('div'); it.className = 'mx-fila-item';
     const top = document.createElement('div'); top.className = 'mx-fila-top';
     const lbl = document.createElement('div'); lbl.style.fontSize = '13px'; lbl.innerHTML = '<b>' + escHtml(p.membro) + '</b> → ' + escHtml(nivelInfo(p.proximo).label);
-    const go = document.createElement('button'); go.className = 'mx-mini go'; go.textContent = '⬆ Promover'; go.onclick = () => promover(p.membro_id, p.proximo, p.membro);
+    const go = document.createElement('button'); go.className = 'mx-mini go'; comIcone(go, 'seta-cima', 'Promover'); go.onclick = () => promover(p.membro_id, p.proximo, p.membro);
     top.append(lbl, go); it.appendChild(top); pc.appendChild(it);
   });
   else { const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = 'Ninguém elegível no momento.'; pc.appendChild(e); }
@@ -191,7 +191,7 @@ async function renderFilas(box) {
   const { data: quase } = await sb.rpc('acolitos_quase_la', { p_niveis: NIVEIS_SLUGS() });
   if (quase && quase.length) {
     const qc = document.createElement('div'); qc.className = 'mx-card'; qc.style.borderColor = 'var(--gold)';
-    const qhd = document.createElement('div'); qhd.className = 'mx-hd'; qhd.style.color = 'var(--gold-light)'; qhd.textContent = '🎯 Quase lá — só falta você conceder (' + quase.length + ')'; qc.appendChild(qhd);
+    const qhd = document.createElement('div'); qhd.className = 'mx-hd'; qhd.style.color = 'var(--gold-light)'; comIcone(qhd, 'alvo', 'Quase lá — só falta você conceder (' + quase.length + ')'); qc.appendChild(qhd);
     const qsub = document.createElement('div'); qsub.className = 'mx-q-sub'; qsub.style.marginBottom = '6px'; qsub.textContent = 'Estes membros já cumpriram tudo e estão presos só esperando a coordenação conceder estas conquistas avaliadas.'; qc.appendChild(qsub);
     quase.forEach(item => {
       const it = document.createElement('div'); it.className = 'mx-fila-item';
@@ -234,7 +234,7 @@ function renderAbasDaJornada(box) {
 
 
 async function renderCriarQuest(main) {
-  const head = document.createElement('h2'); head.style.cssText = 'font-family:var(--font-title);font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 4px;'; head.textContent = '✨ Criar Quest Exclusiva'; main.appendChild(head);
+  const head = document.createElement('h2'); head.style.cssText = 'font-family:var(--font-title);font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 4px;'; comIcone(head, 'sparkles', 'Criar Quest Exclusiva'); main.appendChild(head);
   const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0 0 12px;'; sub.textContent = 'Cria uma quest na hora pra todos ou só alguns níveis. Cai direto pra eles com uma notificação de "✨ Quest Exclusiva".'; main.appendChild(sub);
   const card = document.createElement('div'); card.className = 'mx-card';
   const tit = document.createElement('input'); tit.className = 'form-input'; tit.placeholder = 'Título (ex.: Caça ao tesouro da sacristia)'; tit.style.marginBottom = '6px';
@@ -262,7 +262,7 @@ async function renderCriarQuest(main) {
     nivBox.appendChild(chip);
   });
   card.appendChild(modoRow); card.appendChild(nivBox);
-  const bCriar = document.createElement('button'); bCriar.className = 'btn gold'; bCriar.style.cssText = 'width:100%;margin-top:4px;'; bCriar.textContent = '✨ Criar e notificar';
+  const bCriar = document.createElement('button'); bCriar.className = 'btn gold'; bCriar.style.cssText = 'width:100%;margin-top:4px;'; comIcone(bCriar, 'sparkles', 'Criar e notificar');
   bCriar.onclick = async () => {
     if (!tit.value.trim()) { toast('Dê um título', 'error'); return; }
     const niveis = modo === 'niveis' ? [...selN] : null;
@@ -271,13 +271,13 @@ async function renderCriarQuest(main) {
     const { data: r } = await sb.rpc('acolitos_quest_criar', { p_titulo: tit.value.trim(), p_descricao: desc.value.trim() || null, p_xp: Number(xp.value) || 10, p_validacao: val.value, p_niveis: niveis, p_expira: exp.value || null });
     if (r && r.ok) { toast('✨ Quest criada! ' + r.notificados + ' membro(s) notificado(s).'); tit.value = ''; desc.value = ''; exp.value = ''; selN.clear(); nivBox.querySelectorAll('button').forEach(x => x.classList.remove('go')); }
     else { toast('Erro: ' + (r && r.erro || 'tente de novo'), 'error'); }
-    bCriar.disabled = false; bCriar.textContent = '✨ Criar e notificar';
+    bCriar.disabled = false; comIcone(bCriar, 'sparkles', 'Criar e notificar');
   };
   card.appendChild(bCriar); main.appendChild(card);
 }
 
 async function renderSemanaAdmin(main) {
-  const head = document.createElement('h2'); head.style.cssText = 'font-family:var(--font-title);font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 4px;'; head.textContent = '⭐ Missão da Semana'; main.appendChild(head);
+  const head = document.createElement('h2'); head.style.cssText = 'font-family:var(--font-title);font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 4px;'; comIcone(head, 'star', 'Missão da Semana'); main.appendChild(head);
   const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0 0 12px;line-height:1.5;'; sub.textContent = 'É a quest da semana, IGUAL pra todos da pastoral. Se você não definir nada, o sistema sorteia uma sozinho. Você pode criar a sua ou escolher uma pronta — vale só nesta semana, depois volta ao sorteio.'; main.appendChild(sub);
   const card = document.createElement('div'); card.className = 'mx-card';
 
@@ -294,24 +294,24 @@ async function renderSemanaAdmin(main) {
 
   // pra qual semana? (agendamento)
   const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-  const swl = document.createElement('div'); swl.style.cssText = 'font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin:4px 0 5px;'; swl.textContent = '📅 Pra qual semana?'; card.appendChild(swl);
+  const swl = document.createElement('div'); swl.style.cssText = 'font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin:4px 0 5px;'; comIcone(swl, 'calendar', 'Pra qual semana?'); card.appendChild(swl);
   const semSel = document.createElement('select'); semSel.className = 'form-input'; semSel.style.marginBottom = '14px';
   for (let n = 0; n <= 5; n++) { const d = new Date(); d.setDate(d.getDate() + n * 7); const mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay() + 6) % 7)); const o = document.createElement('option'); o.value = n; o.textContent = (n === 0 ? 'Esta semana' : n === 1 ? 'Próxima semana' : 'Daqui ' + n + ' semanas') + ' · ' + String(mon.getDate()).padStart(2, '0') + '/' + meses[mon.getMonth()]; semSel.appendChild(o); }
   card.appendChild(semSel);
 
   // criar a própria
-  const cl = document.createElement('div'); cl.style.cssText = 'font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin:4px 0 6px;'; cl.textContent = '✨ Criar a sua'; card.appendChild(cl);
+  const cl = document.createElement('div'); cl.style.cssText = 'font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin:4px 0 6px;'; comIcone(cl, 'sparkles', 'Criar a sua'); card.appendChild(cl);
   const tit = document.createElement('input'); tit.className = 'form-input'; tit.placeholder = 'Título (ex.: Caça ao santo da semana)'; tit.style.marginBottom = '6px';
   const desc = document.createElement('textarea'); desc.className = 'form-input'; desc.rows = 2; desc.placeholder = 'Descrição — como cumprir'; desc.style.marginBottom = '6px';
   const xp = document.createElement('input'); xp.className = 'form-input'; xp.type = 'number'; xp.value = '15'; xp.placeholder = 'XP'; xp.style.marginBottom = '6px';
-  const vhint = document.createElement('div'); vhint.style.cssText = 'font-size:11px;color:var(--text-muted);margin-bottom:8px;line-height:1.4;'; vhint.textContent = '✋ O membro marca "Já fiz" e a coordenação aprova na fila (quest da semana nunca depende de conceder um a um).';
+  const vhint = document.createElement('div'); vhint.style.cssText = 'font-size:11px;color:var(--text-muted);margin-bottom:8px;line-height:1.4;'; comIcone(vhint, 'mao', 'O membro marca "Já fiz" e a coordenação aprova na fila (quest da semana nunca depende de conceder um a um).');
   const tema = document.createElement('input'); tema.className = 'form-input'; tema.placeholder = 'Tema (opcional, ex.: Semana da Sacristia)'; tema.style.marginBottom = '8px';
-  const bCriar = document.createElement('button'); bCriar.className = 'btn gold'; bCriar.style.cssText = 'width:100%;margin-bottom:14px;'; bCriar.textContent = '✨ Definir como Missão da Semana';
+  const bCriar = document.createElement('button'); bCriar.className = 'btn gold'; bCriar.style.cssText = 'width:100%;margin-bottom:14px;'; comIcone(bCriar, 'sparkles', 'Definir como Missão da Semana');
   bCriar.onclick = async () => {
     if (!tit.value.trim()) { toast('Dê um título', 'error'); return; }
     bCriar.disabled = true; bCriar.textContent = 'Definindo...';
     const { data: r } = await sb.rpc('acolitos_semana_criar', { p_titulo: tit.value.trim(), p_descricao: desc.value.trim() || null, p_xp: Number(xp.value) || 15, p_validacao: 'reivindicada', p_tema: tema.value.trim() || null, p_offset: Number(semSel.value) });
-    if (r && r.ok) { toast('⭐ Missão da Semana ' + (Number(semSel.value) ? 'agendada' : 'definida') + '!'); renderAll(); } else { toast('Erro: ' + (r && r.erro || 'tente de novo'), 'error'); bCriar.disabled = false; bCriar.textContent = '✨ Definir como Missão da Semana'; }
+    if (r && r.ok) { toast('⭐ Missão da Semana ' + (Number(semSel.value) ? 'agendada' : 'definida') + '!'); renderAll(); } else { toast('Erro: ' + (r && r.erro || 'tente de novo'), 'error'); bCriar.disabled = false; comIcone(bCriar, 'sparkles', 'Definir como Missão da Semana'); }
   };
   card.append(tit, desc, xp, vhint, tema, bCriar);
 
@@ -321,16 +321,16 @@ async function renderSemanaAdmin(main) {
   const sel = document.createElement('select'); sel.className = 'form-input'; sel.style.marginBottom = '6px';
   (bs || []).filter(b => !b.concede_badge && b.validacao !== 'avaliada' && b.aplica_de !== '__exclusiva__' && b.aplica_de !== '__semana__').forEach(b => { const o = document.createElement('option'); o.value = b.id; o.textContent = b.titulo + (b.aplica_de ? ' (' + b.aplica_de + '+)' : ''); sel.appendChild(o); });
   const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:8px;';
-  const bSet = document.createElement('button'); bSet.className = 'mx-mini go'; bSet.textContent = '📌 Usar esta';
+  const bSet = document.createElement('button'); bSet.className = 'mx-mini go'; comIcone(bSet, 'pin', 'Usar esta');
   bSet.onclick = async () => { if (!sel.value) { toast('Escolha uma quest', 'error'); return; } const { data: r } = await sb.rpc('acolitos_semana_definir', { p_missao: sel.value, p_tema: null, p_offset: Number(semSel.value) }); if (r && r.ok) { toast('📌 ' + (Number(semSel.value) ? 'Agendada' : 'Definida') + '!'); renderAll(); } else toast('Erro', 'error'); };
-  const bClr = document.createElement('button'); bClr.className = 'mx-mini'; bClr.textContent = '🎲 Voltar ao sorteio';
+  const bClr = document.createElement('button'); bClr.className = 'mx-mini'; comIcone(bClr, 'dado', 'Voltar ao sorteio');
   bClr.onclick = async () => { const off = Number(semSel.value); const { data: r } = await sb.rpc('acolitos_semana_limpar', { p_offset: off }); if (r && r.ok) { toast('🎲 ' + (off ? 'Semana liberada' : 'Sorteio automático restaurado') + '.'); renderAll(); } else toast('Erro', 'error'); };
   row.append(bSet, bClr);
   card.append(sel, row);
 
   // 📅 Agenda das próximas semanas
   const ag = document.createElement('div'); ag.style.cssText = 'margin-top:16px;border-top:1px solid var(--border-wine);padding-top:12px;';
-  const agh = document.createElement('div'); agh.style.cssText = 'font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;'; agh.textContent = '📅 Agendadas'; ag.appendChild(agh);
+  const agh = document.createElement('div'); agh.style.cssText = 'font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;'; comIcone(agh, 'calendar', 'Agendadas'); ag.appendChild(agh);
   const { data: agenda } = await sb.rpc('acolitos_semana_agenda');
   if (!agenda || !agenda.length) { const e = document.createElement('div'); e.style.cssText = 'font-size:12px;color:var(--text-muted);font-style:italic;'; e.textContent = 'Nada agendado — usando o sorteio automático.'; ag.appendChild(e); }
   else agenda.forEach(a => {
@@ -340,14 +340,14 @@ async function renderSemanaAdmin(main) {
     const wl = document.createElement('div'); wl.style.cssText = 'font-size:11px;color:' + (a.atual ? 'var(--success-text)' : 'var(--gold-light)') + ';font-weight:700;'; wl.textContent = a.atual ? 'Esta semana' : 'Semana de ' + String(dt.getDate()).padStart(2, '0') + '/' + meses[dt.getMonth()];
     const tt = document.createElement('div'); tt.style.cssText = 'font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'; tt.textContent = a.titulo + (a.tema ? ' · ' + a.tema : '');
     info.append(wl, tt);
-    const del = document.createElement('button'); del.className = 'mini-del'; del.textContent = '🗑'; del.title = 'Remover'; del.onclick = async () => { await sb.rpc('acolitos_semana_remover', { p_semana: a.semana }); renderAll(); };
+    const del = document.createElement('button'); del.className = 'mini-del'; comIcone(del, 'lixeira', '', 'Excluir'); del.title = 'Remover'; del.onclick = async () => { await sb.rpc('acolitos_semana_remover', { p_semana: a.semana }); renderAll(); };
     r.append(info, del); ag.appendChild(r);
   });
   card.appendChild(ag); main.appendChild(card);
 }
 
 async function renderTemporadaAdmin(main) {
-  const head = document.createElement('h2'); head.style.cssText = 'font-family:var(--font-title);font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 4px;'; head.textContent = '🏆 Temporada & Ranking'; main.appendChild(head);
+  const head = document.createElement('h2'); head.style.cssText = 'font-family:var(--font-title);font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 4px;'; comIcone(head, 'trophy', 'Temporada & Ranking'); main.appendChild(head);
   const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0 0 12px;'; sub.textContent = 'O ranking por liga (em Destaques) corre durante a temporada. Ao encerrar, o campeão de cada liga vira Destaque.'; main.appendChild(sub);
   const card = document.createElement('div'); card.className = 'mx-card'; card.innerHTML = '<span class="loading">Carregando...</span>'; main.appendChild(card);
   const { data } = await sb.rpc('acolitos_ranking_temporada');
@@ -357,7 +357,7 @@ async function renderTemporadaAdmin(main) {
     const t = document.createElement('div'); t.style.cssText = 'font-size:13px;color:var(--text);margin-bottom:2px;'; t.innerHTML = 'Temporada ativa: <b style="color:var(--gold-light)">' + escHtml(ativa.nome) + '</b>';
     const sb2 = document.createElement('div'); sb2.className = 'mx-q-sub'; sb2.textContent = (ativa.inicio || 'sem início') + ' → ' + (ativa.fim || 'sem fim');
     card.append(t, sb2);
-    const btn = document.createElement('button'); btn.className = 'mx-mini no'; btn.style.marginTop = '10px'; btn.textContent = '🏁 Encerrar e premiar campeões';
+    const btn = document.createElement('button'); btn.className = 'mx-mini no'; btn.style.marginTop = '10px'; comIcone(btn, 'bandeira', 'Encerrar e premiar campeões');
     btn.onclick = async () => {
       if (!await uiConfirm('Encerrar a temporada "' + ativa.nome + '"?\nO campeão de cada liga vira Destaque e recebe um aviso de parabéns. O ranking zera ao abrir a próxima.')) return;
       const { data: r } = await sb.rpc('acolitos_temporada_fechar');
@@ -371,7 +371,7 @@ async function renderTemporadaAdmin(main) {
     const ini = document.createElement('input'); ini.type = 'date'; ini.className = 'form-input';
     const fim = document.createElement('input'); fim.type = 'date'; fim.className = 'form-input';
     row.append(ini, fim);
-    const btn = document.createElement('button'); btn.className = 'mx-mini go'; btn.textContent = '▶ Abrir temporada';
+    const btn = document.createElement('button'); btn.className = 'mx-mini go'; comIcone(btn, 'play', 'Abrir temporada');
     btn.onclick = async () => {
       if (!nome.value.trim()) { toast('Dê um nome à temporada', 'error'); return; }
       const { data: r } = await sb.rpc('acolitos_temporada_abrir', { p_nome: nome.value.trim(), p_inicio: ini.value || null, p_fim: fim.value || null });
@@ -643,9 +643,9 @@ function renderMatriz(container){
       const tr=document.createElement('tr');
       const nmtd=document.createElement('td'); const nome=document.createElement('span');nome.className='matriz-member-name';nome.title=m.nome;nome.textContent=m.apelido||m.nome;
       const acoes=document.createElement('div');acoes.style.cssText='display:flex;gap:4px;';
-      const editar=document.createElement('button');editar.type='button';editar.className='matriz-action';editar.textContent='✏️';editar.title='Editar ficha de '+(m.apelido||m.nome);editar.setAttribute('aria-label',editar.title);
+      const editar=document.createElement('button');editar.type='button';editar.className='matriz-action';comIcone(editar, 'editar', '', 'Editar');editar.title='Editar ficha de '+(m.apelido||m.nome);editar.setAttribute('aria-label',editar.title);
       editar.onclick=()=>abrirFichaRapida(m,{aoMudar:()=>renderAll()});
-      const calendario=document.createElement('button');calendario.type='button';calendario.className='matriz-action';calendario.textContent='📅';calendario.title='Ver últimas missas de '+(m.apelido||m.nome);calendario.setAttribute('aria-label',calendario.title);calendario.onclick=async()=>{calendario.disabled=true;try{await abrirHistoricoMembro(m)}finally{calendario.disabled=false}};
+      const calendario=document.createElement('button');calendario.type='button';calendario.className='matriz-action';comIcone(calendario, 'calendar', '', 'Datas');calendario.title='Ver últimas missas de '+(m.apelido||m.nome);calendario.setAttribute('aria-label',calendario.title);calendario.onclick=async()=>{calendario.disabled=true;try{await abrirHistoricoMembro(m)}finally{calendario.disabled=false}};
       acoes.append(editar,calendario);const member=document.createElement('div');member.className='matriz-member';member.append(checkboxMatriz('Selecionar '+(m.apelido||m.nome),m.id),nome,acoes);nmtd.appendChild(member);
       nmtd.style.cssText='position:sticky;left:0;z-index:1;background:var(--surface2);color:var(--text);padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;';
       tr.appendChild(nmtd);
@@ -704,13 +704,13 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
     const retry=document.createElement('button');retry.className='btn-sm gray';retry.textContent='Tentar novamente';retry.onclick=()=>renderAll();
     main.append(aviso,retry);return;
   }
-  const head = document.createElement('h2'); head.style.cssText = 'font-family:var(--font-title);font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 4px;'; head.textContent = '📈 Desenvolvimento'; main.appendChild(head);
+  const head = document.createElement('h2'); head.style.cssText = 'font-family:var(--font-title);font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 4px;'; comIcone(head, 'grafico', 'Desenvolvimento'); main.appendChild(head);
   const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:0 0 12px;'; sub.textContent = 'Funções = proficiência real de cada um (a desenvolver = abaixo de Apto). Competências = plano de desenvolvimento.'; main.appendChild(sub);
   // 🗺 Mapa de Cobertura — resumo por função (escassez) + matriz colapsável, com edição rápida
   await carregarHabAll();
   const mapaSec = document.createElement('div'); mapaSec.className = 'mx-card'; mapaSec.style.marginBottom = '14px';
   const mh = document.createElement('div'); mh.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;';
-  const mhT = document.createElement('span'); mhT.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:var(--gold);flex:1;'; mhT.textContent = '🗺 Mapa de Cobertura';
+  const mhT = document.createElement('span'); mhT.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:var(--gold);flex:1;'; comIcone(mhT, 'mapa', 'Mapa de Cobertura');
   const btnRel = (txt, fn) => { const b=document.createElement('button'); b.type='button'; b.textContent=txt; b.style.cssText='font-family:var(--font-title);font-weight:700;font-size:11px;padding:5px 10px;border-radius:6px;cursor:pointer;background:transparent;border:1px solid var(--gold-dim);color:var(--gold-light);'; b.onclick=fn; return b; };
   mh.append(mhT, btnRel('🖨 Imprimir/PDF', gerarRelatorioPDF), btnRel('⬇️ CSV', baixarRelatorioCSV)); mapaSec.appendChild(mh);
   // A MATRIZ COMPLETA É A PRIMEIRA COISA (pedido do dono, 01/10/2026) e já vem aberta; o
@@ -733,7 +733,7 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
   const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Todos os níveis'; selNivel.appendChild(o0);
   (typeof NIVEIS !== 'undefined' ? NIVEIS : []).forEach(n => { const o = document.createElement('option'); o.value = n.slug; o.textContent = n.label; selNivel.appendChild(o); });
   selNivel.value=estadoJornada.nivel;
-  const btnLote = document.createElement('button'); btnLote.type='button'; btnLote.textContent='🖨 Boletins';
+  const btnLote = document.createElement('button'); btnLote.type='button'; comIcone(btnLote, 'printer', 'Boletins');
   btnLote.title='Imprimir 1 boletim por membro (leve, sem quests)';
   btnLote.style.cssText='flex:none;font-family:var(--font-title);font-weight:700;font-size:11px;padding:0 10px;border-radius:8px;cursor:pointer;background:transparent;border:1px solid var(--gold-dim);color:var(--gold-light);';
   btnLote.onclick = gerarPanoramasLote;
@@ -795,7 +795,7 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
   main.appendChild(card);
   // gerir a LISTA de competências (movida do Config)
   const hr = document.createElement('div'); hr.style.cssText = 'border-top:1px solid var(--border-wine);margin:14px 0 10px;'; main.appendChild(hr);
-  const ch = document.createElement('div'); ch.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:var(--gold);margin-bottom:4px;'; ch.textContent = '🗂 Competências (lista)'; main.appendChild(ch);
+  const ch = document.createElement('div'); ch.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:var(--gold);margin-bottom:4px;'; comIcone(ch, 'pasta', 'Competências (lista)'); main.appendChild(ch);
   const chs = document.createElement('div'); chs.style.cssText = 'font-size:11px;color:var(--text-muted);margin-bottom:8px;'; chs.textContent = 'Defina a faixa e o ⚖ peso de cada virtude (quantas quests para virar candidata a formada).'; main.appendChild(chs);
   const compBox = document.createElement('div'); main.appendChild(compBox); renderCompLista(compBox);
 }
@@ -803,7 +803,7 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
 async function abrirPanorama(m) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   const md = document.createElement('div'); md.className = 'modal'; md.style.setProperty('--modal-max', '520px');
-  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = '📊 Panorama — ' + (m.apelido || m.nome); md.appendChild(tt);
+  const tt = document.createElement('div'); tt.className = 'modal-title'; comIcone(tt, 'grafico', 'Panorama — ' + (m.apelido || m.nome)); md.appendChild(tt);
   const body = document.createElement('div'); body.innerHTML = '<span class="loading">Carregando...</span>'; md.appendChild(body);
   const close = document.createElement('button'); close.className = 'btn-sm gray'; close.style.cssText = 'width:100%;margin-top:14px;'; close.textContent = 'Fechar'; close.onclick = () => ov.remove(); md.appendChild(close);
   ov.appendChild(md); document.body.appendChild(ov);
@@ -815,7 +815,7 @@ async function abrirPanorama(m) {
   ]);
   const btnPrint = document.createElement('button'); btnPrint.className='btn-sm';
   btnPrint.style.cssText='width:100%;margin-top:8px;background:linear-gradient(180deg,var(--gold),#9a7a1e);color:#2a1a00;border:none;font-weight:700;';
-  btnPrint.textContent='🖨 Imprimir panorama';
+  comIcone(btnPrint, 'printer', 'Imprimir panorama');
   btnPrint.onclick=()=>gerarPanoramaPDF(m, board, est, badges);
   md.insertBefore(btnPrint, close);
   body.textContent = '';
@@ -846,7 +846,7 @@ async function abrirPanorama(m) {
 
   // funções pendentes
   if (pend.length) {
-    const ph = document.createElement('div'); ph.style.cssText = 'font-family:var(--font-body);font-weight:700;font-size:12px;color:var(--danger-text);margin:4px 0 6px;'; ph.textContent = '🔒 Funções pendentes (' + pend.length + ')'; body.appendChild(ph);
+    const ph = document.createElement('div'); ph.style.cssText = 'font-family:var(--font-body);font-weight:700;font-size:12px;color:var(--danger-text);margin:4px 0 6px;'; comIcone(ph, 'lock', 'Funções pendentes (' + pend.length + ')'); body.appendChild(ph);
     const pl = document.createElement('div'); pl.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;';
     pend.forEach(f => { const c = document.createElement('span'); c.style.cssText = 'background:rgba(209,16,32,.12);border:1px solid var(--danger);color:var(--danger-text);border-radius:12px;padding:2px 9px;font-size:11px;'; c.textContent = f.label; pl.appendChild(c); });
     body.appendChild(pl);
@@ -883,7 +883,7 @@ async function abrirPanorama(m) {
   // 🏅 Medalhas especiais (standalone avaliadas) — coordenação concede
   const espec = (badges || []).filter(bd => !bd.nivel && bd.validacao === 'avaliada');
   if (espec.length) {
-    const mh = document.createElement('div'); mh.style.cssText = 'font-family:var(--font-body);font-weight:700;font-size:12px;color:var(--gold);margin:14px 0 6px;'; mh.textContent = '🏅 Medalhas especiais (conceder)'; body.appendChild(mh);
+    const mh = document.createElement('div'); mh.style.cssText = 'font-family:var(--font-body);font-weight:700;font-size:12px;color:var(--gold);margin:14px 0 6px;'; comIcone(mh, 'award', 'Medalhas especiais (conceder)'); body.appendChild(mh);
     espec.forEach(bd => {
       const r = document.createElement('div'); r.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:12px;padding:3px 0;border-bottom:1px solid var(--border);';
       const t = document.createElement('span'); t.style.cssText = 'flex:1;min-width:0;color:var(--text);'; t.textContent = bd.label;
@@ -1050,7 +1050,7 @@ async function renderCompLista(b) {
   b.textContent = '';
   const padraoAtual = (typeof cfg === 'function') ? cfg('competencia_limiar_padrao', 3) : 3;
   const head = document.createElement('div'); head.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;color:var(--text-muted);';
-  const ht = document.createElement('span'); ht.textContent = '⚖ Peso padrão (quests p/ formar a virtude):';
+  const ht = document.createElement('span'); comIcone(ht, 'balanca', 'Peso padrão (quests p/ formar a virtude):');
   const hi = document.createElement('input'); hi.type = 'number'; hi.min = '1'; hi.value = padraoAtual; hi.style.cssText = 'width:56px;font-size:12px;padding:4px;background:var(--surface);border:1px solid var(--border-wine);border-radius:4px;color:var(--text);';
   hi.onchange = async () => { const v = Math.max(1, parseInt(hi.value, 10) || 1); const { error } = await sb.from('acolitos_config').upsert({ chave: 'competencia_limiar_padrao', valor: v }, { onConflict: 'chave' }); if (error) { toast('Erro ao salvar limiar.', 'error'); return; } if (typeof _APP_CONFIG === 'object' && _APP_CONFIG) _APP_CONFIG['competencia_limiar_padrao'] = v; toast('✓ Limiar padrão atualizado'); };
   head.append(ht, hi); b.appendChild(head);
@@ -1064,7 +1064,7 @@ async function renderCompLista(b) {
     FAIXAS_DEV.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; if (v === fx) o.selected = true; fsel.appendChild(o); });
     if (!fx) { const o = document.createElement('option'); o.value = ''; o.textContent = '— faixa —'; o.selected = true; fsel.insertBefore(o, fsel.firstChild); }
     fsel.onchange = async () => { await sb.from('acolitos_listas').update({ meta: Object.assign({}, item.meta || {}, { faixa: fsel.value }) }).eq('id', item.id); item.meta = Object.assign({}, item.meta || {}, { faixa: fsel.value }); toast('✓ Faixa atualizada'); };
-    const pesoLbl = document.createElement('span'); pesoLbl.textContent = '⚖'; pesoLbl.title = 'Peso da virtude'; pesoLbl.style.cssText = 'font-size:12px;color:var(--gold-light);';
+    const pesoLbl = document.createElement('span'); comIcone(pesoLbl, 'balanca', '', 'Equilíbrio'); pesoLbl.title = 'Peso da virtude'; pesoLbl.style.cssText = 'font-size:12px;color:var(--gold-light);';
     const lim = document.createElement('input'); lim.type = 'number'; lim.min = '1'; lim.value = (item.meta && item.meta.limiar) || ''; lim.title = 'Peso desta virtude: nº de quests p/ virar candidata (vazio = usa o padrão)'; lim.placeholder = 'peso'; lim.style.cssText = 'width:54px;font-size:11px;padding:4px;background:var(--surface);border:1px solid var(--border-wine);border-radius:4px;color:var(--text);';
     lim.onchange = async () => { const v = lim.value === '' ? null : Math.max(1, parseInt(lim.value, 10) || 1); await sb.from('acolitos_listas').update({ meta: Object.assign({}, item.meta || {}, { limiar: v }) }).eq('id', item.id); item.meta = Object.assign({}, item.meta || {}, { limiar: v }); toast('✓ Peso atualizado'); };
     const del = mini('−', true); del.onclick = async () => { if (!await uiConfirm('Remover competência "' + (item.label || item.valor) + '"?')) return; await sb.from('acolitos_listas').delete().eq('id', item.id); renderCompLista(b); };
@@ -1098,7 +1098,7 @@ function abrirRevisar(titulo, onSend) {
   const ta = document.createElement('textarea'); ta.className = 'form-input'; ta.rows = 3; ta.placeholder = 'Ex.: Explique melhor em que momentos da missa você usa essa função.'; md.appendChild(ta);
   const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:14px;';
   const c = document.createElement('button'); c.className = 'btn'; c.style.flex = '1'; c.textContent = 'Cancelar'; c.onclick = () => ov.remove();
-  const s = document.createElement('button'); s.className = 'btn gold'; s.style.flex = '1'; s.textContent = '↩ Devolver';
+  const s = document.createElement('button'); s.className = 'btn gold'; s.style.flex = '1'; comIcone(s, 'desfazer', 'Devolver');
   s.onclick = () => { if (!ta.value.trim()) { toast('Escreva a pergunta/observação', 'error'); ta.focus(); return; } ov.remove(); onSend(ta.value.trim()); };
   acts.append(c, s); md.appendChild(acts); ov.appendChild(md); document.body.appendChild(ov);
 }

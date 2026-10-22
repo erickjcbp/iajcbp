@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Escala — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
@@ -243,16 +243,16 @@
     </select>
     <div class="escala-acoes">
       <button class="btn-sm gold" onclick="abrirNovaCeleb()">＋ Celebração</button>
-      <button class="btn-sm gray" id="btn-hist-escala" onclick="toggleHistorico()" title="Incluir celebrações passadas (últimos 90 dias)">🕓 Histórico</button>
+      <button class="btn-sm gray" id="btn-hist-escala" onclick="toggleHistorico()" title="Incluir celebrações passadas (últimos 90 dias)"><span data-icone="relogio"></span>Histórico</button>
       <div class="escala-mais">
         <button class="btn-sm gray" id="btn-mais" onclick="toggleMaisMenu(event)" aria-haspopup="true" aria-expanded="false" title="Mais ações">⋯ Mais</button>
         <div class="escala-mais-menu" id="escala-mais-menu" role="menu">
-          <button class="mais-item" role="menuitem" onclick="maisAcao(abrirModelos)">⚙️ Modelos</button>
+          <button class="mais-item" role="menuitem" onclick="maisAcao(abrirModelos)"><span data-icone="settings"></span>Modelos</button>
           <button class="mais-item" role="menuitem" onclick="maisAcao(function(){ location.href='ausencias.html'; })">Ausências</button>
-          <button class="mais-item" role="menuitem" id="btn-tarcisio" style="display:none" onclick="maisAcao(function(){ location.href='config.html#tarcisio_avisos'; })">📲 WhatsApp</button>
-          <button class="mais-item" role="menuitem" onclick="maisAcao(function(){ setAba('rodizio'); })">📊 Rodízio e frequência</button>
-          <button class="mais-item" role="menuitem" onclick="maisAcao(escalaPDF)">🖨 Escala PDF</button>
-          <button class="mais-item" role="menuitem" id="btn-arte-semana" style="display:none" onclick="maisAcao(arteSemana)">🎨 Arte da semana</button>
+          <button class="mais-item" role="menuitem" id="btn-tarcisio" style="display:none" onclick="maisAcao(function(){ location.href='config.html#tarcisio_avisos'; })"><span data-icone="celular"></span>WhatsApp</button>
+          <button class="mais-item" role="menuitem" onclick="maisAcao(function(){ setAba('rodizio'); })"><span data-icone="grafico"></span>Rodízio e frequência</button>
+          <button class="mais-item" role="menuitem" onclick="maisAcao(escalaPDF)"><span data-icone="printer"></span>Escala PDF</button>
+          <button class="mais-item" role="menuitem" id="btn-arte-semana" style="display:none" onclick="maisAcao(arteSemana)"><span data-icone="paleta"></span>Arte da semana</button>
         </div>
       </div>
     </div>
@@ -277,8 +277,8 @@
     <div class="modal-actions" style="flex-wrap:wrap;gap:8px;">
       <span id="montagem-status" style="font-size:12px;color:var(--success-text,#7bd88f);margin-right:auto;align-self:center;"></span>
       <button class="btn-sm gray" onclick="fecharMontagem()">Fechar</button>
-      <button class="btn-sm gray" onclick="limparMontagem()" title="Limpar todas as posições">🧹 Limpar</button>
-      <button class="btn-sm wine" id="btn-gerar-auto" onclick="gerarEscalaAuto()" style="margin-left:auto;">✨ Gerar automático</button>
+      <button class="btn-sm gray" onclick="limparMontagem()" title="Limpar todas as posições"><span data-icone="borracha"></span>Limpar</button>
+      <button class="btn-sm wine" id="btn-gerar-auto" onclick="gerarEscalaAuto()" style="margin-left:auto;"><span data-icone="sparkles"></span>Gerar automático</button>
       <button class="btn-sm gold" id="btn-sv-escala" onclick="salvarEscala()">Salvar Escala</button>
     </div>
   </div>
@@ -524,7 +524,7 @@ async function init() {
   const _est = restaurarEstadoEscala();
   if(_est){
     if(_est.com!==undefined){ const f=document.getElementById('filtro-com'); if(f) f.value=_est.com; }
-    if(_est.hist){ verHistorico = true; const b=document.getElementById('btn-hist-escala'); if(b){ b.classList.add('gold'); b.classList.remove('gray'); b.textContent='🕓 Histórico ✓'; } }
+    if(_est.hist){ verHistorico = true; const b=document.getElementById('btn-hist-escala'); if(b){ b.classList.add('gold'); b.classList.remove('gray'); comIcone(b, 'relogio', 'Histórico ✓'); } }
     if(_est.aba && ABAS.indexOf(_est.aba)>=0){ abaAtual = _est.aba; }
     window.__escRestoreY = _est.y!=null ? _est.y : null;
   }
@@ -732,15 +732,15 @@ function renderCards() {
     // Seleção de quais missas da semana entram no "Gerar": todas marcadas por padrão
     // (um clique continua gerando a semana inteira), e quem quiser deixa alguma de fora.
     const selSemana=new Set(sem.items.map(c=>c.id));
-    const atualizaTextoGer=()=>{ bGer.textContent='⚡ Gerar escala ('+selSemana.size+'/'+sem.items.length+')'; };
+    const atualizaTextoGer=()=>{ comIcone(bGer, 'raio', 'Gerar escala ('+selSemana.size+'/'+sem.items.length+')'); };
     const bGer=document.createElement('button');bGer.className='btn-sm wine';bGer.style.flexShrink='0';bGer.onclick=()=>{
       const sel=sem.items.filter(c=>selSemana.has(c.id));
       if(!sel.length){ uiAlert('Marque ao menos uma missa para gerar.'); return; }
       gerarEscalaSemana(sel,bGer,sem.items);
     };
     atualizaTextoGer();
-    const bLimp=document.createElement('button');bLimp.className='btn-sm gray';bLimp.style.flexShrink='0';bLimp.textContent='🧹 Limpar semana';bLimp.onclick=()=>limparEscalaSemana(sem.items,bLimp);
-    const bExp=document.createElement('button');bExp.className='btn-sm';bExp.style.cssText='flex-shrink:0;background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2));border:1px solid var(--gold-dim);color:var(--gold-light);';bExp.textContent='📤 Exportar';bExp.onclick=()=>exportarSemana(sem.items,sem.label);
+    const bLimp=document.createElement('button');bLimp.className='btn-sm gray';bLimp.style.flexShrink='0';comIcone(bLimp, 'borracha', 'Limpar semana');bLimp.onclick=()=>limparEscalaSemana(sem.items,bLimp);
+    const bExp=document.createElement('button');bExp.className='btn-sm';bExp.style.cssText='flex-shrink:0;background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2));border:1px solid var(--gold-dim);color:var(--gold-light);';comIcone(bExp, 'enviar', 'Exportar');bExp.onclick=()=>exportarSemana(sem.items,sem.label);
     const bConf=document.createElement('button');bConf.className='btn-sm';bConf.style.cssText='flex-shrink:0;background:linear-gradient(165deg,rgba(46,139,87,.20),var(--surface2));border:1px solid rgba(46,139,87,.55);color:#8fdCa8;';
     bConf.textContent='Confirmar escala da semana';bConf.onclick=()=>confirmarEscalaSemana(sem.items,sem.key,bConf);
     acoesSem.append(bGer,bConf,bLimp,bExp);
@@ -780,9 +780,9 @@ function renderCards() {
       btnM.textContent=cob.preenchido>0?'Editar Escala':'Montar Escala';
       btnM.onclick=()=>abrirMontagem(c);acts.appendChild(btnM);
       if(isCerimo && cob.preenchido>0){const feita=chamadasFeitas.has(c.id);const btnCh=document.createElement('button');btnCh.className='btn-sm';btnCh.style.cssText=feita?'background:linear-gradient(165deg,rgba(76,175,80,.16),var(--surface2));border:1px solid var(--success-text,#4caf50);color:var(--success-text,#7bd88f);':'background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2));border:1px solid var(--gold-dim);color:var(--gold-light);';btnCh.textContent=feita?'✓ Chamada feita':'✋ Chamada';btnCh.onclick=()=>{window.location.href='chamada.html?celeb='+c.id;};acts.appendChild(btnCh);}
-      const btnEd=document.createElement('button');btnEd.className='mini-del';btnEd.textContent='✏️';btnEd.title='Editar celebração';btnEd.style.marginLeft='auto';
+      const btnEd=document.createElement('button');btnEd.className='mini-del';comIcone(btnEd, 'editar', '', 'Editar');btnEd.title='Editar celebração';btnEd.style.marginLeft='auto';
       btnEd.onclick=()=>abrirEditarCeleb(c);acts.appendChild(btnEd);
-      const btnDel=document.createElement('button');btnDel.className='mini-del';btnDel.textContent='🗑';btnDel.title='Excluir celebração';
+      const btnDel=document.createElement('button');btnDel.className='mini-del';comIcone(btnDel, 'lixeira', '', 'Excluir');btnDel.title='Excluir celebração';
       btnDel.onclick=()=>excluirCelebracao(c);acts.appendChild(btnDel);
       card.appendChild(acts);grid.appendChild(card);
     });
@@ -859,7 +859,7 @@ function abrirMontagem(celeb) {
       });
     const pe={sel,funcao,extra:!!isExtra};
     pendingEdicao.push(pe);
-    const trc=document.createElement('button');trc.type='button';trc.className='mini-del';trc.textContent='🔄';trc.title='Trocar por outra opção';trc.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';
+    const trc=document.createElement('button');trc.type='button';trc.className='mini-del';comIcone(trc, 'refresh', '', 'Trocar');trc.title='Trocar por outra opção';trc.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';
     trc.onclick=()=>trocarPosicao(pe);
     const clr=document.createElement('button');clr.type='button';clr.className='mini-del';clr.textContent='✕';clr.title=isExtra?'Remover este campo extra':'Limpar esta função';clr.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';
     const dm=document.createElement('div');dm.style.cssText='font-size:11px;margin:-4px 0 4px;padding-left:2px;font-weight:800;color:var(--danger-text);display:none;';
@@ -868,13 +868,13 @@ function abrirMontagem(celeb) {
     pe.atualizarAvisos=()=>{
       const mid=sel.value;
       const naOutra=mid&&pendingEdicao.some(p=>p!==pe&&p.sel.value===mid);
-      if(naOutra){dm.style.display='';dm.textContent='✋ Já escalado(a) nesta missa em outra função';}
+      if(naOutra){dm.style.display='';comIcone(dm, 'mao', 'Já escalado(a) nesta missa em outra função');}
       else{dm.style.display='none';dm.textContent='';}
       const dup=mid&&dupSemana[mid];
-      if(dup&&dup.size){dp.style.display='';dp.textContent='⚠️ Já escalado(a) esta semana: '+[...dup].join(', ');}
+      if(dup&&dup.size){dp.style.display='';comIcone(dp, 'alerta', 'Já escalado(a) esta semana: '+[...dup].join(', '));}
       else{dp.style.display='none';dp.textContent='';}
       const stp=mid&&semanaPassada[mid];
-      if(stp){const pres=(stp==='presente'||stp==='atrasado'),falt=(stp==='ausente'||stp==='ausente_justificado'||stp==='substituido');sp.style.display='';sp.style.color=pres?'var(--success-text)':falt?'var(--danger-text)':'var(--text-muted)';sp.textContent='🔁 Semana passada: '+(pres?'presença marcada ✓':falt?'faltou ✗':'escalado •');}
+      if(stp){const pres=(stp==='presente'||stp==='atrasado'),falt=(stp==='ausente'||stp==='ausente_justificado'||stp==='substituido');sp.style.display='';sp.style.color=pres?'var(--success-text)':falt?'var(--danger-text)':'var(--text-muted)';comIcone(sp, 'refresh', 'Semana passada: '+(pres?'presença marcada ✓':falt?'faltou ✗':'escalado •'));}
       else{sp.style.display='none';sp.textContent='';}
     };
     if(isExtra){
@@ -884,7 +884,7 @@ function abrirMontagem(celeb) {
     }
     sel.onchange=()=>{sel.classList.toggle('filled',!!sel.value);refreshDuplicatasMissa();checarIrmao(pe);};
     const bFichaPos=document.createElement('button');bFichaPos.type='button';bFichaPos.className='mini-del';bFichaPos.title='Editar ficha de quem está selecionado';
-    bFichaPos.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';bFichaPos.textContent='✏️';
+    bFichaPos.style.cssText='width:28px;height:28px;flex:none;font-size:12px;';comIcone(bFichaPos, 'editar', '', 'Editar');
     bFichaPos.onclick=()=>{
       const alvo=membros.find(x=>x.id===sel.value);
       if(!alvo){ toast('Escolha alguém nesta função primeiro'); return; }
@@ -1049,7 +1049,7 @@ async function gerarEscalaAuto() {
   res.forEach((id,i) => { if (id) { open[i].sel.value = id; open[i].sel.classList.add('filled'); } });
   const vazias = res.filter(r => !r).length;
   const btn = document.getElementById('btn-gerar-auto');
-  if (btn) { btn.textContent = vazias ? '✨ Gerado (' + vazias + ' sem apto)' : '✨ Gerado!'; setTimeout(() => { btn.textContent = '✨ Gerar automático'; }, 2500); }
+  if (btn) { btn.textContent = vazias ? '✨ Gerado (' + vazias + ' sem apto)' : '✨ Gerado!'; setTimeout(() => { comIcone(btn, 'sparkles', 'Gerar automático'); }, 2500); }
 }
 
 // Limpa todas as posições do card aberto (precisa Salvar p/ gravar)
@@ -1257,7 +1257,7 @@ async function arteSemana(){
   const isAdmin = !!(ctx && navCaps(ctx).isAdmin);
   const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
   const md=document.createElement('div'); md.className='modal'; md.style.setProperty('--modal-max', '460px');
-  md.innerHTML='<div class="modal-title">🎨 Arte da semana</div><div id="arte-body" style="text-align:center;"><span class="loading">Carregando...</span></div>';
+  md.innerHTML='<div class="modal-title">'+icone('paleta')+'Arte da semana</div><div id="arte-body" style="text-align:center;"><span class="loading">Carregando...</span></div>';
   ov.appendChild(md); document.body.appendChild(ov);
   await arteRender(md, domISO, isAdmin);
 }
@@ -1285,7 +1285,7 @@ async function arteRender(md, domISO, isAdmin){
         +'<img src="'+_arteEscAttr(p.url+'?t='+t)+'" alt="Arte da escala'+(p.rot?' — '+p.rot:'')+'" style="width:100%;border-radius:10px;border:1px solid var(--border);display:block;"></div>').join('')
       +'</div>'
       +'<div style="font-size:11px;color:var(--text-muted);margin:6px 0 12px;">'+relEsc(arte.descricao||'')+' · '+(arte.gerado_por==='cron'?'gerada automaticamente':'gerada manualmente')+'</div>'
-      +'<button class="btn-sm gold" style="width:100%;" id="arte-baixar">⬇️ Baixar'+(partes.length>1?' as 2 artes':' PNG')+'</button>';
+      +'<button class="btn-sm gold" style="width:100%;" id="arte-baixar">'+icone('baixar')+'Baixar'+(partes.length>1?' as 2 artes':' PNG')+'</button>';
     md._artePartes=partes;
     if(partes.length>1) md.style.setProperty('--modal-max', '620px');   // as duas lado a lado, mesmo que menores
   } else {
@@ -1311,7 +1311,7 @@ async function arteRender(md, domISO, isAdmin){
       +'<label style="display:block;text-align:left;font-size:12px;color:var(--text-muted);">Tempo litúrgico<input id="ov-tempo" class="form-input" style="width:100%;" placeholder="ex.: TEMPO COMUM" value="'+(ovr?_arteEscAttr(ovr.tempo):'')+'"></label>'
       +'<label style="display:block;text-align:left;font-size:12px;color:var(--text-muted);margin-top:6px;">Descrição<input id="ov-desc" class="form-input" style="width:100%;" placeholder="ex.: 16º Domingo do Tempo Comum, Ano A" value="'+(ovr?_arteEscAttr(ovr.descricao):'')+'"></label>'
       +'<label style="display:block;text-align:left;font-size:12px;color:var(--text-muted);margin-top:6px;">Cor litúrgica<select id="ov-cor" class="form-select" style="width:100%;">'+cores.map(c=>'<option value="'+c+'"'+(ovr&&ovr.cor===c?' selected':'')+'>'+(c||'(automática)')+'</option>').join('')+'</select></label>'
-      +'<div style="display:flex;gap:8px;margin-top:14px;"><button class="btn-sm gray" id="arte-ov-save" style="flex:1;">💾 Salvar ajuste</button><button class="btn-sm gold" id="arte-regen" style="flex:1;">♻️ Gerar/Atualizar</button></div>'
+      +'<div style="display:flex;gap:8px;margin-top:14px;"><button class="btn-sm gray" id="arte-ov-save" style="flex:1;">'+icone('salvar')+'Salvar ajuste</button><button class="btn-sm gold" id="arte-regen" style="flex:1;">'+icone('refresh')+'Gerar/Atualizar</button></div>'
       +'<p style="font-size:11px;color:var(--text-muted);margin-top:8px;">Depois de "Gerar/Atualizar", aguarde ~1 min e reabra para ver a nova arte.</p>';
   }
   body.innerHTML=html;
@@ -1398,12 +1398,12 @@ function exportarSemana(celebs, label) {
   const ta = document.createElement('textarea'); ta.readOnly = true; ta.value = txt.trim();
   ta.style.cssText = 'width:100%;height:46vh;background:var(--surface2);border:1px solid var(--border-wine);border-radius:8px;color:var(--text);font-family:monospace;font-size:12px;line-height:1.5;padding:10px;white-space:pre;overflow:auto;';
   const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:12px;';
-  const bCopy = document.createElement('button'); bCopy.className = 'btn gold'; bCopy.style.flex = '1'; bCopy.textContent = '📋 Copiar';
+  const bCopy = document.createElement('button'); bCopy.className = 'btn gold'; bCopy.style.flex = '1'; comIcone(bCopy, 'tarefas', 'Copiar');
   bCopy.onclick = async () => {
     try { await navigator.clipboard.writeText(ta.value); } catch (e) { ta.select(); document.execCommand('copy'); }
-    bCopy.textContent = '✓ Copiado!'; setTimeout(() => { bCopy.textContent = '📋 Copiar'; }, 2000);
+    bCopy.textContent = '✓ Copiado!'; setTimeout(() => { comIcone(bCopy, 'tarefas', 'Copiar'); }, 2000);
   };
-  const bDown = document.createElement('button'); bDown.className = 'btn'; bDown.style.flex = '1'; bDown.textContent = '⬇️ Baixar .txt';
+  const bDown = document.createElement('button'); bDown.className = 'btn'; bDown.style.flex = '1'; comIcone(bDown, 'baixar', 'Baixar .txt');
   bDown.onclick = () => {
     const blob = new Blob([ta.value], { type:'text/plain' }); const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'escala-' + (label||'semana').replace(/[^\w]+/g,'-').toLowerCase() + '.txt'; a.click(); URL.revokeObjectURL(url);
@@ -1525,7 +1525,7 @@ function renderPlanilha() {
     const wrapN=document.createElement('div');wrapN.style.cssText='display:flex;align-items:center;gap:8px;';
     const bFicha=document.createElement('button');bFicha.type='button';bFicha.title='Editar ficha';
     bFicha.style.cssText='border:none;background:none;cursor:pointer;font-size:13px;padding:2px;flex:none;';
-    bFicha.textContent='✏️';bFicha.onclick=()=>abrirFichaRapida(m,{aoMudar:aoFichaRapidaMudou});
+    comIcone(bFicha, 'editar', '', 'Editar');bFicha.onclick=()=>abrirFichaRapida(m,{aoMudar:aoFichaRapidaMudou});
     wrapN.appendChild(bFicha);
     wrapN.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30, { nivelSlug: m.nivel || nivelFromRole(patchRoleFromHabs(habs)), casaSlug: casaSlugDe(m) }));
     const nm=document.createElement('div'); nm.style.cssText='min-width:0;line-height:1.15;';
@@ -1553,7 +1553,7 @@ function renderPlanilha() {
     if(m.necessidades_especiais)obsParts.push('Necessidades: '+m.necessidades_especiais);
     if((restricaoMap[m.id]||[]).length)obsParts.push('Restrições: '+restricaoMap[m.id].join('; '));
     if(m.observacoes)obsParts.push(m.observacoes);
-    if(obsParts.length){const b=document.createElement('button');b.className='cell-ico';b.textContent='💬';b.onclick=()=>openInfo('Observações — '+m.nome,obsParts);tdO.appendChild(b);}
+    if(obsParts.length){const b=document.createElement('button');b.className='cell-ico';comIcone(b, 'message-circle', '', 'Observações');b.onclick=()=>openInfo('Observações — '+m.nome,obsParts);tdO.appendChild(b);}
     else{tdO.style.color='var(--border)';tdO.textContent='—';}
     tr.appendChild(tdO);
 
@@ -1567,7 +1567,7 @@ function renderPlanilha() {
     if(m.tem_pai_ministro&&paiMin)mece.push('Pai: '+paiMin);
     if(m.tem_mae_ministro&&maeMin)mece.push('Mãe: '+maeMin);
     if(m.comunidade_ministro)mece.push('Comunidade: '+(m.comunidade_ministro==='matriz'?'Matriz':m.comunidade_ministro==='santo_antonio'?'Sto. Antônio':m.comunidade_ministro));
-    if(mece.length){const b=document.createElement('button');b.className='cell-ico';b.textContent='👪';b.onclick=()=>openInfo('Pais ministros — '+m.nome,mece);tdM.appendChild(b);}
+    if(mece.length){const b=document.createElement('button');b.className='cell-ico';comIcone(b, 'users', '', 'Pais ministros');b.onclick=()=>openInfo('Pais ministros — '+m.nome,mece);tdM.appendChild(b);}
     else{tdM.style.color='var(--border)';tdM.textContent='—';}
     tr.appendChild(tdM);
 
@@ -1593,7 +1593,7 @@ function renderPlanilha() {
       const td=document.createElement('td');td.style.textAlign='center';
       const e=(escalasMap[c.id]||[]).find(x=>x.membro_id===m.id);
       if(e){const cell=document.createElement('span');cell.className='escala-cell '+(e.status==='ausente_justificado'?'aj':e.status==='escalado'?'escalado':e.status);cell.textContent=FUNCAO_LABEL[e.funcao]||e.funcao;td.appendChild(cell);}
-      else if((ausMap[c.id]||new Set()).has(m.id)){td.textContent='🚫';td.title='Declarou ausência';td.style.color='var(--danger-text)';}
+      else if((ausMap[c.id]||new Set()).has(m.id)){comIcone(td, 'proibido', '', 'Declarou ausência');td.title='Declarou ausência';td.style.color='var(--danger-text)';}
       else{td.textContent='—';td.style.color='var(--border)';}
       tr.appendChild(td);
     });
@@ -1882,9 +1882,9 @@ function desenharRodizio(){
   filtroRodizio = montarFiltroLista(alvo, cfgRodizio, ()=>rodizioRepintar());
 
   const acoes=document.createElement('div'); acoes.className='rodizio-acoes';
-  const bPdf=document.createElement('button'); bPdf.className='btn-sm gold'; bPdf.textContent='🖨 Imprimir/PDF'; bPdf.onclick=rodizioPDF;
-  const bCsv=document.createElement('button'); bCsv.className='btn-sm gray'; bCsv.textContent='⬇️ CSV'; bCsv.onclick=rodizioCSV;
-  const bPer=document.createElement('button'); bPer.className='btn-sm gray'; bPer.textContent='📅 Frequência por período'; bPer.onclick=abrirRelatorioFrequencia;
+  const bPdf=document.createElement('button'); bPdf.className='btn-sm gold'; comIcone(bPdf, 'printer', 'Imprimir/PDF'); bPdf.onclick=rodizioPDF;
+  const bCsv=document.createElement('button'); bCsv.className='btn-sm gray'; comIcone(bCsv, 'baixar', 'CSV'); bCsv.onclick=rodizioCSV;
+  const bPer=document.createElement('button'); bPer.className='btn-sm gray'; comIcone(bPer, 'calendar', 'Frequência por período'); bPer.onclick=abrirRelatorioFrequencia;
   const bDet=document.createElement('button'); bDet.className='btn-sm gray';
   bDet.textContent = rodizioDetalhes ? '➖ Esconder detalhes' : '➕ Ver detalhes';
   bDet.title='Mostra as colunas "Sem escalar" e "Sem servir"';
@@ -1983,7 +1983,7 @@ function pintarPainelRodizio(el){
     const n=document.createElement('div'); n.className='rod-item-nome';
     const b=document.createElement('b'); b.textContent=l.membro.apelido||l.membro.nome;
     const titulo=document.createElement('div');titulo.className='rod-item-titulo';
-    const editar=document.createElement('button');editar.type='button';editar.className='rod-editar';editar.textContent='✏️';
+    const editar=document.createElement('button');editar.type='button';editar.className='rod-editar';comIcone(editar, 'editar', '', 'Editar');
     editar.title='Editar rápido: '+l.membro.nome;editar.setAttribute('aria-label',editar.title);
     editar.onclick=()=>abrirFichaRapida(l.membro,{aoMudar:aoFichaRapidaMudou});
     titulo.append(b,editar);
@@ -2065,7 +2065,7 @@ function pintarRodizio(lista){
     const box=document.createElement('div'); box.style.cssText='display:flex;align-items:center;gap:8px;';
     const bFichaRod=document.createElement('button');bFichaRod.type='button';bFichaRod.title='Editar ficha';
     bFichaRod.style.cssText='border:none;background:none;cursor:pointer;font-size:13px;padding:2px;flex:none;';
-    bFichaRod.textContent='✏️';bFichaRod.onclick=()=>abrirFichaRapida(m,{aoMudar:aoFichaRapidaMudou});
+    comIcone(bFichaRod, 'editar', '', 'Editar');bFichaRod.onclick=()=>abrirFichaRapida(m,{aoMudar:aoFichaRapidaMudou});
     box.appendChild(bFichaRod);
     box.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30, { nivelSlug: m.nivel || nivelFromRole(patchRoleFromHabs(habs)), casaSlug: casaSlugDe(m) }));
     const nm=document.createElement('div'); nm.style.cssText='min-width:0;line-height:1.15;';
@@ -2100,7 +2100,7 @@ function pintarRodizio(lista){
     tdU.appendChild(document.createTextNode(l.ultimaServida ? formatDate(l.ultimaServida).slice(0,5) : '—'));
     const bHist=document.createElement('button'); bHist.type='button'; bHist.title='Ver histórico das últimas semanas';
     bHist.style.cssText='margin-left:5px;border:none;background:none;cursor:pointer;font-size:12px;vertical-align:middle;';
-    bHist.textContent='📅'; bHist.onclick=()=>abrirHistoricoSemanal(m);
+    comIcone(bHist, 'calendar', '', 'Datas'); bHist.onclick=()=>abrirHistoricoSemanal(m);
     tdU.appendChild(bHist); tr.appendChild(tdU);
 
     const tdA=document.createElement('td'); tdA.style.cssText='text-align:center;';
@@ -2137,11 +2137,11 @@ function rodizioCSV(){
 function abrirRelatorioFrequencia(){
   const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
   const md=document.createElement('div'); md.className='modal'; md.style.setProperty('--modal-max', '420px');
-  md.innerHTML='<div class="modal-title">📊 Relatório de Frequência</div>'
+  md.innerHTML='<div class="modal-title">'+icone('grafico')+'Relatório de Frequência</div>'
     +'<p style="font-size:12px;color:var(--text-muted);margin:-4px 0 12px;">Deixe as datas em branco para o acumulado (histórico total).</p>'
     +'<div style="display:flex;gap:10px;"><label style="flex:1;font-size:12px;color:var(--text-muted);">De<input type="date" id="freq-de" class="form-input" style="width:100%;"></label>'
     +'<label style="flex:1;font-size:12px;color:var(--text-muted);">Até<input type="date" id="freq-ate" class="form-input" style="width:100%;"></label></div>'
-    +'<div style="display:flex;gap:8px;margin-top:14px;"><button class="btn-sm gold" id="freq-pdf" style="flex:1;">🖨 Imprimir/PDF</button><button class="btn-sm gray" id="freq-csv" style="flex:1;">⬇️ CSV</button><button class="btn-sm gray" id="freq-x">Fechar</button></div>';
+    +'<div style="display:flex;gap:8px;margin-top:14px;"><button class="btn-sm gold" id="freq-pdf" style="flex:1;">'+icone('printer')+'Imprimir/PDF</button><button class="btn-sm gray" id="freq-csv" style="flex:1;">'+icone('baixar')+'CSV</button><button class="btn-sm gray" id="freq-x">Fechar</button></div>';
   ov.appendChild(md); document.body.appendChild(ov);
   md.querySelector('#freq-pdf').onclick=freqPDF;
   md.querySelector('#freq-csv').onclick=freqCSV;

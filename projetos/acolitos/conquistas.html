@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Conquistas — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
@@ -160,7 +160,7 @@ async function init() {
   main.appendChild(resumo);
 
   // Insígnias de nível
-  const s1 = document.createElement('div'); s1.className = 'cq-sec'; s1.textContent = '🎖️ Insígnias de Nível'; main.appendChild(s1);
+  const s1 = document.createElement('div'); s1.className = 'cq-sec'; comIcone(s1, 'award', 'Insígnias de Nível'); main.appendChild(s1);
   const d1 = document.createElement('div'); d1.className = 'cq-desc'; d1.textContent = 'Cada nível conquistado é uma insígnia sua. As próximas estão te esperando.'; main.appendChild(d1);
   const grid = document.createElement('div'); grid.className = 'cq-grid'; main.appendChild(grid);
   NIVEIS.forEach((n, i) => {
@@ -169,12 +169,12 @@ async function init() {
     const patch = document.createElement('div'); patch.className = 'cq-patch'; patch.appendChild(buildRankEmblem(n.slug, innerWidth < 640 ? 46 : 64));
     const nome = document.createElement('div'); nome.className = 'cq-nome'; nome.textContent = n.label;
     cell.append(patch, nome);
-    if (!ganha) { const lk = document.createElement('div'); lk.className = 'cq-lock'; lk.textContent = '🔒'; cell.appendChild(lk); }
+    if (!ganha) { const lk = document.createElement('div'); lk.className = 'cq-lock'; comIcone(lk, 'lock', '', 'Bloqueado'); cell.appendChild(lk); }
     grid.appendChild(cell);
   });
 
   // Troféus de temporada
-  const s2 = document.createElement('div'); s2.className = 'cq-sec'; s2.textContent = '🏆 Troféus de Temporada'; main.appendChild(s2);
+  const s2 = document.createElement('div'); s2.className = 'cq-sec'; comIcone(s2, 'trophy', 'Troféus de Temporada'); main.appendChild(s2);
   const d2 = document.createElement('div'); d2.className = 'cq-desc'; d2.textContent = 'Cada vez que você fecha uma temporada como campeão da sua liga, ganha um troféu.'; main.appendChild(d2);
   if (!campeoes.length) {
     const e = document.createElement('span'); e.className = 'empty'; e.textContent = 'Ainda sem troféus — a próxima temporada pode ser sua! 🏆'; main.appendChild(e);
@@ -190,7 +190,7 @@ async function init() {
   }
 
   // Medalhas de marcos
-  const s3 = document.createElement('div'); s3.className = 'cq-sec'; s3.textContent = '🏅 Medalhas'; main.appendChild(s3);
+  const s3 = document.createElement('div'); s3.className = 'cq-sec'; comIcone(s3, 'award', 'Medalhas'); main.appendChild(s3);
   const d3 = document.createElement('div'); d3.className = 'cq-desc'; d3.textContent = 'Medalhas por marcos importantes da jornada — aptidões e momentos especiais. Toque numa medalha para ver os detalhes.'; main.appendChild(d3);
   if (!badges.length) { const e = document.createElement('span'); e.className = 'empty'; e.textContent = 'Sem medalhas por aqui ainda.'; main.appendChild(e); }
   else {
@@ -201,7 +201,7 @@ async function init() {
       const ico = document.createElement('div'); ico.className = 'cq-patch'; ico.innerHTML = medalSvg(b.icone, b.tier || tierDe(b.nivel), innerWidth < 640 ? 46 : 58);
       const nome = document.createElement('div'); nome.className = 'cq-nome'; nome.textContent = b.label;
       cell.append(ico, nome);
-      if (!b.ganho) { const lk = document.createElement('div'); lk.className = 'cq-lock'; lk.textContent = '🔒'; cell.appendChild(lk); }
+      if (!b.ganho) { const lk = document.createElement('div'); lk.className = 'cq-lock'; comIcone(lk, 'lock', '', 'Bloqueado'); cell.appendChild(lk); }
       mg.appendChild(cell);
     });
   }

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>CRM — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
@@ -157,8 +157,8 @@
     </div>
 
     <div class="modal-actions" style="flex-wrap:wrap;gap:8px;">
-      <button class="btn-sm red" id="btn-recusar" onclick="recusarCadastro()" style="display:none;">⛔ Recusar</button>
-      <button class="btn-sm wine" id="btn-excluir" onclick="excluirEntry()" style="margin-right:auto;">🗑 Tirar do funil</button>
+      <button class="btn-sm red" id="btn-recusar" onclick="recusarCadastro()" style="display:none;"><span data-icone="proibido"></span>Recusar</button>
+      <button class="btn-sm wine" id="btn-excluir" onclick="excluirEntry()" style="margin-right:auto;"><span data-icone="lixeira"></span>Tirar do funil</button>
       <button class="btn-sm gray" id="btn-voltar" onclick="voltarEtapa()" style="display:none;">◀ Voltar etapa</button>
       <button class="btn-sm gray" onclick="fecharModal()">Cancelar</button>
       <button class="btn-sm gold" id="btn-confirmar" onclick="confirmarAvancar()">Avançar ▶</button>
@@ -328,7 +328,7 @@ function renderPipeline() {
       const wlink = waMembro(m);
       if (wlink) {
         const wa = document.createElement('a'); wa.className = 'crm-wa'; wa.href = wlink; wa.target = '_blank'; wa.rel = 'noopener';
-        wa.textContent = '💬 WhatsApp'; wa.onclick = (e) => e.stopPropagation(); // não abre o modal da etapa
+        comIcone(wa, 'message-circle', 'WhatsApp'); wa.onclick = (e) => e.stopPropagation(); // não abre o modal da etapa
         card.appendChild(wa);
       }
       body.appendChild(card);
@@ -377,7 +377,7 @@ function renderLista() {
     const tdAcao = document.createElement('td');
     tdAcao.style.cssText = 'display:flex;gap:6px;align-items:center;';
     const wlink = waMembro(m);
-    if (wlink) { const wa = document.createElement('a'); wa.className = 'crm-wa sm'; wa.href = wlink; wa.target = '_blank'; wa.rel = 'noopener'; wa.title = 'WhatsApp'; wa.textContent = '💬'; tdAcao.appendChild(wa); }
+    if (wlink) { const wa = document.createElement('a'); wa.className = 'crm-wa sm'; wa.href = wlink; wa.target = '_blank'; wa.rel = 'noopener'; wa.title = 'WhatsApp'; comIcone(wa, 'message-circle', '', 'Mensagem'); tdAcao.appendChild(wa); }
     const btn = document.createElement('button'); btn.className = 'btn-sm gold';
     btn.textContent = 'Avançar'; btn.onclick = () => abrirModal(c);
     tdAcao.appendChild(btn);
@@ -525,7 +525,7 @@ async function abrirCartao(entry) {
       a.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;'
         + 'border:1px solid #25D366;color:#25D366;border-radius:8px;padding:9px 12px;'
         + 'font-size:13px;font-weight:700;text-decoration:none;';
-      a.textContent = '💬 ' + rot + ' · ' + tel;
+      comIcone(a, 'message-circle', '' + rot + ' · ' + tel);
       cx.appendChild(a);
     });
     ficha.appendChild(cx);

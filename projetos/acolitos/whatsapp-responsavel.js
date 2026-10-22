@@ -53,7 +53,7 @@
       cartao.textContent = '';
       var ic = document.createElement('div');
       ic.style.cssText = 'font-size:46px;line-height:1;margin-bottom:14px;';
-      ic.textContent = '📲';
+      comIcone(ic, 'celular', '', 'Celular');
       var tt = document.createElement('div');
       tt.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:21px;color:var(--gold-light,#ffd97a);margin-bottom:10px;';
       var nome = String(m.apelido || m.nome || '').trim().split(' ')[0] || 'o servo';

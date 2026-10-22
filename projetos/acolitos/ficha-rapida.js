@@ -89,8 +89,8 @@
     if (membro.apelido) { const sub = document.createElement('div'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);'; sub.textContent = membro.nome; hdr.appendChild(nomeEl); hdr.appendChild(sub); }
     else hdr.appendChild(nomeEl);
     const rankBtn = document.createElement('button'); rankBtn.type = 'button'; rankBtn.className = 'btn-sm gold'; rankBtn.style.marginTop = '4px';
-    rankBtn.textContent = '⬆ Alterar nível · ' + nivelInfo(membro.nivel || 'aspirante').label;
-    rankBtn.onclick = () => abrirSeletorNivel(membro, { onSalvo: (nv) => { membro.nivel = nv; rankBtn.textContent = '⬆ Alterar nível · ' + nivelInfo(nv).label; aoMudar(); } });
+    comIcone(rankBtn, 'seta-cima', 'Alterar nível · ' + nivelInfo(membro.nivel || 'aspirante').label);
+    rankBtn.onclick = () => abrirSeletorNivel(membro, { onSalvo: (nv) => { membro.nivel = nv; comIcone(rankBtn, 'seta-cima', 'Alterar nível · ' + nivelInfo(nv).label); aoMudar(); } });
     hdr.appendChild(rankBtn);
     md.appendChild(hdr);
 

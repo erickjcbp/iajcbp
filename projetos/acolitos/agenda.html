@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Agenda — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700;800&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
@@ -491,7 +491,7 @@ function abrirEvento(e) {
   const meta = document.createElement('div'); meta.style.cssText = 'font-size:13px;color:var(--text-muted);margin:8px 0;line-height:1.7;';
   const horas = [horaFmt(e.hora), e.hora_fim ? horaFmt(e.hora_fim) : ''].filter(Boolean).join(' às ');
   meta.innerHTML = '📅 ' + DIAS[sd.getDay()] + ', ' + sd.toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' })
-    + '<br>🕑 ' + (horas || 'Dia todo') + (e.local ? '<br>📍 ' + escapeHtml(e.local) : '');
+    + '<br>'+icone('relogio')+'' + (horas || 'Dia todo') + (e.local ? '<br>'+icone('local')+'' + escapeHtml(e.local) : '');
   m.appendChild(meta);
   if (e.descricao) { const d = document.createElement('p'); d.style.cssText = 'font-size:13px;color:var(--text);white-space:pre-wrap;margin:8px 0;'; d.textContent = e.descricao; m.appendChild(d); }
 
@@ -527,7 +527,7 @@ function abrirEvento(e) {
   // gestão (equipe)
   if (ehEquipe) {
     if (e.tipo === 'ensaio') {
-      const ch = document.createElement('button'); ch.className = 'btn gold'; ch.style.cssText = 'width:100%;margin-top:14px;'; ch.textContent = '✋ Chamada do ensaio';
+      const ch = document.createElement('button'); ch.className = 'btn gold'; ch.style.cssText = 'width:100%;margin-top:14px;'; comIcone(ch, 'mao', 'Chamada do ensaio');
       ch.onclick = () => { ov.remove(); abrirChamadaEnsaio(e); };
       m.appendChild(ch);
     }

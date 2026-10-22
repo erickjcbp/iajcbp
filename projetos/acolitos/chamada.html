@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Chamada — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
@@ -364,7 +364,7 @@ async function abrirChamada(celeb) {
   if(chExist){
     const btnLimpar=document.createElement('button');btnLimpar.className='btn';
     btnLimpar.style.cssText='margin-top:8px;background:transparent;border:1px solid var(--danger-text);color:var(--danger-text);';
-    btnLimpar.textContent='🧹 Limpar chamada (refazer)';
+    comIcone(btnLimpar, 'borracha', 'Limpar chamada (refazer)');
     btnLimpar.onclick=limparChamada;
     main.append(btnLimpar);
   }
@@ -374,7 +374,7 @@ async function abrirChamada(celeb) {
 // Seção de presenças avulsas: quem serviu sem estar escalado (+10 XP cada)
 async function renderAvulsos(main, celebId){
   const sec=document.createElement('div'); sec.style.cssText='margin-top:24px;border-top:1px solid var(--border);padding-top:16px;';
-  const h=document.createElement('div'); h.className='chamada-cat'; h.textContent='➕ Vieram sem estar escalados'; sec.appendChild(h);
+  const h=document.createElement('div'); h.className='chamada-cat'; comIcone(h, 'plus', 'Vieram sem estar escalados'); sec.appendChild(h);
   const hint=document.createElement('div'); hint.style.cssText='font-size:12px;color:var(--text-muted);margin:-4px 0 10px;'; hint.textContent='Adicione quem serviu hoje sem estar na escala. Cada um ganha +10 XP e entra no ranking Solícitos.'; sec.appendChild(hint);
   const lista=document.createElement('div'); lista.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;'; sec.appendChild(lista);
   const busca=document.createElement('input'); busca.className='form-input'; busca.placeholder='Buscar nome para adicionar…'; sec.appendChild(busca);
@@ -467,7 +467,7 @@ function mostrarResponsavel(info){
   }
   let quando='';
   if(info.realizada_em){ const d=new Date(info.realizada_em); quando=' em '+d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
-  b.textContent='🖊️ Chamada registrada por '+info.nome+quando;
+  comIcone(b, 'editar', 'Chamada registrada por '+info.nome+quando);
 }
 
 async function confirmarChamada(){

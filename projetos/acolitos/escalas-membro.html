@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Escalas — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
@@ -227,7 +227,7 @@ async function carregarMinhasMissas(body, ctx){
     const dt=document.createElement('div'); dt.className='esc-data'; dt.textContent=dataLabel(c.data)+' · '+c.horario;
     const sub=document.createElement('div'); sub.className='esc-sub'; sub.textContent=comLabel(c.comunidade)+' · '+(FUNCAO_LABEL[e.funcao]||e.funcao);
     const bTroca=document.createElement('button');
-    bTroca.textContent='⚠ Pedir troca';
+    comIcone(bTroca, 'alerta', 'Pedir troca');
     bTroca.style.cssText='margin-top:10px;width:100%;padding:9px;border-radius:8px;border:1px solid #7a2a34;background:linear-gradient(165deg,rgba(224,96,122,.16),var(--surface2));color:#ff9db0;font-family:var(--font-body);font-weight:700;font-size:12px;cursor:pointer;';
     bTroca.onclick=()=>abrirPedirTroca(e, ctx);
     card.append(dt,sub,bTroca); body.appendChild(card);

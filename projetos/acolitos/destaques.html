@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Destaques — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
@@ -109,7 +109,7 @@ async function renderTemporada(corpo) {
   const { data } = await sb.rpc('acolitos_ranking_temporada');
   corpo.textContent = '';
   if (!data || !data.temporada) { const e = document.createElement('span'); e.className = 'empty'; e.textContent = 'Nenhuma temporada rolando agora. 🙂'; corpo.appendChild(e); return; }
-  const h = document.createElement('div'); h.className = 'dest-head'; h.textContent = '🏆 ' + data.temporada.nome; corpo.appendChild(h);
+  const h = document.createElement('div'); h.className = 'dest-head'; comIcone(h, 'trophy', '' + data.temporada.nome); corpo.appendChild(h);
   const d = document.createElement('div'); d.className = 'dest-desc'; d.textContent = 'Ranking de XP da temporada, por liga. O campeão de cada liga vira Destaque!'; corpo.appendChild(d);
   const eu = data.eu_id;
   if (!(data.ligas||[]).length) { const e = document.createElement('span'); e.className = 'empty'; e.textContent = 'Ninguém pontuou ainda. Bora servir! 🕯️'; corpo.appendChild(e); return; }
@@ -124,13 +124,13 @@ async function renderCampeoes(corpo) {
   corpo.textContent = ''; const ld = document.createElement('div'); ld.className = 'dest-desc'; ld.textContent = 'Carregando...'; corpo.appendChild(ld);
   const { data } = await sb.rpc('acolitos_campeoes');
   corpo.textContent = '';
-  const h = document.createElement('div'); h.className = 'dest-head'; h.textContent = '🏅 Campeões'; corpo.appendChild(h);
+  const h = document.createElement('div'); h.className = 'dest-head'; comIcone(h, 'award', 'Campeões'); corpo.appendChild(h);
   const d = document.createElement('div'); d.className = 'dest-desc'; d.textContent = 'Os campeões de cada liga nas temporadas encerradas.'; corpo.appendChild(d);
   if (!data || !data.length) { const e = document.createElement('span'); e.className = 'empty'; e.textContent = 'Ainda não há campeões — a primeira temporada está rolando! 🏆'; corpo.appendChild(e); return; }
   acEstrelasLote(data.map(c => c.membro_id));
   const grupos = {}; data.forEach(c => { (grupos[c.temporada] = grupos[c.temporada] || []).push(c); });
   Object.keys(grupos).forEach(temp => {
-    const th = document.createElement('div'); th.style.cssText = 'font-family:var(--font-body);font-weight:700;font-size:12px;color:var(--gold);margin:16px 0 6px;'; th.textContent = '🏆 ' + temp; corpo.appendChild(th);
+    const th = document.createElement('div'); th.style.cssText = 'font-family:var(--font-body);font-weight:700;font-size:12px;color:var(--gold);margin:16px 0 6px;'; comIcone(th, 'trophy', '' + temp); corpo.appendChild(th);
     grupos[temp].forEach(c => corpo.appendChild(rankRow({ id:c.membro_id, nome:c.membro, foto_url:c.foto_url, nivel:c.nivel, casa_id:c.casa_id, subnivel:(LIGA_LABEL[c.liga]||c.liga) }, null, c.xp, 'XP', 1, '🏅')));
   });
 }
@@ -139,7 +139,7 @@ async function renderSolicitos(corpo) {
   corpo.textContent = ''; const ld = document.createElement('div'); ld.className = 'dest-desc'; ld.textContent = 'Carregando...'; corpo.appendChild(ld);
   const { data } = await sb.rpc('acolitos_solicitos');
   corpo.textContent = '';
-  const h = document.createElement('div'); h.className = 'dest-head'; h.textContent = '🙋 Solícitos'; corpo.appendChild(h);
+  const h = document.createElement('div'); h.className = 'dest-head'; comIcone(h, 'mao', 'Solícitos'); corpo.appendChild(h);
   const d = document.createElement('div'); d.className = 'dest-desc'; d.textContent = 'Quem mais serviu sem estar escalado — sempre prontos a ajudar. 🙏'; corpo.appendChild(d);
   if (!data || !data.length) { const e = document.createElement('span'); e.className = 'empty'; e.textContent = 'Ninguém serviu fora de escala ainda. Bora ser solícito! 🙌'; corpo.appendChild(e); return; }
   acEstrelasLote(data.map(m => m.membro_id));

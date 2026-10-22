@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Membros — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
@@ -106,8 +106,8 @@
       <button class="view-sw" id="vt-lista" onclick="setVista('lista')" title="Lista">☰</button>
     </div>
     <button class="btn-sm gold" onclick="abrirNovoMembro()">+ Novo</button>
-    <button class="btn-sm gray" id="btn-arq" onclick="toggleArquivados()" title="Ver arquivados">🗄</button>
-    <button class="btn-sm gray" onclick="abrirRelatorioMembros()" title="Relatório / backup">📄 Relatório</button>
+    <button class="btn-sm gray" id="btn-arq" onclick="toggleArquivados()" title="Ver arquivados"><span data-icone="arquivo"></span></button>
+    <button class="btn-sm gray" onclick="abrirRelatorioMembros()" title="Relatório / backup"><span data-icone="documento"></span>Relatório</button>
   </div>
 
   <div id="filtro-membros"></div>
@@ -402,12 +402,12 @@ function temFiltroRelatorioMembros(){const e=filtroMembros?.estado();return verA
 function abrirRelatorioMembros(){
   const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
   const md=document.createElement('div'); md.className='modal'; md.style.setProperty('--modal-max', '420px');
-  md.innerHTML='<div class="modal-title">📄 Relatório de Membros</div>'
+  md.innerHTML='<div class="modal-title">'+icone('documento')+'Relatório de Membros</div>'
     +'<p style="font-size:12px;color:var(--text-muted);margin:-4px 0 12px;">Com filtros ativos, PDF, planilha e CSV exportam os membros da lista filtrada. Sem filtros, a planilha inclui o cadastro completo.</p>'
     +'<div style="display:flex;flex-direction:column;gap:8px;">'
-    +'<button class="btn-sm gold" id="rm-pdf" style="width:100%;">🖨 Imprimir/PDF</button>'
-    +'<button class="btn-sm" id="rm-xlsx" style="width:100%;background:transparent;border:1px solid var(--gold-dim);color:var(--gold-light);">⬇️ Planilha do cadastro (Excel)</button>'
-    +'<button class="btn-sm" id="rm-csv" style="width:100%;background:transparent;border:1px solid var(--gold-dim);color:var(--gold-light);">⬇️ CSV (backup completo)</button>'
+    +'<button class="btn-sm gold" id="rm-pdf" style="width:100%;">'+icone('printer')+'Imprimir/PDF</button>'
+    +'<button class="btn-sm" id="rm-xlsx" style="width:100%;background:transparent;border:1px solid var(--gold-dim);color:var(--gold-light);">'+icone('baixar')+'Planilha do cadastro (Excel)</button>'
+    +'<button class="btn-sm" id="rm-csv" style="width:100%;background:transparent;border:1px solid var(--gold-dim);color:var(--gold-light);">'+icone('baixar')+'CSV (backup completo)</button>'
     +'<button class="btn-sm gray" id="rm-x" style="width:100%;">Fechar</button></div>';
   ov.appendChild(md); document.body.appendChild(ov);
   md.querySelector('#rm-pdf').onclick=()=>relatorioMembrosPDF();
@@ -519,7 +519,7 @@ function renderGrid() {
   grid.textContent = '';
   if (verArquivados) {
     const banner = document.createElement('div'); banner.style.cssText = 'grid-column:1/-1;font-size:12px;font-weight:700;color:var(--gold);background:rgba(232,185,74,.1);border:1px solid var(--gold-dim);border-radius:8px;padding:8px 12px;margin-bottom:4px;';
-    banner.textContent = '🗄 Vendo membros arquivados — abra um e use "Restaurar" para reativar.'; grid.appendChild(banner);
+    comIcone(banner, 'arquivo', 'Vendo membros arquivados — abra um e use "Restaurar" para reativar.'); grid.appendChild(banner);
   }
   const lista = membrosRelatorioVisiveis();
   const legendaDe = (m) => (filtroMembros ? filtroMembros.legenda(m) : '');
@@ -666,10 +666,10 @@ async function abrirFicha(membro) {
   // Botão visual para alterar o nível (rank) na jornada
   const curNivel = membro.nivel || nivelFromRole(membro.role);
   const rankBtn = document.createElement('button'); rankBtn.className = 'btn-sm gold nivel-btn'; rankBtn.style.marginTop = '12px';
-  rankBtn.textContent = '⬆  Alterar nível · ' + nivelInfo(curNivel).label;
+  comIcone(rankBtn, 'seta-cima', 'Alterar nível · ' + nivelInfo(curNivel).label);
   rankBtn.onclick = () => abrirSeletorNivel(membro, { onSalvo: (nv) => {
     const alvo = todos.find(t => t.id === membro.id); if (alvo) alvo.nivel = nv;
-    rankBtn.textContent = '⬆  Alterar nível · ' + nivelInfo(nv).label;
+    comIcone(rankBtn, 'seta-cima', 'Alterar nível · ' + nivelInfo(nv).label);
     renderGrid();
   } });
   hdr.appendChild(rankBtn);
@@ -884,10 +884,10 @@ async function renderTab(tab) {
     // Arquivar / restaurar
     const dz = document.createElement('div'); dz.style.cssText = 'margin-top:22px;padding-top:14px;border-top:1px solid var(--border);';
     if (m.status === 'afastado') {
-      const b = document.createElement('button'); b.className = 'btn-sm green'; b.textContent = '♻️ Restaurar membro'; b.onclick = () => restaurarMembro(m); dz.appendChild(b);
+      const b = document.createElement('button'); b.className = 'btn-sm green'; comIcone(b, 'refresh', 'Restaurar membro'); b.onclick = () => restaurarMembro(m); dz.appendChild(b);
       const note = document.createElement('div'); note.style.cssText = 'font-size:11px;color:var(--text-muted);margin-top:6px;'; note.textContent = 'Membro arquivado — não aparece nas listas ativas nem na escala.'; dz.appendChild(note);
     } else {
-      const b = document.createElement('button'); b.className = 'btn-sm wine'; b.textContent = '🗄 Arquivar membro'; b.onclick = () => arquivarMembro(m); dz.appendChild(b);
+      const b = document.createElement('button'); b.className = 'btn-sm wine'; comIcone(b, 'arquivo', 'Arquivar membro'); b.onclick = () => arquivarMembro(m); dz.appendChild(b);
       const note = document.createElement('div'); note.style.cssText = 'font-size:11px;color:var(--text-muted);margin-top:6px;'; note.textContent = 'Tira o membro das listas e da escala sem apagar cadastro/histórico. Reversível.'; dz.appendChild(note);
     }
     el.appendChild(dz);
@@ -985,7 +985,7 @@ async function renderTab(tab) {
       irmaos.forEach(ir => { const chip = document.createElement('span'); chip.className = 'irmao-chip'; chip.textContent = ir.apelido || ir.nome.split(' ')[0]; irmaosLista.appendChild(chip); });
     }
     renderIrmaos();
-    const vincBtn = document.createElement('button'); vincBtn.className = 'btn-sm gold'; vincBtn.style.marginTop = '4px'; vincBtn.textContent = '🔗 Vincular irmãos';
+    const vincBtn = document.createElement('button'); vincBtn.className = 'btn-sm gold'; vincBtn.style.marginTop = '4px'; comIcone(vincBtn, 'link', 'Vincular irmãos');
     vincBtn.onclick = () => abrirSeletorIrmaos(m, renderIrmaos);
     reveal.append(lblIr, irmaosLista, vincBtn);
     el.appendChild(reveal);

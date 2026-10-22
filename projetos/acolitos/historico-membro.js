@@ -47,7 +47,7 @@ async function abrirHistoricoMembro(m, opts = {}){
   const ov=document.createElement('div'); ov.className='modal-overlay open'; ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
   const md=document.createElement('div'); md.className='modal'; md.style.setProperty('--modal-max', '380px');
   const titulo=document.createElement('div'); titulo.className='modal-title';
-  titulo.textContent='📅 Últimas '+RODIZIO_SEMANAS_HISTORICO+' semanas — '+(m.apelido||m.nome);
+  comIcone(titulo, 'calendar', 'Últimas '+RODIZIO_SEMANAS_HISTORICO+' semanas — '+(m.apelido||m.nome));
   md.appendChild(titulo);
   const tempo=document.createElement('p'); tempo.className='historico-tempo'; tempo.style.cssText='font-size:13px;line-height:1.5;margin:8px 0;color:var(--text);';
   const duracao=tempoRegistradoPastoral(m.created_at);

@@ -419,18 +419,18 @@ function showMeuDesenvolvimento(membro) {
 function avisoEl(aviso, membro) {
   if (aviso && aviso.tipo === 'engajamento') {
     const wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:14px;padding:12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--gold);';
-    const t = document.createElement('div'); t.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; t.textContent = '🎯 Seu plano de evolução foi atualizado';
+    const t = document.createElement('div'); t.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; comIcone(t, 'alvo', 'Seu plano de evolução foi atualizado');
     wrap.append(t, buildEngajamentoEl(membro)); return wrap;
   }
   if (aviso && aviso.tipo === 'mensagem') {
     const wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:14px;padding:12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--gold);';
-    const t = document.createElement('div'); t.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; t.textContent = '💬 Mensagem da coordenação';
+    const t = document.createElement('div'); t.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:var(--gold);margin-bottom:8px;'; comIcone(t, 'message-circle', 'Mensagem da coordenação');
     const p = document.createElement('div'); p.style.cssText = 'font-size:14px;color:var(--text);line-height:1.6;'; p.textContent = aviso.texto || aviso.msg || '';
     wrap.append(t, p); return wrap;
   }
   if (aviso && aviso.tipo === 'quest_exclusiva') {
     const wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:14px;padding:12px;background:rgba(155,89,212,.1);border-radius:6px;border-left:3px solid #9b59d4;';
-    const t = document.createElement('div'); t.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:#cd9ef2;margin-bottom:6px;'; t.textContent = '✨ Quest Exclusiva';
+    const t = document.createElement('div'); t.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:13px;color:#cd9ef2;margin-bottom:6px;'; comIcone(t, 'sparkles', 'Quest Exclusiva');
     const p = document.createElement('div'); p.style.cssText = 'font-size:14px;color:var(--text);line-height:1.5;'; p.textContent = aviso.titulo || aviso.msg || '';
     wrap.append(t, p); return wrap;
   }
@@ -1008,7 +1008,7 @@ function _xpgStarShow(card, n) {
   const zone = document.createElement('div'); zone.className = 'xpg-starzone';
   const rays = document.createElement('div'); rays.className = 'xpg-srays';
   const ring = document.createElement('div'); ring.className = 'xpg-sring';
-  const star = document.createElement('div'); star.className = 'xpg-bigstar'; star.textContent = '⭐';
+  const star = document.createElement('div'); star.className = 'xpg-bigstar'; comIcone(star, 'star', '', 'Estrela');
   const lbl = document.createElement('div'); lbl.className = 'xpg-starlbl'; lbl.textContent = 'NOVA ESTRELA!' + (n > 1 ? ' (' + n + 'ª)' : '');
   zone.append(rays, ring, star, lbl);
   // faíscas radiais
@@ -1528,7 +1528,7 @@ async function renderBotaoNotificacoes(container) {
   btn.className = 'btn-sm gray'; btn.style.width = '100%'; btn.style.marginTop = '8px';
   let ativo = false;
   try { const reg = await navigator.serviceWorker.ready; ativo = !!(await reg.pushManager.getSubscription()); } catch (_) {}
-  if (notifStatus() === 'nao-suportado') { btn.disabled = true; btn.textContent = '🔔 Notificações não suportadas'; }
+  if (notifStatus() === 'nao-suportado') { btn.disabled = true; comIcone(btn, 'bell', 'Notificações não suportadas'); }
   else pintarBotaoNotif(btn, ativo);
   container.appendChild(btn);
 }
@@ -1545,7 +1545,7 @@ if ('serviceWorker' in navigator) {
 async function avisarTodos() {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   const md = document.createElement('div'); md.className = 'modal'; md.style.maxWidth = '460px';
-  md.innerHTML = '<div class="modal-title">📣 Enviar aviso</div>'
+  md.innerHTML = '<div class="modal-title">'+icone('megafone')+'Enviar aviso</div>'
     + '<p style="font-size:12px;color:var(--text-muted);margin:-4px 0 10px;">Escolha quem recebe. Todos veem o aviso dentro do app, no sininho e ao abrir. Quem ativou notificação recebe também no celular.</p>'
     + '<label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;margin-bottom:8px;cursor:pointer;"><input type="checkbox" id="av-todos" checked> Todos os membros</label>'
     + '<div id="av-sel" style="display:none;">'
@@ -1958,7 +1958,7 @@ function mostrarParedeSenha(conta) {
 
   const ic = document.createElement('div');
   ic.style.cssText = 'font-size:46px;line-height:1;margin-bottom:14px;';
-  ic.textContent = '🔑';
+  comIcone(ic, 'chave', '', 'Acessos');
 
   const tt = document.createElement('div');
   tt.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:21px;color:var(--gold-light,#ffd97a);margin-bottom:10px;';
@@ -2037,7 +2037,7 @@ function mostrarParedeNotificacoes(qual, userId) {
 
   const sino = document.createElement('div');
   sino.style.cssText = 'font-size:46px;line-height:1;margin-bottom:14px;';
-  sino.textContent = '🔔';
+  comIcone(sino, 'bell', '', 'Notificações');
 
   const tt = document.createElement('div');
   tt.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:21px;color:var(--gold-light,#ffd97a);margin-bottom:10px;';
@@ -2694,6 +2694,36 @@ function _svgIcon(name) {
   return `<svg class="ico" viewBox="0 0 24 24"><path d="${d[name] || ''}"/></svg>`;
 }
 
+// ── icone('nome', 'Rótulo') — o ícone do app escrito no código da tela (21/10/2026) ─────────
+// Substitui o emoji estrutural NA FONTE (botão, menu, título de seção, ícone de card). Sem
+// rótulo, o desenho é decorativo (aria-hidden) porque o texto ao lado já diz o que é; com
+// rótulo, vira imagem com nome (role=img + aria-label + <title>), para ícone sozinho.
+// O vigia EMOJI_ICONE no fim deste arquivo continua como rede de segurança.
+function _icoAttr(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function icone(nome, rotulo) {
+  const svg = _svgIcon(nome).replace('class="ico"', 'class="ico ico-emj"');
+  if (!rotulo) return svg.replace('<svg ', '<svg aria-hidden="true" focusable="false" ');
+  const r = _icoAttr(rotulo);
+  return svg.replace('ico-emj"', 'ico-emj ico-so"').replace('<svg ', `<svg role="img" aria-label="${r}" `).replace('><path', `><title>${r}</title><path`);
+}
+// comIcone(el, 'nome', 'Texto') → ícone + texto (o texto entra como nó de texto: seguro).
+// comIcone(el, 'nome', '', 'Rótulo') → botão só de ícone, com aria-label e title.
+function comIcone(el, nome, texto, rotulo) {
+  if (!el) return el;
+  el.innerHTML = icone(nome, texto ? null : (rotulo || null));
+  if (texto) el.append(document.createTextNode(String(texto).replace(/^\s*/, '')));
+  else if (rotulo && el.matches && el.matches('button,a,[role="button"]')) {
+    el.setAttribute('aria-label', rotulo); if (!el.title) el.title = rotulo;
+  }
+  return el;
+}
+// No HTML fixo: <span data-icone="printer"></span> (com data-rotulo="..." se estiver sozinho).
+function _hidratarIcones(raiz) {
+  const lista = raiz && raiz.querySelectorAll ? raiz.querySelectorAll('[data-icone]:empty') : [];
+  for (const s of lista) s.innerHTML = icone(s.dataset.icone, s.dataset.rotulo || null);
+}
+
+
 // ── DE QUE CASA É ESTA PESSOA ─────────────────────────────────
 // O avatar precisa do SLUG da casa, mas as telas carregam `casa_id`. Em vez de pendurar um
 // embed em cada consulta (nove telas, dezoito avatares), o app lê as casas UMA vez — são
@@ -3154,11 +3184,11 @@ function abrirSeletorNivel(membro, opts) {
     cell.append(num, emb);
     const pr = pipRowEl(n.slug, 32); if (pr) cell.appendChild(pr); // pips animados abaixo do patch
     cell.appendChild(lbl);
-    cell.onclick = () => { escolha = n.slug; Object.values(cells).forEach(c => c.classList.remove('sel')); cell.classList.add('sel'); titEl.textContent = '🏆 ' + n.titulo; };
+    cell.onclick = () => { escolha = n.slug; Object.values(cells).forEach(c => c.classList.remove('sel')); cell.classList.add('sel'); comIcone(titEl, 'trophy', '' + n.titulo); };
     cells[n.slug] = cell; grid.appendChild(cell);
   });
   modal.appendChild(grid);
-  titEl.textContent = '🏆 ' + nivelInfo(escolha).titulo; modal.appendChild(titEl);
+  comIcone(titEl, 'trophy', '' + nivelInfo(escolha).titulo); modal.appendChild(titEl);
   const msg = document.createElement('div'); msg.className = 'msg'; modal.appendChild(msg);
 
   const acts = document.createElement('div'); acts.className = 'modal-actions';
@@ -3912,11 +3942,12 @@ const EMOJI_PONTO = { '🟢':['#2f9e57','verde'], '🔵':['#3a7bd5','azul'], '�
   }
   window.iconizarEmojis = varrer;
   function ligar() {
+    _hidratarIcones(document.body);
     varrer(document.body);
     new MutationObserver((lista) => {
       for (const r of lista) {
         if (r.type === 'characterData') trocar(r.target);
-        else r.addedNodes.forEach(varrer);
+        else r.addedNodes.forEach(n => { if (n.nodeType === 1) _hidratarIcones(n.matches('[data-icone]:empty') ? n.parentNode : n); varrer(n); });
       }
     }).observe(document.body, { childList: true, subtree: true, characterData: true });
   }

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Minha Jornada — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
@@ -120,14 +120,14 @@ function pedirHab(f) {
   const d = document.createElement('p'); d.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;'; d.textContent = 'Reivindique que já sabe servir nesta função. A coordenação vai avaliar pela sua explicação e, se aprovar, você fica Apto.'; md.appendChild(d);
   if (revHabMap[f.funcao] != null) {
     const rb = document.createElement('div'); rb.style.cssText = 'background:rgba(209,16,32,.12);border:1px solid var(--danger);border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--text);line-height:1.4;';
-    const bb = document.createElement('b'); bb.style.color = 'var(--danger-text)'; bb.textContent = '📝 A coordenação pediu: ';
+    const bb = document.createElement('b'); bb.style.color = 'var(--danger-text)'; comIcone(bb, 'editar', 'A coordenação pediu: ');
     rb.append(bb, document.createTextNode(revHabMap[f.funcao] || 'explique melhor')); md.appendChild(rb);
   }
   const l = document.createElement('div'); l.style.cssText = 'font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 5px;'; l.textContent = 'Explique como se serve nessa função *'; md.appendChild(l);
   const ta = document.createElement('textarea'); ta.className = 'form-input'; ta.rows = 4;
   ta.placeholder = 'Com suas palavras: o que você faz nessa função, em que momentos da missa, e como — pra mostrar que sabe servir bem.';
   md.appendChild(ta);
-  const aviso = document.createElement('div'); aviso.style.cssText = 'font-size:11px;color:var(--wine-bright,#d45050);margin-top:5px;font-style:italic;'; aviso.textContent = '😏 Escreve com suas palavras! Se colar resposta de ChatGPT aqui, o tio Erick vai saber 👀'; md.appendChild(aviso);
+  const aviso = document.createElement('div'); aviso.style.cssText = 'font-size:11px;color:var(--wine-bright,#d45050);margin-top:5px;font-style:italic;'; aviso.textContent = ('😏 Escreve com suas palavras! Se colar resposta de ChatGPT aqui, o tio Erick vai saber 👀'); md.appendChild(aviso);
   const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:16px;';
   const cancelar = document.createElement('button'); cancelar.className = 'btn'; cancelar.style.flex = '1'; cancelar.textContent = 'Cancelar'; cancelar.onclick = () => ov.remove();
   const enviar = document.createElement('button'); enviar.className = 'btn gold'; enviar.style.flex = '1'; enviar.textContent = 'Enviar';
@@ -148,7 +148,7 @@ function questRow(q) {
   const t = document.createElement('div'); t.className = 'mx-q-tit'; t.textContent = q.titulo + (q.obrigatoria === false ? ' · opcional' : '');
   body.appendChild(t);
   if (q.descricao) { const d = document.createElement('div'); d.className = 'mx-q-sub'; d.textContent = q.descricao; body.appendChild(d); }
-  if (q.competencia) { const c = document.createElement('div'); c.className = 'mx-q-sub'; c.style.cssText = 'color:var(--gold);font-size:11px;margin-top:2px;font-weight:700;'; c.textContent = '💪 Trabalha: ' + q.competencia; body.appendChild(c); }
+  if (q.competencia) { const c = document.createElement('div'); c.className = 'mx-q-sub'; c.style.cssText = 'color:var(--gold);font-size:11px;margin-top:2px;font-weight:700;'; comIcone(c, 'musculo', 'Trabalha: ' + q.competencia); body.appendChild(c); }
   // progresso cumulativo (missas/ensaios/funções distintas) → barra X/N
   if (q.alvo != null && q.atual != null) {
     const done = q.atual >= q.alvo;
@@ -163,7 +163,7 @@ function questRow(q) {
   // automáticas de verdade (enchem pela chamada/presença) → NÃO têm botão.
   const claimable = ((q.validacao === 'reivindicada' || q.validacao === 'avaliada' || (q.validacao === 'automatica' && q.fonte === 'habilitacao')) && (q.status === 'pendente' || q.status === 'revisao'));
   if (q.status === 'em_analise' || q.validacao === 'avaliada') { const h = document.createElement('div'); h.className = 'mx-q-sub'; h.style.cssText = 'color:var(--gold-dim);font-size:11px;margin-top:2px;'; h.textContent = subDe(q); body.appendChild(h); }
-  if (q.status === 'revisao' && revisoesMap[q.id] != null) { const rv = document.createElement('div'); rv.className = 'mx-q-sub'; rv.style.cssText = 'color:var(--danger-text);font-size:11px;margin-top:2px;font-weight:700;'; rv.textContent = '📝 Revisão: ' + (revisoesMap[q.id] || 'reenvie sua resposta'); body.appendChild(rv); }
+  if (q.status === 'revisao' && revisoesMap[q.id] != null) { const rv = document.createElement('div'); rv.className = 'mx-q-sub'; rv.style.cssText = 'color:var(--danger-text);font-size:11px;margin-top:2px;font-weight:700;'; comIcone(rv, 'editar', 'Revisão: ' + (revisoesMap[q.id] || 'reenvie sua resposta')); body.appendChild(rv); }
   row.appendChild(body);
   const xp = document.createElement('span'); xp.className = 'mx-q-xp'; xp.textContent = '+' + q.xp + ' XP'; row.appendChild(xp);
   if (claimable) {
@@ -180,7 +180,7 @@ function capCard(c) {
   hd.textContent = 'Capítulo ' + c.capitulo + (c.completo ? ' ✓ concluído' : c.desbloqueado ? '' : ' 🔒 bloqueado');
   card.appendChild(hd);
   if (!c.desbloqueado) {
-    const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = '🔒 Conclua o capítulo anterior pra desbloquear.'; card.appendChild(e);
+    const e = document.createElement('div'); e.className = 'mx-empty'; comIcone(e, 'lock', 'Conclua o capítulo anterior pra desbloquear.'); card.appendChild(e);
   } else {
     (c.missoes || []).forEach(q => card.appendChild(questRow(q)));
   }
@@ -194,10 +194,10 @@ async function renderBoard(main) {
   try { const { data: rh } = await sb.rpc('acolitos_hab_revisoes_minhas', { p_membro: ctx.membro.id }); revHabMap = rh || {}; } catch (e) { revHabMap = {}; }
 
   // 🎖️ Minhas Conquistas (topo)
-  const cqBtn = document.createElement('button'); cqBtn.className = 'btn-sm gold'; cqBtn.style.cssText = 'width:100%;margin:0 0 12px;'; cqBtn.textContent = '🎖️ Minhas Conquistas';
+  const cqBtn = document.createElement('button'); cqBtn.className = 'btn-sm gold'; cqBtn.style.cssText = 'width:100%;margin:0 0 12px;'; comIcone(cqBtn, 'award', 'Minhas Conquistas');
   cqBtn.onclick = () => { window.location.href = 'conquistas.html'; }; main.appendChild(cqBtn);
 
-  if (data.elegivel) { const el = document.createElement('div'); el.className = 'mx-elig'; el.textContent = '🎉 Pronto pra subir de nível! Aguardando a coordenação confirmar.'; main.appendChild(el); }
+  if (data.elegivel) { const el = document.createElement('div'); el.className = 'mx-elig'; comIcone(el, 'festa', 'Pronto pra subir de nível! Aguardando a coordenação confirmar.'); main.appendChild(el); }
 
   // Card "Sua jornada"
   const caps = data.capitulos || [];
@@ -227,7 +227,7 @@ async function renderBoard(main) {
     const cnt = document.createElement('div'); cnt.className = 'mx-q-sub'; cnt.style.marginTop = '4px'; cnt.textContent = capsOk + ' de ' + caps.length + ' capítulos concluídos';
     info.append(nm, xpl, estl, bar, cnt); prox.appendChild(info); card.appendChild(prox);
   } else {
-    const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = '🏆 Você está no topo da jornada com ' + data.xp_total + ' XP!'; card.appendChild(e);
+    const e = document.createElement('div'); e.className = 'mx-empty'; comIcone(e, 'trophy', 'Você está no topo da jornada com ' + data.xp_total + ' XP!'); card.appendChild(e);
   }
   main.appendChild(card);
 
@@ -236,7 +236,7 @@ async function renderBoard(main) {
     const { data: ex } = await sb.rpc('acolitos_quests_exclusivas', { p_membro: ctx.membro.id });
     if (ex && ex.length) {
       const ec = document.createElement('div'); ec.className = 'mx-card'; ec.style.cssText = 'border-color:#9b59d4;background:linear-gradient(165deg,rgba(155,89,212,.18),var(--surface));';
-      const eh = document.createElement('div'); eh.className = 'mx-hd'; eh.style.color = '#cd9ef2'; eh.textContent = '✨ Quest' + (ex.length > 1 ? 's' : '') + ' Exclusiva' + (ex.length > 1 ? 's' : ''); ec.appendChild(eh);
+      const eh = document.createElement('div'); eh.className = 'mx-hd'; eh.style.color = '#cd9ef2'; comIcone(eh, 'sparkles', 'Quest' + (ex.length > 1 ? 's' : '') + ' Exclusiva' + (ex.length > 1 ? 's' : '')); ec.appendChild(eh);
       ex.forEach(q => ec.appendChild(questRow(q)));
       main.appendChild(ec);
     }
@@ -245,7 +245,7 @@ async function renderBoard(main) {
     const { data: ws } = await sb.rpc('acolitos_missao_semana', { p_membro: ctx.membro.id, p_niveis: NIVEIS_SLUGS() });
     if (ws && ws.missao) {
       const wc = document.createElement('div'); wc.className = 'mx-card'; wc.style.cssText = 'border-color:var(--gold);background:linear-gradient(165deg,rgba(232,185,74,.13),var(--surface));';
-      const wh = document.createElement('div'); wh.className = 'mx-hd'; wh.style.color = 'var(--gold-light)'; wh.textContent = '⭐ Missão da Semana' + (ws.tema ? ' · ' + ws.tema : ''); wc.appendChild(wh);
+      const wh = document.createElement('div'); wh.className = 'mx-hd'; wh.style.color = 'var(--gold-light)'; comIcone(wh, 'star', 'Missão da Semana' + (ws.tema ? ' · ' + ws.tema : '')); wc.appendChild(wh);
       wc.appendChild(questRow(ws.missao));
       main.appendChild(wc);
     }
@@ -258,18 +258,18 @@ async function renderBoard(main) {
       const { data: meus } = await sb.rpc('acolitos_hab_pedidos_meus', { p_membro: ctx.membro.id });
       const pendSet = new Set(meus || []);
       const pc = document.createElement('div'); pc.className = 'mx-card'; pc.style.borderColor = 'var(--danger)';
-      const ph = document.createElement('div'); ph.className = 'mx-hd'; ph.style.color = 'var(--danger-text)'; ph.textContent = '🔒 Funções pendentes do seu nível'; pc.appendChild(ph);
+      const ph = document.createElement('div'); ph.className = 'mx-hd'; ph.style.color = 'var(--danger-text)'; comIcone(ph, 'lock', 'Funções pendentes do seu nível'); pc.appendChild(ph);
       const ps = document.createElement('div'); ps.className = 'mx-q-sub'; ps.style.marginBottom = '6px'; ps.textContent = 'Você precisa dominar estas funções (ficar Apto) antes de subir de nível. Treine nas missas e ensaios — ou marque "Já faço" pra coordenação avaliar.'; pc.appendChild(ps);
       pend.forEach(f => {
         const r = document.createElement('div'); r.className = 'mx-q';
-        const ic = document.createElement('span'); ic.style.cssText = 'font-size:15px;flex:none;'; ic.textContent = '⚠️'; r.appendChild(ic);
+        const ic = document.createElement('span'); ic.style.cssText = 'font-size:15px;flex:none;'; comIcone(ic, 'alerta', '', 'Atenção'); r.appendChild(ic);
         const bd = document.createElement('div'); bd.className = 'mx-q-body';
         const t = document.createElement('div'); t.className = 'mx-q-tit'; t.textContent = 'Ficar Apto: ' + f.label; bd.appendChild(t);
         r.appendChild(bd);
         if (pendSet.has(f.funcao)) {
-          const tag = document.createElement('span'); tag.className = 'mx-q-sub'; tag.style.cssText = 'color:var(--gold-dim);font-size:11px;font-weight:700;flex:none;'; tag.textContent = '⏳ em análise'; r.appendChild(tag);
+          const tag = document.createElement('span'); tag.className = 'mx-q-sub'; tag.style.cssText = 'color:var(--gold-dim);font-size:11px;font-weight:700;flex:none;'; comIcone(tag, 'ampulheta', 'em análise'); r.appendChild(tag);
         } else {
-          if (revHabMap[f.funcao] != null) { const rv = document.createElement('div'); rv.className = 'mx-q-sub'; rv.style.cssText = 'color:var(--danger-text);font-size:11px;margin-top:2px;font-weight:700;'; rv.textContent = '📝 Revisão: ' + (revHabMap[f.funcao] || 'reenvie'); bd.appendChild(rv); }
+          if (revHabMap[f.funcao] != null) { const rv = document.createElement('div'); rv.className = 'mx-q-sub'; rv.style.cssText = 'color:var(--danger-text);font-size:11px;margin-top:2px;font-weight:700;'; comIcone(rv, 'editar', 'Revisão: ' + (revHabMap[f.funcao] || 'reenvie')); bd.appendChild(rv); }
           const b = document.createElement('button'); b.className = 'mx-mini go'; b.textContent = revHabMap[f.funcao] != null ? 'Reenviar' : 'Já faço';
           b.onclick = () => pedirHab(f); r.appendChild(b);
         }
@@ -312,7 +312,7 @@ async function abrirClaimModal(q) {
   if (q.descricao) { const d = document.createElement('p'); d.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;'; d.textContent = q.descricao; md.appendChild(d); }
   if (q.status === 'revisao' && revisoesMap[q.id] != null) {
     const rb = document.createElement('div'); rb.style.cssText = 'background:rgba(209,16,32,.12);border:1px solid var(--danger);border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--text);line-height:1.4;';
-    const bb = document.createElement('b'); bb.style.color = 'var(--danger-text)'; bb.textContent = '📝 A coordenação pediu: ';
+    const bb = document.createElement('b'); bb.style.color = 'var(--danger-text)'; comIcone(bb, 'editar', 'A coordenação pediu: ');
     rb.append(bb, document.createTextNode(revisoesMap[q.id] || 'reenvie sua resposta corrigida')); md.appendChild(rb);
   }
   const lab = (txt) => { const l = document.createElement('div'); l.style.cssText = 'font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 5px;'; l.textContent = txt; md.appendChild(l); };
@@ -321,7 +321,7 @@ async function abrirClaimModal(q) {
   const ta = document.createElement('textarea'); ta.className = 'form-input'; ta.rows = 3;
   ta.placeholder = aptidao ? 'Com suas palavras: o que você faz nessa função, em que momentos da missa, e como — pra mostrar que sabe servir.' : 'Descreva com suas palavras como você cumpriu (obrigatório)';
   md.appendChild(ta);
-  const aviso = document.createElement('div'); aviso.style.cssText = 'font-size:11px;color:var(--wine-bright,#d45050);margin-top:5px;font-style:italic;'; aviso.textContent = '😏 Escreve com suas palavras! Se colar resposta de ChatGPT aqui, o tio Erick vai saber 👀'; md.appendChild(aviso);
+  const aviso = document.createElement('div'); aviso.style.cssText = 'font-size:11px;color:var(--wine-bright,#d45050);margin-top:5px;font-style:italic;'; aviso.textContent = ('😏 Escreve com suas palavras! Se colar resposta de ChatGPT aqui, o tio Erick vai saber 👀'); md.appendChild(aviso);
   // marcar participantes
   lab('Envolveu alguém? marque (ganham XP)');
   const chips = document.createElement('div'); chips.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;'; md.appendChild(chips);
@@ -355,7 +355,7 @@ async function abrirClaimModal(q) {
 
 async function renderCoord(main) {
   const head = document.createElement('h2'); head.style.cssText = 'font-family:var(--font-title);font-size:14px;color:var(--text);letter-spacing:1px;margin:22px 0 12px;';
-  head.textContent = '⚙️ Coordenação'; main.appendChild(head);
+  comIcone(head, 'settings', 'Coordenação'); main.appendChild(head);
 
   // Fila de aprovação
   const { data: fila } = await sb.rpc('acolitos_missoes_fila');
@@ -368,7 +368,7 @@ async function renderCoord(main) {
     const xp = document.createElement('span'); xp.className = 'mx-q-xp'; xp.textContent = '+' + item.xp + ' XP';
     top.append(lbl, xp); it.appendChild(top);
     if (item.evidencia) { const ev = document.createElement('div'); ev.className = 'mx-q-sub'; ev.textContent = '“' + item.evidencia + '”'; it.appendChild(ev); }
-    if (item.envolvidos) { const en = document.createElement('div'); en.className = 'mx-q-sub'; en.style.color = 'var(--gold-light)'; en.textContent = '👥 Com: ' + item.envolvidos + ' (ganham XP ao aprovar)'; it.appendChild(en); }
+    if (item.envolvidos) { const en = document.createElement('div'); en.className = 'mx-q-sub'; en.style.color = 'var(--gold-light)'; comIcone(en, 'users', 'Com: ' + item.envolvidos + ' (ganham XP ao aprovar)'); it.appendChild(en); }
     const acts = document.createElement('div'); acts.className = 'mx-fila-acts';
     const ok = document.createElement('button'); ok.className = 'mx-mini ok'; ok.textContent = '✓ Aprovar'; ok.onclick = () => decidir(item.missao_id, item.membro_id, 'aprovar');
     const no = document.createElement('button'); no.className = 'mx-mini no'; no.textContent = '✕ Recusar'; no.onclick = () => decidir(item.missao_id, item.membro_id, 'recusar');
@@ -385,7 +385,7 @@ async function renderCoord(main) {
     const it = document.createElement('div'); it.className = 'mx-fila-item';
     const top = document.createElement('div'); top.className = 'mx-fila-top';
     const lbl = document.createElement('div'); lbl.style.fontSize = '13px'; lbl.innerHTML = '<b>' + escHtml(p.membro) + '</b> → ' + escHtml(nivelInfo(p.proximo).label);
-    const go = document.createElement('button'); go.className = 'mx-mini go'; go.textContent = '⬆ Promover'; go.onclick = () => promover(p.membro_id, p.proximo, p.membro);
+    const go = document.createElement('button'); go.className = 'mx-mini go'; comIcone(go, 'seta-cima', 'Promover'); go.onclick = () => promover(p.membro_id, p.proximo, p.membro);
     top.append(lbl, go); it.appendChild(top); pc.appendChild(it);
   });
   else { const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = 'Ninguém elegível no momento.'; pc.appendChild(e); }

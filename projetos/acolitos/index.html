@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Acólitos e Coroinhas — JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
@@ -278,7 +278,7 @@ async function renderStatusCrm(ctx) {
     if (crm) etapa = crm.etapa;
   }
   const card = document.createElement('div'); card.className = 'status-card';
-  const icon = document.createElement('div'); icon.className = 'status-icon'; icon.textContent = '⛪';
+  const icon = document.createElement('div'); icon.className = 'status-icon'; comIcone(icon, 'igreja', '', 'Igreja');
   const title = document.createElement('div'); title.className = 'status-title'; title.textContent = 'Sua Integração na Pastoral';
   const sub = document.createElement('div'); sub.className = 'status-sub'; sub.textContent = CRM_DESC[etapa];
   card.append(icon, title, sub); main.appendChild(card);
@@ -361,7 +361,7 @@ async function shareLevelUp(nivel, nome, btn) {
     if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share(data); }
     else { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'conquista.png'; a.click(); URL.revokeObjectURL(url); }
   } catch (e) { /* usuário cancelou */ }
-  if (btn) { btn.disabled = false; btn.textContent = '📲 Compartilhar'; }
+  if (btn) { btn.disabled = false; comIcone(btn, 'celular', 'Compartilhar'); }
 }
 
 function showLevelUp(nivel, nome, done) {
@@ -391,7 +391,7 @@ function showLevelUp(nivel, nome, done) {
   const txt = document.createElement('div'); txt.className = 'levelup-text'; txt.textContent = 'Você avançou na sua jornada';
   const rank = document.createElement('div'); rank.className = 'levelup-rank'; rank.textContent = info.label;
   const tit = document.createElement('div'); tit.className = 'levelup-titulo'; tit.textContent = info.titulo ? '🏆 ' + info.titulo : '';
-  const share = document.createElement('button'); share.className = 'levelup-btn share'; share.textContent = '📲 Compartilhar';
+  const share = document.createElement('button'); share.className = 'levelup-btn share'; comIcone(share, 'celular', 'Compartilhar');
   share.onclick = () => shareLevelUp(nivel, nome || '', share);
   const btn = document.createElement('button'); btn.className = 'levelup-btn ghost'; btn.textContent = 'Continuar';
   btn.onclick = () => { ov.classList.add('closing'); setTimeout(() => { ov.remove(); if (typeof done === 'function') done(); }, 300); };
@@ -569,7 +569,7 @@ function showJornada(nivelAtual) {
     const det = document.createElement('div'); det.className = 'jor-det' + (status === 'atual' ? ' open' : '');
     const intro = document.createElement('p'); intro.className = 'jor-intro'; intro.textContent = n.intro;
     det.appendChild(intro);
-    if (n.titulo) { const tt2 = document.createElement('div'); tt2.className = 'jor-titulo'; tt2.textContent = '🏆 Título: ' + n.titulo; det.appendChild(tt2); }
+    if (n.titulo) { const tt2 = document.createElement('div'); tt2.className = 'jor-titulo'; comIcone(tt2, 'trophy', 'Título: ' + n.titulo); det.appendChild(tt2); }
     [['Missão', n.missao], ['Desafio', n.desafio], [i === NIVEIS.length - 1 ? 'Conquista final' : 'Próximo objetivo', n.proximo]].forEach(([k, v]) => {
       if (!v) return;
       const d = document.createElement('div'); d.className = 'jor-kv';
@@ -624,7 +624,7 @@ async function renderDashboardMembro(ctx) {
         const av = document.createElement('a'); av.href = 'escalas-membro.html';
         av.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;text-decoration:none;background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2));border:1px solid var(--gold-dim);border-radius:10px;padding:12px 14px;margin-bottom:16px;';
         const tx = document.createElement('div'); tx.style.cssText='color:var(--gold-light);font-weight:700;font-size:13px;';
-        tx.textContent = '⚡ Você tem ' + nConv + (nConv>1?' convites de troca pra responder':' convite de troca pra responder');
+        comIcone(tx, 'raio', 'Você tem ' + nConv + (nConv>1?' convites de troca pra responder':' convite de troca pra responder'));
         const go = document.createElement('span'); go.style.cssText='color:var(--gold);font-size:12px;white-space:nowrap;'; go.textContent='Ver na escala →';
         av.append(tx, go); main.appendChild(av);
       }
@@ -818,7 +818,9 @@ function renderGraficoNiveis(main, membros, pm) {
     const cnt=document.createElement('div'); cnt.className='nivel-cnt'; cnt.textContent=cont[n.slug];
     const lbl=document.createElement('div'); lbl.className='nivel-lbl'; lbl.textContent=n.label;
     cell.append(emb);
-    const pr=pipRowEl(n.slug, 30); if(pr) cell.appendChild(pr); // pips animados abaixo do patch
+    // Sem pips, uma fileira invisível do mesmo tamanho: contagem e nome ficam na mesma linha em todas as células.
+    let pr=pipRowEl(n.slug, 30); if(!pr){ pr=pipRowEl(n.slug, 30, {pips:1}); if(pr){ pr.style.visibility='hidden'; pr.setAttribute('aria-hidden','true'); } }
+    if(pr) cell.appendChild(pr); // pips animados abaixo do patch
     cell.append(cnt, lbl);
     if (cont[n.slug]) { cell.style.cursor='pointer'; cell.title='Ver membros'; cell.onclick=()=>abrirNivelMembros(n, porNivel[n.slug]); }
     grid.appendChild(cell);

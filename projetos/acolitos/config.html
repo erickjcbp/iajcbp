@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Configuração — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700;800&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="stylesheet" href="tarcisio-painel.css">
   <link rel="manifest" href="manifest.json">
@@ -1756,7 +1756,7 @@ function renderNiveis(b){
       const rot=()=>{ tg.textContent=(det.hidden?'Textos do nível':'Fechar textos'); tg.setAttribute('aria-expanded', det.hidden?'false':'true'); };
       tg.onclick=()=>{ det.hidden=!det.hidden; if(det.hidden) abertos.delete(w.slug); else abertos.add(w.slug); rot(); };
       rot(); card.appendChild(tg); card.appendChild(det);
-      const gp=document.createElement('button'); gp.className='btn-sm'; gp.style.cssText='margin-top:6px;background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2));border:1px solid var(--gold-dim);color:var(--gold-light);'; gp.textContent='🎨 Gerar patch';
+      const gp=document.createElement('button'); gp.className='btn-sm'; gp.style.cssText='margin-top:6px;background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2));border:1px solid var(--gold-dim);color:var(--gold-light);'; comIcone(gp, 'paleta', 'Gerar patch');
       gp.onclick=()=>abrirGeradorPatch(w.slug, w.patch || _specPadraoNivel(w.slug), (spec)=>{ w.patch=spec; pinta(); }); det.appendChild(gp);
       const baseRow=document.createElement('div'); baseRow.className='cfg-fld';
       const bl=document.createElement('label'); bl.textContent='Categoria (base)';

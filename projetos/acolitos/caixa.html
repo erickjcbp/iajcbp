@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Caixa — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="stylesheet" href="tarcisio-painel.css">
   <link rel="manifest" href="manifest.json">
@@ -226,7 +226,7 @@ async function renderCaixaSolicitacoes(container){
     if (erroNovos) throw erroNovos; // o PostgREST não lança — sem isso um erro vira "sem novos cadastros"
     if ((novos||[]).length){
       const h=document.createElement('div'); h.style.cssText='font-family:var(--font-title);font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
-      h.textContent='🆕 Novos cadastros ('+novos.length+')'; container.appendChild(h);
+      comIcone(h, 'sparkles', 'Novos cadastros ('+novos.length+')'); container.appendChild(h);
       novos.forEach(n=>{
         const c=document.createElement('div'); c.style.cssText='background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;';
         const t=document.createElement('div'); t.style.fontWeight='700'; t.textContent=(n.acolitos_membros && n.acolitos_membros.nome) || '(sem nome)';
@@ -247,7 +247,7 @@ async function renderCaixaSolicitacoes(container){
 async function renderCaixaCobrir(container, cobrir){
   if(!cobrir.length) return 0;
   const h=document.createElement('div'); h.style.cssText='font-family:var(--font-title);font-weight:800;font-size:13px;color:var(--gold-light);margin:16px 0 8px;';
-  h.textContent='🛟 Cobrir / auto-troca ('+cobrir.length+')'; container.appendChild(h);
+  comIcone(h, 'boia', 'Cobrir / auto-troca ('+cobrir.length+')'); container.appendChild(h);
   for (const it of cobrir){
     const c=document.createElement('div'); c.style.cssText='background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;padding:12px;margin-bottom:8px;';
     const t=document.createElement('div'); t.style.fontWeight='700'; t.textContent='Vaga de '+(it.de_nome||'?')+' — '+(FUNCAO_LABEL[it.funcao]||it.funcao);
@@ -307,7 +307,7 @@ async function renderPendentesPublicas(container){
   const restantes = ()=>body.querySelectorAll('div[data-pend]').length;
   const atualiza = ()=>{
     const n = restantes();
-    ht.textContent = '📋 Avisos recebidos (' + n + ')';
+    comIcone(ht, 'tarefas', 'Avisos recebidos (' + n + ')');
     bAll.textContent = '✓ Aprovar todas (' + n + ')';
     if(!n) card.remove();
   };

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Tesouraria — Acólitos JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
@@ -173,7 +173,7 @@ function render() {
       + (ar ? ' · ' + (TIPO_AREA[ar.tipo] || 'Área') + ': ' + ar.nome : (l.retiro_area_id ? ' · vinculado a um retiro' : ''));
     info.append(desc, meta);
     const val = document.createElement('div'); val.className = 'lanc-val ' + l.tipo; val.textContent = (l.tipo === 'entrada' ? '+ ' : '− ') + brl(l.valor);
-    const del = document.createElement('button'); del.className = 'lanc-del'; del.textContent = '🗑'; del.title = 'Excluir';
+    const del = document.createElement('button'); del.className = 'lanc-del'; comIcone(del, 'lixeira', '', 'Excluir'); del.title = 'Excluir';
     del.onclick = async (e) => { e.stopPropagation(); if (!await uiConfirm(l.retiro_compra_id
       ? 'Este lançamento é de uma COMPRA da lista de um retiro. Excluir aqui deixa a compra sem lançamento (o retiro vai avisar). O certo é "Desfazer compra" na aba Retiros.\n\nExcluir mesmo assim?'
       : 'Excluir este lançamento?')) return; await sb.from('acolitos_financeiro').delete().eq('id', l.id); load(); };
