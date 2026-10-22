@@ -250,8 +250,7 @@ const ESTADO_LABEL = { afazer:'A fazer', andamento:'Em andamento', feita:'Feita'
 const COLUNAS = [
   { estado:'afazer',    titulo:'A fazer' },
   { estado:'andamento', titulo:'Em andamento' },
-  { estado:'feita',     titulo:'Feita' },
-];
+];   // 'feita' não é coluna: tarefa concluída vai para o Arquivo
 
 // ── ESTADO EM MEMÓRIA (carregado uma vez, reaproveitado pelas três visões) ──
 let TAREFAS = [], ERR_TAREFAS = false;
@@ -646,7 +645,33 @@ function acoesDaTarefa(t) {
 }
 
 // ── LINHA DE TAREFA (Lista e Por time) ───────────────────────────────
-function tarefasNaVisao(){ return filtroTarefas?filtroTarefas.aplicar(TAREFAS):ordenar(TAREFAS,'prazo',false); }
+// Concluída = ARQUIVADA (22/10/2026): sai de todas as visões e mora no botão "Arquivo".
+function tarefasArquivadas(){ return ordenar(TAREFAS.filter(t => estadoDaTarefa(t) === 'feita'), 'prazo', true); }
+function tarefasAbertas(){ return TAREFAS.filter(t => estadoDaTarefa(t) !== 'feita'); }
+function tarefasNaVisao(){ const ab=tarefasAbertas(); return filtroTarefas?filtroTarefas.aplicar(ab):ordenar(ab,'prazo',false); }
+function abrirArquivo(){
+  const lista = tarefasArquivadas();
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const m = document.createElement('div'); m.className = 'modal'; m.style.setProperty('--modal-max', '560px');
+  const h = document.createElement('div'); h.className = 'modal-title'; h.textContent = 'Arquivo · ' + lista.length + (lista.length === 1 ? ' tarefa concluída' : ' tarefas concluídas'); m.appendChild(h);
+  if (!lista.length) { const e = document.createElement('p'); e.className = 'empty'; e.textContent = 'Nada arquivado ainda.'; m.appendChild(e); }
+  lista.forEach(t => {
+    const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);';
+    const info = document.createElement('div'); info.style.cssText = 'flex:1;min-width:0;';
+    const tt = document.createElement('div'); tt.style.cssText = 'font-weight:700;font-size:13px;line-height:1.25;overflow-wrap:anywhere;'; tt.textContent = t.titulo;
+    const meta = document.createElement('div'); meta.style.cssText = 'font-size:11px;color:var(--text-muted);';
+    const quando = t.concluida_em ? new Date(t.concluida_em).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' }) : '';
+    meta.textContent = (LABEL_TIME[t.time_slug] || t.time_slug || '') + (quando ? ' · feita em ' + quando : '');
+    info.append(tt, meta);
+    const re = document.createElement('button'); re.className = 'btn-sm gray'; re.textContent = 'Reabrir';
+    re.onclick = async () => { re.disabled = true; await aplicarTransicao(t, 'andamento', re); ov.remove(); };
+    const ap = document.createElement('button'); ap.className = 'btn-sm red'; ap.textContent = 'Apagar';
+    ap.onclick = async () => { await apagarTarefa(t, ap); ov.remove(); };
+    row.append(info, re, ap); m.appendChild(row);
+  });
+  const fechar = document.createElement('button'); fechar.className = 'btn gold'; fechar.style.marginTop = '10px'; fechar.textContent = 'Fechar'; fechar.onclick = () => ov.remove(); m.appendChild(fechar);
+  ov.appendChild(m); document.body.appendChild(ov);
+}
 function seletorStatus(t){
   const estado=estadoDaTarefa(t), sel=document.createElement('select');sel.className='tf-board-status '+estado;sel.setAttribute('aria-label','Status de '+t.titulo);
   Object.entries(ESTADO_LABEL).forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;sel.appendChild(o)});sel.value=estado;
@@ -820,7 +845,7 @@ function configFiltroTarefas() {
     filtros.push({ id: 'time', nome: 'Time', opcoes: TIMES.map(s => (
       { id: s.valor, nome: s.label || s.valor, testa: t => t.time_slug === s.valor })) });
   }
-  const resp = responsaveisUnicos(TAREFAS);
+  const resp = responsaveisUnicos(tarefasAbertas());
   if (resp.length) {
     filtros.push({ id: 'responsavel', nome: 'Responsável', opcoes: [
       { id: '__sem__', nome: 'Sem responsável', testa: t => !t.responsavel_id },
@@ -839,7 +864,7 @@ function configFiltroTarefas() {
     busca: { placeholder: 'Buscar tarefa...', campos: t => [t.titulo, t.observacao] },
   };
   cfg.desempate = (t) => t.titulo;
-  cfg.contar = (e) => FiltroLista.aplicar(TAREFAS, e, cfg).length;
+  cfg.contar = (e) => FiltroLista.aplicar(tarefasAbertas(), e, cfg).length;
   return cfg;
 }
 
@@ -1198,7 +1223,7 @@ function render() {
   const main = document.getElementById('main-content'); main.textContent = '';main.classList.add('tf-workspace');
   const t = document.createElement('h1'); t.className = 'page-title'; t.textContent = 'Tarefas dos times';
   const heading=document.createElement('div');heading.className='tf-workspace-heading';
-  const nova=document.createElement('button');nova.className='btn-sm tf-create';nova.textContent='+ Nova tarefa';nova.onclick=()=>abrirFormTarefa();heading.append(t,nova);main.appendChild(heading);
+  const nova=document.createElement('button');nova.className='btn-sm tf-create';nova.textContent='+ Nova tarefa';nova.onclick=()=>abrirFormTarefa();const arq=document.createElement('button');arq.className='btn-sm gray tf-arquivo';arq.textContent='Arquivo ('+tarefasArquivadas().length+')';arq.onclick=abrirArquivo;heading.append(t,arq,nova);main.appendChild(heading);
   const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;';
   hint.textContent = modoVisao === 'tabela' ? 'Organize por time. Clique na tarefa para editar ou mude o status na própria linha.' : modoVisao === 'quadro'
     ? 'Acompanhe o trabalho por status. Arraste os cartões ou use o seletor para mover uma tarefa.'

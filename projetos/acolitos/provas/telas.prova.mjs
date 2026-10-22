@@ -3059,7 +3059,8 @@ async function provaTarefasEtiquetaHoraEArvore(provas) {
   const a = lista.avaliado || {};
   exigir(!lista.erroAvaliar, 'a Lista desenha com etiqueta e hora sem estourar', lista.erroAvaliar);
   exigir(r_obj(lista), 'a prova da Lista chegou ao fim', 'avaliado: ' + JSON.stringify(lista.avaliado));
-  exigir((a.etiquetas || []).length === 4, 'na Lista, toda tarefa diz de qual time é', 'etiquetas: ' + JSON.stringify(a.etiquetas));
+  // 22/10/2026: tarefa concluída é ARQUIVADA — sai da Lista (3 abertas, não 4) e mora no Arquivo.
+  exigir((a.etiquetas || []).length === 3, 'na Lista, toda tarefa aberta diz de qual time é e a concluída não aparece', 'etiquetas: ' + JSON.stringify(a.etiquetas));
   exigir(a.comHora === true, 'a hora combinada aparece do jeito que a pastoral fala ("às 19h")');
   exigir(a.comMeiaHora === true, 'e a meia hora vira "18h30", não "18:30"');
   exigir(a.horaQuebrada === false, 'sem "18:30", "18h30min" nem "0h" — nada de jeito de máquina');
