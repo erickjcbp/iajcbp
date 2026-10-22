@@ -36,11 +36,22 @@ export function criarEntradaDono({ db, evo, confirmarSemana, ministros, relogio 
   // Só age com a semana em 'aguardando'. botao: 'escala:<acao>:<semana>' (botão) ou
   // 'escala:<acao>' (atalho "1"/"2"). Botão de outra semana, ou semana já tratada: só o aviso.
   // Atalho sem semana esperando: false (vira conversa normal), salvo aviso de semana já decidida.
+  const avisadosDesconhecidos = new Map()
   async function tratarRespostaDono({ numero, botao, cfg = null }) {
     cfg ??= await lerCfg()
     const dono = donoDe(cfg, numero)
-    if (!dono) return false
     const m = /^escala:(confirmar|revisar)(?::(\d{4}-\d{2}-\d{2}))?$/.exec(String(botao || ''))
+    if (!dono) {
+      // Toque de botão da escala vindo de número que não é o do dono (ex.: o aparelho do dono chegou como
+      // outro identificador): continua ignorado, mas deixa rastro no log, no máximo 1x por hora por número.
+      const chave = String(numero || '')
+      const agora = relogio().getTime()
+      if (m && agora - (avisadosDesconhecidos.get(chave) || 0) > 3_600_000) {
+        avisadosDesconhecidos.set(chave, agora)
+        log.warn(`botão da escala de número não reconhecido (${chave.slice(0, 4)}…${chave.slice(-3)}): ignorado`)
+      }
+      return false
+    }
     if (!m) return false
     const [, acao, daSemana] = m
     const hoje = agoraSP(relogio()).data

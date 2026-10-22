@@ -33,7 +33,7 @@ const MEMBROS = [
   { id: 'm4', nome: 'Ana Teste', status: 'ativo', serve: true, tem_pai_ministro: false, tem_mae_ministro: false },
 ]
 
-function cenario({ estado = 'aguardando', confirmar = async () => ({ ok: true }), texto = TEXTO_OUTUBRO, botoesFalham = false, banco = {} } = {}) {
+function cenario({ estado = 'aguardando', confirmar = async () => ({ ok: true }), texto = TEXTO_OUTUBRO, botoesFalham = false, banco = {}, log: logCenario = silencioso } = {}) {
   const relogio = { agora: new Date(HOJE) }
   const passar = (min) => { relogio.agora = new Date(+relogio.agora + min * 60_000) }
   const db = bancoMemoria({
@@ -52,7 +52,7 @@ function cenario({ estado = 'aguardando', confirmar = async () => ({ ok: true })
   const chamadas = { confirmar: 0 }
   const ministros = criarMinistrosPdf({ db, evo, nucleo: () => NUCLEO, log: silencioso, relogio: () => relogio.agora,
     extrairTexto: async () => (typeof texto === 'function' ? texto() : texto) })
-  const entrada = criarEntradaDono({ db, evo, ministros, log: silencioso, relogio: () => relogio.agora,
+  const entrada = criarEntradaDono({ db, evo, ministros, log: logCenario, relogio: () => relogio.agora,
     confirmarSemana: async (s) => { chamadas.confirmar++; assert.equal(s, SAB); return confirmar(s) } })
   return { db, evo, enviados, baixados, chamadas, entrada, ministros, passar }
 }
@@ -463,4 +463,17 @@ test('não promete "arte indo" quando a arte está desligada, já pedida, ou o d
     assert.ok(!c.enviados.some((e) => e.t === RESPOSTAS.confirmada), JSON.stringify(arte))
     assert.match(c.enviados.at(-1).t, re)
   }
+})
+
+test('botão da escala de número desconhecido: ignorado e registrado no log só 1x por hora', async () => {
+  const avisos = []
+  const c = cenario({ log: { ...silencioso, warn: (m) => avisos.push(m) } })
+  await receber(c, toque(OUTRO, CONFIRMAR))
+  await receber(c, toque(OUTRO, CONFIRMAR))
+  assert.equal(avisos.length, 1)
+  assert.ok(!avisos[0].includes(OUTRO), 'o número inteiro não vai para o log')
+  assert.equal(c.chamadas.confirmar, 0)
+  c.passar(61)
+  await receber(c, toque(OUTRO, CONFIRMAR))
+  assert.equal(avisos.length, 2)
 })
