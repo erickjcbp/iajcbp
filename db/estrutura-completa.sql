@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict JYHhDX7FGAwdIw4zgkaLrTbsdLngZnt1tjhIYctWtp8fMQAkDBfiAz5r8aLoHNW
+\restrict IvNboyfjBcYAUCoRgIdAdHtS4odxzMPPltXHQj7sSLATcaEZAh2GX9REsD9PBVI
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.6
@@ -3449,7 +3449,9 @@ begin
   if not (select escala_ligada from tarcisio_config where id = 1) then return jsonb_build_object('ok', true, 'desligado', true); end if;
   insert into tarcisio_envios (tipo, estado, domingo_data, chave_unica, destino_nome)
   values ('escala', 'aguardando_arte', p_domingo, 'escala:' || p_domingo, 'Grupos')
-  on conflict (chave_unica) do nothing;
+  on conflict (chave_unica) do update
+    set estado = 'aguardando_arte', erro = null, created_at = now()
+    where tarcisio_envios.estado = 'falhou';
   get diagnostics v_n = row_count;
   return jsonb_build_object('ok', true, 'novo', v_n > 0);
 end; $$;
@@ -4767,7 +4769,8 @@ CREATE TABLE public.tarcisio_escala_auto (
     mensagem_dono_id text,
     lembretes integer DEFAULT 0 NOT NULL,
     erro text,
-    CONSTRAINT tarcisio_escala_auto_estado_check CHECK ((estado = ANY (ARRAY['gerando'::text, 'aguardando'::text, 'em_revisao'::text, 'confirmada'::text, 'falhou'::text, 'sem_missas'::text, 'ja_confirmada'::text])))
+    confirmando_em timestamp with time zone,
+    CONSTRAINT tarcisio_escala_auto_estado_check CHECK ((estado = ANY (ARRAY['gerando'::text, 'aguardando'::text, 'em_revisao'::text, 'confirmando'::text, 'confirmada'::text, 'falhou'::text, 'sem_missas'::text, 'ja_confirmada'::text])))
 );
 
 
@@ -9219,5 +9222,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON T
 -- PostgreSQL database dump complete
 --
 
-\unrestrict JYHhDX7FGAwdIw4zgkaLrTbsdLngZnt1tjhIYctWtp8fMQAkDBfiAz5r8aLoHNW
+\unrestrict IvNboyfjBcYAUCoRgIdAdHtS4odxzMPPltXHQj7sSLATcaEZAh2GX9REsD9PBVI
 
