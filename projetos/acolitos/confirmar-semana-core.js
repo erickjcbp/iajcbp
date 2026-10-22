@@ -155,7 +155,7 @@
     }
     var valor = lido.data && lido.data.valor;
     var mapa = (valor && typeof valor === 'object' && !Array.isArray(valor)) ? Object.assign({}, valor) : {};
-    var novos = nucleo.aNotificar({ escalados: escalados, jaAvisados: [] });
+    var novos = nucleo.aNotificar({ escalados: escalados, jaAvisados: mapa[chave] || [] });
     base.novos = novos;
 
     var avisados = [];
