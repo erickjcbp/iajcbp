@@ -215,3 +215,44 @@ test('lembrete de ausência dentro do prazo (terça 17h) é enviado normalmente'
   await robo.rodada()
   assert.equal(enviados.length, 1)
 })
+
+// ── lembrete da véspera só para semana CONFIRMADA (rascunho do robô não chega no celular de ninguém) ──
+function cenarioLembrete({ avisados, falhaAvisados = false }) {
+  const filas = []
+  const db = bancoFalso((tabela, ops) => {
+    if (tabela === 'tarcisio_config') return op(ops, 'single') ? { data: { ...CFG, lembrete_ligado: true, texto_lembrete: null } } : { data: null }
+    if (tabela === 'acolitos_config') return falhaAvisados ? { data: null, error: { message: 'caiu' } } : { data: avisados === undefined ? null : { valor: avisados } }
+    if (tabela === 'acolitos_celebracoes') return { data: [{ id: 'c1', data: '2026-10-31', horario: '19h', comunidade: 'matriz', minutos: 1140 }] }
+    if (tabela === 'acolitos_escalas') return { data: [{ funcao: 'vela', celebracao_id: 'c1', membro: { id: 'm1', nome: 'Ana', telefone: '19998765432', nivel: 'aspirante' } }] }
+    if (tabela === 'tarcisio_envios' && op(ops, 'upsert')) { filas.push(...op(ops, 'upsert')[1]); return { data: op(ops, 'upsert')[1].map((_, i) => ({ id: i })) } }
+    return { data: [] }
+  })
+  const evo = { estado: async () => 'close', numeroConectado: async () => null, enviarTexto: async () => {}, enviarImagem: async () => {} }
+  const avisos = []
+  const log = { info() {}, error() {}, warn: (m) => avisos.push(m) }
+  // sexta 30/10/2026 19:30 de Brasília
+  const robo = criarRobo({ db, evo, supabaseUrl: 'https://p.supabase.co', relogio: () => new Date('2026-10-30T22:30:00Z'), rnd: () => 0, log })
+  return { robo, filas, avisos }
+}
+
+test('véspera de semana NÃO confirmada: nenhum lembrete vai para a fila', async () => {
+  const { robo, filas, avisos } = cenarioLembrete({ avisados: {} })
+  await robo.rodada()
+  assert.equal(filas.filter((l) => l.tipo === 'lembrete').length, 0)
+  assert.ok(avisos.some((m) => /não confirmada/.test(m)), avisos.join('|'))
+})
+test('véspera de semana confirmada (chave em qualquer dia da semana): lembrete vai', async () => {
+  const { robo, filas } = cenarioLembrete({ avisados: { '2026-10-26': ['m1'] } })
+  await robo.rodada()
+  assert.equal(filas.filter((l) => l.tipo === 'lembrete').length, 1)
+})
+test('confirmação de OUTRA semana não libera o lembrete', async () => {
+  const { robo, filas } = cenarioLembrete({ avisados: { '2026-10-24': ['m1'], '2026-11-02': ['m1'] } })
+  await robo.rodada()
+  assert.equal(filas.filter((l) => l.tipo === 'lembrete').length, 0)
+})
+test('sem conseguir ler os avisados: não lembra ninguém (não arrisca rascunho)', async () => {
+  const { robo, filas } = cenarioLembrete({ falhaAvisados: true })
+  await robo.rodada()
+  assert.equal(filas.filter((l) => l.tipo === 'lembrete').length, 0)
+})

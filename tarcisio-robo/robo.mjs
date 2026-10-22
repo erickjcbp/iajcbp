@@ -4,7 +4,7 @@
 // Só envia: não lê resposta de ninguém. Projeto: docs/superpowers/specs/2026-10-20-sao-tarcisio-whatsapp-design.md
 import {
   agoraSP, somarDias, hmCurto, dentroDaJanela, montarLembretes, montarAniversarios,
-  publicoPrivado, proximaVez, lembreteAusenciaAgora, ausenciaVencida, pausaEntreEnvios, imagemPermitida, cumprimentoValido,
+  publicoPrivado, proximaVez, semanaConfirmada, lembreteAusenciaAgora, ausenciaVencida, pausaEntreEnvios, imagemPermitida, cumprimentoValido,
 } from './regras.mjs'
 
 const CAMPOS_MEMBRO = 'id,nome,apelido,nivel,user_id,data_nascimento,telefone,celular_recado,celular_responsavel,celular_mae'
@@ -69,6 +69,14 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
     if (!cfg.lembrete_ligado || st.lembreteEm === sp.data) return
     if (sp.hm < hmCurto(cfg.hora_lembrete) || sp.hm >= hmCurto(cfg.janela_fim)) return   // depois das 21h "amanhã" chegaria no dia
     const amanha = somarDias(sp.data, 1)
+    // Rascunho não chega no celular de ninguém: só lembra a semana CONFIRMADA (a mesma marca do
+    // botão Confirmar, em qualquer dia da semana). Sem conseguir ler, não lembra (erro sobe e loga).
+    const avisados = exigir(await db.from('acolitos_config').select('valor').eq('chave', 'escala_avisados').maybeSingle(), 'ler semanas confirmadas')
+    if (!semanaConfirmada(amanha, avisados?.valor)) {
+      if (st.lembretePuladoEm !== sp.data) log.warn(`lembretes de ${amanha}: semana não confirmada, nenhum lembrete enviado`)
+      st.lembretePuladoEm = sp.data
+      return   // não marca lembreteEm: se confirmarem ainda na janela, o lembrete sai
+    }
     const cels = exigir(await db.from('acolitos_celebracoes').select('id,data,horario,comunidade,minutos').eq('data', amanha), 'ler missas')
     let escalas = []
     if (cels.length) {
