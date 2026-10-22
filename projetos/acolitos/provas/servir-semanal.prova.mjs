@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {iniciarProvas,PAPEIS} from './abrir-tela.mjs';
-const dir='/Users/erickmartins/arquivos/auditorias/coroinhas/2026-10-14-servir-semanal';fs.mkdirSync(dir,{recursive:true});
+const dir='/Users/erickmartins/arquivos/projetos/paroquia/auditorias/2026-10-14-servir-semanal';fs.mkdirSync(dir,{recursive:true});
 const maria={id:'m1',nome:'Maria Clara',nivel:'coroinha',status:'ativo',serve:true,comunidade:'matriz',servir_toda_semana:false,escalar_frequente:true};
 const p=await iniciarProvas();
 try{

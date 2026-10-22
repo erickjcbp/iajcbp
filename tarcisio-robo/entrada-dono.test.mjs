@@ -431,3 +431,36 @@ test('pdfjs-dist de verdade: PDF mínimo vira texto que o núcleo lê', async (t
     { data: '2026-10-25', horario: '7h', comunidade: 'matriz', nomes: ['Bia'] },
   ])
 })
+
+// ── estado intermediário 'confirmando' e respostas honestas sobre a arte ──
+test('durante o Confirmar a semana fica em confirmando (com hora); no fim, confirmada', async () => {
+  let visto
+  const c = cenario({ confirmar: async () => { visto = { ...c.db.t.tarcisio_escala_auto.find((r) => r.semana === SAB) }; return { ok: true, arte: { novo: true } } } })
+  await receber(c, toque(DONO, CONFIRMAR))
+  assert.equal(visto.estado, 'confirmando')
+  assert.ok(visto.confirmando_em)
+  assert.equal(estadoSemana(c.db), 'confirmada')
+  assert.equal(c.enviados.at(-1).t, RESPOSTAS.confirmada)
+})
+test('push parcial: volta a aguardando e o dono sabe que a arte foi pedida e quem faltou', async () => {
+  const c = cenario({ confirmar: async () => ({ ok: false, motivo: 'push_parcial', erro: '1 pessoa não recebeu o aviso.', arte: { novo: true } }) })
+  await receber(c, toque(DONO, CONFIRMAR))
+  assert.equal(estadoSemana(c.db), 'aguardando')
+  assert.match(c.enviados.at(-1).t, /1 pessoa não recebeu/)
+  assert.match(c.enviados.at(-1).t, /arte/i)
+  assert.match(c.enviados.at(-1).t, /Confirmar de novo/)
+})
+test('falha: volta de confirmando para aguardando', async () => {
+  const c = cenario({ confirmar: async () => ({ ok: false, erro: 'push caiu' }) })
+  await receber(c, toque(DONO, CONFIRMAR))
+  assert.equal(estadoSemana(c.db), 'aguardando')
+})
+test('não promete "arte indo" quando a arte está desligada, já pedida, ou o disparo falhou', async () => {
+  for (const [arte, re] of [[{ desligado: true }, /desligad/], [{ novo: false }, /já tinha sido pedida/], [{ novo: true, erroRegenerar: 'regenerar-arte respondeu 403' }, /403/]]) {
+    const c = cenario({ confirmar: async () => ({ ok: true, arte }) })
+    await receber(c, toque(DONO, CONFIRMAR))
+    assert.equal(estadoSemana(c.db), 'confirmada')
+    assert.ok(!c.enviados.some((e) => e.t === RESPOSTAS.confirmada), JSON.stringify(arte))
+    assert.match(c.enviados.at(-1).t, re)
+  }
+})

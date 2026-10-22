@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import puppeteer from 'puppeteer-core';
 import { iniciarProvas } from './abrir-tela.mjs';
-const destino=process.env.FOTOS_VISUAL || '/Users/erickmartins/arquivos/auditorias/coroinhas/2026-10/auditoria-visual-coroinhas-2026-10-10/depois';
+const destino=process.env.FOTOS_VISUAL || '/Users/erickmartins/arquivos/projetos/paroquia/auditorias/2026-10/auditoria-visual-coroinhas-2026-10-10/depois';
 const server=await iniciarProvas();
 const browser=await puppeteer.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,args:['--no-sandbox']});
 const scenarios=[['login','entrar',''],['login','cadastro',"showScreen('cadastro')"],['login','cadastro-solo',"showScreen('cadastro-solo')"],['login','cadastro-familia',"showScreen('cadastro-familia')"],['login','esqueci',"showScreen('esqueci')"],['pastoral','pagina',''],['ausencias-publica','formulario',''],['ausencias-publica','tutorial','startTour()'],['novena-publica','formulario',''],['novena-publica','confirmacao',"escolher({id:'m1',nome:'Maria Clara de Oliveira Santos'});await new Promise(r=>setTimeout(r,350));document.querySelector('#cels .cel').click();document.getElementById('enviar').click();"]];

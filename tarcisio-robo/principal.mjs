@@ -60,7 +60,7 @@ const confirmarSemana = async (sabado) => {
     const C = lerNucleos().Confirmar
     const r = await C.confirmarSemana({ sb: db, enviarPush: site.enviarPushEscalado, celebracoes: cels.data, escalas: esc.data,
       pedirArte: C.pedirArtePeloServico, regenerarArte: site.regenerarArte })
-    return r.ok ? { ok: true } : { ok: false, erro: r.erro || r.motivo || 'não consegui confirmar' }
+    return r.ok ? r : { ...r, erro: r.erro || r.motivo || 'não consegui confirmar' }
   } catch (e) { return { ok: false, erro: e.message } }
 }
 const entradaDono = criarEntradaDono({ db, evo, ministros, confirmarSemana, log: console })

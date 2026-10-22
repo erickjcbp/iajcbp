@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {iniciarProvas,PAPEIS} from './abrir-tela.mjs';
-const dir='/Users/erickmartins/arquivos/auditorias/coroinhas/2026-10-13-rodizio-edicao';
+const dir='/Users/erickmartins/arquivos/projetos/paroquia/auditorias/2026-10-13-rodizio-edicao';
 fs.mkdirSync(dir,{recursive:true});
 const pessoas=[{id:'m1',nome:'Maria Clara',nivel:'coroinha',status:'ativo',serve:true,comunidade:'matriz'},
  {id:'m2',nome:'João Pedro',nivel:'acolito_guardiao',status:'ativo',serve:true,comunidade:'matriz',suspenso_em:'2026-01-01',suspenso_ate:'2099-01-01'}];

@@ -124,12 +124,14 @@ test('rodou pela metade: a nova tentativa avisa só o resto', async () => {
   assert.strictEqual(r1.motivo, 'push_parcial');
   assert.strictEqual(r1.avisados, 2);
   assert.deepStrictEqual(r1.falharam, ['c']);
-  assert.strictEqual(sb.st.rpcs, 0, 'confirmação incompleta ainda não pede a arte');
+  // alguém já foi avisado = a semana está confirmada de fato: a arte é pedida mesmo assim
+  assert.strictEqual(sb.st.rpcs, 1, 'confirmação parcial também pede a arte');
+  assert.strictEqual(r1.arte.novo, true);
   const push2 = pushFalso();
   const r2 = await rodar(sb, push2);
   assert.strictEqual(r2.ok, true);
   assert.deepStrictEqual(push2.recebidos, ['c']);
-  assert.strictEqual(r2.arte.novo, true);
+  assert.strictEqual(r2.arte.novo, false, 'a trava do banco não pede duas vezes');
 });
 
 test('arte falhou na vez anterior: tentar de novo completa só a arte', async () => {

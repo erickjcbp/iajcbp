@@ -21,7 +21,7 @@ Inclui fichas de membros e suas abas, operacionais/planilha/rodízio, criação 
 
 ## Evidências e reprodução
 
-Galeria e medições: /Users/erickmartins/arquivos/auditorias/coroinhas/2026-10/auditoria-visual-coroinhas-2026-10-10.
+Galeria e medições: /Users/erickmartins/arquivos/projetos/paroquia/auditorias/2026-10/auditoria-visual-coroinhas-2026-10-10.
 
 Rodar novamente: npm run auditar-visual. FOTOS_VISUAL permite escolher a pasta das fotos.
 

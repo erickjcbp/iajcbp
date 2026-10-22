@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { iniciarProvas, PAPEIS } from './abrir-tela.mjs';
 const provas = await iniciarProvas();
-const pasta = process.env.FOTOS_AUDITORIA || '/Users/erickmartins/arquivos/auditorias/coroinhas/2026-10/auditoria-coroinhas-2026-10-10';
+const pasta = process.env.FOTOS_AUDITORIA || '/Users/erickmartins/arquivos/projetos/paroquia/auditorias/2026-10/auditoria-coroinhas-2026-10-10';
 const celeb = { id:'c1', data:'2026-10-11', horario:'10:00', comunidade:'matriz', tipo:'dominical' };
 try {
   for (const [largura, altura] of [[390,844], [768,1024], [1366,900], [2560,1440]]) {

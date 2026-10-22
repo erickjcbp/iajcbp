@@ -230,11 +230,55 @@ test('lembrete não sai se a semana já foi confirmada no app; estado vira confi
   const c = cenario({ banco: {
     tarcisio_escala_auto: [{ semana: SAB, estado: 'aguardando', lembretes: 0, resumo: { texto: 'x' } }],
     acolitos_config: [{ chave: 'escala_avisados', valor: { '2026-10-24': ['m1'] } }],
+    tarcisio_envios: [{ chave_unica: 'escala:2026-10-25', estado: 'aguardando_arte' }],
   } })
   await c.auto.cuidar(new Date('2026-10-20T23:00:00Z'), CFG)   // terça 20:00
   await c.novo().cuidar(new Date('2026-10-21T12:00:00Z'), CFG) // quarta 09:00
   assert.equal(c.enviados.length, 0)
   assert.equal(linhaSemana(c.db).estado, 'confirmada')
+})
+
+test('avisados gravados mas a arte NUNCA pedida: não fecha como confirmada, lembra o dono', async () => {
+  const c = cenario({ banco: {
+    tarcisio_escala_auto: [{ semana: SAB, estado: 'aguardando', lembretes: 0, resumo: { texto: 'x' } }],
+    acolitos_config: [{ chave: 'escala_avisados', valor: { '2026-10-24': ['m1'] } }],
+  } })
+  await c.auto.cuidar(new Date('2026-10-20T23:00:00Z'), CFG)   // terça 20:00
+  assert.equal(linhaSemana(c.db).estado, 'aguardando')
+  assert.equal(c.enviados.length, 1)
+  assert.match(c.enviados[0].texto, /arte/i)
+})
+
+test('presa em confirmando há mais de 15 min (robô caiu no Confirmar): volta a aguardando e o dono é avisado', async () => {
+  const c = cenario({ banco: { tarcisio_escala_auto: [{ semana: SAB, estado: 'confirmando', confirmando_em: '2026-10-20T22:00:00.000Z', lembretes: 0 }] } })
+  await c.auto.cuidar(new Date('2026-10-20T22:10:00Z'), CFG)
+  assert.equal(linhaSemana(c.db).estado, 'confirmando')
+  assert.equal(c.enviados.length, 0)
+  await c.auto.cuidar(new Date('2026-10-20T22:16:00Z'), CFG)
+  assert.equal(linhaSemana(c.db).estado, 'aguardando')
+  assert.equal(c.enviados.length, 1)
+  assert.match(c.enviados[0].texto, /Confirmar/)
+  await c.auto.cuidar(new Date('2026-10-20T22:20:00Z'), CFG)
+  assert.equal(c.enviados.length, 1, 'avisa uma vez só')
+})
+
+test('fim de semana que já tem escala montada: não grava nada, manda só para conferência', async () => {
+  const c = cenario()
+  const deps = c.novo
+  void deps
+  const db = c.db
+  const auto = criarEscalaAuto({ db, evo: { enviarBotoes: async (d, texto, botoes) => { c.enviados.push({ d, texto, botoes }); return { key: { id: 'm' } } }, enviarTexto: async () => {} },
+    log: silencioso, rnd: () => 0.5,
+    carregarEntrada: async () => ({ celebracoes: CELS, membros: MEMBROS, escalasExistentes: { c1: [{ celebracao_id: 'c1', membro_id: 'm2', funcao: 'cruz', status: 'escalado' }] } }),
+    gerarSemana: () => { c.chamadas.gerar++; return RESULTADO } })
+  await auto.cuidar(new Date(TERCA_1801), CFG)
+  assert.equal(c.chamadas.gerar, 0)
+  assert.equal((db.t.acolitos_escalas || []).length, 0)
+  assert.equal(linhaSemana(db).estado, 'aguardando')
+  assert.equal(c.enviados.length, 1)
+  assert.match(c.enviados[0].texto, /já tinha escala montada/)
+  assert.match(c.enviados[0].texto, /Bia/)
+  assert.equal(c.enviados[0].botoes.length, 2)
 })
 
 test('falha depois de gravar (montar a mensagem): apaga o que esta rodada gravou, falhou, dono avisado', async () => {

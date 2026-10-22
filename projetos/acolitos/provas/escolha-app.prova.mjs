@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';import fs from 'node:fs';import {iniciarProvas,PAPEIS} from './abrir-tela.mjs';
-const dir='/Users/erickmartins/arquivos/auditorias/coroinhas/2026-10-13-identidade-controles';fs.mkdirSync(dir,{recursive:true});
+const dir='/Users/erickmartins/arquivos/projetos/paroquia/auditorias/2026-10-13-identidade-controles';fs.mkdirSync(dir,{recursive:true});
 const p=await iniciarProvas();try{
 for(const width of [360,1366]){
 const r=await p.abrir('tarefas.html',{papel:PAPEIS.admin,largura:width,altura:900,tabelas:{acolitos_tarefas:{data:[{id:'t1',titulo:'Preparar altar',time_slug:'liturgia',responsavel_id:null}]},acolitos_listas:{data:[{tipo:'setor',valor:'liturgia',label:'Liturgia'}]}},avaliar:`modoVisao='tabela';render();document.getElementById('splash')?.remove();document.getElementById('pwa-banner')?.remove();await new Promise(r=>setTimeout(r,200));

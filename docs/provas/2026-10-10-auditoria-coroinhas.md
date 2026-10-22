@@ -17,7 +17,7 @@ Testes novos executam a configuração PWA e a ativação do service worker, rep
 
 A primeira execução encontrou sete falhas antigas nas expectativas da suíte: o filtro Idade estava ausente da expectativa; o rodízio agora exige abrir Ver detalhes, e seus cabeçalhos indicam a ordem com uma seta. Atualizados os cenários para exercer a interface atual, mantendo as verificações das contas e dos estados de erro.
 
-Fotos e logs ficam em /Users/erickmartins/arquivos/auditorias/coroinhas/2026-10/auditoria-coroinhas-2026-10-10.
+Fotos e logs ficam em /Users/erickmartins/arquivos/projetos/paroquia/auditorias/2026-10/auditoria-coroinhas-2026-10-10.
 
 ## Limites e ponto a aprofundar
 

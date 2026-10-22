@@ -123,11 +123,15 @@ export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEnt
   }
 
   // Confirmada = alguém já foi avisado nesta semana, ou a arte do domingo já foi pedida.
-  async function jaConfirmada(sabado) {
+  async function avisadosNaSemana(sabado) {
     const avisados = exigir(await db.from('acolitos_config').select('valor').eq('chave', 'escala_avisados').maybeSingle(), 'ler avisados')
-    if (semanaConfirmada(sabado, avisados?.valor)) return true
-    const arte = exigir(await db.from('tarcisio_envios').select('id').eq('chave_unica', `escala:${somarDias(sabado, 1)}`).maybeSingle(), 'ler arte pedida')
-    return !!arte
+    return semanaConfirmada(sabado, avisados?.valor)
+  }
+  async function artePedida(sabado) {
+    return !!exigir(await db.from('tarcisio_envios').select('id').eq('chave_unica', `escala:${somarDias(sabado, 1)}`).maybeSingle(), 'ler arte pedida')
+  }
+  async function jaConfirmada(sabado) {
+    return (await avisadosNaSemana(sabado)) || (await artePedida(sabado))
   }
 
   async function gerar(sabado, agora, cfg) {
@@ -148,6 +152,16 @@ export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEnt
       if (!entrada?.celebracoes?.length) {
         await marcar(sabado, { estado: 'sem_missas' })
         await avisarDono(cfg, `Não há nenhuma missa cadastrada no fim de semana ${fds}. Não gerei a escala.`)
+        return
+      }
+      // Já tem escala montada (o dono gerou ou editou no app): o robô não gera por cima. Manda a
+      // escala como está, só para conferir, com os mesmos botões; nada é gravado.
+      if (Object.values(entrada.escalasExistentes || {}).some((l) => l?.length)) {
+        const texto = `O fim de semana ${fds} já tinha escala montada no app: não gerei nem gravei nada. Segue como está, só para conferir.\n\n`
+          + montarMensagem({ sabado, ...entrada }, { novas: [] })
+        const id = await enviarConferencia(cfg, texto, sabado)
+        await marcar(sabado, { estado: 'aguardando', gerada_em: agora.toISOString(), resumo: { texto, novas: 0, jaMontada: true }, mensagem_dono_id: id, erro: null })
+        log.info(`escala automática ${sabado}: já montada no app, só enviada para conferência`)
         return
       }
       const resultado = { semMinistros: entrada.semMinistros, ...(await gerarSemana({ ...entrada, rnd })) }
@@ -186,6 +200,16 @@ export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEnt
     for (const p of presas) {
       await avisarDono(cfg, `A escala automática do fim de semana ${fimDeSemana(p.semana)} parou no meio. Confira no app antes de confirmar.`)
     }
+    // Caiu no meio do Confirmar: volta a esperar. Confirmar de novo é seguro (só avisa quem falta,
+    // a arte tem trava própria).
+    // lê antes (barato): a troca só roda quando há alguma presa
+    const vistas = exigir(await db.from('tarcisio_escala_auto').select('semana')
+      .eq('estado', 'confirmando').lt('confirmando_em', limite), 'ler confirmações presas')
+    const confirmando = vistas.length ? exigir(await db.from('tarcisio_escala_auto').update({ estado: 'aguardando' })
+      .eq('estado', 'confirmando').lt('confirmando_em', limite).select('semana'), 'destravar confirmações') : []
+    for (const p of confirmando) {
+      await avisarDono(cfg, `O Confirmar da escala do fim de semana ${fimDeSemana(p.semana)} parou no meio. Toque Confirmar de novo (ninguém é avisado duas vezes) ou confirme pelo app.`)
+    }
   }
 
   // Quarta 09:00 sem linha da semana = a terça não rodou (robô fora). Não gera atrasado: avisa o
@@ -206,18 +230,22 @@ export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEnt
     for (const l of linhas) {
       const k = lembreteDaVez(l.semana, sp)
       if (!k || l.lembretes >= k) continue
-      // confirmada no app depois da geração: encerra sem lembrar
-      if (await jaConfirmada(l.semana)) {
+      // confirmada no app depois da geração: encerra sem lembrar — mas só com a arte pedida; avisados
+      // sem arte (confirmar parou no meio) é semana pela metade: lembra o dono de tocar Confirmar.
+      if (await artePedida(l.semana)) {
         exigir(await db.from('tarcisio_escala_auto').update({ estado: 'confirmada' })
           .eq('semana', l.semana).eq('estado', 'aguardando'), 'encerrar semana confirmada')
         continue
       }
+      const semArte = await avisadosNaSemana(l.semana)
       // compara-e-troca: só quem mudar o contador envia (outra rodada/reinício não repete)
       const ok = exigir(await db.from('tarcisio_escala_auto').update({ lembretes: k })
         .eq('semana', l.semana).eq('estado', 'aguardando').eq('lembretes', l.lembretes).select('semana'), 'contar lembrete')
       if (!ok.length) continue
       try {
-        await enviarConferencia(cfg, `Lembrete: a escala ainda espera sua conferência.\n\n${l.resumo?.texto || ''}`, l.semana)
+        await enviarConferencia(cfg, semArte
+          ? `Lembrete: a escala do fim de semana ${fimDeSemana(l.semana)} já avisou o pessoal, mas a arte dos grupos não foi pedida. Toque Confirmar para pedir a arte (ninguém é avisado de novo).`
+          : `Lembrete: a escala ainda espera sua conferência.\n\n${l.resumo?.texto || ''}`, l.semana)
       } catch (e) { log.warn(`lembrete da escala ${l.semana}: ${e.message}`) }
     }
   }

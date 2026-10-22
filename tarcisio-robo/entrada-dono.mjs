@@ -28,8 +28,8 @@ const JA_DECIDIDA = {
 export function criarEntradaDono({ db, evo, confirmarSemana, ministros, relogio = () => new Date(), log = console }) {
   const lerCfg = async () => exigir(await db.from('tarcisio_config').select('*').eq('id', 1).single(), 'ler config')
 
-  async function cas(semana, de, para) {
-    return exigir(await db.from('tarcisio_escala_auto').update({ estado: para }).eq('semana', semana).eq('estado', de).select('semana'),
+  async function cas(semana, de, para, extra = {}) {
+    return exigir(await db.from('tarcisio_escala_auto').update({ estado: para, ...extra }).eq('semana', semana).eq('estado', de).select('semana'),
       'mudar estado da semana').length > 0
   }
 
@@ -62,19 +62,36 @@ export function criarEntradaDono({ db, evo, confirmarSemana, ministros, relogio 
       await responder(RESPOSTAS.revisar)
       return true
     }
-    // Confirmar: a troca de estado é a trava (dois toques ao mesmo tempo, só um passa).
-    if (!(await cas(alvo.semana, 'aguardando', 'confirmada'))) return jaDecidida()
+    // Confirmar: a troca de estado é a trava (dois toques ao mesmo tempo, só um passa). Fica em
+    // 'confirmando' enquanto avisa; se o robô cair no meio, a varredura de 15 min devolve a
+    // 'aguardando' (escala-auto.mjs) e o dono pode tocar de novo.
+    if (!(await cas(alvo.semana, 'aguardando', 'confirmando', { confirmando_em: relogio().toISOString() }))) return jaDecidida()
     let r
     try { r = await confirmarSemana(alvo.semana) } catch (e) { r = { ok: false, erro: e.message } }
     if (r?.ok) {
-      await responder(RESPOSTAS.confirmada)
+      try { await cas(alvo.semana, 'confirmando', 'confirmada') } catch (e) { log.error(e.message) }
+      await responder(respostaConfirmada(r.arte))
       log.info(`escala ${alvo.semana}: confirmada pelo dono no WhatsApp`)
       return true
     }
-    // não confirmou: a semana volta a esperar (pode tocar de novo ou confirmar no app)
-    try { await cas(alvo.semana, 'confirmada', 'aguardando') } catch (e) { log.error(e.message) }
+    // não confirmou (ou só em parte): a semana volta a esperar (pode tocar de novo ou confirmar no app)
+    try { await cas(alvo.semana, 'confirmando', 'aguardando') } catch (e) { log.error(e.message) }
+    if (r?.motivo === 'push_parcial') {
+      await responder(`Confirmada em parte: ${r.erro} ${r.arte?.erro || r.arte?.erroRegenerar ? 'E a arte dos grupos não foi pedida.' : 'A arte dos grupos já foi pedida.'} Toque Confirmar de novo para avisar só quem faltou.`)
+      return true
+    }
     await responder(`Não consegui confirmar: ${r?.erro || 'erro desconhecido'}. A escala continua esperando: toque de novo ou confirme pelo app.`)
     return true
+  }
+
+  // O que dizer depois do Confirmar: só promete "arte indo" quando ela foi mesmo pedida e disparada.
+  function respostaConfirmada(arte) {
+    if (!arte) return RESPOSTAS.confirmada
+    if (arte.desligado) return 'Confirmada. O envio da escala para os grupos está desligado em São Tarcísio, então nenhuma arte vai.'
+    if (arte.erro) return `Confirmada, mas a arte não entrou na fila dos grupos (${arte.erro}). Veja em São Tarcísio.`
+    if (arte.erroRegenerar) return `Confirmada, mas não consegui mandar fazer a arte (${arte.erroRegenerar}). Gere a arte na Escala.`
+    if (!arte.novo) return 'Confirmada. A arte desta semana já tinha sido pedida; nada foi reenviado.'
+    return RESPOSTAS.confirmada
   }
 
   // Precisa ser olhada aqui (e não pela IA)? Decide antes de gravar, só com a config.

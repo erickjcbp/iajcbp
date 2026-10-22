@@ -195,8 +195,11 @@
       }
 
       if (falharam.length) {
+        // Alguém já foi avisado: a semana está confirmada de fato, então a arte segue (senão a semana
+        // fecharia sem arte). A falha volta para a pessoa tentar de novo só com quem faltou.
+        var arteP = await pedirArteDosGrupos(o, sb, celebracoes);
         return falha('push_parcial', (falharam.length === 1 ? '1 pessoa não recebeu' : falharam.length + ' pessoas não receberam') +
-          ' o aviso. Quem recebeu ficou marcado; tente de novo para avisar só o resto.', { avisados: avisados.length });
+          ' o aviso. Quem recebeu ficou marcado; tente de novo para avisar só o resto.', { avisados: avisados.length, arte: arteP });
       }
     }
 

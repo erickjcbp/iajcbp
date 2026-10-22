@@ -1,7 +1,7 @@
 // Prova da tela São Tarcísio | JCBP e do portão do WhatsApp do responsável (migration 098).
 // Roda o init() de verdade com sessão simulada, nos 4 papéis e nas 4 larguras da casa.
 //   node projetos/acolitos/provas/tarcisio.prova.mjs
-// Fotos em FOTOS_TARCISIO (padrão: ~/arquivos/auditorias/coroinhas/2026-10/sao-tarcisio).
+// Fotos em FOTOS_TARCISIO (padrão: ~/arquivos/projetos/paroquia/auditorias/2026-10/sao-tarcisio).
 import fs from 'node:fs';
 import os from 'node:os';
 import { iniciarProvas, PAPEIS } from './abrir-tela.mjs';
