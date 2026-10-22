@@ -12,6 +12,7 @@ import { criarAssistente } from './assistente.mjs'
 import { criarEscalaAuto, criarCarregarEntrada } from './escala-auto.mjs'
 import { criarMinistrosPdf } from './ministros-pdf.mjs'
 import { criarEntradaDono } from './entrada-dono.mjs'
+import { criarSite } from './site.mjs'
 
 const precisa = (nome) => {
   const v = process.env[nome]
@@ -45,15 +46,10 @@ const ministros = criarMinistrosPdf({ db, evo, log: console,
   nucleo: () => exigirNucleo(path.join(PASTA_NUCLEOS, 'escala-ministros-core.js')) })
 // Confirmar a semana = a MESMA regra do botão da tela (confirmar-semana-core.js): avisa por push só
 // quem ainda não foi avisado e pede a arte dos grupos uma vez. O push passa por /api/enviar-push com
-// a chave só do robô (tipo escalado_robo); PUSH_URL e ROBO_PUSH_SECRET vêm do robo.env.
-const enviarPushEscalado = async (membros) => {
-  const url = process.env.PUSH_URL, segredo = process.env.ROBO_PUSH_SECRET
-  if (!url || !segredo) throw new Error('faltam PUSH_URL e ROBO_PUSH_SECRET no robo.env')
-  const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'x-cron-secret': segredo },
-    body: JSON.stringify({ tipo: 'escalado_robo', membros }) })
-  if (!r.ok) throw new Error(`push respondeu ${r.status}`)
-  return { ok: true }
-}
+// a chave só do robô (tipo escalado_robo); a arte é disparada por /api/regenerar-arte com a mesma chave
+// (sem isso o pedido da fila esperava uma arte que ninguém mandava fazer e falhava em 30 min).
+// PUSH_URL e ROBO_PUSH_SECRET vêm do robo.env; a URL da arte é derivada do PUSH_URL.
+const site = criarSite({ pushUrl: process.env.PUSH_URL, arteUrl: process.env.REGENERAR_ARTE_URL || null, segredo: process.env.ROBO_PUSH_SECRET })
 const confirmarSemana = async (sabado) => {
   try {
     const domingo = new Date(sabado + 'T12:00:00Z'); domingo.setUTCDate(domingo.getUTCDate() + 1)
@@ -62,7 +58,8 @@ const confirmarSemana = async (sabado) => {
     const esc = await db.from('acolitos_escalas').select('celebracao_id,membro_id').in('celebracao_id', cels.data.map((c) => c.id))
     if (esc.error) throw esc.error
     const C = lerNucleos().Confirmar
-    const r = await C.confirmarSemana({ sb: db, enviarPush: enviarPushEscalado, celebracoes: cels.data, escalas: esc.data, pedirArte: C.pedirArtePeloServico })
+    const r = await C.confirmarSemana({ sb: db, enviarPush: site.enviarPushEscalado, celebracoes: cels.data, escalas: esc.data,
+      pedirArte: C.pedirArtePeloServico, regenerarArte: site.regenerarArte })
     return r.ok ? { ok: true } : { ok: false, erro: r.erro || r.motivo || 'não consegui confirmar' }
   } catch (e) { return { ok: false, erro: e.message } }
 }

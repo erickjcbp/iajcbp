@@ -1,7 +1,19 @@
 // Vercel serverless — dispara o workflow "Arte da Escala" (GitHub Actions).
 // Só coordenação (coord_admin/subadmin no módulo acolitos). Espelha a auth de acolito-admin.js.
+// Exceção única: o robô do WhatsApp (VPS), depois do Confirmar do dono, entra com a chave só dele
+// (ROBO_PUSH_SECRET no cabeçalho x-cron-secret) e pede a arte no formato automático. Sem isso a fila
+// dos grupos esperava uma arte que ninguém pedia e virava 'falhou' em 30 min. O CRON_SECRET NÃO vale aqui.
 
+import crypto from 'node:crypto';
 import { dispararArte } from './_github.js';
+
+// Compara segredos sem vazar tempo. Falso se qualquer um estiver vazio.
+function segredoConfere(recebido, esperado) {
+  if (!recebido || !esperado) return false;
+  const a = Buffer.from(String(recebido)), b = Buffer.from(String(esperado));
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -14,6 +26,15 @@ export default async function handler(req, res) {
   const GH_REPO = process.env.GH_REPO; // ex.: erickjcbp/iajcbp
   if (!URL || !ANON || !SRK) return res.status(500).json({ error: 'Server misconfigured' });
   if (!GH_PAT || !GH_REPO) return res.status(500).json({ error: 'GitHub não configurado' });
+
+  // Robô: segredo presente decide o caminho. Errado (ou o do cron) = 403, nunca cai para o login.
+  const segredo = req.headers['x-cron-secret'];
+  if (segredo) {
+    if (!segredoConfere(segredo, process.env.ROBO_PUSH_SECRET)) return res.status(403).json({ error: 'Acesso negado' });
+    const gh = await dispararArte({ GH_PAT, GH_REPO, origem: 'manual', formato: 'automatico' });
+    if (!gh.ok) return res.status(502).json({ error: gh.motivo, detalhe: gh.detalhe });
+    return res.status(202).json({ ok: true });
+  }
 
   const token = (req.headers.authorization || '').replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Token ausente' });

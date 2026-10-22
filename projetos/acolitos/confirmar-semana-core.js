@@ -10,7 +10,8 @@
 //   - cada pessoa recebe o próprio envio, e só quem teve o envio aceito é marcada como avisada;
 //   - a lista de avisados é lida ANTES de qualquer envio; sem conseguir ler, nada é enviado;
 //   - o pedido da arte confia na trava do banco (tarcisio_pedir_escala: chave_unica
-//     'escala:<domingo>' em tarcisio_envios, "on conflict do nothing"), então repetir é inofensivo.
+//     'escala:<domingo>' em tarcisio_envios), então repetir é inofensivo; só um pedido que
+//     FALHOU volta para a fila (migration 105).
 //
 // Nunca lança para falha esperada: devolve { ok:false, motivo, erro } com o texto para a pessoa.
 // Formato de escala_avisados em acolitos_config: { 'AAAA-MM-DD (chave da semana)': [membro_id] }.
@@ -84,7 +85,17 @@
         { onConflict: 'chave_unica', ignoreDuplicates: true })
       .select('id');
     if (ins.error) throw ins.error;
-    return { ok: true, novo: Array.isArray(ins.data) && ins.data.length > 0 };
+    if (Array.isArray(ins.data) && ins.data.length > 0) return { ok: true, novo: true };
+    // Já existia. Se o pedido anterior FALHOU (a arte não ficou pronta em 30 min, nenhum grupo
+    // ligado), confirmar de novo revive o MESMO pedido: volta a esperar a arte, com created_at novo
+    // (o robô só envia arte gerada DEPOIS do pedido). Enviado ou ainda esperando: não mexe.
+    // Igual à tarcisio_pedir_escala da migration 105.
+    var rev = await sb.from('tarcisio_envios')
+      .update({ estado: 'aguardando_arte', erro: null, created_at: new Date().toISOString() })
+      .eq('chave_unica', 'escala:' + domingo).eq('estado', 'falhou')
+      .select('id');
+    if (rev.error) throw rev.error;
+    return { ok: true, novo: Array.isArray(rev.data) && rev.data.length > 0 };
   }
 
   // Roda `fn` sobre cada item com no máximo `n` ao mesmo tempo. Nunca rejeita.
@@ -144,7 +155,7 @@
     }
     var valor = lido.data && lido.data.valor;
     var mapa = (valor && typeof valor === 'object' && !Array.isArray(valor)) ? Object.assign({}, valor) : {};
-    var novos = nucleo.aNotificar({ escalados: escalados, jaAvisados: mapa[chave] || [] });
+    var novos = nucleo.aNotificar({ escalados: escalados, jaAvisados: [] });
     base.novos = novos;
 
     var avisados = [];

@@ -207,6 +207,7 @@ test('pedirArtePeloServico usa a mesma trava (chave_unica) e respeita escala des
           upsertArgs = { linha, opc };
           return { async select() { if (linhas.has(linha.chave_unica)) return { data: [], error: null }; linhas.add(linha.chave_unica); return { data: [{ id: 1 }], error: null }; } };
         },
+        update() { const q = { eq() { return q; }, async select() { return { data: [], error: null }; } }; return q; },   // nada falhou: não revive
       };
     },
   };
@@ -216,4 +217,42 @@ test('pedirArtePeloServico usa a mesma trava (chave_unica) e respeita escala des
   assert.deepStrictEqual(upsertArgs.opc, { onConflict: 'chave_unica', ignoreDuplicates: true });
   ligada = false;
   assert.deepStrictEqual(await C.pedirArtePeloServico(sb, '2026-11-01'), { ok: true, desligado: true });
+});
+
+test('pedirArtePeloServico revive o pedido que FALHOU (arte não ficou pronta): confirmar de novo funciona', async () => {
+  // estado por chave: o que a fila tem hoje
+  const fila = new Map([['escala:2026-10-25', { estado: 'falhou', created_at: '2026-10-20T21:00:00Z', erro: 'A arte não ficou pronta em 30 min.' }],
+    ['escala:2026-11-01', { estado: 'enviado', created_at: '2026-10-27T21:00:00Z' }]]);
+  const sb = {
+    from(tab) {
+      if (tab === 'tarcisio_config') {
+        const q = { select() { return q; }, eq() { return q; }, async maybeSingle() { return { data: { escala_ligada: true }, error: null }; } };
+        return q;
+      }
+      return {
+        upsert(linha) {
+          return { async select() { if (fila.has(linha.chave_unica)) return { data: [], error: null }; fila.set(linha.chave_unica, { estado: linha.estado }); return { data: [{ id: 1 }], error: null }; } };
+        },
+        update(campos) {
+          const filtro = {};
+          const q = { eq(c, v) { filtro[c] = v; return q; },
+            async select() {
+              const l = fila.get(filtro.chave_unica);
+              if (!l || (filtro.estado && l.estado !== filtro.estado)) return { data: [], error: null };
+              Object.assign(l, campos); return { data: [{ id: 1 }], error: null };
+            } };
+          return q;
+        },
+      };
+    },
+  };
+  const r = await C.pedirArtePeloServico(sb, '2026-10-25');
+  assert.deepStrictEqual(r, { ok: true, novo: true });
+  const l = fila.get('escala:2026-10-25');
+  assert.strictEqual(l.estado, 'aguardando_arte');
+  assert.strictEqual(l.erro, null);
+  assert.ok(new Date(l.created_at) > new Date('2026-10-21T00:00:00Z'), 'created_at renovado: a arte nova tem de ser mais nova que o pedido');
+  // já enviada: a escala confirmada é a que vale, não reenvia
+  assert.deepStrictEqual(await C.pedirArtePeloServico(sb, '2026-11-01'), { ok: true, novo: false });
+  assert.strictEqual(fila.get('escala:2026-11-01').estado, 'enviado');
 });
