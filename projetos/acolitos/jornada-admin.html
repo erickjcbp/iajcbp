@@ -641,7 +641,7 @@ function renderMatriz(container){
     sep.appendChild(sc); tbody.appendChild(sep);
     membros.forEach(m=>{
       const tr=document.createElement('tr');
-      const nmtd=document.createElement('td'); const nome=document.createElement('span');nome.className='matriz-member-name';nome.title=m.nome;nome.textContent=m.apelido||m.nome;nome.onclick=()=>abrirFichaRapida(m,{aoMudar:()=>renderAll()});
+      const nmtd=document.createElement('td'); const nome=document.createElement('span');nome.className='matriz-member-name';nome.title=m.nome;nome.textContent=nomeExibir(m);nome.onclick=()=>abrirFichaRapida(m,{aoMudar:()=>renderAll()});
       const acoes=document.createElement('div');acoes.style.cssText='display:flex;gap:4px;';
       const editar=document.createElement('button');editar.type='button';editar.className='matriz-action';comIcone(editar, 'editar', '', 'Editar');editar.title='Editar ficha de '+(m.apelido||m.nome);editar.setAttribute('aria-label',editar.title);
       editar.onclick=()=>abrirFichaRapida(m,{aoMudar:()=>renderAll()});
@@ -747,11 +747,11 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
     b.onclick = onClick; return b;
   };
   function cardDe(m) {
-    const row = document.createElement('div'); row.style.cssText = 'display:flex;flex-direction:column;gap:9px;padding:11px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--surface2);';
-    const top = document.createElement('div'); top.style.cssText = 'display:flex;align-items:center;gap:10px;';
-    const av = buildAvatarEl(m.foto_url, null, 38, { nivelSlug: m.nivel || 'aspirante', casaSlug: casaSlugDe(m) }); av.style.flex = 'none';
+    const row = document.createElement('div'); row.style.cssText = 'display:flex;flex-direction:column;gap:5px;padding:5px 8px;border:1px solid var(--border);border-radius:8px;margin-bottom:4px;background:var(--surface2);';
+    const top = document.createElement('div'); top.style.cssText = 'display:flex;align-items:center;gap:8px;';
+    const av = buildAvatarEl(m.foto_url, null, 30, { nivelSlug: m.nivel || 'aspirante', casaSlug: casaSlugDe(m) }); av.style.flex = 'none';
     const info = document.createElement('div'); info.style.cssText = 'flex:1;min-width:0;';
-    const nm = document.createElement('div'); nm.style.cssText = 'font-weight:700;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; nm.textContent = m.apelido || m.nome;
+    const nm = document.createElement('div'); nm.style.cssText = 'font-weight:700;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; nm.textContent = nomeExibir(m);
     // Quantas funções a pessoa já domina é O número desta aba — antes só aparecia
     // "0 comp.", que é o plano, não o que ela sabe fazer hoje.
     const aptas = Object.values(habAll[m.id] || {}).filter(pf => pf === 'apto' || pf === 'experiente' || pf === 'referencia').length;
@@ -763,7 +763,7 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
     // página e empurravam o mapa de cobertura para fora da vista.
     const mais = document.createElement('button'); mais.type = 'button'; mais.className = 'mx-mini';
     mais.textContent = '⋯'; mais.title = 'Ações'; mais.setAttribute('aria-label', 'Ações de ' + (m.apelido || m.nome));
-    mais.style.cssText = 'flex:none;padding:4px 10px;font-size:16px;line-height:1;';
+    mais.style.cssText = 'flex:none;padding:0 10px;font-size:16px;line-height:1;margin:-6px 0;';
     top.appendChild(mais);
     // 4 botões: quebram em 2 linhas no celular (min-width) em vez de espremer tudo numa só
     const btns = document.createElement('div'); btns.style.cssText = 'display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;';

@@ -247,6 +247,54 @@
       #view-rodizio .planilha-table td [class*="btn"] { min-height:34px !important; padding:2px 8px; }
       .rodizio-regua, .rod-painel { font-size:11px; }
     }
+    /* Rodízio 3 (22/10/2026): refeito no celular — UMA linha por pessoa, grade com cabeçalho */
+    @media(max-width:639px){
+      .planilha-table td.sticky-left { max-width:78px !important; min-width:0 !important; }
+      .pl-nome > div { white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }
+      .rodizio-regua { padding:5px 8px; margin-bottom:6px; font-size:10.5px; line-height:1.3; }
+      .rodizio-regua strong { display:none; }
+      .rodizio-regua-nota { display:none; }
+      .rod-painel { padding:4px 8px; margin-bottom:6px; }
+      .rod-painel h3 { margin:0 0 2px; font-size:10.5px; }
+      .rod-painel-dica { display:none; }
+      .rod-editar { display:none; }
+      .rod-item { padding:0; gap:6px; min-height:44px; }
+      .rod-item-nome b { display:inline; font-size:12.5px; }
+      .rod-item-nome span { font-size:10.5px; display:block; }
+      .rod-item .btn-sm { padding:0; font-size:15px; }
+      .rod-item .btn-sm .rot, .rod-td-acao .btn-sm .rot { display:none; }
+      .rodizio-acoes { margin-top:6px; }
+      .rodizio-acoes .btn-sm { padding:4px 8px; }
+      #view-rodizio .planilha-table thead { display:block; }
+      #view-rodizio .planilha-table thead tr, #view-rodizio .planilha-table tbody tr { display:grid !important; grid-template-columns:minmax(0,1fr) 48px 36px 46px 44px; align-items:center; gap:0 4px; padding:0 6px; margin:0; border:0; border-bottom:1px solid var(--border); border-radius:0; background:none; }
+      #view-rodizio .planilha-table thead th { padding:3px 0; font-size:10px; text-align:center; white-space:nowrap; background:none; border:0; position:static; }
+      #view-rodizio .planilha-table thead th.sticky-left { text-align:left; }
+      #view-rodizio .planilha-table thead th:last-child { visibility:hidden; }
+      #view-rodizio th[data-label^="Sem "], #view-rodizio td[data-label^="Sem "] { display:none !important; }
+      #view-rodizio .planilha-table tbody td { display:block !important; padding:0 !important; margin:0 !important; text-align:center !important; font-size:11px; min-width:0; }
+      #view-rodizio .planilha-table tbody td::before { display:none !important; }
+      #view-rodizio .planilha-table td.sticky-left { text-align:left !important; border:0; max-width:none !important; flex:none; }
+      #view-rodizio .rod-nome-box { gap:0; }
+      #view-rodizio .rod-nome-box > button, #view-rodizio .rod-nome-box > :nth-child(2) { display:none !important; }
+      #view-rodizio .rod-nome-box > div { min-width:0; }
+      #view-rodizio .rod-nome-box > div > div:first-child { font-size:12.5px !important; cursor:pointer; }
+      #view-rodizio .rod-nome-box > div > div:nth-child(2) { font-size:10px !important; }
+      #view-rodizio .rodizio-motivo, #view-rodizio .rodizio-selo { display:none; }
+      #view-rodizio .rodizio-susp { margin-top:0; font-size:9.5px; padding:0 4px; }
+      #view-rodizio .planilha-table td button:not(.btn-sm) { display:none; }
+      #view-rodizio .planilha-table td .btn-sm { min-width:44px !important; min-height:44px !important; padding:0; font-size:15px; }
+      .rodizio-alerta { padding:1px 4px; }
+      .rodizio-contagem { margin:6px 0 0; }
+      .rod-painel { display:grid; grid-template-columns:1fr 1fr; gap:0 10px; }
+      .rod-painel > h3 { grid-column:1 / -1; }
+      .rod-item { border-top:0 !important; border-bottom:1px solid var(--border); min-width:0; }
+      .rod-item-nome b { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+      .rod-item-nome span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .rod-item .btn-sm, #view-rodizio .planilha-table td .btn-sm { background:none !important; border:0 !important; box-shadow:none !important; clip-path:none !important; color:var(--gold-light) !important; }
+      #view-rodizio .planilha-table td .btn-sm { margin:-6px 0 !important; }
+      #view-rodizio .planilha-table thead tr, #view-rodizio .planilha-table tbody tr { grid-template-columns:minmax(0,1fr) 56px 42px 54px 44px !important; }
+      #view-rodizio .planilha-table thead th { font-size:9.5px; letter-spacing:0; text-transform:none; overflow:hidden; }
+    }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -1583,8 +1631,8 @@ function renderPlanilha() {
     wrapN.appendChild(bFicha);
     wrapN.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30, { nivelSlug: m.nivel || nivelFromRole(patchRoleFromHabs(habs)), casaSlug: casaSlugDe(m) }));
     const nm=document.createElement('div'); nm.style.cssText='min-width:0;line-height:1.15;';
-    if((m.apelido||'').trim()){ const a=document.createElement('div'); a.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; a.textContent=m.apelido; const n=document.createElement('div'); n.style.cssText='font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; n.textContent=m.nome; nm.append(a,n); }
-    else { nm.style.cssText='font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; nm.textContent=m.nome; }
+    if((m.apelido||'').trim() && !nomeEmTelaPequena()){ const a=document.createElement('div'); a.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; a.textContent=m.apelido; const n=document.createElement('div'); n.style.cssText='font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; n.textContent=m.nome; nm.append(a,n); }
+    else { nm.style.cssText='font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; nm.textContent=nomeExibir(m); }
     nm.onclick=()=>abrirFichaRapida(m,{aoMudar:aoFichaRapidaMudou});wrapN.appendChild(nm);tdN.appendChild(wrapN);tr.appendChild(tdN);
 
     // Idade
@@ -1962,7 +2010,7 @@ function abrirHistoricoSemanal(m){
 function botaoSuspensao(m){
   const hoje=hojeLocal(), susp=RodizioCore.suspensoNaData(m, hoje);
   const b=document.createElement('button'); b.className='btn-sm '+(susp?'gray':'wine');
-  b.textContent = susp ? '▶ Reativar' : '⏸ Suspender';
+  const ic=document.createElement('span'); ic.textContent = susp ? '▶' : '⏸'; const rt=document.createElement('span'); rt.className='rot'; rt.textContent = susp ? ' Reativar' : ' Suspender'; b.append(ic,rt); b.setAttribute('aria-label', susp ? 'Reativar' : 'Suspender');
   b.title = susp ? 'Tirar da suspensão antes do prazo' : 'Fica '+RodizioCore.DIAS_SUSPENSAO+' dias sem ser escalado';
   b.style.cssText='padding:5px 9px;font-size:11px;white-space:nowrap;';
   b.onclick=()=> susp ? reativarMembro(m) : suspenderMembro(m);
@@ -2035,11 +2083,12 @@ function pintarPainelRodizio(el){
   const item=(l, linha2, btn)=>{
     const d=document.createElement('div'); d.className='rod-item';
     const n=document.createElement('div'); n.className='rod-item-nome';
-    const b=document.createElement('b'); b.textContent=l.membro.apelido||l.membro.nome;
+    const b=document.createElement('b'); b.textContent=nomeExibir(l.membro);
     const titulo=document.createElement('div');titulo.className='rod-item-titulo';
     const editar=document.createElement('button');editar.type='button';editar.className='rod-editar';comIcone(editar, 'editar', '', 'Editar');
     editar.title='Editar rápido: '+l.membro.nome;editar.setAttribute('aria-label',editar.title);
     editar.onclick=()=>abrirFichaRapida(l.membro,{aoMudar:aoFichaRapidaMudou});
+    b.onclick=()=>{ if(nomeEmTelaPequena()) abrirFichaRapida(l.membro,{aoMudar:aoFichaRapidaMudou}); };
     titulo.append(b,editar);
     const sp=document.createElement('span'); sp.textContent=linha2;
     n.append(titulo,sp); d.append(n,btn); return d;
@@ -2095,6 +2144,7 @@ function pintarRodizio(lista){
   const ordemAtual = filtroRodizio ? filtroRodizio.estado().ordem : null;
   cols.forEach((h,i)=>{
     const th=document.createElement('th'); if(i===0) th.className='sticky-left';
+    th.dataset.label=h;
     if(i>0) th.style.textAlign='center';
     const par = COL_ORDEM[h];
     if (par && filtroRodizio) {
@@ -2116,16 +2166,17 @@ function pintarRodizio(lista){
     const habs=habMap[m.id]||{};
 
     const tdN=document.createElement('td'); tdN.className='sticky-left';
-    const box=document.createElement('div'); box.style.cssText='display:flex;align-items:center;gap:8px;';
+    const box=document.createElement('div'); box.className='rod-nome-box'; box.style.cssText='display:flex;align-items:center;gap:8px;';
     const bFichaRod=document.createElement('button');bFichaRod.type='button';bFichaRod.title='Editar ficha';
     bFichaRod.style.cssText='border:none;background:none;cursor:pointer;font-size:13px;padding:2px;flex:none;';
     comIcone(bFichaRod, 'editar', '', 'Editar');bFichaRod.onclick=()=>abrirFichaRapida(m,{aoMudar:aoFichaRapidaMudou});
     box.appendChild(bFichaRod);
     box.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30, { nivelSlug: m.nivel || nivelFromRole(patchRoleFromHabs(habs)), casaSlug: casaSlugDe(m) }));
     const nm=document.createElement('div'); nm.style.cssText='min-width:0;line-height:1.15;';
-    const n1=document.createElement('div'); n1.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; n1.textContent=m.apelido||m.nome;
+    const n1=document.createElement('div'); n1.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; n1.textContent=nomeExibir(m);
     const n2=document.createElement('div'); n2.style.cssText='font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
     n2.textContent=nivelInfo(m.nivel||'aspirante').label+' · '+_freqComLabel(m.comunidade);
+    n1.onclick=()=>{ if(nomeEmTelaPequena()) abrirFichaRapida(m,{aoMudar:aoFichaRapidaMudou}); };
     nm.append(n1,n2);
     const motivo=RodizioCore.rotuloDoMotivo(l.motivo);
     if(motivo!=='—'){ const n3=document.createElement('div'); n3.className='rodizio-motivo'; n3.textContent=motivo; nm.appendChild(n3); }
@@ -2136,7 +2187,7 @@ function pintarRodizio(lista){
     else if(m.escalar_frequente){ const sf=document.createElement('div'); sf.className='rodizio-selo'; sf.textContent='frequente'; nm.appendChild(sf); }
     box.appendChild(nm); tdN.appendChild(box); tr.appendChild(tdN);
 
-    const cel=(txt,label)=>{ const td=document.createElement('td'); td.style.cssText='text-align:center;font-size:11px;'; td.textContent=txt; if(label) td.setAttribute('data-label',label); return td; };
+    const cel=(txt,label)=>{ const td=document.createElement('td'); td.className='rod-td-num'; td.style.cssText='text-align:center;font-size:11px;'; td.textContent=txt; if(label) td.setAttribute('data-label',label); return td; };
 
     // "Este mês" é a coluna da REGRA, e por isso vem logo depois do nome. Quem está abaixo
     // destaca por FUNDO, com o texto na cor normal: texto pequeno pintado de âmbar mede
@@ -2155,9 +2206,9 @@ function pintarRodizio(lista){
     const bHist=document.createElement('button'); bHist.type='button'; bHist.title='Ver histórico das últimas semanas';
     bHist.style.cssText='margin-left:5px;border:none;background:none;cursor:pointer;font-size:12px;vertical-align:middle;';
     comIcone(bHist, 'calendar', '', 'Datas'); bHist.onclick=()=>abrirHistoricoSemanal(m);
-    tdU.appendChild(bHist); tr.appendChild(tdU);
+    tdU.appendChild(bHist); tdU.onclick=(ev)=>{ if(ev.target===bHist||bHist.contains(ev.target)) return; if(nomeEmTelaPequena()) abrirHistoricoSemanal(m); }; tr.appendChild(tdU);
 
-    const tdA=document.createElement('td'); tdA.style.cssText='text-align:center;';
+    const tdA=document.createElement('td'); tdA.className='rod-td-acao'; tdA.style.cssText='text-align:center;';
     tdA.appendChild(botaoSuspensao(m)); tr.appendChild(tdA);
 
     tbody.appendChild(tr);

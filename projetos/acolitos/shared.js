@@ -3953,3 +3953,15 @@ const EMOJI_PONTO = { '🟢':['#2f9e57','verde'], '🔵':['#3a7bd5','azul'], '�
   }
   if (document.body) ligar(); else document.addEventListener('DOMContentLoaded', ligar);
 })();
+
+
+// Nome enxuto para listas densas no celular: apelido, ou 1º nome + inicial do último sobrenome.
+// No computador devolve o nome de sempre (apelido ou nome completo).
+function nomeEmTelaPequena() { try { return !!(window.matchMedia && window.matchMedia('(max-width: 639px)').matches); } catch (e) { return false; } }
+function nomeExibir(m) {
+  const ap = ((m && m.apelido) || '').trim(), nome = ((m && m.nome) || '').trim();
+  if (!nomeEmTelaPequena()) return ap || nome;
+  if (ap) return ap;
+  const p = nome.split(/\s+/);
+  return p.length < 2 ? (p[0] || '') : p[0] + ' ' + p[p.length - 1].charAt(0) + '.';
+}
