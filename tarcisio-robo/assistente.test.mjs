@@ -123,3 +123,17 @@ test('lê mensagem recebida; ignora grupo, status e o que o próprio número man
   assert.equal(lerMensagemRecebida(ev({ remoteJid: '5519998765432@s.whatsapp.net', id: 'A6' }, { audioMessage: {} })).midia, 'audio')
   assert.equal(lerMensagemRecebida({ event: 'connection.update', data: {} }), null)
 })
+
+test('chamar_coordenacao: com pendência aberta do mesmo número, atualiza em vez de abrir outra', async () => {
+  const db = bancoFalso((tabela, ops) => (tabela === 'tarcisio_pendencias' && ops.some((o) => o[0] === 'limit') ? { data: [{ id: 'p1' }] } : { data: [] }))
+  const a = criarAssistente({ db, evo: {}, relogio: () => new Date('2026-10-21T15:00:00Z'), log: silencioso })
+  const r = await a.executorPara(NUM_MAE, [joao], TODOS)('chamar_coordenacao', { resumo: 'saída às 17h' })
+  assert.deepEqual(r, { ok: true })
+  assert.equal(db.gravado.filter((g) => g.tabela === 'tarcisio_pendencias' && g.op === 'insert').length, 0)
+})
+
+test('chamar_coordenacao: sem pendência aberta, abre uma', async () => {
+  const { a, db } = montar()
+  await a.executorPara(NUM_MAE, [joao], TODOS)('chamar_coordenacao', { resumo: 'saída às 17h' })
+  assert.equal(db.gravado.filter((g) => g.tabela === 'tarcisio_pendencias' && g.op === 'insert').length, 1)
+})

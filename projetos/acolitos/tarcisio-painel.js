@@ -237,36 +237,120 @@
     box.append(grid);
   });
 
-  // ── CONVERSAS: o que chegou e o que foi respondido (últimos 7 dias) ──
+  // ── CONVERSAS: estilo WhatsApp — lista de contatos à esquerda, conversa à direita (últimos 30 dias) ──
+  const hora = (iso) => new Date(iso).toLocaleTimeString('pt-BR', { timeZone:FUSO, hour:'2-digit', minute:'2-digit' });
+  const diaChave = (iso) => new Date(iso).toLocaleDateString('en-CA', { timeZone:FUSO });
+  const diaRotulo = (iso) => {
+    const k = diaChave(iso), hoje = diaChave(new Date().toISOString()), ontem = diaChave(new Date(Date.now() - 864e5).toISOString());
+    if (k === hoje) return 'Hoje';
+    if (k === ontem) return 'Ontem';
+    return new Date(iso).toLocaleDateString('pt-BR', { timeZone:FUSO, weekday:'long', day:'2-digit', month:'long' });
+  };
+  const iniciais = (nome) => (nome || '').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+  const ROTULO_FERRAMENTA = { escala_dos_meus:'consultou a escala', registrar_ausencia:'registrou ausência', chamar_coordenacao:'chamou a coordenação', identificar:'pediu vínculo do número' };
+  const previa = (m) => (m.direcao === 'saida' ? '✓ ' : '') + (m.texto || `[${m.midia || 'mídia'}]`).replace(/\s+/g, ' ');
+
   const conversas = montar(async (box, ctl) => {
-    const desde = new Date(Date.now() - 7 * 864e5).toISOString();
+    const desde = new Date(Date.now() - 30 * 864e5).toISOString();
     const [msgs, pend] = await Promise.all([
-      sb.from('tarcisio_mensagens').select('*').gte('created_at', desde).order('created_at', { ascending:false }).limit(400),
-      sb.from('tarcisio_pendencias').select('id', { count:'exact', head:true }).eq('estado', 'aberta'),
+      sb.from('tarcisio_mensagens').select('*').gte('created_at', desde).order('created_at', { ascending:false }).limit(1500),
+      sb.from('tarcisio_pendencias').select('numero').eq('estado', 'aberta'),
     ]);
     if (erroBanco(msgs, 'ler as conversas')) return;
+    const comPendencia = new Set((pend.data || []).map((p) => p.numero));
     const ids = [...new Set(msgs.data.flatMap((m) => m.membro_ids || []))];
     const nomes = {};
     if (ids.length) { const r = await sb.from('acolitos_membros').select('id,nome').in('id', ids); (r.data || []).forEach((m) => { nomes[m.id] = m.nome; }); }
-    box.append(el('p', 'tc-st-muted', `Últimos 7 dias. Pendências abertas na Caixa: ${pend.count ?? 0}.`));
-    const ac = el('div', 'tc-st-acoes'); ac.append(botao('Atualizar', 'gray', () => ctl.redesenhar())); box.append(ac);
-    const porNumero = new Map();
-    msgs.data.forEach((m) => { if (!porNumero.has(m.numero)) porNumero.set(m.numero, []); porNumero.get(m.numero).push(m); });
-    const l = el('div', 'tc-lista'); l.style.marginTop = '14px';
-    if (!porNumero.size) l.append(el('div', 'tc-st-muted', 'Nenhuma conversa ainda.'));
-    porNumero.forEach((lista, numero) => {
-      const c = el('div', 'tc-conversa');
+
+    // Uma conversa por número; mensagens em ordem cronológica.
+    const mapa = new Map();
+    [...msgs.data].reverse().forEach((m) => { if (!mapa.has(m.numero)) mapa.set(m.numero, []); mapa.get(m.numero).push(m); });
+    const contatos = [...mapa.entries()].map(([numero, lista]) => {
       const quem = [...new Set(lista.flatMap((m) => m.membro_ids || []))].map((id) => nomes[id]).filter(Boolean);
-      c.append(el('div', 'tc-tit', foneBonito(numero) + (quem.length ? ' · ' + quem.join(', ') : ' · número desconhecido')));
-      lista.slice(0, 12).reverse().forEach((m) => {
-        const b = el('div', 'tc-bolha tc-' + m.direcao, m.texto || `[${m.midia || 'mídia'}]`);
-        const fez = (m.ferramentas || []).map((f) => f.ferramenta).join(', ');
-        b.append(el('small', null, quando(m.created_at) + (fez ? ' · usou: ' + fez : '') + (m.direcao === 'entrada' && !m.respondida ? ' · aguardando' : '')));
-        c.append(b);
+      return { numero, lista, ultima: lista.at(-1), quem, titulo: quem.length ? quem.join(', ') : foneBonito(numero),
+        aguardando: lista.filter((m) => m.direcao === 'entrada' && !m.respondida).length, pendencia: comPendencia.has(numero) };
+    }).sort((a, b) => b.ultima.created_at.localeCompare(a.ultima.created_at));
+
+    box.append(el('p', 'tc-st-muted', `Últimos 30 dias · ${contatos.length} conversa(s) · ${comPendencia.size} com pendência aberta na Caixa.`));
+    if (!contatos.length) { box.append(el('div', 'tc-st-muted', 'Nenhuma conversa ainda.')); return; }
+
+    const zap = el('div', 'zp');
+    const colLista = el('div', 'zp-lista'), colChat = el('div', 'zp-chat');
+    zap.append(colLista, colChat);
+    box.append(zap);
+
+    let aberto = null, filtro = 'todas', busca = '';
+    const cab = el('div', 'zp-cab');
+    const campoBusca = el('input', 'zp-busca'); campoBusca.type = 'search'; campoBusca.placeholder = 'Buscar nome ou número';
+    const filtros = el('div', 'zp-filtros');
+    const itens = el('div', 'zp-itens');
+    const botaoAtualizar = botao('↻', 'gray zp-atualizar', () => ctl.redesenhar()); botaoAtualizar.title = 'Atualizar'; botaoAtualizar.setAttribute('aria-label', 'Atualizar');
+    const topo = el('div', 'zp-topo'); topo.append(campoBusca, botaoAtualizar);
+    cab.append(topo, filtros);
+    colLista.append(cab, itens);
+
+    const FILTROS = [['todas', 'Todas'], ['aguardando', 'Aguardando'], ['pendencia', 'Com pendência']];
+    const desenharFiltros = () => {
+      filtros.textContent = '';
+      FILTROS.forEach(([k, rot]) => {
+        const n = k === 'aguardando' ? contatos.filter((c) => c.aguardando).length : k === 'pendencia' ? contatos.filter((c) => c.pendencia).length : contatos.length;
+        const b = el('button', 'zp-filtro' + (filtro === k ? ' on' : ''), `${rot} ${n}`); b.type = 'button';
+        b.onclick = () => { filtro = k; desenharFiltros(); desenharItens(); };
+        filtros.append(b);
       });
-      l.append(c);
-    });
-    box.append(l);
+    };
+    const visiveis = () => {
+      const q = busca.trim().toLowerCase(), qd = q.replace(/\D/g, '');
+      return contatos.filter((c) => (filtro === 'todas' || (filtro === 'aguardando' ? c.aguardando : c.pendencia))
+        && (!q || c.titulo.toLowerCase().includes(q) || (qd && c.numero.includes(qd))));
+    };
+    const desenharItens = () => {
+      itens.textContent = '';
+      const lista = visiveis();
+      if (!lista.length) itens.append(el('div', 'tc-st-muted zp-vazio', 'Nada por aqui.'));
+      lista.forEach((c) => {
+        const b = el('button', 'zp-item' + (aberto === c.numero ? ' on' : '')); b.type = 'button';
+        const av = el('div', 'zp-av', iniciais(c.quem[0]) || '#');
+        const meio = el('div', 'zp-meio');
+        meio.append(el('div', 'zp-nome', c.titulo), el('div', 'zp-previa', previa(c.ultima)));
+        const dir = el('div', 'zp-dir');
+        const hoje = diaChave(c.ultima.created_at) === diaChave(new Date().toISOString());
+        dir.append(el('div', 'zp-hora' + (c.aguardando ? ' novo' : ''), hoje ? hora(c.ultima.created_at) : diaRotulo(c.ultima.created_at).slice(0, 10)));
+        if (c.aguardando) dir.append(el('span', 'zp-badge', String(c.aguardando)));
+        else if (c.pendencia) { const w = el('span', 'zp-alerta', '!'); w.title = 'Pendência aberta na Caixa'; dir.append(w); }
+        b.append(av, meio, dir);
+        b.onclick = () => { aberto = c.numero; zap.classList.add('zp-lendo'); desenharItens(); desenharChat(); };
+        itens.append(b);
+      });
+    };
+    const desenharChat = () => {
+      colChat.textContent = '';
+      const c = contatos.find((x) => x.numero === aberto);
+      if (!c) { const v = el('div', 'zp-sem'); v.append(el('div', 'zp-sem-ico', '💬'), el('div', null, 'Escolha uma conversa para ler.')); colChat.append(v); return; }
+      const topoChat = el('div', 'zp-chat-topo');
+      const voltar = el('button', 'zp-voltar', '←'); voltar.type = 'button'; voltar.setAttribute('aria-label', 'Voltar');
+      voltar.onclick = () => { aberto = null; zap.classList.remove('zp-lendo'); desenharItens(); desenharChat(); };
+      const info = el('div', 'zp-chat-info');
+      info.append(el('div', 'zp-nome', c.titulo), el('div', 'zp-sub', c.quem.length ? foneBonito(c.numero) : 'número sem cadastro ligado'));
+      topoChat.append(voltar, el('div', 'zp-av', iniciais(c.quem[0]) || '#'), info);
+      if (c.pendencia) topoChat.append(el('span', 'zp-chip-pend', 'pendência aberta'));
+      const corpo = el('div', 'zp-corpo');
+      let diaAtual = '';
+      c.lista.forEach((m) => {
+        const k = diaChave(m.created_at);
+        if (k !== diaAtual) { diaAtual = k; corpo.append(el('div', 'zp-dia', diaRotulo(m.created_at))); }
+        const b = el('div', 'zp-bolha zp-' + m.direcao);
+        b.append(el('span', 'zp-txt', m.texto || `[${m.midia || 'mídia'}]`));
+        b.append(el('span', 'zp-rodape', hora(m.created_at) + (m.direcao === 'saida' ? ' ✓✓' : (m.respondida ? '' : ' · aguardando'))));
+        const fer = [...new Set((m.ferramentas || []).map((f) => ROTULO_FERRAMENTA[f.ferramenta] || f.ferramenta))];
+        if (fer.length) { const t = el('div', 'zp-ferr'); fer.forEach((f) => t.append(el('span', 'zp-ferr-chip' + (f === 'chamou a coordenação' ? ' alerta' : ''), '⚙ ' + f))); b.append(t); }
+        corpo.append(b);
+      });
+      colChat.append(topoChat, corpo);
+      corpo.scrollTop = corpo.scrollHeight;
+    };
+    campoBusca.oninput = () => { busca = campoBusca.value; desenharItens(); };
+    desenharFiltros(); desenharItens(); desenharChat();
   });
 
   // ── AVISOS (coordenação) ──

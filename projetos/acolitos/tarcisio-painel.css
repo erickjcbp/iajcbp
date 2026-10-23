@@ -61,3 +61,63 @@
 .tm-op input[type=radio] { width:22px; height:22px; accent-color:var(--gold); flex:none; }
 .tc-campo { width:100%; min-height:44px; font-size:16px; padding:8px 12px; border-radius:10px; border:1px solid var(--border);
   background:var(--surface2); color:var(--text); }
+
+/* ── Conversas estilo WhatsApp ── */
+.zp { display:grid; grid-template-columns:minmax(300px,380px) minmax(0,1fr); height:clamp(460px,calc(100dvh - 230px),1100px);
+  border:1px solid var(--border); border-radius:14px; overflow:hidden; background:var(--surface); margin-top:12px; }
+.zp-lista { display:flex; flex-direction:column; min-width:0; min-height:0; border-right:1px solid var(--border); background:var(--surface); }
+.zp-cab { padding:10px 12px 8px; border-bottom:1px solid var(--border); display:grid; gap:8px; }
+.zp-topo { display:flex; gap:8px; }
+.zp-busca { flex:1; min-width:0; min-height:44px; font:16px var(--font-body, inherit); color:var(--text); background:var(--surface2);
+  border:1px solid var(--border); border-radius:22px; padding:0 16px; }
+.zp-atualizar.btn-sm { min-width:44px; min-height:44px; border-radius:50%; font-size:18px; padding:0; }
+.zp-filtros { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
+.zp-filtro { flex:none; min-height:36px; padding:0 14px; border-radius:18px; border:1px solid var(--border); background:var(--surface2);
+  color:var(--text-muted); font-size:13px; font-weight:600; cursor:pointer; }
+.zp-filtro.on { background:rgba(47,158,87,.2); border-color:var(--success); color:var(--success-text); }
+.zp-itens { flex:1; overflow-y:auto; min-height:0; }
+.zp-item { width:100%; display:flex; align-items:center; gap:12px; padding:10px 14px; min-height:68px; text-align:left; background:transparent;
+  border:0; border-bottom:1px solid var(--border); color:var(--text); cursor:pointer; font:inherit; }
+.zp-item:hover { background:var(--surface2); }
+.zp-item.on { background:var(--surface3); }
+.zp-av { flex:none; width:46px; height:46px; border-radius:50%; background:var(--wine-dim); color:var(--text); display:grid; place-items:center;
+  font-weight:700; font-size:15px; }
+.zp-meio { flex:1; min-width:0; }
+.zp-nome { font-weight:700; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.zp-previa { color:var(--text-muted); font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+.zp-dir { flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+.zp-hora { font-size:12px; color:var(--text-muted); }
+.zp-hora.novo { color:var(--success-text); font-weight:700; }
+.zp-badge { min-width:22px; height:22px; padding:0 6px; border-radius:11px; background:var(--success); color:#fff; font-size:12px; font-weight:700; display:grid; place-items:center; }
+.zp-alerta { width:22px; height:22px; border-radius:50%; background:var(--gold); color:#2a1b00; font-size:13px; font-weight:800; display:grid; place-items:center; }
+.zp-vazio { padding:20px 14px; }
+.zp-chat { display:flex; flex-direction:column; min-width:0; min-height:0; background:var(--bg); }
+.zp-chat-topo { display:flex; align-items:center; gap:12px; padding:10px 14px; background:var(--surface2); border-bottom:1px solid var(--border); }
+.zp-chat-info { flex:1; min-width:0; }
+.zp-sub { color:var(--text-muted); font-size:12.5px; }
+.zp-chip-pend { flex:none; font-size:12px; font-weight:700; padding:4px 10px; border-radius:14px; background:rgba(232,185,74,.18); color:var(--gold-light); border:1px solid var(--gold-dim); }
+.zp-voltar { display:none; flex:none; width:44px; height:44px; border-radius:50%; border:0; background:transparent; color:var(--text); font-size:22px; cursor:pointer; }
+.zp-corpo { flex:1; overflow-y:auto; min-height:0; padding:14px clamp(12px,4vw,56px); display:flex; flex-direction:column; gap:3px;
+  background-image:radial-gradient(rgba(255,255,255,.035) 1px, transparent 1px); background-size:22px 22px; }
+.zp-dia { align-self:center; margin:12px 0 8px; padding:4px 12px; border-radius:10px; background:var(--surface3); color:var(--text-muted); font-size:12px; text-transform:capitalize; }
+.zp-bolha { position:relative; max-width:min(78%,640px); padding:7px 10px 6px; border-radius:10px; font-size:15px; line-height:1.4; overflow-wrap:anywhere; box-shadow:0 1px 1px rgba(0,0,0,.35); }
+.zp-txt { white-space:pre-wrap; }
+.zp-entrada { align-self:flex-start; background:var(--surface3); border-top-left-radius:2px; }
+.zp-saida { align-self:flex-end; background:#0f4a2c; color:#eafff1; border-top-right-radius:2px; }
+.zp-rodape { display:block; text-align:right; font-size:11px; margin-top:3px; opacity:.7; }
+.zp-saida .zp-rodape { color:#9fe3bb; opacity:1; }
+.zp-ferr { display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; }
+.zp-ferr-chip { font-size:11px; padding:2px 8px; border-radius:10px; background:rgba(0,0,0,.28); color:var(--text-muted); }
+.zp-ferr-chip.alerta { background:rgba(232,185,74,.2); color:var(--gold-light); }
+.zp-sem { margin:auto; text-align:center; color:var(--text-muted); display:grid; gap:10px; }
+.zp-sem-ico { font-size:44px; }
+@media (max-width:820px) {
+  .zp { display:block; height:clamp(460px,calc(100dvh - 200px),1100px); }
+  .zp-chat { display:none; }
+  .zp-lista { height:100%; border-right:0; }
+  .zp.zp-lendo .zp-lista { display:none; }
+  .zp.zp-lendo .zp-chat { display:flex; position:fixed; inset:0; z-index:60; }
+  .zp-voltar { display:block; }
+  .zp-bolha { max-width:88%; }
+  .zp-chip-pend { display:none; }
+}

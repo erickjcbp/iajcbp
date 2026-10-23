@@ -83,7 +83,13 @@ export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log =
           tambem_para: servos.filter((m) => m.id !== alvo.id).map(primeiroNome) }
       }
       if (nome === 'chamar_coordenacao') {
-        await pendencia('coordenacao', numero, String(e.resumo || '').slice(0, 500), { servos: ligados.map((m) => ({ id: m.id, nome: m.nome })) })
+        const resumo = String(e.resumo || '').slice(0, 500)
+        // Mesmo número com pendência aberta nas últimas 24 h: atualiza em vez de abrir outra (a Lívia gerou 4 iguais).
+        const desde = new Date(relogio().getTime() - 24 * 3600 * 1000).toISOString()
+        const abertas = exigir(await db.from('tarcisio_pendencias').select('id').eq('tipo', 'coordenacao').eq('numero', numero)
+          .eq('estado', 'aberta').gte('created_at', desde).order('created_at', { ascending: false }).limit(1), 'ler pendência aberta')
+        if (abertas?.length) exigir(await db.from('tarcisio_pendencias').update({ resumo }).eq('id', abertas[0].id), 'atualizar pendência')
+        else await pendencia('coordenacao', numero, resumo, { servos: ligados.map((m) => ({ id: m.id, nome: m.nome })) })
         return { ok: true }
       }
       if (nome === 'identificar') {
@@ -110,6 +116,9 @@ export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log =
       `Hoje é ${diaPorExtenso(hoje)} (${hoje}), horário de Brasília.`,
       quem,
       'Ausência: em semana já confirmada a escala não muda; diga quais datas estavam confirmadas e quais foram registradas.',
+      'Só diga que fez algo (registrou, encaminhou, consultou) se chamou a ferramenta NESTA resposta e ela devolveu ok. Nunca prometa antes de chamar.',
+      'Para dizer se uma semana está confirmada, chame escala_dos_meus de novo: o estado muda ao longo do dia. Nunca repita de memória.',
+      'Se a pessoa diz que já registrou ausência pelo link ou já avisou antes, isso NÃO é pedido de ausência: agradeça, não registre e, se houver dúvida a resolver, chame chamar_coordenacao UMA vez para o assunto.',
       'Responda em português do Brasil, em mensagem curta de WhatsApp, sem markdown.',
     ].join('\n')
   }
