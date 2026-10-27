@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  agoraSP, dentroDaJanela, normalizarNumero, numeroDoMembro, montarLembretes,
+  agoraSP, dentroDaJanela, normalizarNumero, numeroDoMembro, numeroDoParticipante, montarLembretes,
   montarAniversarios, fazAnosHoje, publicoPrivado, proximaVez, pausaEntreEnvios, idade,
 } from './regras.mjs'
 
@@ -9,7 +9,7 @@ const HOJE = '2026-10-20'
 const menor = { id: 'm1', nome: 'João Pedro', data_nascimento: '2014-05-01', celular_responsavel: '(19) 99876-5432', celular_mae: '19 98888-7777', telefone: '19 97777-6666' }
 const irmao = { id: 'm2', nome: 'Maria Clara', apelido: 'Clarinha', data_nascimento: '2016-01-01', celular_responsavel: '19998765432' }
 const adulto = { id: 'a1', nome: 'Carlos Lima', data_nascimento: '2000-03-03', telefone: '+55 (19) 97777-1234', celular_responsavel: '19911112222' }
-const semNada = { id: 's1', nome: 'Sem Número', data_nascimento: '2015-02-02', telefone: '19 97777-0000' }
+const semNada = { id: 's1', nome: 'Sem Número', data_nascimento: '2015-02-02', telefone: '' }
 
 test('agoraSP usa o horário de Brasília, não o da máquina', () => {
   assert.deepEqual(agoraSP(new Date('2026-10-20T22:30:00Z')), { data: '2026-10-20', hm: '19:30' })
@@ -32,11 +32,13 @@ test('normaliza celular brasileiro e recusa fixo ou lixo', () => {
   assert.equal(normalizarNumero(null), null)
 })
 
-test('menor recebe SÓ pelo responsável; maior pelo próprio número', () => {
+test('menor prioriza responsável, mas também usa telefone próprio; maior prioriza próprio', () => {
   assert.equal(numeroDoMembro(menor, HOJE), '5519998765432')
   assert.equal(numeroDoMembro({ ...menor, celular_responsavel: '' }, HOJE), '5519988887777')   // cai para a mãe
   assert.equal(numeroDoMembro({ ...menor, celular_recado: '19 96666-5555' }, HOJE), '5519966665555')   // recado vem primeiro
-  assert.equal(numeroDoMembro(semNada, HOJE), null)                                           // telefone do menor NÃO conta
+  assert.equal(numeroDoMembro({ ...semNada, telefone: '19 97777-0000' }, HOJE), '5519977770000')
+  assert.equal(numeroDoMembro({ ...menor, celular_recado: '123', celular_responsavel: '', celular_mae: '' }, HOJE), '5519977776666')
+  assert.equal(numeroDoMembro(semNada, HOJE), null)                                           // nenhum telefone cadastrado
   assert.equal(numeroDoMembro(adulto, HOJE), '5519977771234')
   assert.equal(numeroDoMembro({ ...adulto, data_nascimento: null }, HOJE), '5519911112222')   // sem nascimento = trata como menor
 })
@@ -186,7 +188,8 @@ test('terça 18h01 devolve null', () => {
 })
 test('texto personalizado da config substitui o padrão', () => {
   const r = lembreteAusenciaAgora(sp('2026-10-18T12:00:00Z'), { ...CFG_AUS, ausencia_texto: 'Mande suas ausências!' })
-  assert.equal(r.texto, 'Mande suas ausências!')
+  assert.ok(r.texto.startsWith('Mande suas ausências!'))
+  assert.ok(r.texto.includes('https://coroinhas.jcbplimeira.com.br/ausencias'))
 })
 test('horário que não está na lista devolve null', () => {
   assert.equal(lembreteAusenciaAgora(sp('2026-10-18T11:59:00Z'), CFG_AUS), null) // 8h59, antes do slot
@@ -214,3 +217,30 @@ test('o texto padrão cumprimenta sem hora, fala dos pais e põe o último lembr
   assert.match(t, /você ou seu filho\(a\)/)
   assert.ok(t.indexOf('18h') < t.indexOf('último lembrete') && t.indexOf('último lembrete') < t.indexOf('Obrigado'))
 })
+
+test('domingo, segunda e terça sempre incluem link de ausências sem duplicar', () => {
+  const link = 'https://coroinhas.jcbplimeira.com.br/ausencias'
+  for (const dia of ['2026-10-25', '2026-10-26', '2026-10-27']) {
+    for (const texto of [null, 'Avise sua ausência!', `Registre aqui: ${link}`]) {
+      const r = lembreteAusenciaAgora({ data: dia, hm: '09:00' }, { ...CFG_AUS, ausencia_texto: texto })
+      assert.equal(r.texto.split(link).length - 1, 1)
+    }
+  }
+})
+
+test('retiro prioriza telefone do participante, usa responsável como fallback e ignora sem contato', () => {
+  assert.equal(numeroDoParticipante(menor), '5519977776666')
+  assert.equal(numeroDoParticipante({...menor, telefone:''}), '5519998765432')
+  assert.equal(numeroDoParticipante({...menor, telefone:'123', celular_recado:'19966665555'}), '5519966665555')
+  assert.equal(numeroDoParticipante(semNada), null)
+})
+
+test('cerimoniário menor recebe no próprio; avisos aos pais continuam no responsável',()=>{
+ const m={...menor,nivel:'cerimoniario_guardiao'};
+ assert.equal(numeroDoMembro(m,HOJE),normalizarNumero(m.telefone));
+ const optar=p=>publicoPrivado(p,[m],{hoje:HOJE,papelDoUsuario:new Map()}).map(x=>x.numero);
+ assert.deepEqual(optar(['cerimoniarios']),[normalizarNumero(m.telefone)]);
+ assert.deepEqual(optar(['pais']),[normalizarNumero(m.celular_responsavel)]);
+ assert.deepEqual(new Set(optar(['pais','cerimoniarios'])),new Set([normalizarNumero(m.telefone),normalizarNumero(m.celular_responsavel)]));
+ assert.equal(numeroDoMembro({...m,telefone:null},HOJE),normalizarNumero(m.celular_responsavel));
+});

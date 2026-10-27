@@ -1,0 +1,27 @@
+ILUSTRAÇÕES DO VÍDEO DE INTEGRAÇÃO — 7 imagens, uma por cena
+Gere em formato QUADRADO (1:1), a maior resolução possível (mínimo 2048x2048), sem nenhum texto ou letra na imagem.
+Salve com o nome da cena: abertura.png, servir.png, missas.png, escala.png, veste.png, chegada.png, fecho.png (e solte em Downloads, igual às narrações; eu pego e encaixo).
+
+ESTILO (cole no começo de cada prompt, é ele que mantém as 7 parecidas):
+"Ilustração digital pintada, estilo cinematográfico de animação 3D suave (acabamento de filme de animação), iluminação dourada quente e volumétrica, paleta vinho profundo, dourado e creme sobre fundo bordô escuro, profundidade de campo, partículas de luz no ar, composição centralizada com margem em volta, sem texto, sem letras, sem logotipos."
+
+1. abertura.png
+"[ESTILO] Fachada de uma igreja católica paroquial ao entardecer, torre sineira com cruz dourada, porta em arco com luz quente saindo de dentro, escadaria de pedra, céu bordô com primeiras estrelas, raios dourados suaves."
+
+2. servir.png
+"[ESTILO] Três jovens acólitos de túnica branca e cíngulo vermelho caminhando em procissão no corredor central de uma igreja iluminada por velas e vitrais; o do meio carrega uma cruz processional dourada alta, os dois ao lado carregam velas acesas; rostos gentis, tons de pele diversos, raios de luz dos vitrais."
+
+3. missas.png
+"[ESTILO] Um grande sino dourado de igreja pendurado num arco de pedra da torre sineira, sol poente atrás criando coroa de luz, pombas ao fundo, céu bordô e dourado."
+
+4. escala.png
+"[ESTILO] Um acólito jovem sorrindo, de túnica branca, olhando a tela de um celular que mostra uma lista de escala em cores vinho e dourado (sem texto legível), balão de mensagem verde de WhatsApp com um sinal de visto flutuando ao lado, sacristia aconchegante ao fundo."
+
+5. veste.png
+"[ESTILO] Uma túnica branca de acólito, limpa e passada, pendurada num cabide de madeira, cíngulo vermelho enrolado ao lado e um par de sapatos pretos fechados e limpos no chão, fundo de sacristia com armário de madeira, faíscas de brilho sugerindo limpeza."
+
+6. chegada.png
+"[ESTILO] Sacristia de igreja, um acólito de túnica branca sorrindo ao lado de um grande relógio de parede redondo, celular em modo silencioso sobre a mesa, uma maçã e um copo d'água, sensação de chegar cedo e preparado, luz quente."
+
+7. fecho.png
+"[ESTILO] Cinco jovens acólitos de túnica branca e cíngulo vermelho abraçados, sorrindo, um acenando, uma pomba branca voando acima deles, raios de luz dourada ao fundo, vitral ao fundo; alegre e acolhedor, tons de pele diversos."

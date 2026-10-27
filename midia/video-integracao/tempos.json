@@ -1,0 +1,175 @@
+{
+ "total": 103.153,
+ "cenas": [
+  {
+   "id": "abertura",
+   "chave": "Bem-vindo",
+   "inicio": 0.6,
+   "frases": [
+    {
+     "show": "Bem-vindo à Pastoral dos Coroinhas e Acólitos da paróquia Jesus Cristo Bom Pastor.",
+     "arquivo": "audio/01.wav",
+     "inicio": 1.7,
+     "dur": 6.702
+    },
+    {
+     "show": "Em poucos minutos, você vai conhecer como a gente serve.",
+     "arquivo": "audio/02.wav",
+     "inicio": 8.752,
+     "dur": 4.149
+    }
+   ],
+   "fim": 13.652
+  },
+  {
+   "id": "pastoral",
+   "chave": "Servir",
+   "inicio": 13.652,
+   "frases": [
+    {
+     "show": "Servir ao altar é servir a Cristo e à comunidade.",
+     "arquivo": "audio/03.wav",
+     "inicio": 14.752,
+     "dur": 3.741
+    },
+    {
+     "show": "Ajudamos a celebração a acontecer com atenção, reverência e alegria.",
+     "arquivo": "audio/04.wav",
+     "inicio": 18.842,
+     "dur": 5.774
+    },
+    {
+     "show": "Aqui, ninguém é mais digno por função, idade ou experiência.",
+     "arquivo": "audio/05.wav",
+     "inicio": 24.967,
+     "dur": 4.833
+    }
+   ],
+   "fim": 30.549
+  },
+  {
+   "id": "missas",
+   "chave": "Missas",
+   "inicio": 30.549,
+   "frases": [
+    {
+     "show": "Matriz: sábado, 17h. Domingo, 7h, 9h e 19h.",
+     "arquivo": "audio/06.wav",
+     "inicio": 31.649,
+     "dur": 6.959
+    },
+    {
+     "show": "Santo Antônio: sábado, 18h30.",
+     "arquivo": "audio/07.wav",
+     "inicio": 38.958,
+     "dur": 4.121
+    },
+    {
+     "show": "Confira sempre a sua escala.",
+     "arquivo": "audio/08.wav",
+     "inicio": 43.429,
+     "dur": 2.145
+    }
+   ],
+   "fim": 46.324
+  },
+  {
+   "id": "escala",
+   "chave": "Escala",
+   "inicio": 46.324,
+   "frases": [
+    {
+     "show": "A escala sai toda semana, pelo WhatsApp e no app da pastoral.",
+     "arquivo": "audio/09.wav",
+     "inicio": 47.424,
+     "dur": 4.724
+    },
+    {
+     "show": "Cada servo costuma ser escalado até 2 vezes por mês.",
+     "arquivo": "audio/10.wav",
+     "inicio": 52.498,
+     "dur": 4.553
+    },
+    {
+     "show": "Se não puder servir, registre a ausência no link da pastoral.",
+     "arquivo": "audio/11.wav",
+     "inicio": 57.4,
+     "dur": 3.986
+    }
+   ],
+   "fim": 62.136
+  },
+  {
+   "id": "veste",
+   "chave": "Veste",
+   "inicio": 62.136,
+   "frases": [
+    {
+     "show": "A túnica deve estar limpa, passada e completa em cada serviço.",
+     "arquivo": "audio/12.wav",
+     "inicio": 63.236,
+     "dur": 4.644
+    },
+    {
+     "show": "Por baixo: roupa discreta e sapato fechado.",
+     "arquivo": "audio/13.wav",
+     "inicio": 68.23,
+     "dur": 4.699
+    },
+    {
+     "show": "Evite chinelos. Cabelos longos, presos.",
+     "arquivo": "audio/14.wav",
+     "inicio": 73.279,
+     "dur": 4.148
+    }
+   ],
+   "fim": 78.176
+  },
+  {
+   "id": "chegada",
+   "chave": "Chegada",
+   "inicio": 78.176,
+   "frases": [
+    {
+     "show": "Chegue 20 minutos antes da missa.",
+     "arquivo": "audio/15.wav",
+     "inicio": 79.276,
+     "dur": 2.942
+    },
+    {
+     "show": "Lanche leve 1 hora antes. Celular no silencioso.",
+     "arquivo": "audio/16.wav",
+     "inicio": 82.568,
+     "dur": 5.027
+    },
+    {
+     "show": "Na igreja e na sacristia: silêncio e respeito.",
+     "arquivo": "audio/17.wav",
+     "inicio": 87.945,
+     "dur": 3.651
+    }
+   ],
+   "fim": 92.346
+  },
+  {
+   "id": "fecho",
+   "chave": "Paz e bem",
+   "inicio": 92.346,
+   "frases": [
+    {
+     "show": "Terminou? Responda “li e entendi” no WhatsApp.",
+     "arquivo": "audio/18.wav",
+     "inicio": 93.446,
+     "dur": 5.082
+    },
+    {
+     "show": "Estamos juntos. Paz e bem!",
+     "arquivo": "audio/19.wav",
+     "inicio": 98.879,
+     "dur": 2.724
+    }
+   ],
+   "fim": 102.353
+  }
+ ]
+}

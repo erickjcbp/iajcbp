@@ -40,6 +40,17 @@ export function criarEvolution({ url, chave, instancia, fetchFn = fetch }) {
     return json
   }
 
+  async function conferirGrupo(destino) {
+    if (!String(destino).endsWith('@g.us')) return
+    const grupo = await chamar(`/group/findGroupInfos/${nome}?groupJid=${encodeURIComponent(destino)}`)
+    if (!grupo?.announce) return
+    const lista = await chamar(`/instance/fetchInstances?instanceName=${nome}`)
+    const proprio = (Array.isArray(lista) ? lista[0] : lista)?.ownerJid
+    const participante = grupo.participants?.find(p => proprio && (p.id === proprio || p.phoneNumber === proprio))
+    if (!['admin', 'superadmin'].includes(participante?.admin))
+      throw new ErroGateway(403, 'Grupo permite apenas administradores e o São Tarcísio não tem essa permissão.')
+  }
+
   return {
     estado: async () => (await chamar(`/instance/connectionState/${nome}`))?.instance?.state ?? 'desconhecida',
     // devolve { base64 } enquanto não pareado
@@ -56,7 +67,11 @@ export function criarEvolution({ url, chave, instancia, fetchFn = fetch }) {
     // Mensagens recebidas vão para o robô pela rede interna do compose (nada público).
     configurarWebhook: (url) => chamar(`/webhook/set/${nome}`, { metodo: 'POST', corpo: { webhook: {
       enabled: true, url, byEvents: false, base64: false, events: ['MESSAGES_UPSERT'] } } }),
-    enviarTexto: (destino, texto) => chamar(`/message/sendText/${nome}`, { metodo: 'POST', corpo: { number: destino, text: texto } }),
+    enviarTexto: async (destino, texto) => {
+      if (typeof texto !== 'string' || !texto.trim()) throw new ErroGateway(400, 'Mensagem vazia: envio bloqueado.')
+      await conferirGrupo(destino)
+      return chamar(`/message/sendText/${nome}`, { metodo: 'POST', corpo: { number: destino, text: texto } })
+    },
     // Botões de resposta (Evolution 2.x, /message/sendButtons). botoes: [{ id, texto }].
     // A resposta do toque volta pelo webhook com o `id` (lida na Task 9).
     enviarBotoes: (destino, texto, botoes, titulo = 'São Tarcísio | JCBP', rodape = 'Responda 1 = Confirmar, 2 = Revisar') => chamar(`/message/sendButtons/${nome}`, {
@@ -72,10 +87,35 @@ export function criarEvolution({ url, chave, instancia, fetchFn = fetch }) {
       if (!r?.base64) throw new ErroGateway(0, 'A Evolution não devolveu o arquivo.')
       return { base64: String(r.base64), mimetype: r.mimetype ?? null, nome: r.fileName ?? null }
     },
-    enviarImagem: (destino, url, legenda) => chamar(`/message/sendMedia/${nome}`, {
+    // Grupos: o Tarcísio é administrador de Pais e Acólitos. `participantes` devolve só dígitos (a lista é a prova).
+    participantes: async (jid) => {
+      const g = await chamar(`/group/findGroupInfos/${nome}?groupJid=${encodeURIComponent(jid)}`)
+      return (g?.participants || []).map((p) => String(p.phoneNumber || p.id || '').split('@')[0].replace(/\D/g, '')).filter(Boolean)
+    },
+    adicionarAoGrupo: (jid, numeros) => chamar(`/group/updateParticipant/${nome}?groupJid=${encodeURIComponent(jid)}`, { metodo: 'POST', corpo: { action: 'add', participants: numeros } }),
+    linkConvite: async (jid) => {
+      const r = await chamar(`/group/inviteCode/${nome}?groupJid=${encodeURIComponent(jid)}`)
+      return r?.inviteUrl || (r?.code ? `https://chat.whatsapp.com/${r.code}` : null)
+    },
+    // Pergunta ao WhatsApp quais números têm conta (não envia nada). Devolve [{ numero, existe }].
+    numerosComWhatsapp: async (numeros) => {
+      const r = await chamar(`/chat/whatsappNumbers/${nome}`, { metodo: 'POST', corpo: { numbers: numeros } })
+      return (Array.isArray(r) ? r : []).map((x) => ({ numero: String(x.number || '').replace(/\D/g, ''), existe: x.exists === true }))
+    },
+    enviarVideo: async (destino, url, legenda) => {
+      await conferirGrupo(destino)
+      return chamar(`/message/sendMedia/${nome}`, {
+      metodo: 'POST',
+      corpo: { number: destino, mediatype: 'video', mimetype: 'video/mp4', media: url, caption: legenda || '', fileName: 'apresentacao-pastoral.mp4' },
+      })
+    },
+    enviarImagem: async (destino, url, legenda) => {
+      await conferirGrupo(destino)
+      return chamar(`/message/sendMedia/${nome}`, {
       metodo: 'POST',
       corpo: { number: destino, mediatype: 'image', mimetype: 'image/png', media: url, caption: legenda || '', fileName: 'sao-tarcisio.png' },
-    }),
+      })
+    },
   }
 }
 
@@ -120,6 +160,9 @@ export function lerMensagemRecebida(corpo) {
   if (!numero || !chave?.id) return null
   let m = d?.message || {}
   if (m.ephemeralMessage?.message) m = m.ephemeralMessage.message
+  // Reagir (ou retirar uma reação) não é uma mensagem para o assistente.
+  if (m.reactionMessage != null || m.encReactionMessage != null
+    || ['reactionMessage', 'encReactionMessage'].includes(d?.messageType)) return null
   const doc = m.documentMessage || m.documentWithCaptionMessage?.message?.documentMessage || null
   const tocado = idDoBotao(m)
   const texto = m.conversation || m.extendedTextMessage?.text || m.imageMessage?.caption || m.videoMessage?.caption

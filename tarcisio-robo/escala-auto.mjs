@@ -94,7 +94,7 @@ export function montarMensagemConferencia(semana, resultado = {}) {
 
 // deps: db (chave de serviço), evo, gerarSemana(entrada), carregarEntrada(db, sabado), rnd, log.
 // `push` fica reservado para a confirmação (Task 9): gerar não avisa ninguém.
-export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEntrada, montarMensagem = montarMensagemConferencia, rnd = Math.random, log = console }) {
+export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEntrada, montarMensagem = montarMensagemConferencia, enviarImagensConferencia = null, rnd = Math.random, log = console }) {
   void push
   const numeroDono = (cfg) => String(cfg.numero_conferencia || '').replace(/\D/g, '')
 
@@ -105,9 +105,10 @@ export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEnt
   }
 
   // Botões; se a Evolution recusar, o mesmo texto vai sem botão (ele já diz "1"/"2").
-  async function enviarConferencia(cfg, texto, sabado) {
+  async function enviarConferencia(cfg, texto, sabado, comImagem = false) {
     const numero = numeroDono(cfg)
     if (!numero) throw new Error('sem número de conferência na configuração')
+    if (comImagem && enviarImagensConferencia) await enviarImagensConferencia(numero, sabado)
     try {
       const r = await evo.enviarBotoes(numero, texto, botoesDaSemana(sabado))
       return r?.key?.id ?? null
@@ -159,7 +160,7 @@ export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEnt
       if (Object.values(entrada.escalasExistentes || {}).some((l) => l?.length)) {
         const texto = `O fim de semana ${fds} já tinha escala montada no app: não gerei nem gravei nada. Segue como está, só para conferir.\n\n`
           + montarMensagem({ sabado, ...entrada }, { novas: [] })
-        const id = await enviarConferencia(cfg, texto, sabado)
+        const id = await enviarConferencia(cfg, texto, sabado, true)
         await marcar(sabado, { estado: 'aguardando', gerada_em: agora.toISOString(), resumo: { texto, novas: 0, jaMontada: true }, mensagem_dono_id: id, erro: null })
         log.info(`escala automática ${sabado}: já montada no app, só enviada para conferência`)
         return
@@ -173,7 +174,7 @@ export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEnt
       const resumo = { texto, novas: novas.length, vazias: resultado.vazias || [], alemDoMinimo: resultado.alemDoMinimo || [],
         semVagaFilhoDeMinistro: resultado.semVagaFilhoDeMinistro || resultado.filhosSemVaga || [], semMinistros: !!resultado.semMinistros }
       // botões e texto falhando: lança, e a semana NÃO fica 'aguardando' (cai no desfazer abaixo)
-      const id = await enviarConferencia(cfg, texto, sabado)
+      const id = await enviarConferencia(cfg, texto, sabado, true)
       enviouConferencia = true
       await marcar(sabado, { estado: 'aguardando', gerada_em: agora.toISOString(), resumo, mensagem_dono_id: id, erro: null })
       log.info(`escala automática ${sabado}: ${novas.length} vaga(s) preenchida(s), dono avisado`)

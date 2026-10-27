@@ -252,19 +252,37 @@
 
   const conversas = montar(async (box, ctl) => {
     const desde = new Date(Date.now() - 30 * 864e5).toISOString();
-    const [msgs, pend] = await Promise.all([
+    const [msgs, pend, envios] = await Promise.all([
       sb.from('tarcisio_mensagens').select('*').gte('created_at', desde).order('created_at', { ascending:false }).limit(1500),
       sb.from('tarcisio_pendencias').select('numero').eq('estado', 'aberta'),
+      sb.from('tarcisio_envios').select('id,destino_numero,texto,enviado_em,created_at,membro_id')
+        .eq('estado', 'enviado').not('destino_numero', 'is', null).gte('enviado_em', desde)
+        .order('enviado_em', { ascending:false }).limit(1500),
     ]);
     if (erroBanco(msgs, 'ler as conversas')) return;
+    if (erroBanco(envios, 'ler os envios privados')) return;
+    // Respostas do bot já aparecem em tarcisio_mensagens. Avisos e lembretes automáticos
+    // ficam em tarcisio_envios; incluí-los completa o histórico de saída sem duplicar uma
+    // resposta registrada nos dois lugares no mesmo instante.
+    const historico = [...(msgs.data || [])];
+    const normalizarTexto = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+    (envios.data || []).forEach((e) => {
+      const horario = e.enviado_em || e.created_at;
+      const duplicada = historico.some((m) => m.direcao === 'saida' && m.numero === e.destino_numero
+        && normalizarTexto(m.texto) === normalizarTexto(e.texto) && Math.abs(new Date(m.created_at) - new Date(horario)) <= 30_000);
+      if (!duplicada) historico.push({ id:'envio:'+e.id, numero:e.destino_numero, direcao:'saida', texto:e.texto,
+        midia:null, external_id:null, membro_ids:e.membro_id ? [e.membro_id] : [], ferramentas:null,
+        respondida:true, created_at:horario, envio_estado:'enviado' });
+    });
     const comPendencia = new Set((pend.data || []).map((p) => p.numero));
-    const ids = [...new Set(msgs.data.flatMap((m) => m.membro_ids || []))];
+    const ids = [...new Set(historico.flatMap((m) => m.membro_ids || []))];
     const nomes = {};
     if (ids.length) { const r = await sb.from('acolitos_membros').select('id,nome').in('id', ids); (r.data || []).forEach((m) => { nomes[m.id] = m.nome; }); }
 
     // Uma conversa por número; mensagens em ordem cronológica.
     const mapa = new Map();
-    [...msgs.data].reverse().forEach((m) => { if (!mapa.has(m.numero)) mapa.set(m.numero, []); mapa.get(m.numero).push(m); });
+    historico.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      .forEach((m) => { if (!mapa.has(m.numero)) mapa.set(m.numero, []); mapa.get(m.numero).push(m); });
     const contatos = [...mapa.entries()].map(([numero, lista]) => {
       const quem = [...new Set(lista.flatMap((m) => m.membro_ids || []))].map((id) => nomes[id]).filter(Boolean);
       return { numero, lista, ultima: lista.at(-1), quem, titulo: quem.length ? quem.join(', ') : foneBonito(numero),
@@ -353,37 +371,165 @@
     desenharFiltros(); desenharItens(); desenharChat();
   });
 
+  function avisosDasRegras(cfg) {
+    const link='https://coroinhas.jcbplimeira.com.br/ausencias';
+    const ausencia=cfg.ausencia_texto || 'Paz e bem! Se você ou seu filho(a) não puder servir no próximo fim de semana, registre a ausência até terça-feira, às 18h.';
+    const base=(regra,titulo,texto,ativo,destinos,horario)=>({id:'regra:'+regra,titulo,texto,ativo,grupos:[],privado:[],quando:null,repetir:'regra',imagem_url:null,
+      configuracao:{tipo:'regra_nativa',regra,destinos_rotulo:destinos,horario_rotulo:horario},_cfg:cfg});
+    return [
+      base('ausencia','Ausências — domingo, segunda e terça',ausencia.includes(link)?ausencia:ausencia+'\n\nRegistre pelo link universal:\n'+link,
+        !!((cfg.ausencia_horas||[]).length || cfg.ausencia_ultimo),'Grupos vinculados da pastoral',
+        'Domingo, segunda e terça: '+(cfg.ausencia_horas||[]).map(h=>h.slice(0,5)).join(', ')+' · último lembrete da terça: '+(cfg.ausencia_ultimo||'desligado').slice(0,5)),
+      base('lembrete','Lembrete da escala — véspera da Missa',cfg.texto_lembrete||'',!!cfg.lembrete_ligado,'No particular de quem está escalado, sem números repetidos','Na véspera de escala confirmada, às '+(cfg.hora_lembrete||'19:00').slice(0,5)),
+      base('aniversario','Aniversários',cfg.texto_aniversario||'',!!cfg.aniversario_ligado,'No particular do aniversariante ou responsável','No dia do aniversário, às '+(cfg.hora_aniversario||'08:00').slice(0,5)),
+      base('escala','Arte da escala nos grupos','A imagem é gerada a partir da escala confirmada. Cada grupo recebe a arte uma única vez por semana.',!!cfg.escala_ligada,'Grupos vinculados da pastoral','Após a confirmação da escala e a geração da arte'),
+      base('conferencia','Conferência da escala — terça-feira','Gera ou lê o rascunho, envia a imagem no particular da coordenação e apresenta Confirmar / Revisar.',!cfg.pausado,'No número de conferência da coordenação','Terça, a partir das 18h01; lembretes terça às 20h e quarta às 09h')
+    ];
+  }
+
+  function abrirRegra(a, ctl) {
+    if(a.configuracao.regra==='conferencia'){ if(typeof abrirSecao==='function')abrirSecao('tarcisio_whatsapp'); return; }
+    const cfg=a._cfg, regra=a.configuracao.regra;
+    const ov=el('div','modal-overlay open');ov.id='modal-aviso';
+    const m=el('div','modal tc-form-av');m.style.overflowY='auto';m.append(el('h2','modal-title',a.titulo));
+    m.append(el('p','tc-sub','Esta é a regra automática existente. Salvar aqui atualiza a própria regra, sem criar outro disparo.'));
+    const campo=(rot,tipo,valor)=>{const l=el('label',null,rot),i=el(tipo==='textarea'?'textarea':'input');if(tipo!=='textarea')i.type=tipo;i.value=valor||'';m.append(l,i);return i;};
+    const label=el('label');const ativo=el('input');ativo.type='checkbox';ativo.checked=a.ativo;label.append(ativo,document.createTextNode(' Regra ativa'));m.append(label);
+    let texto=null,hora=null,ultimo=null;
+    if(regra!=='escala')texto=campo('Mensagem','textarea',a.texto);
+    else m.append(el('p','tc-sub',a.texto));
+    if(regra==='ausencia'){
+      hora=campo('Horários de domingo, segunda e terça (HH:MM, separados por vírgula)','text',(cfg.ausencia_horas?.length?cfg.ausencia_horas:['09:00']).map(h=>h.slice(0,5)).join(', '));
+      ultimo=campo('Último lembrete da terça','time',(cfg.ausencia_ultimo||'15:00').slice(0,5));
+      m.append(el('p','tc-sub','O link universal é obrigatório e será incluído automaticamente. Prazo: terça às 18h.'));
+    }else if(regra!=='escala')hora=campo('Horário','time',(regra==='lembrete'?(cfg.hora_lembrete||'19:00'):(cfg.hora_aniversario||'08:00')).slice(0,5));
+    const msg=el('div','msg');m.append(msg);const acs=el('div','modal-actions');
+    const fechar=()=>{ov.remove();ctl.redesenhar();};acs.append(botao('Cancelar','gray',fechar));
+    const salvar=botao('Salvar regra','gold',async()=>{
+      const dados={};
+      if(regra==='ausencia'){
+        const horas=hora.value.split(',').map(h=>h.trim()).filter(Boolean);
+        if(horas.some(h=>!/^([01]\d|2[0-3]):[0-5]\d$/.test(h)||h>'18:00')){msg.textContent='Use horários HH:MM até 18h.';return;}
+        const link='https://coroinhas.jcbplimeira.com.br/ausencias';let t=texto.value.trim();if(!t.includes(link))t+='\n\nRegistre sua ausência pelo link universal:\n'+link;
+        dados.ausencia_texto=t;dados.ausencia_horas=ativo.checked?[...new Set(horas)]:[];dados.ausencia_ultimo=ativo.checked?(ultimo.value||null):null;
+      }else if(regra==='lembrete'){dados.lembrete_ligado=ativo.checked;dados.texto_lembrete=texto.value.trim();dados.hora_lembrete=hora.value;}
+      else if(regra==='aniversario'){dados.aniversario_ligado=ativo.checked;dados.texto_aniversario=texto.value.trim();dados.hora_aniversario=hora.value;}
+      else dados.escala_ligada=ativo.checked;
+      salvar.disabled=true;const r=await sb.from('tarcisio_config').update(dados).eq('id',1);salvar.disabled=false;
+      if(r.error){msg.textContent='Não foi possível salvar: '+r.error.message;return;}toast('Regra atualizada.');fechar();
+    });acs.append(salvar);m.append(acs);ov.append(m);document.body.append(ov);ov.onclick=e=>{if(e.target===ov)fechar();};
+  }
+
   // ── AVISOS (coordenação) ──
   const avisos = montar(async (box, ctl) => {
-    const r = await sb.from('tarcisio_avisos').select('*').order('ativo', { ascending:false }).order('quando');
-    if (erroBanco(r, 'ler os avisos')) return;
-    const ac = el('div', 'tc-st-acoes'); ac.style.marginTop = '0';
-    ac.append(botao('+ Novo aviso', 'gold', () => abrirAviso(null, ctl)));
-    box.append(ac);
-    const l = el('div', 'tc-lista'); l.style.marginTop = '14px';
-    if (!r.data.length) l.append(el('div', 'tc-st-muted', 'Nenhum aviso agendado.'));
-    r.data.forEach((a) => {
-      const linha = el('div', 'tc-linha'); const c = el('div', 'tc-corpo');
-      const t = el('div', 'tc-tit'); t.append(el('span', 'tc-chip ' + (a.ativo ? 'tc-pendente' : 'tc-cancelado'), a.ativo ? 'ativo' : 'encerrado'), document.createTextNode(a.titulo));
-      const destinos = [...a.grupos.map((p) => 'Grupo ' + PAPEIS[p]), ...a.privado.map((p) => 'Privado ' + PAPEIS[p])].join(', ');
-      c.append(t, el('div', 'tc-sub', `${a.ativo ? 'Próximo: ' + quando(a.quando) : 'Último: ' + quando(a.quando)} · ${REPETIR[a.repetir]}${a.ate ? ' até ' + a.ate.split('-').reverse().join('/') : ''}\n${destinos}${a.imagem_url ? ' · 🖼 com imagem' : ''}`));
-      const acs = el('div', 'tc-st-acoes');
-      acs.append(botao('Editar', 'gray', () => abrirAviso(a, ctl)));
-      if (a.ativo) {
-        acs.append(botao('Enviar agora', 'gold', async () => {
-          if (!await uiConfirm('Enviar "' + a.titulo + '" agora? Se ele se repete, a próxima vez conta a partir de hoje.')) return;
-          const x = await sb.from('tarcisio_avisos').update({ quando: new Date().toISOString() }).eq('id', a.id);
-          if (!erroBanco(x, 'enviar')) { toast('Na fila: sai em alguns segundos.'); ctl.redesenhar(); }
+    const [r,config]=await Promise.all([
+      sb.from('tarcisio_avisos').select('*').order('ativo',{ascending:false}).order('quando'),
+      sb.from('tarcisio_config').select('*').eq('id',1).single()
+    ]);
+    if(erroBanco(r,'ler os avisos')||erroBanco(config,'ler as regras'))return;
+    const programados=r.data||[],regras=avisosDasRegras(config.data||{});
+    const tela=el('div','ta-painel');
+    const toolbar=el('div','ta-toolbar');
+    const busca=el('input','ta-busca');busca.type='search';busca.placeholder='Buscar aviso ou regra';busca.setAttribute('aria-label','Buscar aviso ou regra');
+    toolbar.append(busca,botao('+ Novo aviso','gold',()=>abrirAviso(null,ctl)));tela.append(toolbar);
+    const filtros=el('div','ta-filtros');filtros.setAttribute('aria-label','Filtrar avisos');
+    let filtro='todos';const botoes=new Map();
+    for(const [id,label] of [['todos','Todos'],['agendados','Agendados'],['recorrentes','Recorrentes'],['regras','Regras automáticas'],['arquivo','Arquivo']]){
+      const b=botao(label,'gray ta-filtro',()=>{filtro=id;desenhar();});botoes.set(id,b);filtros.append(b);
+    }
+    tela.append(filtros);const conteudo=el('div','ta-conteudo');tela.append(conteudo);box.append(tela);
+    const normalizar=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const metadados=a=>{
+      const cfg=a.configuracao||{},nativa=cfg.tipo==='regra_nativa';
+      const destinos=cfg.destinos_rotulo||[...a.grupos.map(p=>'Grupo '+PAPEIS[p]),...a.privado.map(p=>'Privado '+PAPEIS[p])].join(', ');
+      let quandoTexto=quando(a.quando),frequencia=REPETIR[a.repetir]||'Regra automática',destino=destinos,alcance='';
+      if(nativa){
+        const c=a._cfg;
+        const horarios={ausencia:['Dom, seg e ter',(c.ausencia_horas||[]).map(h=>h.slice(0,5)).join(', ')+' · terça também '+(c.ausencia_ultimo||'—').slice(0,5)],
+          lembrete:[(c.hora_lembrete||'19:00').slice(0,5),'Na véspera da Missa'],aniversario:[(c.hora_aniversario||'08:00').slice(0,5),'No dia do aniversário'],
+          escala:['Após confirmar','Quando a arte estiver pronta'],conferencia:['Terça, 18h01','Conferência da coordenação']};
+        [quandoTexto,frequencia]=horarios[cfg.regra];
+        destino=cfg.regra==='lembrete'?'Quem está escalado':cfg.regra==='aniversario'?'Aniversariante':cfg.regra==='conferencia'?'Coordenação':'Grupos da pastoral';
+        alcance=['lembrete','aniversario','conferencia'].includes(cfg.regra)?'No particular':'Nos grupos vinculados';
+      }else if(a.chave?.startsWith('retiro-')||cfg.destinos_rotulo?.includes('participantes')){
+        const total=destinos.match(/^([0-9]+) números/);destino=(total?total[1]+' participantes':'Participantes elegíveis')+' + cerimoniários';alcance='Particular e grupo';
+      }else if(cfg.tipo==='preparacao_missa'){destino='Grupos da pastoral';alcance='Somente nos grupos';frequencia=cfg.horario?'Toda semana':(cfg.antecedencia_min||60)+' min antes da primeira Missa';}
+      else if(cfg.prefixo?.includes(':apresentacao:')){destino='Todos os grupos';alcance='Uma apresentação por grupo';}
+      return {nativa,destinos,quandoTexto,frequencia,destino,alcance};
+    };
+    const encerrar=async a=>{
+      if(!await uiConfirm('Encerrar e arquivar "'+a.titulo+'"? Os envios pendentes serão cancelados.'))return;
+      const x=await sb.from('tarcisio_avisos').update({ativo:false}).eq('id',a.id);
+      if(erroBanco(x,'encerrar'))return;
+      const fila=await sb.from('tarcisio_envios').update({estado:'cancelado',erro:'Aviso encerrado na configuração'}).eq('aviso_id',a.id).in('estado',['pendente','sem_numero','aguardando_arte']);
+      if(!erroBanco(fila,'cancelar os envios'))ctl.redesenhar();
+    };
+    const excluirDoArquivo=async a=>{
+      if(a.ativo||a.configuracao?.tipo==='regra_nativa')return;
+      if(!await uiConfirm('Excluir "'+a.titulo+'" do arquivo? O histórico de envios será preservado.'))return;
+      const emCurso=await sb.from('tarcisio_envios').select('id').eq('aviso_id',a.id).eq('estado','enviando').limit(1);
+      if(erroBanco(emCurso,'conferir envios em andamento'))return;
+      if(emCurso.data?.length){uiAlert('Há um envio deste aviso em andamento. Aguarde terminar antes de excluir.');return;}
+      const fila=await sb.from('tarcisio_envios').update({estado:'cancelado',erro:'Aviso excluído do arquivo'}).eq('aviso_id',a.id).in('estado',['pendente','sem_numero','aguardando_arte']);
+      if(erroBanco(fila,'cancelar os envios pendentes'))return;
+      const x=await sb.from('tarcisio_avisos').delete().eq('id',a.id).eq('ativo',false).select('id');
+      if(erroBanco(x,'excluir do arquivo'))return;
+      if(!x.data?.length){toast('O aviso mudou de estado. Atualizei o arquivo.','error');ctl.redesenhar();return;}
+      toast('Aviso excluído do arquivo; histórico preservado.');ctl.redesenhar();
+    };
+    const linha=a=>{
+      const meta=metadados(a),item=el('article','ta-item'),row=el('div','ta-row');
+      const titulo=el('div','ta-identidade');titulo.append(el('div','ta-nome',a.titulo));
+      const estado=el('span','ta-status '+(a.ativo?'ta-status-ativo':'ta-status-encerrado'),a.ativo?'Ativo':'Arquivado');
+      titulo.append(estado);if(a.imagem_url)titulo.append(el('span','ta-anexo','Com arte'));
+      const hora=el('div','ta-quando');hora.append(el('strong',null,meta.quandoTexto),el('span',null,meta.frequencia));
+      const destino=el('div','ta-destino');destino.title=meta.destinos;destino.append(el('strong',null,meta.destino));if(meta.alcance)destino.append(el('span',null,meta.alcance));
+      const acoes=el('div','ta-acoes');
+      const detalhe=el('div','ta-detalhe');detalhe.hidden=true;detalhe.id='ta-detalhe-'+a.id.replace(/[^a-z0-9-]/gi,'-');
+      const ver=botao('Ver','gray ta-ver',()=>{detalhe.hidden=!detalhe.hidden;ver.textContent=detalhe.hidden?'Ver':'Fechar';ver.setAttribute('aria-expanded',String(!detalhe.hidden));});
+      ver.setAttribute('aria-label','Ver mensagem de '+a.titulo);ver.setAttribute('aria-expanded','false');ver.setAttribute('aria-controls',detalhe.id);
+      acoes.append(ver,botao(meta.nativa?'Configurar regra':'Editar','gold ta-editar',()=>meta.nativa?abrirRegra(a,ctl):abrirAviso(a,ctl)));
+      row.append(titulo,hora,destino,acoes);item.append(row);
+      const preview=el('div','ta-preview');
+      const texto=el('div','ta-mensagem',a.texto||'O conteúdo é gerado automaticamente a partir da regra.');preview.append(texto);
+      if(a.imagem_url){const img=el('img','ta-arte');img.src=a.imagem_url;img.alt='Arte de '+a.titulo;img.loading='lazy';preview.append(img);}
+      detalhe.append(preview);const info=el('div','ta-info');info.append(el('span',null,meta.destinos));if(a.configuracao?.horario_rotulo)info.append(el('span',null,a.configuracao.horario_rotulo));detalhe.append(info);
+      if(a.ativo&&!meta.nativa){
+        const extras=el('div','ta-extras');
+        if(!a.configuracao?.tipo)extras.append(botao('Enviar agora','gold',async()=>{
+          if(!await uiConfirm('Enviar "'+a.titulo+'" agora?'))return;
+          const x=await sb.from('tarcisio_avisos').update({quando:new Date().toISOString()}).eq('id',a.id);
+          if(!erroBanco(x,'enviar')){toast('Aviso colocado na fila.');ctl.redesenhar();}
         }));
-        acs.append(botao('Encerrar', 'wine', async () => {
-          if (!await uiConfirm('Encerrar o aviso "' + a.titulo + '"? Ele não sai mais.')) return;
-          const x = await sb.from('tarcisio_avisos').update({ ativo:false }).eq('id', a.id);
-          if (!erroBanco(x, 'encerrar')) ctl.redesenhar();
-        }));
+        extras.append(botao('Encerrar e arquivar','red ta-encerrar',()=>encerrar(a)));detalhe.append(extras);
+      }else if(!a.ativo&&!meta.nativa){
+        const extras=el('div','ta-extras');
+        extras.append(botao('Excluir do arquivo','red ta-excluir',()=>excluirDoArquivo(a)));detalhe.append(extras);
       }
-      c.append(acs); linha.append(c); l.append(linha);
-    });
-    box.append(l);
+      item.append(detalhe);return item;
+    };
+    function desenhar(){
+      for(const [id,b]of botoes){b.classList.toggle('ta-selecionado',id===filtro);b.setAttribute('aria-pressed',String(id===filtro));}
+      conteudo.textContent='';const termo=normalizar(busca.value);
+      const combina=a=>!termo||normalizar([a.titulo,a.texto,a.configuracao?.destinos_rotulo].join(' ')).includes(termo);
+      const grupos=[];
+      if(['todos','agendados'].includes(filtro))grupos.push(['Agendados e recorrentes',programados.filter(a=>a.ativo&&combina(a))]);
+      if(filtro==='recorrentes'){
+        grupos.push(['Avisos com repetição',programados.filter(a=>a.ativo&&combina(a)&&(a.repetir!=='nao'||a.configuracao?.tipo==='preparacao_missa'))]);
+        grupos.push(['Regras automáticas ativas',regras.filter(a=>a.ativo&&combina(a))]);
+      }
+      if(['todos','regras'].includes(filtro))grupos.push(['Regras automáticas',regras.filter(combina)]);
+      if(['todos','arquivo'].includes(filtro))grupos.push(['Arquivo',programados.filter(a=>!a.ativo&&combina(a))]);
+      let total=0;
+      for(const [titulo,avisos]of grupos){
+        if(!avisos.length)continue;total+=avisos.length;
+        const secao=el('section','ta-secao'),cab=el('div','ta-secao-topo');cab.append(el('h3',null,titulo),el('span','ta-contagem',String(avisos.length)));secao.append(cab);
+        const colunas=el('div','ta-colunas');for(const nome of ['Aviso','Quando','Destino',''])colunas.append(el('span',null,nome));secao.append(colunas);
+        const lista=el('div','ta-lista');avisos.forEach(a=>lista.append(linha(a)));secao.append(lista);conteudo.append(secao);
+      }
+      if(!total)conteudo.append(el('div','ta-vazio',termo?'Nenhum aviso encontrado.':'Nenhum aviso nesta categoria.'));
+    }
+    busca.oninput=desenhar;desenhar();
   });
 
   function paraCampoData(iso) {
@@ -435,12 +581,18 @@
       Object.entries(PAPEIS).forEach(([k, t]) => { const l = el('label'); const c = el('input'); c.type = 'checkbox'; c.checked = (sel || []).includes(k); caixas[k] = c; l.append(c, document.createTextNode(t)); g.append(l); });
       m.append(g); return () => Object.keys(caixas).filter((k) => caixas[k].checked);
     };
-    const lerGrupos = marcas('Mandar nos grupos', a?.grupos);
-    const lerPrivado = marcas('Mandar no privado de (pais = responsável de cada menor)', a?.privado);
+    const gerenciado = !!a?.configuracao?.tipo;
+    if (gerenciado) m.append(el('div', 'tc-sub', a.configuracao.destinos_rotulo + '\n' + (a.configuracao.horario_rotulo || '')));
+    const lerGrupos = gerenciado ? () => a.grupos : marcas('Mandar nos grupos', a?.grupos);
+    const lerPrivado = gerenciado ? () => a.privado : marcas('Mandar no privado de (pais = responsável de cada menor)', a?.privado);
     const fQuando = campo('Quando sai', 'datetime-local', paraCampoData(a?.quando));
     m.append(el('label', null, 'Repetir'));
     const fRep = el('select'); Object.entries(REPETIR).forEach(([k, t]) => { const o = el('option', null, t); o.value = k; fRep.append(o); }); fRep.value = a?.repetir || 'nao'; m.append(fRep);
     const fAte = campo('Repetir até (opcional)', 'date', a?.ate);
+    if (gerenciado) {
+      fRep.style.display = 'none'; fAte.style.display = 'none';
+      m.append(el('p', 'tc-sub', a.repetir === 'semanal' ? 'Repetição semanal. O horário e a mensagem podem ser ajustados.' : 'Disparo único, conforme configurado para este aviso.'));
+    }
     const msg = el('div', 'msg'); m.append(msg);
     const acs = el('div', 'modal-actions');
     const fechar = () => { ov.remove(); ctl.redesenhar(); };
@@ -463,8 +615,34 @@
       }
       const dados = { titulo: fTit.value.trim(), texto: fTxt.value.trim() || null, imagem_url: imagemUrl, grupos, privado,
         quando: new Date(fQuando.value + ':00-03:00').toISOString(), repetir: fRep.value, ate: fAte.value || null, ativo: true };
+      if (gerenciado) {
+        dados.repetir = a.repetir;
+        const configuracao = { ...a.configuracao };
+        if (configuracao.tipo === 'preparacao_missa') {
+          if (configuracao.horario) {
+            configuracao.horario = fQuando.value.slice(11,16);
+            configuracao.horario_rotulo = 'Semanalmente às ' + configuracao.horario;
+          } else {
+            const cels = await sb.from('acolitos_celebracoes').select('minutos').eq('data', fQuando.value.slice(0,10));
+            if (cels.error) { salvar.disabled=false; salvar.textContent='Salvar aviso'; return erro('Não foi possível consultar a primeira Missa.'); }
+            const mins=(cels.data||[]).map(c=>c.minutos).filter(Number.isInteger);
+            const marcado=Number(fQuando.value.slice(11,13))*60+Number(fQuando.value.slice(14,16));
+            const antecedencia=mins.length ? Math.min(...mins)-marcado : null;
+            if (antecedencia == null || antecedencia <= 0) { salvar.disabled=false; salvar.textContent='Salvar aviso'; return erro('Escolha um horário anterior à primeira Missa cadastrada nesse dia.'); }
+            configuracao.antecedencia_min=antecedencia;
+            configuracao.horario_rotulo=antecedencia+' minutos antes da primeira Missa cadastrada';
+          }
+        }
+        dados.configuracao=configuracao;
+      }
       const r = a ? await sb.from('tarcisio_avisos').update(dados).eq('id', a.id) : await sb.from('tarcisio_avisos').insert(dados);
       if (r.error) { salvar.disabled = false; salvar.textContent = 'Salvar aviso'; return erro('Não foi possível salvar: ' + r.error.message); }
+      if (gerenciado) {
+        const atualiza = { texto:dados.texto, imagem_url:dados.imagem_url };
+        if (a.configuracao.tipo === 'fila_existente') atualiza.agendado_para=dados.quando;
+        const fila=await sb.from('tarcisio_envios').update(atualiza).eq('aviso_id', a.id).in('estado',['pendente','sem_numero']);
+        if (fila.error) { salvar.disabled=false; salvar.textContent='Salvar aviso'; return erro('Aviso salvo, mas não foi possível atualizar a fila: '+fila.error.message); }
+      }
       toast('Aviso salvo.'); fechar();
     });
     acs.append(salvar); m.append(acs); ov.append(m); document.body.append(ov);
@@ -473,22 +651,47 @@
   }
 
   // ── SEM NÚMERO ──
-  const semNumero = montar(async (box) => {
-    const desde = new Date(Date.now() - 60 * 864e5).toISOString();
-    const r = await sb.from('tarcisio_envios').select('membro_id,destino_nome,erro,created_at,tipo,estado')
-      .or('estado.eq.sem_numero,erro.eq."Número sem WhatsApp"').gte('created_at', desde).order('created_at', { ascending:false }).limit(500);
-    if (erroBanco(r, 'ler a lista')) return;
-    const porMembro = new Map();
-    r.data.forEach((e) => { const k = e.membro_id || e.destino_nome; if (k && !porMembro.has(k)) porMembro.set(k, e); });
-    box.append(el('p', 'tc-st-muted', 'Quem deveria ter recebido algo nos últimos 60 dias e não recebeu por falta de WhatsApp. O app já pede o número do responsável ao abrir; para corrigir agora, edite o telefone de recado na ficha em Membros.'));
-    const l = el('div', 'tc-lista'); l.style.marginTop = '14px';
-    if (!porMembro.size) l.append(el('div', 'tc-st-muted tc-st-ok', 'Ninguém sem número. 🎉'));
-    [...porMembro.values()].forEach((e) => {
-      const linha = el('div', 'tc-linha'); const c = el('div', 'tc-corpo');
-      c.append(el('div', 'tc-tit', e.destino_nome || '—'), el('div', 'tc-sub', `${e.erro || 'Sem número'} · ${TIPOS[e.tipo] || e.tipo} de ${quando(e.created_at)}`));
-      linha.append(c); l.append(linha);
-    });
-    box.append(l);
+  const semNumero = montar(async (box,ctl) => {
+    const desde=new Date(Date.now()-60*864e5).toISOString();
+    const r=await sb.from('tarcisio_envios').select('membro_id,destino_nome,erro,created_at,tipo,estado')
+      .or('estado.eq.sem_numero,erro.eq."Número sem WhatsApp"').gte('created_at',desde).order('created_at',{ascending:false}).limit(500);
+    if(erroBanco(r,'ler a lista'))return;
+    const porMembro=new Map();r.data.forEach(e=>{const k=e.membro_id||e.destino_nome;if(k&&!porMembro.has(k))porMembro.set(k,e);});
+    const ids=[...porMembro.values()].map(e=>e.membro_id).filter(Boolean);
+    const fichas=ids.length?await sb.from('acolitos_membros').select('id,nome,telefone,celular_recado,celular_responsavel,celular_mae').in('id',ids):{data:[]};
+    if(erroBanco(fichas,'ler os contatos'))return;
+    const membros=new Map((fichas.data||[]).map(m=>[m.id,m]));
+    box.append(el('p','tc-st-muted','Cadastre o WhatsApp com DDD abaixo. O contato será salvo na ficha; avisos futuros serão atualizados sem repetir números. Mensagens antigas não serão reenviadas.'));
+    const lista=el('div','tn-lista');
+    if(!porMembro.size)lista.append(el('div','tc-st-muted tc-st-ok','Ninguém sem número. 🎉'));
+    const normalizar=v=>{let n=String(v||'').replace(/\D/g,'').replace(/^0+/,'');if(n.length===10||n.length===11)n='55'+n;if(n.length===12&&n.startsWith('55')&&/[6-9]/.test(n[4]))n=n.slice(0,4)+'9'+n.slice(4);return /^55\d{2}9\d{8}$/.test(n)?n:null;};
+    for(const e of porMembro.values()){
+      const ficha=membros.get(e.membro_id),linha=el('div','tn-linha'),info=el('div','tn-info');
+      info.append(el('div','tc-tit',ficha?.nome||e.destino_nome||'—'),el('div','tc-sub',e.erro||'Sem contato utilizável'));
+      linha.append(info);
+      if(!e.membro_id||!ficha){info.append(el('div','tc-sub','Este destino não está ligado a uma pessoa. Confira o vínculo na aba Grupos.'));lista.append(linha);continue;}
+      const form=el('div','tn-form'),relacao=el('select','tc-campo');relacao.id='tn-tipo-'+e.membro_id;
+      for(const [v,t]of [['proprio','Do participante'],['responsavel','Do responsável']]){const o=el('option',null,t);o.value=v;relacao.append(o);}
+      const lTipo=el('label','tn-campo');lTipo.htmlFor=relacao.id;lTipo.append(el('span',null,'De quem é o número?'),relacao);
+      const numero=el('input','tc-campo');numero.type='tel';numero.inputMode='tel';numero.autocomplete='tel';numero.maxLength=24;numero.placeholder='(19) 99999-9999';numero.id='tn-numero-'+e.membro_id;
+      const lNumero=el('label','tn-campo');lNumero.htmlFor=numero.id;lNumero.append(el('span',null,'WhatsApp com DDD'),numero);
+      const preencher=()=>{numero.value=foneBonito(relacao.value==='proprio'?ficha.telefone:(ficha.celular_recado||ficha.celular_responsavel||ficha.celular_mae))||'';};relacao.onchange=preencher;preencher();
+      const msg=el('div','tn-msg');msg.setAttribute('role','status');msg.setAttribute('aria-live','polite');
+      const salvar=botao('Salvar','gold',async()=>{
+        const n=normalizar(numero.value);if(!n){msg.textContent='Informe um celular válido com DDD.';numero.focus();return;}
+        salvar.disabled=true;numero.disabled=true;relacao.disabled=true;salvar.textContent='Salvando…';msg.textContent='';
+        try{
+          const x=await sb.rpc('tarcisio_salvar_contato',{p_membro:e.membro_id,p_numero:n,p_relacao:relacao.value});
+          if(x.error||x.data?.erro||!x.data?.ok){const erros={sem_permissao:'Seu acesso não permite alterar esse contato.',numero_invalido:'Informe um celular válido com DDD.',membro_nao_encontrado:'A ficha não foi encontrada. Atualize a página.'};throw new Error(erros[x.data?.erro]||x.error?.message||'Não foi possível salvar o contato.');}
+          toast('Contato salvo.'+(x.data?.futuros_atualizados?' '+x.data.futuros_atualizados+' aviso(s) futuro(s) atualizado(s).':''));
+          await ctl.redesenhar();
+        }catch(err){msg.textContent=err.message||'Não foi possível salvar. Tente novamente.';}
+        finally{salvar.disabled=false;numero.disabled=false;relacao.disabled=false;salvar.textContent='Salvar';}
+      });
+      salvar.setAttribute('aria-label','Salvar número de '+(ficha.nome||e.destino_nome));numero.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();salvar.click();}};
+      form.append(lTipo,lNumero,salvar,msg);linha.append(form);lista.append(linha);
+    }
+    box.append(lista);
   });
 
   // ── CAIXA: pendências que o assistente abriu (ligar número, chamar a coordenação) ──

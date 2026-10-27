@@ -1133,6 +1133,7 @@ const CAMPOS_OBRIGATORIOS = [
   { key:'celular_recado', label:'Telefone de recado (responsável/familiar)', tipo:'tel', padrao:true },
   { key:'responsavel', label:'Nome do responsável', tipo:'text', padrao:false },
   { key:'celular_mae', label:'Telefone da mãe', tipo:'tel', padrao:false },
+  { key:'responsavel_whatsapp', label:'Os telefones da mãe e de recado têm WhatsApp?', tipo:'bool', padrao:false },
   { key:'pode_outras_comunidades', label:'Pode servir em outras comunidades?', tipo:'bool', padrao:false },
   { key:'necessidades_especiais', label:'Necessidades especiais (TEA, TDAH, limitações…)', tipo:'text', padrao:false },
   { key:'batismo', label:'É batizado(a)?', tipo:'bool', padrao:true },

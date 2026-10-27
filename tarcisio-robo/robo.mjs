@@ -7,9 +7,14 @@ import {
   publicoPrivado, proximaVez, semanaConfirmada, lembreteAusenciaAgora, ausenciaVencida, pausaEntreEnvios, imagemPermitida, cumprimentoValido,
 } from './regras.mjs'
 
-const CAMPOS_MEMBRO = 'id,nome,apelido,nivel,user_id,data_nascimento,telefone,celular_recado,celular_responsavel,celular_mae'
+import { cuidarPreparacao } from './avisos-programados.mjs'
+
+const CAMPOS_MEMBRO = 'id,nome,apelido,nivel,user_id,data_nascimento,telefone,celular_recado,celular_responsavel,celular_mae,acolitos_logins(usuario)'
 const PAPEL_GRUPO = { pais: 'Pais', acolitos: 'Acólitos', cerimoniarios: 'Cerimoniários', equipe: 'Equipe' }
 const MINUTO = 60_000
+// Dois disparos expressamente autorizados pelo dono, sem liberar os demais automáticos.
+const CAMPANHA_RETIRO = 'campanha:retiro-2026-10-24:'
+const LIMITE_RETIRO = Date.parse('2026-10-24T12:00:00-03:00')
 
 // Erro do banco nunca passa calado: sem isto, falha de leitura viraria "não há nada a fazer".
 const exigir = ({ data, error }, onde) => {
@@ -17,12 +22,43 @@ const exigir = ({ data, error }, onde) => {
   return data
 }
 
-export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, escalaAuto = null, relogio = () => new Date(), rnd = Math.random, log = console }) {
-  const st = { proximoEnvioEm: 0, lembreteEm: null, anivEm: null, estadoEm: 0, conexao: 'desconhecida', gruposPedidoEm: null }
+// Só vincula os dois avisos já autorizados ao nome informado pelo dono.
+export async function vincularGrupoRetiro(db, evo) {
+  const normalizar = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
+  const chaves = ['sexta', 'sabado'].map((dia) => `${CAMPANHA_RETIRO}${dia}:grupo-cerimoniarios`)
+  const pendentes = exigir(await db.from('tarcisio_envios').select('id,chave_unica')
+    .in('chave_unica', chaves).eq('estado', 'sem_numero'), 'ler grupo pendente do retiro')
+  if (!pendentes?.length) return null
+  const candidatos = (await evo.grupos()).filter((g) => normalizar(g.nome) === 'cerimoniariosjcbp')
+  if (candidatos.length !== 1) return null
+  const grupo = candidatos[0]
+  exigir(await db.from('tarcisio_envios').update({ destino_jid: grupo.jid, destino_nome: grupo.nome,
+    estado: 'pendente', erro: null }).in('chave_unica', chaves).eq('estado', 'sem_numero'), 'vincular grupo do retiro')
+  return grupo
+}
+
+export async function prepararApresentacaoGrupos(db, evo) {
+  // Dono autorizou a apresentação em todos os grupos em que incluir este número.
+  const pai = exigir(await db.from('tarcisio_avisos').select('id,ativo,texto,imagem_url,quando').eq('chave', 'apresentacao-grupos-20261023').maybeSingle(), 'ler apresentação')
+  if (pai && !pai.ativo) return 0
+  const grupos = await evo.grupos()
+  const texto = 'Olá, pessoal! Paz e bem! 🙏\n\nEu sou o Tarcísio, da Pastoral dos Coroinhas e Acólitos da Paróquia Jesus Cristo Bom Pastor.\n\nVou caminhar junto com a equipe para ajudar com avisos, comunicados e dúvidas. Por aqui vocês receberão as informações da pastoral.\n\n📌 Precisa informar uma ausência? Registre pelo link universal de ausências:\nhttps://coroinhas.jcbplimeira.com.br/ausencias\n\nUsem esse link sempre que não puderem servir, para que a ausência fique registrada no sistema.\n\nPara consultar sua escala ou tirar dúvidas, falem comigo no privado. Quando precisar, encaminharei o assunto à coordenação.\n\nContem comigo! 🙏'
+  if (!grupos.length) return 0
+  const linhas = grupos.map(g => ({ tipo: 'aviso', estado: 'pendente', destino_jid: g.jid, destino_nome: g.nome,
+    texto: pai?.texto || texto, aviso_id: pai?.id || null, imagem_url: pai?.imagem_url || null, agendado_para: pai?.quando || '2026-10-23T08:00:00-03:00', chave_unica: `${CAMPANHA_RETIRO}apresentacao:${g.jid}` }))
+  const gravadas = exigir(await db.from('tarcisio_envios').upsert(linhas, { onConflict: 'chave_unica', ignoreDuplicates: true }).select('id'), 'agendar apresentação')
+  return gravadas.length
+}
+
+export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, escalaAuto = null, acolhida = null, relogio = () => new Date(), rnd = Math.random, log = console }) {
+  const st = { proximoEnvioEm: 0, lembreteEm: null, anivEm: null, estadoEm: 0, conexao: 'desconhecida', gruposPedidoEm: null, grupoRetiroEm: 0 }
 
   async function inserirNaFila(linhas) {
     if (!linhas.length) return 0
-    const r = await db.from('tarcisio_envios').upsert(linhas, { onConflict: 'chave_unica', ignoreDuplicates: true }).select('id')
+    // Lotes mistos incluem pendentes e sem_numero: campos ausentes devem usar
+    // os defaults do banco, nunca NULL (estado/agendado_para são obrigatórios).
+    const r = await db.from('tarcisio_envios').upsert(linhas.map(l => ({ ...l, estado: l.estado ?? 'pendente' })),
+      { onConflict: 'chave_unica', ignoreDuplicates: true, defaultToNull: false }).select('id')
     return exigir(r, 'gravar fila').length
   }
 
@@ -105,13 +141,18 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
 
   // ── avisos agendados vencidos: viram linhas e andam para a próxima vez (ou desligam) ──
   async function gerarAvisos(cfg, agora, sp) {
-    const avisos = exigir(await db.from('tarcisio_avisos').select('*').eq('ativo', true).lte('quando', agora.toISOString()), 'ler avisos')
+    const avisos = exigir(await db.from('tarcisio_avisos').select('*').eq('ativo', true), 'ler avisos')
     if (!avisos.length) return
     const grupos = exigir(await db.from('tarcisio_grupos').select('jid,nome,papel').not('papel', 'is', null), 'ler grupos')
     const jidDoPapel = new Map(grupos.map((g) => [g.papel, g]))
     let membros = null
     let papelDoUsuario = null
     for (const a of avisos) {
+      if (a.configuracao?.tipo === 'fila_existente') continue
+      if (a.configuracao?.tipo === 'preparacao_missa') {
+        await cuidarPreparacao({ db, evo, aviso: a, agora }); continue
+      }
+      if (+new Date(a.quando) > +agora) continue
       const base = { tipo: 'aviso', aviso_id: a.id, imagem_url: a.imagem_url }
       const textoGrupo = a.texto || ''
       const linhas = []
@@ -128,9 +169,22 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
           .select('user_id,role,pastoral_modules!inner(slug)').eq('pastoral_modules.slug', 'acolitos'), 'ler papéis')
           .map((p) => [p.user_id, p.role]))
         const textoPrivado = [a.texto, cfg.rodape].filter(Boolean).join('\n\n')
-        for (const { numero, membro } of publicoPrivado(a.privado, membros, { hoje: sp.data, papelDoUsuario })) {
+        const destinatarios = publicoPrivado(a.privado, membros, { hoje: sp.data, papelDoUsuario })
+        const logins = new Map(await Promise.all(destinatarios.map(async ({ membro }) => {
+          let login = Array.isArray(membro.acolitos_logins) ? membro.acolitos_logins[0]?.usuario : membro.acolitos_logins?.usuario
+          if (!login && membro.user_id) {
+            const conta = await db.auth.admin.getUserById(membro.user_id)
+            login = conta?.data?.user?.email?.split('@')[0] || ''
+          }
+          return [membro.id, login || '']
+        })))
+        for (const { numero, membro } of destinatarios) {
+          const login = logins.get(membro.id) || ''
+          const textoIndividual = textoPrivado
+            .replaceAll('{{nome}}', membro.apelido || membro.nome || '')
+            .replaceAll('{{usuario}}', login || 'Fale com a coordenação para conferir seu usuário')
           linhas.push({ ...base, destino_numero: numero, destino_nome: membro.nome, membro_id: membro.id,
-            texto: textoPrivado, chave_unica: `aviso:${a.id}:${a.quando}:${numero}` })
+            texto: textoIndividual, chave_unica: `aviso:${a.id}:${a.quando}:${numero}` })
         }
       }
       await inserirNaFila(linhas)
@@ -190,11 +244,40 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
 
   // ── envio: um por vez, na janela, abaixo do teto do dia, com pausa sorteada ──
   async function enviarProximo(cfg, agora, sp) {
-    if (cfg.pausado || st.conexao !== 'open' || +agora < st.proximoEnvioEm) return
-    if (!dentroDaJanela(sp.hm, cfg.janela_inicio, cfg.janela_fim)) return
-    const item = exigir(await db.from('tarcisio_envios').select('*').eq('estado', 'pendente')
-      .lte('agendado_para', agora.toISOString()).order('agendado_para').order('created_at').limit(1).maybeSingle(), 'ler fila')
+    if (st.conexao !== 'open' || +agora < st.proximoEnvioEm) return
+    let consulta = db.from('tarcisio_envios').select('*').eq('estado', 'pendente')
+      .lte('agendado_para', agora.toISOString())
+    if (cfg.pausado) consulta = consulta.or(`chave_unica.like.${CAMPANHA_RETIRO}%,chave_unica.like.preparacao-missa:%`)
+    const item = exigir(await consulta.order('agendado_para').order('created_at').limit(1).maybeSingle(), 'ler fila')
     if (!item) return
+    const retiroAutorizado = String(item.chave_unica || '').startsWith(CAMPANHA_RETIRO)
+    let pai = null
+    if (item.aviso_id) pai = exigir(await db.from('tarcisio_avisos').select('*').eq('id', item.aviso_id).maybeSingle(), 'ler aviso do envio')
+    const preparacao = String(item.chave_unica || '').startsWith('preparacao-missa:') && pai?.configuracao?.tipo === 'preparacao_missa'
+    if (cfg.pausado && !retiroAutorizado && !preparacao) return
+    if (pai?.configuracao?.tipo && !pai.ativo) {
+      exigir(await db.from('tarcisio_envios').update({ estado: 'cancelado', erro: 'Aviso encerrado na configuração' }).eq('id', item.id).eq('estado', 'pendente'), 'encerrar envio'); return
+    }
+    if (preparacao) {
+      const data = agoraSP(new Date(item.agendado_para)).data
+      const cels = exigir(await db.from('acolitos_celebracoes').select('minutos').eq('data', data), 'ler prazo da preparação')
+      const primeira = cels.map(c => c.minutos).filter(Number.isInteger).sort((a,b) => a-b)[0]
+      if (sp.data !== data || (!pai.configuracao.horario && (primeira == null || Number(sp.hm.slice(0,2))*60+Number(sp.hm.slice(3)) >= primeira))) {
+        exigir(await db.from('tarcisio_envios').update({ estado: 'cancelado', erro: 'Passou do horário da primeira missa' }).eq('id', item.id).eq('estado', 'pendente'), 'cancelar preparação vencida'); return
+      }
+    }
+    if (!preparacao && !dentroDaJanela(sp.hm, cfg.janela_inicio, cfg.janela_fim)) return
+    if (pai?.configuracao?.tipo) { item.texto = pai.texto; item.imagem_url = pai.imagem_url }
+    if (retiroAutorizado && +agora >= LIMITE_RETIRO) {
+      exigir(await db.from('tarcisio_envios').update({ estado: 'cancelado', erro: 'Encerrado o prazo de envio do retiro de 24/10' })
+        .eq('id', item.id).eq('estado', 'pendente'), 'cancelar retiro vencido')
+      return
+    }
+    if (retiroAutorizado && item.destino_jid && !String(item.chave_unica).includes(':apresentacao:')) {
+      const intro = exigir(await db.from('tarcisio_envios').select('estado')
+        .eq('chave_unica', `${CAMPANHA_RETIRO}apresentacao:${item.destino_jid}`).maybeSingle(), 'conferir apresentação')
+      if (intro?.estado !== 'enviado') return
+    }
     if (item.destino_numero) {
       const { count, error } = await db.from('tarcisio_envios').select('id', { count: 'exact', head: true })
         .eq('estado', 'enviado').not('destino_numero', 'is', null).gte('enviado_em', `${sp.data}T00:00:00-03:00`)
@@ -207,24 +290,33 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
         .eq('id', item.id).eq('estado', 'pendente'), 'cancelar ausência vencida')
       return
     }
+    if(acolhida&&!await acolhida.validarEnvio(item)){exigir(await db.from('tarcisio_envios').update({estado:'cancelado',erro:'Acompanhamento pausado, vencido ou destinatário/etapa alterado.'}).eq('id',item.id).eq('estado','pendente'),'cancelar acolhida');return;}
     // reserva a linha: se outra coisa mexeu nela (cancelou), não envia
     const reservada = exigir(await db.from('tarcisio_envios').update({ estado: 'enviando' })
       .eq('id', item.id).eq('estado', 'pendente').select('id'), 'reservar envio')
     if (!reservada.length) return
     const destino = item.destino_jid || item.destino_numero
-    if (!imagemPermitida(item.imagem_url, supabaseUrl)) {
+    // Avisos e comunicados sem arte própria levam a peça oficial ATENÇÃO.
+    const avisoGrupoTexto = item.tipo === 'aviso' && String(item.destino_jid || '').endsWith('@g.us')
+      && (!item.imagem_url || /\/avisos\/atencao-pastoral-v1\.png(?:\?|$)/.test(item.imagem_url))
+    const imagem = avisoGrupoTexto || (String(item.chave_unica || '').startsWith('senha-reset:')||String(item.chave_unica || '').startsWith('acolhida:') && !/\.mp4(?:\?|$)/.test(item.imagem_url || '')) || pai?.configuracao?.sem_arte ? null : item.imagem_url || (item.tipo === 'aviso'
+      ? `${String(supabaseUrl).replace(/\/$/, '')}/storage/v1/object/public/tarcisio/avisos/atencao-pastoral-v1.png` : null)
+    if (!imagemPermitida(imagem, supabaseUrl)) {
       exigir(await db.from('tarcisio_envios').update({ estado: 'falhou', erro: 'Imagem fora da pasta do São Tarcísio: não enviada' }).eq('id', item.id), 'recusar imagem')
       log.warn(`envio ${item.id}: imagem recusada (${item.imagem_url})`)
       return
     }
     try {
       const texto = await talvezVariar(cfg, item)
-      if (item.imagem_url) await evo.enviarImagem(destino, item.imagem_url, texto)
+      if ((item.tipo === 'aviso' || !imagem) && (typeof texto !== 'string' || !texto.trim()))
+        throw new Error('Mensagem vazia: envio bloqueado; revise o texto do aviso.')
+      if (imagem && /\.mp4(?:\?|$)/.test(imagem)) await evo.enviarVideo(destino, imagem, texto)
+      else if (imagem) await evo.enviarImagem(destino, imagem, texto)
       else await evo.enviarTexto(destino, texto)
       exigir(await db.from('tarcisio_envios').update({ estado: 'enviado', enviado_em: agora.toISOString(), erro: null }).eq('id', item.id), 'marcar enviado')
     } catch (e) {
       const tentativas = item.tentativas + 1
-      const desiste = e.semWhatsapp || tentativas >= 3
+      const desiste = e.semWhatsapp || String(item.chave_unica||'').startsWith('acolhida:') || tentativas >= 3
       exigir(await db.from('tarcisio_envios').update(desiste
         ? { estado: 'falhou', tentativas, erro: e.message }
         : { estado: 'pendente', tentativas, erro: e.message, agendado_para: new Date(+agora + 5 * MINUTO).toISOString() })
@@ -299,6 +391,7 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
 
   async function iniciar() {
     // envio interrompido no meio (robô reiniciou) volta para a fila
+    exigir(await db.from('tarcisio_envios').update({ estado: 'falhou',erro:'Envio de acolhida interrompido; conferir conversa antes de repetir.' }).eq('estado','enviando').like('chave_unica','acolhida:%'),'isolar acolhida interrompida')
     exigir(await db.from('tarcisio_envios').update({ estado: 'pendente' }).eq('estado', 'enviando'), 'destravar fila')
   }
 
@@ -309,6 +402,13 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
     const cfg = exigir(await db.from('tarcisio_config').select('*').eq('id', 1).single(), 'ler config')
     const etapas = [
       ['conexão', () => cuidarConexao(cfg, agora)],
+      ['grupo do retiro', async () => {
+        if (+agora >= LIMITE_RETIRO || +agora - st.grupoRetiroEm < MINUTO || st.conexao !== 'open') return
+        st.grupoRetiroEm = +agora
+        await prepararApresentacaoGrupos(db, evo)
+        const grupo = await vincularGrupoRetiro(db, evo)
+        if (grupo) log.info('Grupo de cerimoniários vinculado aos dois avisos do retiro')
+      }],
       ['lembretes', () => gerarLembretes(cfg, sp)],
       ['aniversários', () => gerarAniversarios(cfg, sp)],
       ['avisos', () => gerarAvisos(cfg, agora, sp)],
@@ -316,6 +416,7 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
       ['escala', () => cuidarEscala(agora)],
       ['escala automática', () => escalaAuto?.cuidar(agora, cfg)],
       ['validade', () => expirar(agora)],
+      ['acolhida', () => acolhida?.cuidar(agora,cfg)],
       ['conversas', () => cuidarConversas(cfg, agora)],
       ['rascunhos', () => cuidarRascunhos(cfg)],
       ['envio', () => enviarProximo(cfg, agora, sp)],

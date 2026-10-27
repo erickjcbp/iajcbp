@@ -57,7 +57,7 @@ const RESULTADO = { novas: [{ celebracao_id: 'c1', membro_id: 'm1', funcao: 'cru
 // Terça 20/10/2026, 18:01 em Brasília = 21:01 UTC.
 const TERCA_1801 = '2026-10-20T21:01:00Z'
 
-function cenario({ banco = {}, resultado = RESULTADO, lancar = null, celebracoes = CELS, falhar, evoFalha = null, montarMensagem } = {}) {
+function cenario({ banco = {}, resultado = RESULTADO, lancar = null, celebracoes = CELS, falhar, evoFalha = null, montarMensagem, enviarImagensConferencia } = {}) {
   const db = bancoMemoria(banco, falhar)
   const enviados = []
   const evo = {
@@ -66,7 +66,7 @@ function cenario({ banco = {}, resultado = RESULTADO, lancar = null, celebracoes
   }
   const chamadas = { gerar: 0 }
   const deps = {
-    db, evo, log: silencioso, rnd: () => 0.5, ...(montarMensagem ? { montarMensagem } : {}),
+    db, evo, enviarImagensConferencia, log: silencioso, rnd: () => 0.5, ...(montarMensagem ? { montarMensagem } : {}),
     carregarEntrada: async () => ({ celebracoes, membros: MEMBROS, escalasExistentes: {} }),
     gerarSemana: (entrada) => { chamadas.gerar++; assert.equal(typeof entrada.rnd, 'function'); if (lancar) throw lancar; return resultado },
   }
@@ -351,4 +351,20 @@ test('evolution.enviarBotoes chama sendButtons com os botões de resposta', asyn
     { type: 'reply', displayText: 'Confirmar', id: 'escala:confirmar' },
     { type: 'reply', displayText: 'Revisar', id: 'escala:revisar' },
   ])
+})
+
+test('conferência envia imagens antes dos botões; imagem falhando impede botões e desfaz rascunho', async () => {
+  let c
+  c = cenario({ enviarImagensConferencia: async (numero, semana) => {
+    assert.equal(numero, CFG.numero_conferencia); assert.equal(semana, SAB)
+    assert.equal(c.enviados.length, 0); c.enviados.push({ imagem: true })
+  } })
+  await c.auto.cuidar(new Date(TERCA_1801), CFG)
+  assert.equal(c.enviados[0].imagem, true)
+  assert.equal(c.enviados[1].botoes.length, 2)
+  const f = cenario({ enviarImagensConferencia: async () => { throw Error('imagem indisponível') } })
+  await f.auto.cuidar(new Date(TERCA_1801), CFG)
+  assert.equal(linhaSemana(f.db).estado, 'falhou')
+  assert.equal(f.db.t.acolitos_escalas.length, 0)
+  assert.ok(f.enviados.every((e) => !e.botoes))
 })

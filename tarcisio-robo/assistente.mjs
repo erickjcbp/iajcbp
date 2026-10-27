@@ -33,7 +33,7 @@ const FERRAMENTAS_DESCONHECIDO = [
   FERRAMENTAS_CONHECIDO[2],
 ]
 
-export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log = console }) {
+export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log = console, acolhida = null }) {
   async function membrosQueServem() {
     return exigir(await db.from('acolitos_membros').select(CAMPOS).eq('status', 'ativo').eq('serve', true), 'ler membros')
   }
@@ -119,6 +119,7 @@ export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log =
       'Só diga que fez algo (registrou, encaminhou, consultou) se chamou a ferramenta NESTA resposta e ela devolveu ok. Nunca prometa antes de chamar.',
       'Para dizer se uma semana está confirmada, chame escala_dos_meus de novo: o estado muda ao longo do dia. Nunca repita de memória.',
       'Se a pessoa diz que já registrou ausência pelo link ou já avisou antes, isso NÃO é pedido de ausência: agradeça, não registre e, se houver dúvida a resolver, chame chamar_coordenacao UMA vez para o assunto.',
+      'Responda só ao que a pessoa perguntou: uma saudação recebe uma saudação curta; não consulte escala nem traga assunto antigo da conversa se ninguém perguntou.',
       'Responda em português do Brasil, em mensagem curta de WhatsApp, sem markdown.',
     ].join('\n')
   }
@@ -131,10 +132,12 @@ export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log =
     const marcar = async (extra = {}) => exigir(await db.from('tarcisio_mensagens').update({ respondida: true, ...extra })
       .in('id', pendentes.map((p) => p.id)), 'marcar respondida')
     const todos = await membrosQueServem()
-    const ligados = membrosDoNumero(numero, todos)
+    const acolhimento=await acolhida?.contexto(numero);
+    const ligados = membrosDoNumero(numero, todos);for(const a of acolhimento||[])if(!ligados.some(m=>m.id===a.membro.id))ligados.push(a.membro)
     let texto
     let usadas = []
-    if (pendentes.every((p) => !p.texto)) {
+    const comandoAcolhida=acolhimento?.length?await acolhida.comando(numero,pendentes):null;
+    if(comandoAcolhida){texto=comandoAcolhida;} else if (pendentes.every((p) => !p.texto)) {
       texto = 'Por aqui eu só consigo ler mensagens de texto. Pode escrever o que precisa? 🙏'
     } else if (!chaveIA) {
       return   // sem chave da IA: fica guardado, sem resposta (Configurações mostra o aviso)
@@ -151,8 +154,8 @@ export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log =
       while (mensagens.length && mensagens[0].role !== 'user') mensagens.shift()
       if (!mensagens.length) return marcar()
       const hoje = agoraSP(relogio()).data
-      const r = await ia.conversar({ modelo: cfg.ia_modelo, sistema: sistema(cfg, ligados, hoje), mensagens,
-        ferramentas: ligados.length ? FERRAMENTAS_CONHECIDO : FERRAMENTAS_DESCONHECIDO, executar: executorPara(numero, ligados, todos) })
+      const ferramentas=ligados.length?[...FERRAMENTAS_CONHECIDO]:[...FERRAMENTAS_DESCONHECIDO];const executarPadrao=executorPara(numero,ligados,todos);let contextoAcolhida='';if(acolhimento?.length){ferramentas.push({name:'registrar_acolhida',description:'Registra UM fato explícito da mensagem atual ou pausa/retomada pedida. Não inferir por silêncio, previsão ou prazo. Envio de catequese não é aprendizado comprovado.',input_schema:{type:'object',required:['membro_id','mensagem_id','marco'],properties:{membro_id:{type:'string'},mensagem_id:{type:'string'},marco:{type:'string',enum:['contato_raquel','pedido_confirmado','confeccao_iniciada','tunica_recebida','respondeu_tunica','integracao_realizada','grupo_confirmado','pausar','retomar','interacao']}}}});contextoAcolhida='\nVocê também acompanha a acolhida. Dados atuais: '+JSON.stringify(acolhimento.map(a=>({id:a.membro.id,nome:a.membro.nome,canal:a.canal,etapa:a.etapa,marcos:a.estado.marcos,ultimo_encontro:a.estado.ultimo_encontro,pausado:a.estado.pausado})))+'\nMensagem(ns) atual(is), com IDs para comprovar fatos: '+JSON.stringify(pendentes.map(p=>({id:p.id,texto:p.texto})))+'\nRegras da acolhida: (1) Os números ligados acima SÃO os membros em questão; se só há um membro ligado, os fatos são dele, sem pedir o nome. Apelidos valem (ex.: Bia = Beatriz). Se há vários, confirme de qual se trata. (2) Os encontros de formação NÃO são presenciais (são 14 textos curtos, 2 por semana, terça e quinta, por volta de 7 semanas; cada um é uma leitura rápida; se perguntarem quanto duram, responda isso, sem encaminhar à coordenação):  são textos curtos que você envia por este WhatsApp às terças e quintas, para ler a qualquer hora, sem comparecer e sem avisar ausência. NUNCA registre ausência por causa dos encontros e nunca fale em horário de comparecimento. Se a pessoa entender que é presencial, corrija com gentileza. Só explique os encontros depois que a família responder sobre a túnica; o primeiro texto de formação já traz a explicação. (2b) registrar_acolhida só vale para os membros listados em "Dados atuais" da acolhida. Outros cadastros ligados ao mesmo número não estão em acompanhamento: se só há um membro em "Dados atuais", os fatos sobre túnica são dele; NÃO pergunte de qual cadastro se trata nem cite os outros. (3) Sempre que a pessoa falar da túnica, registre com registrar_acolhida: tunica_recebida se disse que já tem, recebeu, buscou, está usando ou já serviu com ela (túnica recebida conclui a integração e a pessoa sai do CRM: aspirante e apta em apoio, então comemore com ela); respondeu_tunica para qualquer outra resposta sobre a túnica (medidas marcadas, ainda não pediu, vai buscar, pronta mas não retirada). Se a túnica está pronta mas ainda não foi retirada, não é recebida. Responda de acordo com o que registrou e só afirme o que a ferramenta confirmou. (4) Quem está na etapa integracao recebe de você um vídeo curto apresentando a pastoral (o que é, missas, escala e ausências, vestes e roupas, chegada e conduta). Responda dúvidas com o que o vídeo e as ferramentas trazem; não invente regra. Quando a família disser que assistiu e entendeu (ex.: \"li e entendi\"), registre integracao_realizada: a coordenação segue com o grupo de WhatsApp. Para mães/responsáveis, proponha leitura para conversar com o filho; para o jovem, fale com ele. A família trata diretamente com a Raquel, +55 19 99195-8657, medidas, valor, pagamento e prazo; 30-45 dias é só referência. Nunca prometa data, preço, admissão ou aptidão além do que o sistema registrou. Se estiver pausado, respeite; só retome por pedido explícito. Para dizer que atualizou o CRM, execute registrar_acolhida com sucesso.';}
+      const r = await ia.conversar({ modelo: cfg.ia_modelo, sistema: sistema(cfg, ligados, hoje)+contextoAcolhida, mensagens,ferramentas,executar:(nome,e)=>nome==='registrar_acolhida'?acolhida.executar(numero,e,pendentes):executarPadrao(nome,e) })
       texto = r.texto
       usadas = r.usadas
     }

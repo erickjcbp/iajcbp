@@ -8,11 +8,12 @@ import { createClient } from '@supabase/supabase-js'
 import { criarEvolution, lerMensagemRecebida } from './evolution.mjs'
 import { criarRobo } from './robo.mjs'
 import { criarIA } from './ia.mjs'
+import { criarAcolhida } from './acolhida.mjs'
 import { criarAssistente } from './assistente.mjs'
 import { criarEscalaAuto, criarCarregarEntrada } from './escala-auto.mjs'
 import { criarMinistrosPdf } from './ministros-pdf.mjs'
 import { criarEntradaDono } from './entrada-dono.mjs'
-import { criarSite } from './site.mjs'
+import { criarSite, criarConferenciaImagem } from './site.mjs'
 
 const precisa = (nome) => {
   const v = process.env[nome]
@@ -23,7 +24,8 @@ const precisa = (nome) => {
 const db = createClient(precisa('SUPABASE_URL'), precisa('SUPABASE_SERVICE_KEY'), { auth: { persistSession: false } })
 const evo = criarEvolution({ url: precisa('EVOLUTION_URL'), chave: precisa('EVOLUTION_API_KEY'), instancia: process.env.EVOLUTION_INSTANCIA || 'SaoTarcisio' })
 const ia = process.env.ANTHROPIC_API_KEY ? criarIA({ chave: process.env.ANTHROPIC_API_KEY }) : null
-const assistente = criarAssistente({ db, evo, ia })
+const acolhida = criarAcolhida({ db, evo, videoIntegracao: `${String(process.env.SUPABASE_URL).replace(/\/$/, '')}/storage/v1/object/public/tarcisio/integracao/apresentacao-pastoral-v1.mp4` })
+const assistente = criarAssistente({ db, evo, ia, acolhida })
 // Escala automática de terça: o gerador e os núcleos puros são os MESMOS da tela (projetos/acolitos),
 // lidos só na hora de usar. Se faltarem na imagem, a geração falha, o estado vira 'falhou' e o dono
 // é avisado; o resto do robô segue. Na VPS, ACOLITOS_CORE_DIR aponta para a cópia desses arquivos.
@@ -37,7 +39,8 @@ const lerNucleos = () => (nucleos ??= (() => {
     SemanalCore: ler('servir-semanal-core.js'), lerTudo: ler('paginar-core.js').lerTudo,
     Confirmar: ler('confirmar-semana-core.js') }
 })())
-const escalaAuto = criarEscalaAuto({ db, evo, log: console,
+const site = criarSite({ pushUrl: process.env.PUSH_URL, arteUrl: process.env.REGENERAR_ARTE_URL || null, segredo: process.env.ROBO_PUSH_SECRET })
+const escalaAuto = criarEscalaAuto({ enviarImagensConferencia: criarConferenciaImagem({ db, evo, site, supabaseUrl: process.env.SUPABASE_URL }), db, evo, log: console,
   gerarSemana: (entrada) => lerNucleos().Gerador.gerarSemana(entrada),
   carregarEntrada: (banco, sabado) => criarCarregarEntrada(lerNucleos())(banco, sabado) })
 // Respostas do dono e PDF dos ministros: tratados no webhook, antes da IA.
@@ -49,7 +52,6 @@ const ministros = criarMinistrosPdf({ db, evo, log: console,
 // a chave só do robô (tipo escalado_robo); a arte é disparada por /api/regenerar-arte com a mesma chave
 // (sem isso o pedido da fila esperava uma arte que ninguém mandava fazer e falhava em 30 min).
 // PUSH_URL e ROBO_PUSH_SECRET vêm do robo.env; a URL da arte é derivada do PUSH_URL.
-const site = criarSite({ pushUrl: process.env.PUSH_URL, arteUrl: process.env.REGENERAR_ARTE_URL || null, segredo: process.env.ROBO_PUSH_SECRET })
 const confirmarSemana = async (sabado) => {
   try {
     const domingo = new Date(sabado + 'T12:00:00Z'); domingo.setUTCDate(domingo.getUTCDate() + 1)
@@ -64,7 +66,7 @@ const confirmarSemana = async (sabado) => {
   } catch (e) { return { ok: false, erro: e.message } }
 }
 const entradaDono = criarEntradaDono({ db, evo, ministros, confirmarSemana, log: console })
-const robo = criarRobo({ db, evo, ia, assistente, escalaAuto, supabaseUrl: process.env.SUPABASE_URL })
+const robo = criarRobo({ db, evo, ia, assistente, escalaAuto, acolhida, supabaseUrl: process.env.SUPABASE_URL })
 
 // Entrada das mensagens: só a Evolution, de dentro do compose, fala com esta porta (não é publicada).
 const PORTA = 3000

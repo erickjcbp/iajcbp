@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="crm-acolhida.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
   <link rel="icon" href="icon-192.png">
@@ -58,6 +59,7 @@
 <div class="main">
   <div class="kpi-grid" id="crm-kpis"></div>
   <h1 class="page-title">Pipeline de Integração</h1>
+  <div id="crm-acolhida-config"></div>
 
   <div class="view-toggle">
     <button class="view-btn active" id="btn-v-pipeline" onclick="setView('pipeline')">Pipeline</button>
@@ -176,6 +178,7 @@
 <script src="telefones-core.js"></script>
 <script src="identidade-core.js"></script>
 <script src="shared.js"></script>
+<script src="crm-acolhida.js"></script>
 <script>
 // Etapas padrão (fallback). O Config (cfg('crm_etapas') = lista ordenada) substitui tudo no init.
 let ETAPAS = ['aprovacao_cadastro','integracao','whatsapp','tunica','disponivel_escala','integrado'];
@@ -242,6 +245,7 @@ async function init() {
   renderBottomNav(ctx, 'crm');
   montarFiltroCrm();
   await loadCrm();
+  await CrmAcolhida.configuracao(sbAdmin,document.getElementById('crm-acolhida-config'));
   document.getElementById('cartao-fechar').onclick = fecharCartao;
   document.getElementById('cartao-fundo').onclick = fecharCartao;
   document.getElementById('cartao-comentar').onclick = comentarNoCartao;
@@ -537,6 +541,7 @@ async function abrirCartao(entry) {
   acao.onclick = () => { fecharCartao(); abrirModal(entry); };
   ficha.appendChild(acao);
 
+  await CrmAcolhida.membro(sbAdmin,ficha,m.id);
   await carregarLinhaDoTempo(m.id, entry);
 }
 

@@ -1,0 +1,7 @@
+# entradas pesadas ou de terceiros: ficam só na máquina (ver LEIA-ME)
+arte/
+sfx/
+quadros/
+*.mp4
+*.wav
+audio/*.wav

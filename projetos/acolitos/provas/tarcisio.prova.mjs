@@ -50,6 +50,7 @@ const tabelas = {
     { id: 'ap2', nome_pdf: 'joao b.', membro_id: 'm1', pai_ou_mae: 'pai', resposta: 'nao', respondido_por: '5519999071702', em: agora },
   ] },
   tarcisio_avisos: { data: [
+    { id:'prep', titulo:'Preparação para a Missa — domingo', texto:'Prepare sua veste e chegue com antecedência. Ausências: https://coroinhas.jcbplimeira.com.br/ausencias', imagem_url:null, grupos:['pais','acolitos','cerimoniarios'], privado:[], quando:'2026-10-25T09:00:00Z', repetir:'semanal', ativo:true, configuracao:{tipo:'preparacao_missa', destinos_rotulo:'Grupos da pastoral, sem disparo no privado', horario_rotulo:'Uma hora antes da primeira Missa cadastrada; hoje às 06h'} },
     { id: 'a1', titulo: 'Reunião de formação', texto: 'Segunda às 19h30 no salão.', imagem_url: null, grupos: ['acolitos', 'pais'], privado: [],
       quando: agora, repetir: 'semanal', ate: '2026-12-20', ativo: true },
     { id: 'a2', titulo: 'Retiro de Advento', texto: 'Inscrições abertas.', imagem_url: null, grupos: [], privado: ['pais'],
@@ -59,6 +60,7 @@ const tabelas = {
 
 const avaliar = `
   await document.fonts.ready;
+  document.querySelectorAll('details').forEach(d => { d.open = true; });
   document.getElementById('splash')?.remove();
   const visivel = (e) => { const r = e.getBoundingClientRect(); const s = getComputedStyle(e); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
   const rolavel = (e) => { let p = e.parentElement; while (p && p !== document.body) { if (/auto|scroll/.test(getComputedStyle(p).overflowX)) return true; p = p.parentElement; } return false; };
@@ -73,11 +75,12 @@ const avaliar = `
     parede: !!document.getElementById('parede-whatsapp'), abas: [...document.querySelectorAll('.tc-aba-btn')].map((b) => b.textContent),
     arquivoPdf: !!document.querySelector('#tm-arquivo'), remover: [...document.querySelectorAll('.tc-linha button')].filter((b) => /Remover/.test(b.textContent)).length,
     campoConferencia: [...document.querySelectorAll('.tc-campo')].length,
-    textoTc: document.querySelectorAll('.tc-st-card, .tc-linha, .tc-conversa, .tc-st-muted').length };
+    textoTc: document.querySelectorAll('.tc-st-card, .tc-linha, .tc-conversa, .tc-st-muted, .ta-item, .tn-linha').length };
 `;
 
 const cenarios = [
   { id: 'avisos', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_avisos'] }] },
+  { id: 'aviso-editado', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_avisos'] }, { clicar: 'Editar' }] },
   { id: 'aviso-novo', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_avisos'] }, { clicar: '+ Novo aviso' }] },
   { id: 'sem-numero', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_sem'] }] },
   { id: 'config-whatsapp', tela: 'config.html', passos: [{ chamar: 'abrirSecao', args: ['tarcisio_whatsapp'] }] },
@@ -95,7 +98,7 @@ const exigir = (ok, msg) => { if (!ok) falhas.push(msg); };
 const provas = await iniciarProvas();
 try {
   // 1) A tela, como admin, em todas as larguras
-  for (const c of cenarios) for (const [largura, altura] of larguras) {
+  for (const c of cenarios.filter(c => !process.env.CENARIOS_TARCISIO || process.env.CENARIOS_TARCISIO.split(',').includes(c.id))) for (const [largura, altura] of larguras) {
     const r = await provas.abrir(c.tela, { papel: PAPEIS.admin, tabelas, largura, altura, passos: c.passos, avaliar,
       foto: { caminho: `${destino}/${c.id}-${largura}.png`, viewport: true } });
     const a = r.avaliado || {};

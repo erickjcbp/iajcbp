@@ -3,6 +3,20 @@ import assert from 'node:assert/strict'
 import { criarAssistente } from './assistente.mjs'
 import { lerMensagemRecebida } from './evolution.mjs'
 
+test('reações e remoções não entram no assistente; emoji enviado como texto continua entrando', () => {
+  const evento = (message, messageType) => ({ event: 'messages.upsert', data: {
+    key: { remoteJid: '5519999999999@s.whatsapp.net', id: 'reacao-1' }, message, messageType,
+  } })
+  for (const text of ['👍', '❤️', '']) {
+    assert.equal(lerMensagemRecebida(evento({ reactionMessage: { text } })), null)
+    assert.equal(lerMensagemRecebida(evento({ ephemeralMessage: { message: { reactionMessage: { text } } } })), null)
+  }
+  assert.equal(lerMensagemRecebida(evento({}, 'reactionMessage')), null)
+  assert.equal(lerMensagemRecebida(evento({ encReactionMessage: {} })), null)
+  assert.equal(lerMensagemRecebida(evento({ conversation: '👍' })).texto, '👍')
+  assert.equal(lerMensagemRecebida(evento({ audioMessage: {} })).midia, 'audio')
+})
+
 // Banco falso (mesmo jeito do robo.test.mjs): `responder(tabela, ops)` devolve { data, error }.
 function bancoFalso(responder) {
   const gravado = []

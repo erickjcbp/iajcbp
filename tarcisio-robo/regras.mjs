@@ -62,15 +62,21 @@ export function normalizarNumero(bruto) {
   return /^55\d{2}9\d{8}$/.test(n) ? n : null
 }
 
-// Número que recebe pelo membro. Menor (ou sem data de nascimento) → só o responsável;
-// maior → o próprio. Decisão do dono: menor recebe SÓ no número do responsável.
+// Cerimoniários recebem no próprio número, inclusive menores (orientação de 25/10).
+// Para os demais menores, mantém a prioridade do responsável.
 export function numeroDoMembro(m, hoje) {
+  if (ehCerimoniario(m) && normalizarNumero(m.telefone)) return normalizarNumero(m.telefone)
   const id = idade(m.data_nascimento, hoje)
   const menor = id == null || id < 18
   // mesma ordem do telefoneDeRecado() do app (telefones-core.js): recado, responsável, mãe
   const doResponsavel = normalizarNumero(m.celular_recado) || normalizarNumero(m.celular_responsavel) || normalizarNumero(m.celular_mae)
-  if (menor) return doResponsavel
+  if (menor) return doResponsavel || normalizarNumero(m.telefone)
   return normalizarNumero(m.telefone) || doResponsavel
+}
+
+// Avisos do retiro: o participante é o destinatário prioritário, independentemente da idade.
+export function numeroDoParticipante(m) {
+  return normalizarNumero(m.telefone) || normalizarNumero(m.celular_recado) || normalizarNumero(m.celular_responsavel) || normalizarNumero(m.celular_mae)
 }
 
 export const primeiroNome = (m) => (m.apelido || String(m.nome || '').trim().split(/\s+/)[0] || 'Servo')
@@ -109,7 +115,7 @@ export function montarLembretes(escalas, { amanha, hoje, modelo, rodape }) {
     envios,
     semNumero: semNumeroUnico.map((m) => ({
       tipo: 'lembrete', estado: 'sem_numero', membro_id: m.id, destino_nome: m.nome,
-      erro: 'Sem WhatsApp do responsável no cadastro', chave_unica: `lembrete:${amanha}:sem:${m.id}`,
+      erro: 'Sem telefone válido do servo ou responsável no cadastro', chave_unica: `lembrete:${amanha}:sem:${m.id}`,
     })),
   }
 }
@@ -148,9 +154,14 @@ export function publicoPrivado(papeis, membros, { hoje, papelDoUsuario }) {
       || (quer.has('cerimoniarios') && ehCerimoniario(m))
       || (quer.has('equipe') && PAPEIS_EQUIPE.includes(papel))
     if (!entra) continue
-    // equipe recebe no próprio número; os demais pela regra do responsável
-    const numero = (quer.has('equipe') && PAPEIS_EQUIPE.includes(papel) && normalizarNumero(m.telefone)) || numeroDoMembro(m, hoje)
-    if (numero && !numeros.has(numero)) numeros.set(numero, m)
+    const destinos = []
+    // Pais são um público explícito: não redirecionar o aviso deles para o filho.
+    if (quer.has('pais')) destinos.push(normalizarNumero(m.celular_recado) || normalizarNumero(m.celular_responsavel)
+      || normalizarNumero(m.celular_mae) || normalizarNumero(m.telefone))
+    if ((quer.has('acolitos') && !ehCerimoniario(m)) || (quer.has('cerimoniarios') && ehCerimoniario(m)))
+      destinos.push(numeroDoMembro(m, hoje))
+    if (quer.has('equipe') && PAPEIS_EQUIPE.includes(papel)) destinos.push(normalizarNumero(m.telefone) || numeroDoMembro(m, hoje))
+    for (const numero of destinos) if (numero && !numeros.has(numero)) numeros.set(numero, m)
   }
   return [...numeros].map(([numero, m]) => ({ numero, membro: m }))
 }
@@ -269,8 +280,9 @@ export function lembreteAusenciaAgora(sp, cfg) {
     .sort((a, b) => minutos(b.hm) - minutos(a.hm))
   const slot = vale.find((x) => x.ultimo) || vale[0]
   if (!slot) return null
+  const base = cfg.ausencia_texto || textoPadraoAusencia(slot.ultimo)
   return {
-    texto: cfg.ausencia_texto || textoPadraoAusencia(slot.ultimo),
+    texto: base.includes(LINK_AUSENCIAS) ? base : `${base}\n\n📌 Registre sua ausência pelo link universal:\n${LINK_AUSENCIAS}`,
     chave: `ausencia:${sp.data}:${slot.hm}`,
   }
 }
