@@ -104,3 +104,8 @@ Agente somente leitura`/root/revisao_acolhida` encontrou5casos; todos receberam 
 - Etapa whatsapp: depois de `integracao_realizada`, o Tarcísio (admin de Pais/Acólitos; NÃO é admin de "Escala") adiciona: jovem c/ WhatsApp próprio → Acólitos (+ responsável em Pais); responsável → Pais. Prova = lista de participantes do gateway; privacidade recusa → convite por link no privado. Confirmado → `tarcisio_acolhida_grupo_confirmado` → etapa tunica + mensagem "grupo-ok". Cerimoniários fica manual.
 - Etapa tunica: 1ª mensagem apresenta a costureira (Raquel, +55 19 99195-8657; combinam medidas/valor/pagamento/prazo; 30–45 dias é referência). Marco `tunica_apresentada` (backfill nos 8 já acolhidos). Catequese só depois que a família responde sobre a túnica (ou 7 dias).
 - Marco: vídeo de integração enviado manualmente 27/10 ~12h50; aguarda "li e entendi".
+
+## 27/10 noite — controle humano (migração 117)
+- O Tarcísio PROPÕe, a coordenação confirma com um toque (CRM → "Tarcísio · … propostas para você"): (1) sair da CRM como integrado após túnica recebida (a etapa agora PARA em disponivel_escala); (2) entrada nos grupos Pais/Acólitos. Aprovar cadastro completo continua automático. Tabela `tarcisio_acolhida_propostas`; RPC `tarcisio_acolhida_decidir` (só coordenação); a proposta vira pendência na Caixa.
+- Prova SQL com rollback: `docs/provas/propostas-tarcisio-rollback-2026-10-27.sql`. Ela achou um BUG real em `tarcisio_acolhida_coord()`: com uid nulo/sem papel devolvia NULL e `if not coord()` não barrava (afetava também `tarcisio_acolhida_controlar`). Corrigido com coalesce(...,false).
+- Migrações 110/111 (push da jornada, bônus editorial) são de outro trabalho: ficam fora deste commit.

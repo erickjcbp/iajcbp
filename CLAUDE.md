@@ -47,4 +47,4 @@ O GitHub responde em UTC e o CLI da Vercel em hora local — lembrar dos 3 horas
 
 ## Tarcísio / acolhida e CRM (no ar desde 26–27/10/2026)
 
-A acolhida automática do Tarcísio está **ativa em produção** (robô na VPS, CRM publicado, migrações 112–116 aplicadas). Antes de mexer, leia **[docs/RETOMADA-TARCISIO-CRM.md](docs/RETOMADA-TARCISIO-CRM.md)** (decisões do dono, estado e como refazer o vídeo). Regras vivas: túnica recebida = sai da CRM; catequese é só texto por WhatsApp (nunca presencial); integração = um vídeo; o robô é "Tarcísio" (não "São").
+A acolhida automática do Tarcísio está **ativa em produção** (robô na VPS, CRM publicado, migrações 112–117 aplicadas). Antes de mexer, leia **[docs/RETOMADA-TARCISIO-CRM.md](docs/RETOMADA-TARCISIO-CRM.md)** (decisões do dono, estado e como refazer o vídeo). Regras vivas: túnica recebida = sai da CRM; catequese é só texto por WhatsApp (nunca presencial); integração = um vídeo; o robô é "Tarcísio" (não "São").

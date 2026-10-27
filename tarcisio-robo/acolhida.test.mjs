@@ -55,7 +55,7 @@ test('ao entrar na etapa túnica, a costureira é apresentada uma vez; quem já 
 test('etapa WhatsApp: adiciona ao grupo certo, confirma pela lista de participantes e só então avança; recusa de privacidade gera convite',async()=>{
  const agoraT=new Date('2026-10-28T15:00:00Z'),adds=[],rpcs=[];
  const cenario=(aceita)=>{const grupos=[{jid:'pais@g.us',nome:'Pais',papel:'pais'},{jid:'ac@g.us',nome:'Acólitos',papel:'acolitos'}],part={'pais@g.us':new Set(),'ac@g.us':new Set()};
-  const db=bancoMemoria({tarcisio_acolhida_config:[{id:true,ativa:true}],acolitos_crm:[{membro_id:'m1',etapa:'whatsapp'}],acolitos_membros:[{...m,responsavel_whatsapp:true}],tarcisio_acolhida:[{membro_id:'m1',acolhido_em:'2026-10-20T11:00:00Z',marcos:{integracao_realizada:{em:'x'}}}],tarcisio_acolhida_envios:[],tarcisio_envios:[],tarcisio_pendencias:[],acolitos_celebracoes:[],tarcisio_grupos:grupos});
+  const db=bancoMemoria({tarcisio_acolhida_config:[{id:true,ativa:true}],acolitos_crm:[{membro_id:'m1',etapa:'whatsapp'}],acolitos_membros:[{...m,responsavel_whatsapp:true}],tarcisio_acolhida:[{membro_id:'m1',acolhido_em:'2026-10-20T11:00:00Z',marcos:{integracao_realizada:{em:'x'}}}],tarcisio_acolhida_envios:[],tarcisio_envios:[],tarcisio_pendencias:[],acolitos_celebracoes:[],tarcisio_grupos:grupos,tarcisio_acolhida_propostas:[{membro_id:'m1',acao:'grupos',estado:'confirmada'}]});
   db.rpc=async(n,a)=>{rpcs.push([n,a.p_membro]);return {data:{ok:true},error:null};};
   const evo={participantes:async j=>[...part[j]],adicionarAoGrupo:async(j,ns)=>{adds.push([j,ns]);if(aceita)ns.forEach(n=>part[j].add(n));return {};},linkConvite:async()=>'https://chat.whatsapp.com/XYZ',numerosComWhatsapp:async ns=>ns.map(numero=>({numero,existe:true}))};
   return {db,evo};};
@@ -64,4 +64,12 @@ test('etapa WhatsApp: adiciona ao grupo certo, confirma pela lista de participan
  assert.equal((await ok.db.from('tarcisio_envios').select('*')).data.filter(e=>/^grupo-ok:/.test(e.chave_unica)).length,1);
  adds.length=0;rpcs.length=0;const no=cenario(false);await criarAcolhida({db:no.db,evo:no.evo,relogio:()=>agoraT}).cuidar(agoraT,{pausado:false});
  assert.ok(!rpcs.some(r=>r[0]==='tarcisio_acolhida_grupo_confirmado'));const envs=(await no.db.from('tarcisio_envios').select('*')).data;assert.equal(envs.filter(e=>/^grupo-convite:/.test(e.chave_unica)).length,1);assert.match(envs[0].texto,/chat\.whatsapp\.com\/XYZ/);
+});
+
+test('grupos: sem confirmação da coordenação o Tarcísio só propõe (não adiciona ninguém); recusada ou pendente também não adicionam',async()=>{
+ const agoraT=new Date('2026-10-28T15:00:00Z');
+ const rodar=async(propostas)=>{const adds=[],rpcs=[];const db=bancoMemoria({tarcisio_acolhida_config:[{id:true,ativa:true}],acolitos_crm:[{membro_id:'m1',etapa:'whatsapp'}],acolitos_membros:[{...m,responsavel_whatsapp:true}],tarcisio_acolhida:[{membro_id:'m1',acolhido_em:'2026-10-20T11:00:00Z',marcos:{integracao_realizada:{em:'x'}}}],tarcisio_acolhida_envios:[],tarcisio_envios:[],tarcisio_pendencias:[],acolitos_celebracoes:[],tarcisio_grupos:[{jid:'pais@g.us',nome:'Pais',papel:'pais'}],tarcisio_acolhida_propostas:propostas});db.rpc=async(n,a)=>{rpcs.push(n);return {data:{ok:true},error:null};};
+  const evo={participantes:async()=>[],adicionarAoGrupo:async(j,ns)=>{adds.push([j,ns]);return {};},linkConvite:async()=>null,numerosComWhatsapp:async ns=>ns.map(numero=>({numero,existe:true}))};await criarAcolhida({db,evo,relogio:()=>agoraT}).cuidar(agoraT,{pausado:false});return {adds,rpcs};};
+ const sem=await rodar([]);assert.equal(sem.adds.length,0);assert.ok(sem.rpcs.includes('tarcisio_acolhida_propor'));
+ for(const estado of ['pendente','recusada']){const r=await rodar([{membro_id:'m1',acao:'grupos',estado}]);assert.equal(r.adds.length,0);assert.ok(!r.rpcs.includes('tarcisio_acolhida_propor'));}
 });
