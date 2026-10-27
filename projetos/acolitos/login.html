@@ -2,6 +2,7 @@
 <html lang="pt-BR" data-theme="dark">
 <head>
   <meta charset="UTF-8">
+  <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Acólitos & Coroinhas — JCBP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -74,7 +75,7 @@
       font-family:var(--font-body); font-weight:700; letter-spacing:2px; text-transform:uppercase; }
     input{
       width:100%; padding:13px 14px; background:var(--surface3); border:1px solid var(--border-wine);
-      border-radius:2px; color:var(--text); font-size:15px; font-weight:500; font-family:var(--font-body);
+      border-radius:2px; color:var(--text); font-size:16px; font-weight:500; font-family:var(--font-body);
       outline:none; transition:all .2s; margin-bottom:18px;
     }
     input:focus{ border-color:var(--red-soft); box-shadow:0 0 0 1px var(--red-soft), 0 0 16px var(--red-glow); background:var(--focus-bg); }
@@ -245,21 +246,28 @@
     </div>
 
     <!-- ESQUECI -->
-    <!-- Aqui havia um "enviar link de recuperação" por e-mail. Ele NUNCA entregou nada:
-         as contas do app usam usuário (fulano@coroinhas...), que não é caixa postal de
-         ninguém — o domínio aponta para a hospedagem do site e não recebe mensagem. A
-         tela dizia "Link enviado. Verifique seu e-mail" e a pessoa ficava esperando em
-         vez de pedir ajuda. Dizer a verdade resolve mais que um botão bonito. -->
     <div id="screen-esqueci" class="screen">
       <p style="font-size:13px;line-height:1.6;opacity:.85;margin:0 0 14px;">
-        Aqui o acesso é por <b>usuário e senha</b>, não por e-mail — então não dá para
-        mandar link de recuperação.<br><br>
-        Fale com a coordenação: ela redefine a sua senha na hora e te passa a nova.
+        Informe seu usuário. Se a conta estiver ativa e tiver um WhatsApp cadastrado,
+        enviaremos um link individual para você criar uma senha nova. O link vale por 15 minutos.
       </p>
-      <a class="btn" href="https://wa.me/5519999071702" target="_blank" rel="noopener"
-         style="display:block;text-align:center;text-decoration:none;">Falar com a coordenação</a>
+      <label for="rs-usuario">Usuário</label>
+      <input type="text" id="rs-usuario" autocomplete="username" placeholder="seu usuário">
+      <button class="btn" id="btn-recuperar" onclick="solicitarRedefinicao()">Enviar link no WhatsApp cadastrado</button>
       <a class="link-action" onclick="showScreen('entrar')">← Voltar</a>
       <div class="msg" id="msg-esqueci"></div>
+    </div>
+
+    <div id="screen-redefinir" class="screen">
+      <p style="font-size:13px;line-height:1.6;opacity:.85;margin:0 0 14px;">
+        Crie uma senha nova. Ela nunca será enviada à coordenação nem salva em mensagens.
+      </p>
+      <label for="rs-senha">Nova senha</label>
+      <input type="password" id="rs-senha" autocomplete="new-password" minlength="10" placeholder="mínimo 10 caracteres">
+      <label for="rs-repetida">Repita a nova senha</label>
+      <input type="password" id="rs-repetida" autocomplete="new-password" minlength="10" placeholder="digite novamente">
+      <button class="btn" id="btn-salvar-senha" onclick="confirmarRedefinicao()">Salvar senha nova</button>
+      <div class="msg" id="msg-redefinir"></div>
     </div>
   </div>
 
@@ -316,11 +324,42 @@
     window.location.href='novos.html';
   }
 
-  // A recuperação por e-mail foi removida em 27/08/2026 — ver o comentário na tela.
-  // Quando as pessoas puderem cadastrar um e-mail de verdade, ela volta, e aí funciona.
+  const tokenRedefinicao = new URLSearchParams(location.search).get('redefinir') || '';
+  if (tokenRedefinicao) showScreen('redefinir');
+
+  async function solicitarRedefinicao(){
+    const usuario=document.getElementById('rs-usuario').value.trim();
+    const btn=document.getElementById('btn-recuperar');
+    if(!usuario){ msg('msg-esqueci','Informe seu usuário.','error'); return; }
+    btn.disabled=true; btn.textContent='Enviando…';
+    try{
+      const r=await fetch('/api/acolito-admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'password_reset_request',usuario})});
+      const d=await r.json();
+      if(!r.ok) throw new Error(d.error||'Não foi possível solicitar o link.');
+      msg('msg-esqueci',d.mensagem||'Se a conta estiver ativa e tiver WhatsApp cadastrado, enviaremos um link seguro em instantes.','success');
+    }catch(e){msg('msg-esqueci',e.message||'Não foi possível solicitar o link. Tente novamente.','error');}
+    finally{btn.disabled=false;btn.textContent='Enviar link no WhatsApp cadastrado';}
+  }
+
+  async function confirmarRedefinicao(){
+    const password=document.getElementById('rs-senha').value;
+    const repetida=document.getElementById('rs-repetida').value;
+    const btn=document.getElementById('btn-salvar-senha');
+    if(!tokenRedefinicao){msg('msg-redefinir','Link inválido. Solicite outro.','error');return;}
+    if(password.length<10){msg('msg-redefinir','A senha precisa ter pelo menos 10 caracteres.','error');return;}
+    if(password!==repetida){msg('msg-redefinir','As duas senhas precisam ser iguais.','error');return;}
+    btn.disabled=true;btn.textContent='Salvando…';
+    try{
+      const r=await fetch('/api/acolito-admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'password_reset_confirm',token:tokenRedefinicao,password})});
+      const d=await r.json();if(!r.ok)throw new Error(d.error||'Não foi possível trocar a senha.');
+      history.replaceState(null,'',location.pathname);showScreen('entrar');document.getElementById('li-email').focus();
+      msg('msg-entrar',d.mensagem||'Senha atualizada. Entre com seu usuário e a senha nova.','success');
+    }catch(e){msg('msg-redefinir',e.message||'Não foi possível trocar a senha. Tente novamente.','error');}
+    finally{btn.disabled=false;btn.textContent='Salvar senha nova';}
+  }
 
   // Se já está logado, vai direto para a home do módulo
-  sb.auth.getSession().then(({ data:{ session } })=>{ if(session) window.location.href=DESTINO; });
+  sb.auth.getSession().then(({ data:{ session } })=>{ if(session && !tokenRedefinicao) window.location.href=DESTINO; });
 
   // ── Cadastro família ───────────────────────────────────────────
   function sugereUsuario(nome){

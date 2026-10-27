@@ -510,8 +510,27 @@ function queueNotificacoes(membro) {
   _notifStart();
   // 4) Lembrete diário de XP (assíncrono; só se ainda não pontuou hoje)
   _checkXpDiario(membro);
+  carregarXpServico(membro);
   // (5) O pedido de notificações saiu daqui: virou PORTÃO no initModulo, antes desta fila.
   // Quem chega até aqui já tem o sino ligado.
+}
+
+// Créditos de serviço vêm do ledger do servidor. Só confirma a visualização ao fechar.
+const _xpServicoEnfileirados = new Set();
+async function carregarXpServico(membro, origem) {
+  if (!membro?.id) return;
+  try {
+    const { data, error } = await sb.rpc('acolitos_xp_servico_meus', { p_membro: membro.id });
+    if (error || !Array.isArray(data?.eventos)) return;
+    for (const evento of data.eventos) {
+      if ((origem && evento.origem !== origem) || _xpServicoEnfileirados.has(evento.id)) continue;
+      _xpServicoEnfileirados.add(evento.id);
+      enqueueNotif(25, done => showXpGain(evento.gain, evento.from_xp, evento.titulo, async () => {
+        try { await sb.rpc('acolitos_xp_servico_visto', { p_evento: evento.id }); } catch (_) { /* tenta confirmar a leitura no próximo acesso */ } finally { done(); }
+      }, { avulso: true }));
+    }
+    _notifStart();
+  } catch (_) { /* o saldo já foi salvo; a celebração pode reaparecer no próximo acesso */ }
 }
 
 // Notificação diária de engajamento: aparece 1x/dia, só na home, e SÓ se o membro
@@ -890,6 +909,8 @@ function _xpgEnsureStyle() {
   st.textContent = `
   .xpg-overlay{position:fixed;inset:0;z-index:9990;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 50% 38%,rgba(120,20,30,.42),rgba(6,3,5,.86) 62%);backdrop-filter:blur(3px);animation:xpgIn .35s ease both}
   .xpg-overlay.closing{opacity:0;transition:opacity .3s ease}
+  @media(max-width:639px){.xpg-overlay{padding:0}.xpg-card{max-width:none;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}.xpg-card .xpg-barwrap{width:100%}}
+  @media(prefers-reduced-motion:reduce){.xpg-overlay,.xpg-overlay *{animation:none!important;transition:none!important}.xpg-confetti,.xpg-sparks{display:none}}
   @keyframes xpgIn{from{opacity:0}to{opacity:1}}
   .xpg-card{position:relative;width:100%;max-width:340px;text-align:center;padding:26px 22px 22px;animation:xpgPop .6s cubic-bezier(.18,1.4,.4,1) both}
   @keyframes xpgPop{0%{transform:scale(.7);opacity:0}60%{opacity:1}100%{transform:scale(1);opacity:1}}
@@ -917,7 +938,7 @@ function _xpgEnsureStyle() {
   .xpg-bar.flash{animation:xpgFlash .5s ease}
   @keyframes xpgFlash{0%,100%{box-shadow:0 0 0 transparent}50%{box-shadow:0 0 18px 4px var(--gold-light)}}
   .xpg-hint{font-family:var(--font-title);font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--gold-light);margin-top:7px;text-shadow:0 0 8px var(--red-glow)}
-  .xpg-btn{position:relative;z-index:1;margin-top:18px;font-family:var(--font-title);font-weight:700;letter-spacing:.5px;font-size:13px;padding:11px 26px;border-radius:10px;cursor:pointer;border:1px solid var(--border-wine);background:transparent;color:var(--text-muted);animation:xpgUp .5s ease .7s both}
+  .xpg-btn{min-height:44px;min-width:44px;position:relative;z-index:1;margin-top:18px;font-family:var(--font-title);font-weight:700;letter-spacing:.5px;font-size:13px;padding:11px 26px;border-radius:10px;cursor:pointer;border:1px solid var(--border-wine);background:transparent;color:var(--text-muted);animation:xpgUp .5s ease .7s both}
   @keyframes xpgUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
   .xpg-sparks{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
   .xpg-sparks i{position:absolute;bottom:30%;width:7px;height:7px;border-radius:50%;opacity:0;background:radial-gradient(circle,#fff,var(--gold) 60%,transparent);animation:xpgSpark 1.4s ease-out forwards}
@@ -940,15 +961,18 @@ function _xpgEnsureStyle() {
   `;
   document.head.appendChild(st);
 }
-function showXpGain(gain, fromXp, quest, done) {
+function showXpGain(gain, fromXp, quest, done, options = {}) {
   _xpgEnsureStyle();
   _celebrate(playStarSound);
   gain = Number(gain) || 0; fromXp = Number(fromXp) || 0;
   const toXp = fromXp + gain;
-  const crossesStar = Math.floor(toXp / XPG_LIMIAR) > Math.floor(fromXp / XPG_LIMIAR);
+  const crossesStar = !options.avulso && Math.floor(toXp / XPG_LIMIAR) > Math.floor(fromXp / XPG_LIMIAR);
   const novaEstrela = Math.floor(toXp / XPG_LIMIAR);
 
   const ov = document.createElement('div'); ov.className = 'xpg-overlay';
+  const focoAnterior = document.activeElement, overflowAnterior = document.body.style.overflow;
+  ov.setAttribute('role','dialog'); ov.setAttribute('aria-modal','true'); ov.setAttribute('aria-label','XP conquistado');
+  document.body.style.overflow='hidden';
   ov.innerHTML =
     '<div class="xpg-card">' +
       '<div class="xpg-rays"></div><div class="xpg-halo"></div>' +
@@ -956,7 +980,7 @@ function showXpGain(gain, fromXp, quest, done) {
       '<div class="xpg-orb"><span>✦</span></div>' +
       '<div class="xpg-tag">XP CONQUISTADO</div>' +
       '<div class="xpg-num"><b>+</b><span class="xpg-val">0</span><small>XP</small></div>' +
-      '<div class="xpg-quest">Missão: <b class="xpg-qname"></b></div>' +
+      '<div class="xpg-quest">Conquista: <b class="xpg-qname"></b></div>' +
       '<div class="xpg-barwrap"><div class="xpg-bar"><div class="xpg-fill"></div></div><div class="xpg-hint"></div></div>' +
       '<button class="xpg-btn">Continuar 🙏</button>' +
     '</div>';
@@ -968,6 +992,7 @@ function showXpGain(gain, fromXp, quest, done) {
   const fill = ov.querySelector('.xpg-fill'), bar = ov.querySelector('.xpg-bar');
   const hint = ov.querySelector('.xpg-hint'), sparks = ov.querySelector('.xpg-sparks');
   const btn = ov.querySelector('.xpg-btn');
+  if(options.avulso) ov.querySelector('.xpg-barwrap').style.display='none';
 
   for (let i = 0; i < 14; i++) { const s = document.createElement('i'); s.style.left = (8 + Math.random() * 84) + '%'; s.style.animationDelay = (Math.random() * 0.8).toFixed(2) + 's'; sparks.appendChild(s); }
 
@@ -997,7 +1022,9 @@ function showXpGain(gain, fromXp, quest, done) {
   }, 450);
 
   let closed = false;
-  const close = () => { if (closed) return; closed = true; clearTimeout(ov._timer); ov.classList.add('closing'); setTimeout(() => { ov.remove(); if (typeof done === 'function') done(); }, 300); };
+  const close = () => { if (closed) return; closed = true; clearTimeout(ov._timer); document.removeEventListener('keydown',xpTeclado); ov.classList.add('closing'); setTimeout(() => { ov.remove(); document.body.style.overflow=overflowAnterior; if(focoAnterior?.isConnected)focoAnterior.focus({preventScroll:true}); if (typeof done === 'function') done(); }, 300); };
+  function xpTeclado(e){ if(e.key==='Escape'){e.preventDefault();close();} if(e.key==='Tab'){e.preventDefault();btn.focus();} }
+  document.addEventListener('keydown',xpTeclado);btn.focus({preventScroll:true});
   btn.onclick = close;
   ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
   ov._timer = setTimeout(close, crossesStar ? 5600 : 4200);
@@ -2492,6 +2519,7 @@ const MODULOS_LIBERAVEIS = [
   ['tesouraria','Tesouraria','tesouraria.html'], ['casas','Casas','casas.html'],
   ['tarefas','Tarefas dos times','tarefas.html'],
   ['retiros','Retiros (planejamento e compras)','retiros.html'],
+  ['quizzes','Dinâmicas e temporadas (somente equipe)','quizzes.html'],
 ]; // 'chamada' foi fundida na Escala (botão por card) — não é mais um módulo de nav separado,
    // então a Chamada é gateada pela permissão 'escala' (ver chamada.html)
 
@@ -2508,6 +2536,7 @@ const NAV_COORD_MODULOS = {
   tesouraria: { label:'Tesouraria', href:'tesouraria.html', icon:'dollar' },
   casas:      { label:'Casas',      href:'casas.html',      icon:'shield' },
   tarefas:    { label:'Tarefas',    href:'tarefas.html',    icon:'tarefas' },
+  quizzes:    { label:'Dinâmicas', href:'quizzes.html', icon:'star' },
   retiros:    { label:'Retiros',    href:'retiros.html',    icon:'retiros' },
 };
 // 'jornada' vem primeiro pra manter o lugar que ela já ocupava na barra (logo após Agenda).
@@ -2516,12 +2545,12 @@ const NAV_COORD_MODULOS = {
 // trocas, cadastros e ausências — o que mais se acessa depois da Jornada.
 // 'tarefas' entra no FIM: id novo pode entrar, mas mexer na posição das outras mudaria
 // a barra de todo mundo (contrato com acolitos_config.nav_ordem_coord).
-const ORDEM_MODULOS = ['jornada','caixa','membros','escala','crm','tesouraria','casas','tarefas','retiros'];
+const ORDEM_MODULOS = ['jornada','caixa','membros','escala','crm','tesouraria','casas','tarefas','retiros','quizzes'];
 
 // Rótulos amigáveis por arquivo, p/ o chip "Continuar" da Home (Fase 4).
 // Cobre telas de coordenação (NAV_COORD_MODULOS) e de jornada.
 const TELA_LABEL = {
-  'membros.html':'Membros', 'escala.html':'Escala', 'crm.html':'CRM',
+  'quizzes.html':'Dinâmicas', 'membros.html':'Membros', 'escala.html':'Escala', 'crm.html':'CRM',
   'tesouraria.html':'Tesouraria', 'casas.html':'Casas', 'tarefas.html':'Tarefas', 'retiros.html':'Retiros',
   'missoes.html':'Quests', 'escalas-membro.html':'Minhas Escalas', 'agenda.html':'Agenda',
   'destaques.html':'Destaques', 'minha-casa.html':'Minha Casa', 'ausencias.html':'Ausências',
@@ -2550,7 +2579,8 @@ function navCaps(ctx) {
   const serve = m ? (m.serve !== false) : false;
   const nivel = (m && m.nivel) || nivelFromRole(role || 'aspirante');
   const isCerimo = nivelInfo(nivel).base === 'cerimonario';
-  const perms = isAdmin ? ORDEM_MODULOS.slice() : ((m && Array.isArray(m.permissoes)) ? m.permissoes : []);
+  const perms = isAdmin ? ORDEM_MODULOS.slice() : ((m && Array.isArray(m.permissoes)) ? m.permissoes.slice() : []);
+  if (EQUIPE_ROLES.includes(role) && !perms.includes('quizzes')) perms.push('quizzes');
   // Quem alcança a Coordenação: ser da equipe OU ter permissão de algum módulo. A regra mora
   // no navegacao-core (testada em node). O login.html não carrega esse arquivo — daí a
   // reserva, que é o comportamento de antes.
@@ -2828,6 +2858,19 @@ function renderBottomNav(ctx, activePage) {
     const a = document.createElement('a');
     a.className = 'nav-item' + (item.id === activePage ? ' active' : '');
     a.href = item.href;
+    // Retoma a seção de Dinâmicas, sem perder a temporada ao alternar o menu principal.
+    if (item.id === 'quizzes') {
+      try {
+        const rota = sessionStorage.getItem('dinamicas-rota-' + ctx.user.id);
+        if (rota) {
+          const destino = new URL(rota, location.href);
+          if (destino.origin === location.origin && destino.pathname === '/projetos/acolitos/quizzes.html') a.href = destino.href;
+        }
+      } catch (_) {}
+      if (activePage === 'quizzes') a.addEventListener('click', e => {
+        if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) e.preventDefault();
+      });
+    }
     a.dataset.id = item.id;
     // Páginas ainda não construídas ficam desabilitadas
     if (!['home','membros','crm','index'].includes(item.id) && !item.href.includes('index')) {

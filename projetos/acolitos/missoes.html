@@ -7,6 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="jornada-quests.css">
+  <link rel="stylesheet" href="bonus-semana.css">
+  <link rel="stylesheet" href="quests-vivas.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
   <link rel="icon" href="icon-192.png">
@@ -69,6 +72,10 @@
 <script src="telefones-core.js"></script>
 <script src="identidade-core.js"></script>
 <script src="shared.js"></script>
+<script src="jornada-core.js"></script>
+<script src="jornada-quests.js"></script>
+<script src="quests-ux.js"></script>
+<script src="bonus-semana.js"></script>
 <script>
 const COORD = ['coord_admin','subadmin','membro_equipe'];
 const NIVEIS_SLUGS = () => NIVEIS.map(n => n.slug);
@@ -83,19 +90,27 @@ async function init() {
   if (ctx.membro) { try { await sb.rpc('acolitos_avaliar_missoes', { p_membro: ctx.membro.id, p_niveis: NIVEIS_SLUGS() }); } catch (e) {} }
   // medalhas standalone (marcos, tempo, solícitos, campeão…) — concede e comemora as novas
   if (ctx.membro) { try { await sb.rpc('acolitos_medalhas_avaliar', { p_membro: ctx.membro.id }); } catch (e) {} }
+  await JornadaQuests.carregar(sb);
   await renderAll();
+  if(ctx.membro)QuestUX.retomar(ctx.membro.id);
+  BonusSemana.abrirDoLink();
 }
 
 async function renderAll() {
   const main = document.getElementById('main');
-  main.textContent = '';
+  const pos=QuestUX.capture(main);
+  const oldHeight=main.getBoundingClientRect().height;
+  const content=document.createElement('div');
+  content.className='qv-page';
 
   const title = document.createElement('h1'); title.className = 'page-title';
-  title.textContent = 'Minha Jornada';
-  main.appendChild(title);
+  title.textContent = 'Sua próxima descoberta';
+  content.appendChild(title);
+  const intro = document.createElement('p'); intro.className = 'jq-intro'; intro.textContent = 'Escolha um desafio. O resto da história é com você.'; content.appendChild(intro);
 
-  if (ctx.membro) await renderBoard(main);
-  else { const e = document.createElement('p'); e.className = 'mx-empty'; e.textContent = 'Sua conta não tem um perfil de membro ativo.'; main.appendChild(e); }
+  if (ctx.membro) await renderBoard(content);
+  else { const e = document.createElement('p'); e.className = 'mx-empty'; e.textContent = 'Sua conta não tem um perfil de membro ativo.'; content.appendChild(e); }
+  main.style.minHeight=oldHeight+'px';main.replaceChildren(...content.childNodes);QuestUX.restore(pos);await new Promise(requestAnimationFrame);main.style.minHeight='';QuestUX.restore(pos);
   // painel de coordenação migrado p/ jornada-admin.html (aba Jornada na coordenação)
 }
 
@@ -125,10 +140,11 @@ function pedirHab(f) {
   }
   const l = document.createElement('div'); l.style.cssText = 'font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 5px;'; l.textContent = 'Explique como se serve nessa função *'; md.appendChild(l);
   const ta = document.createElement('textarea'); ta.className = 'form-input'; ta.rows = 4;
+  ta.setAttribute('aria-label','Explique como você serve nesta função');
   ta.placeholder = 'Com suas palavras: o que você faz nessa função, em que momentos da missa, e como — pra mostrar que sabe servir bem.';
   md.appendChild(ta);
-  const aviso = document.createElement('div'); aviso.style.cssText = 'font-size:11px;color:var(--wine-bright,#d45050);margin-top:5px;font-style:italic;'; aviso.textContent = ('😏 Escreve com suas palavras! Se colar resposta de ChatGPT aqui, o tio Erick vai saber 👀'); md.appendChild(aviso);
-  const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:16px;';
+  const aviso = document.createElement('div'); aviso.style.cssText = 'font-size:11px;color:var(--wine-bright,#d45050);margin-top:5px;font-style:italic;'; aviso.textContent = ('Conta do seu jeito. A equipe quer entender o que você aprendeu e onde ainda precisa de ajuda.'); md.appendChild(aviso);
+  const acts = document.createElement('div');acts.className='qv-submit-actions'; acts.style.cssText = 'display:flex;gap:8px;margin-top:16px;';
   const cancelar = document.createElement('button'); cancelar.className = 'btn'; cancelar.style.flex = '1'; cancelar.textContent = 'Cancelar'; cancelar.onclick = () => ov.remove();
   const enviar = document.createElement('button'); enviar.className = 'btn gold'; enviar.style.flex = '1'; enviar.textContent = 'Enviar';
   enviar.onclick = async () => {
@@ -139,15 +155,17 @@ function pedirHab(f) {
     else { enviar.disabled = false; enviar.textContent = 'Enviar'; toast('Erro: ' + (r && r.erro || 'tente de novo'), 'error'); }
   };
   acts.append(cancelar, enviar); md.appendChild(acts);
-  ov.appendChild(md); document.body.appendChild(ov);
+  ov.appendChild(md); document.body.appendChild(ov);const close=document.createElement('button');close.className='qv-close';close.textContent='Voltar ×';close.type='button';close.onclick=()=>ov.remove();md.prepend(close);QuestUX.mount(ov,md);
 }
 function questRow(q) {
+  const episodio = JornadaQuests.linha(q, { sb, membro: ctx.membro.id, toast, atualizar: renderAll, revisao: revisoesMap[q.id] });
+  if (episodio) return episodio;
   const row = document.createElement('div'); row.className = 'mx-q';
   row.appendChild(statusIco(q.status));
   const body = document.createElement('div'); body.className = 'mx-q-body';
   const t = document.createElement('div'); t.className = 'mx-q-tit'; t.textContent = q.titulo + (q.obrigatoria === false ? ' · opcional' : '');
   body.appendChild(t);
-  if (q.descricao) { const d = document.createElement('div'); d.className = 'mx-q-sub'; d.textContent = q.descricao; body.appendChild(d); }
+  
   if (q.competencia) { const c = document.createElement('div'); c.className = 'mx-q-sub'; c.style.cssText = 'color:var(--gold);font-size:11px;margin-top:2px;font-weight:700;'; comIcone(c, 'musculo', 'Trabalha: ' + q.competencia); body.appendChild(c); }
   // progresso cumulativo (missas/ensaios/funções distintas) → barra X/N
   if (q.alvo != null && q.atual != null) {
@@ -164,12 +182,13 @@ function questRow(q) {
   const claimable = ((q.validacao === 'reivindicada' || q.validacao === 'avaliada' || (q.validacao === 'automatica' && q.fonte === 'habilitacao')) && (q.status === 'pendente' || q.status === 'revisao'));
   if (q.status === 'em_analise' || q.validacao === 'avaliada') { const h = document.createElement('div'); h.className = 'mx-q-sub'; h.style.cssText = 'color:var(--gold-dim);font-size:11px;margin-top:2px;'; h.textContent = subDe(q); body.appendChild(h); }
   if (q.status === 'revisao' && revisoesMap[q.id] != null) { const rv = document.createElement('div'); rv.className = 'mx-q-sub'; rv.style.cssText = 'color:var(--danger-text);font-size:11px;margin-top:2px;font-weight:700;'; comIcone(rv, 'editar', 'Revisão: ' + (revisoesMap[q.id] || 'reenvie sua resposta')); body.appendChild(rv); }
+  row.dataset.quest=q.id;
   row.appendChild(body);
   const xp = document.createElement('span'); xp.className = 'mx-q-xp'; xp.textContent = '+' + q.xp + ' XP'; row.appendChild(xp);
   if (claimable) {
-    const b = document.createElement('button'); b.className = 'mx-mini go'; b.textContent = (q.status === 'revisao' ? 'Reenviar' : q.fonte === 'habilitacao' ? 'Eu já faço' : 'Já fiz');
+    const b = document.createElement('button'); b.className = 'mx-mini go'; b.textContent = (q.status === 'revisao' ? 'Ver retorno' : 'Abrir missão');
     b.onclick = () => abrirClaimModal(q); row.appendChild(b);
-  }
+  } else {const b=document.createElement('button');b.className='mx-mini';b.textContent='Ver missão';b.onclick=()=>abrirClaimModal(q);row.appendChild(b);}
   return row;
 }
 // Card de um capítulo (desbloqueado mostra missões; travado mostra cadeado)
@@ -184,7 +203,20 @@ function capCard(c) {
   } else {
     (c.missoes || []).forEach(q => card.appendChild(questRow(q)));
   }
+  if(c.extras?.length){const extra=document.createElement('div');extra.className='jq-chapter-extra';const p=document.createElement('p');p.textContent='Experimente também · missões interativas opcionais';extra.appendChild(p);c.extras.forEach(q=>extra.appendChild(questRow(q)));card.appendChild(extra);}
   return card;
+}
+
+function renderCapitulos(main,caps,extras,nivel){
+ const atual=caps.find(c=>c.desbloqueado&&!c.completo)||caps[caps.length-1];
+ const area=document.createElement('section');area.className='jq-chapters';area.id='capitulos';
+ const heading=document.createElement('h2');heading.textContent='Seu próximo capítulo';heading.className='qv-section-title';area.append(heading);
+ const key='jornada-capitulo:'+ctx.membro.id+':'+nivel;let selected=atual.capitulo,expanded=false;try{const old=JSON.parse(sessionStorage.getItem(key)||'null');if(caps.some(c=>c.capitulo===Number(old?.cap||old)))selected=Number(old?.cap||old);expanded=!!old?.expanded;}catch{}
+ const hero=document.createElement('div');hero.className='jq-continue';const map=document.createElement('div');map.className='jq-chapter-map';map.setAttribute('aria-label','Capítulos da sua jornada');const view=document.createElement('div');view.className='qv-chapter-content';
+ function save(){try{sessionStorage.setItem(key,JSON.stringify({cap:selected,expanded}));}catch{}}
+ function show(cap,open=expanded){selected=cap;expanded=open;const c=caps.find(c=>c.capitulo===cap);hero.replaceChildren();const visual=document.createElement('div');visual.className='qv-cover';visual.append(QuestUX.art(c.completo?'igreja':'caderno'));const copy=document.createElement('div');copy.className='qv-cover-copy';const h=document.createElement('h3');h.textContent='Capítulo '+cap;const p=document.createElement('p');const next=(c.missoes||[]).find(q=>q.status!=='concluida');p.textContent=!c.desbloqueado?'Seu próximo destino. Termine o capítulo anterior para entrar.':c.completo?'Esse capítulo já faz parte da sua história. Pode revisitar.':next?'Sua próxima descoberta: '+next.titulo:'Um novo passo espera por você aqui.';const progress=document.createElement('p');progress.className='qv-chapter-count';progress.textContent=(c.missoes||[]).filter(q=>q.status==='concluida').length+' de '+(c.missoes||[]).length+' missões reveladas concluídas';const go=document.createElement('button');go.className='bw-button gold';go.textContent=!c.desbloqueado?'Ainda vai chegar sua vez':expanded?'Guardar capítulo':c.completo?'Revisitar capítulo':'Abrir meu capítulo →';go.disabled=!c.desbloqueado;go.onclick=()=>{show(cap,!expanded);save();};copy.append(h,p,progress,go);hero.append(visual,copy);view.replaceChildren();view.hidden=!expanded;if(expanded)view.append(capCard({...c,extras:c===atual?extras:[]}));map.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.cap)===cap)));save();}
+ for(const c of caps){const b=document.createElement('button');b.type='button';b.dataset.cap=c.capitulo;const label=document.createElement('span');label.textContent='Capítulo '+c.capitulo;const state=document.createElement('small');state.textContent=c.completo?'Conquistado':c===atual?'Você está aqui':c.desbloqueado?'Pode explorar':'Em breve';b.append(label,state);b.onclick=()=>show(c.capitulo,false);map.append(b);}
+ area.append(hero,map,view);main.append(area);show(selected);
 }
 
 async function renderBoard(main) {
@@ -193,16 +225,18 @@ async function renderBoard(main) {
   try { const { data: rv } = await sb.rpc('acolitos_revisoes_minhas', { p_membro: ctx.membro.id }); revisoesMap = rv || {}; } catch (e) { revisoesMap = {}; }
   try { const { data: rh } = await sb.rpc('acolitos_hab_revisoes_minhas', { p_membro: ctx.membro.id }); revHabMap = rh || {}; } catch (e) { revHabMap = {}; }
 
+  const bonusDaCoord=[]; let interativas=[];const pendenciasArea=document.createElement('section');pendenciasArea.className='qv-pendencias';pendenciasArea.id='preparar-proximo-nivel';
+
   // 🎖️ Minhas Conquistas (topo)
-  const cqBtn = document.createElement('button'); cqBtn.className = 'btn-sm gold'; cqBtn.style.cssText = 'width:100%;margin:0 0 12px;'; comIcone(cqBtn, 'award', 'Minhas Conquistas');
-  cqBtn.onclick = () => { window.location.href = 'conquistas.html'; }; main.appendChild(cqBtn);
+  const cqBtn = document.createElement('button'); cqBtn.className = 'btn-sm gold'; cqBtn.style.cssText = 'min-height:44px;margin:0 0 16px;'; comIcone(cqBtn, 'award', 'Minhas Conquistas');
+  cqBtn.onclick = () => { window.location.href = 'conquistas.html'; };cqBtn.className='qv-conquistas';cqBtn.textContent='Conquistas →';
 
   if (data.elegivel) { const el = document.createElement('div'); el.className = 'mx-elig'; comIcone(el, 'festa', 'Pronto pra subir de nível! Aguardando a coordenação confirmar.'); main.appendChild(el); }
 
   // Card "Sua jornada"
   const caps = data.capitulos || [];
   const capsOk = caps.filter(c => c.completo).length;
-  const card = document.createElement('div'); card.className = 'mx-card';
+  const card = document.createElement('div'); card.className = 'mx-card qv-progress';
   const hd = document.createElement('div'); hd.className = 'mx-hd'; hd.textContent = data.proximo_nivel ? 'Sua jornada' : 'Nível máximo'; card.appendChild(hd);
   if (data.proximo_nivel) {
     const prox = document.createElement('div'); prox.className = 'mx-prox';
@@ -229,27 +263,10 @@ async function renderBoard(main) {
   } else {
     const e = document.createElement('div'); e.className = 'mx-empty'; comIcone(e, 'trophy', 'Você está no topo da jornada com ' + data.xp_total + ' XP!'); card.appendChild(e);
   }
-  main.appendChild(card);
+  card.appendChild(cqBtn);main.appendChild(card);
 
-  // ✨ Quests Exclusivas + ⭐ Missão da Semana (logo abaixo da Sua jornada)
-  try {
-    const { data: ex } = await sb.rpc('acolitos_quests_exclusivas', { p_membro: ctx.membro.id });
-    if (ex && ex.length) {
-      const ec = document.createElement('div'); ec.className = 'mx-card'; ec.style.cssText = 'border-color:#9b59d4;background:linear-gradient(165deg,rgba(155,89,212,.18),var(--surface));';
-      const eh = document.createElement('div'); eh.className = 'mx-hd'; eh.style.color = '#cd9ef2'; comIcone(eh, 'sparkles', 'Quest' + (ex.length > 1 ? 's' : '') + ' Exclusiva' + (ex.length > 1 ? 's' : '')); ec.appendChild(eh);
-      ex.forEach(q => ec.appendChild(questRow(q)));
-      main.appendChild(ec);
-    }
-  } catch (e) {}
-  try {
-    const { data: ws } = await sb.rpc('acolitos_missao_semana', { p_membro: ctx.membro.id, p_niveis: NIVEIS_SLUGS() });
-    if (ws && ws.missao) {
-      const wc = document.createElement('div'); wc.className = 'mx-card'; wc.style.cssText = 'border-color:var(--gold);background:linear-gradient(165deg,rgba(232,185,74,.13),var(--surface));';
-      const wh = document.createElement('div'); wh.className = 'mx-hd'; wh.style.color = 'var(--gold-light)'; comIcone(wh, 'star', 'Missão da Semana' + (ws.tema ? ' · ' + ws.tema : '')); wc.appendChild(wh);
-      wc.appendChild(questRow(ws.missao));
-      main.appendChild(wc);
-    }
-  } catch (e) {}
+  // Exclusivas e bônus antigos compartilham a mesma área de aventuras.
+  try {const {data:ex}=await sb.rpc('acolitos_quests_exclusivas',{p_membro:ctx.membro.id});interativas=(ex||[]).filter(q=>JornadaQuests.tem(q.id));bonusDaCoord.push(...(ex||[]).filter(q=>!JornadaQuests.tem(q.id)));}catch(e){}
 
   // 🔒 Funções pendentes + Capítulos (só quando há próximo nível)
   if (data.proximo_nivel) {
@@ -257,8 +274,8 @@ async function renderBoard(main) {
     if (pend.length) {
       const { data: meus } = await sb.rpc('acolitos_hab_pedidos_meus', { p_membro: ctx.membro.id });
       const pendSet = new Set(meus || []);
-      const pc = document.createElement('div'); pc.className = 'mx-card'; pc.style.borderColor = 'var(--danger)';
-      const ph = document.createElement('div'); ph.className = 'mx-hd'; ph.style.color = 'var(--danger-text)'; comIcone(ph, 'lock', 'Funções pendentes do seu nível'); pc.appendChild(ph);
+      const pc = document.createElement('div'); pc.className = 'mx-card'; pc.style.borderColor = 'var(--border-wine)';
+      const ph = document.createElement('div'); ph.className = 'mx-hd'; ph.style.color = 'var(--gold-light)'; comIcone(ph, 'musculo', 'Preparar meu próximo nível'); pc.appendChild(ph);
       const ps = document.createElement('div'); ps.className = 'mx-q-sub'; ps.style.marginBottom = '6px'; ps.textContent = 'Você precisa dominar estas funções (ficar Apto) antes de subir de nível. Treine nas missas e ensaios — ou marque "Já faço" pra coordenação avaliar.'; pc.appendChild(ps);
       pend.forEach(f => {
         const r = document.createElement('div'); r.className = 'mx-q';
@@ -275,19 +292,17 @@ async function renderBoard(main) {
         }
         pc.appendChild(r);
       });
-      main.appendChild(pc);
+      pendenciasArea.appendChild(pc);
     }
-    if (caps.length) caps.forEach(c => main.appendChild(capCard(c)));
+    if (caps.length) renderCapitulos(main,caps,interativas,data.nivel);
     else { const e = document.createElement('div'); e.className = 'mx-empty'; e.style.padding = '8px 2px'; e.textContent = 'Nenhum capítulo cadastrado pra este nível ainda.'; main.appendChild(e); }
   }
 
-  // Bônus
-  const bonus = data.bonus || [];
-  const bc = document.createElement('div'); bc.className = 'mx-card';
-  const bhd = document.createElement('div'); bhd.className = 'mx-hd'; bhd.textContent = 'Missões bônus'; bc.appendChild(bhd);
-  if (bonus.length) bonus.forEach(q => bc.appendChild(questRow(q)));
-  else { const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = 'Nenhuma missão bônus disponível agora.'; bc.appendChild(e); }
-  main.appendChild(bc);
+  const bonusWeek=document.createElement('div');
+  await BonusSemana.render(bonusWeek,ctx,sb,{extras:[...bonusDaCoord,...(data.bonus||[])],abrir:abrirClaimModal});main.appendChild(bonusWeek);
+  if(!caps.length&&interativas.length){const extra=document.createElement('section');extra.className='qv-extra';interativas.forEach(q=>extra.appendChild(questRow(q)));main.appendChild(extra);}
+  if(pendenciasArea.childNodes.length)main.appendChild(pendenciasArea);
+
 }
 
 let _rosterCache = null;
@@ -298,6 +313,8 @@ async function getRoster() {
   return _rosterCache;
 }
 async function abrirClaimModal(q) {
+  const origin=document.activeElement;const editorialAtual=BonusSemana.editorial(q.id);
+  if(['concluida','em_analise'].includes(q.status)||(q.validacao==='automatica'&&q.fonte!=='habilitacao')){const ov=document.createElement('div');ov.className='modal-overlay open';const md=document.createElement('section');md.className='modal';const back=document.createElement('button');back.className='qv-close';back.textContent='Voltar ×';back.onclick=()=>ov.remove();const title=document.createElement('h2');title.textContent=editorialAtual?.titulo||q.titulo;const message=document.createElement('p');message.textContent=q.status==='em_analise'?'Sua experiência já está com a coordenação. Quando ela avaliar, o retorno aparece aqui.':q.status==='concluida'?'Conquista confirmada! Você pode continuar explorando.':'Seu progresso é atualizado automaticamente quando a participação é registrada pela equipe.';md.append(back,QuestUX.art(editorialAtual?.arte||QuestUX.tema(q),'qv-modal-art'),title,message);if(q.descricao){const d=document.createElement('p');d.textContent=q.descricao;md.append(d);}ov.append(md);document.body.append(ov);QuestUX.mount(ov,md);return;}
   const roster = await getRoster();
   // missões de aptidão (habilitação) exigem explicar COMO se serve na função
   let aptidao = false;
@@ -308,8 +325,10 @@ async function abrirClaimModal(q) {
   const selecionados = []; // {id,nome}
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   const md = document.createElement('div'); md.className = 'modal'; md.style.setProperty('--modal-max', '440px');
-  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = q.titulo; md.appendChild(tt);
-  if (q.descricao) { const d = document.createElement('p'); d.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;'; d.textContent = q.descricao; md.appendChild(d); }
+  const editorial=BonusSemana.editorial(q.id);md.prepend(QuestUX.art(editorial?.arte||QuestUX.tema(q),'qv-modal-art'));
+  const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = editorial?.titulo||q.titulo; md.appendChild(tt);
+  if(editorial&&q.status!=='em_analise'){const steps=document.createElement('ol');steps.className='qv-steps';editorial.passos.forEach(p=>{const li=document.createElement('li');li.textContent=p;steps.append(li);});md.append(steps);}
+  if (q.descricao && !editorial) { const d = document.createElement('p'); d.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;'; d.textContent = q.descricao; md.appendChild(d); }
   if (q.status === 'revisao' && revisoesMap[q.id] != null) {
     const rb = document.createElement('div'); rb.style.cssText = 'background:rgba(209,16,32,.12);border:1px solid var(--danger);border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--text);line-height:1.4;';
     const bb = document.createElement('b'); bb.style.color = 'var(--danger-text)'; comIcone(bb, 'editar', 'A coordenação pediu: ');
@@ -319,13 +338,16 @@ async function abrirClaimModal(q) {
   // resposta obrigatória (na aptidão, pede pra explicar como se serve na função)
   lab(aptidao ? 'Explique como se serve nessa função *' : 'Conte o que você fez *');
   const ta = document.createElement('textarea'); ta.className = 'form-input'; ta.rows = 3;
-  ta.placeholder = aptidao ? 'Com suas palavras: o que você faz nessa função, em que momentos da missa, e como — pra mostrar que sabe servir.' : 'Descreva com suas palavras como você cumpriu (obrigatório)';
+  ta.setAttribute('aria-label',aptidao?'Explique como serve nesta função':'Conte sua experiência');
+  const draftKey='quest-relato:'+ctx.membro.id+':'+q.id;try{ta.value=sessionStorage.getItem(draftKey)||'';}catch{}ta.oninput=()=>{try{sessionStorage.setItem(draftKey,ta.value);}catch{}};
+  if(editorialAtual)ta.placeholder=editorialAtual.pergunta;
+  ta.placeholder = editorialAtual?.pergunta||(aptidao ? 'Com suas palavras: o que você faz nessa função, em que momentos da missa, e como — pra mostrar que sabe servir.' : 'Descreva com suas palavras como você cumpriu (obrigatório)');
   md.appendChild(ta);
-  const aviso = document.createElement('div'); aviso.style.cssText = 'font-size:11px;color:var(--wine-bright,#d45050);margin-top:5px;font-style:italic;'; aviso.textContent = ('😏 Escreve com suas palavras! Se colar resposta de ChatGPT aqui, o tio Erick vai saber 👀'); md.appendChild(aviso);
+  const aviso = document.createElement('div'); aviso.style.cssText = 'font-size:11px;color:var(--wine-bright,#d45050);margin-top:5px;font-style:italic;'; aviso.textContent = ('Conta do seu jeito. A equipe quer entender o que você aprendeu e onde ainda precisa de ajuda.'); md.appendChild(aviso);
   // marcar participantes
   lab('Envolveu alguém? marque (ganham XP)');
   const chips = document.createElement('div'); chips.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;'; md.appendChild(chips);
-  const busca = document.createElement('input'); busca.className = 'form-input'; busca.placeholder = 'Buscar nome…'; md.appendChild(busca);
+  const busca = document.createElement('input'); busca.className = 'form-input'; busca.placeholder = 'Buscar nome…';busca.setAttribute('aria-label','Buscar participantes da missão'); md.appendChild(busca);
   const lista = document.createElement('div'); lista.style.cssText = 'max-height:150px;overflow-y:auto;margin-top:6px;'; md.appendChild(lista);
   function pintaChips() {
     chips.textContent = '';
@@ -339,7 +361,7 @@ async function abrirClaimModal(q) {
   }
   busca.oninput = pintaLista;
   // botões
-  const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:8px;margin-top:16px;';
+  const acts = document.createElement('div');acts.className='qv-submit-actions'; acts.style.cssText = 'display:flex;gap:8px;margin-top:16px;';
   const cancelar = document.createElement('button'); cancelar.className = 'btn'; cancelar.style.flex = '1'; cancelar.textContent = 'Cancelar'; cancelar.onclick = () => ov.remove();
   const enviar = document.createElement('button'); enviar.className = 'btn gold'; enviar.style.flex = '1'; enviar.textContent = 'Enviar';
   enviar.onclick = async () => {
@@ -347,10 +369,10 @@ async function abrirClaimModal(q) {
     enviar.disabled = true; enviar.textContent = 'Enviando…';
     const { data, error } = await sb.rpc('acolitos_missao_reivindicar', { p_missao: q.id, p_evidencia: ta.value.trim(), p_envolvidos: selecionados.length ? selecionados.map(p => p.id) : null });
     if (error || data?.erro) { toast('Erro: ' + (data?.erro || error?.message), 'error'); enviar.disabled = false; enviar.textContent = 'Enviar'; return; }
-    ov.remove(); toast('✓ Enviado pra coordenação aprovar'); await renderAll();
+    try{sessionStorage.removeItem(draftKey);}catch{}ov.remove(); toast('✓ Enviado pra coordenação aprovar'); await renderAll();
   };
   acts.append(cancelar, enviar); md.appendChild(acts);
-  ov.appendChild(md); document.body.appendChild(ov);
+  ov.appendChild(md); document.body.appendChild(ov);const close=document.createElement('button');close.className='qv-close';close.textContent='Voltar ×';close.type='button';close.onclick=()=>ov.remove();md.prepend(close);QuestUX.mount(ov,md);
 }
 
 async function renderCoord(main) {

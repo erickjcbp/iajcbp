@@ -201,6 +201,18 @@ async function init() {
   await carregarTiposConfiguraveis();
   const hoje = new Date();
   curY = hoje.getFullYear(); curM = hoje.getMonth(); selDate = hojeLocal();
+  try {
+    const salvo = JSON.parse(sessionStorage.getItem('estado-agenda') || 'null');
+    if (salvo && Date.now() - Number(salvo.salvoEm) < 24 * 60 * 60 * 1000
+        && Number.isInteger(salvo.ano) && Number.isInteger(salvo.mes) && salvo.mes >= 0 && salvo.mes <= 11
+        && typeof salvo.data === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(salvo.data)
+        && ymd(parseD(salvo.data)) === salvo.data) {
+      curY = salvo.ano; curM = salvo.mes; selDate = salvo.data;
+      window.__agendaRestoreY = Number.isFinite(salvo.scrollY) ? salvo.scrollY : 0;
+    }
+  } catch (_) {}
+  window.addEventListener('pagehide', salvarEstadoAgenda);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') salvarEstadoAgenda(); });
   await reload();
   // Depois do reload, não antes: o desenho da tela limpa o #main-content e o aviso sumiria.
   if (tiposIncompletos) {
@@ -212,7 +224,15 @@ async function init() {
 }
 
 function reload() { return viewMode === 'cal' ? loadMes() : loadTimeline(); }
-function switchView(mode) { if (mode === viewMode) return; viewMode = mode; localStorage.setItem('agenda-view', mode); reload(); }
+function salvarEstadoAgenda() {
+  try { sessionStorage.setItem('estado-agenda', JSON.stringify({ ano:curY, mes:curM, data:selDate, scrollY:window.scrollY, salvoEm:Date.now() })); } catch (_) {}
+}
+function switchView(mode) {
+  if (mode === viewMode) return;
+  viewMode = mode; localStorage.setItem('agenda-view', mode);
+  window.scrollTo({ left:0, top:0, behavior:'instant' });
+  salvarEstadoAgenda(); reload();
+}
 
 // ── A barra de filtro da Agenda ──
 // Só uma ordem (data e hora), então a barra não mostra "Ordenar por". Os tipos de evento vêm
@@ -299,6 +319,8 @@ function itensDoDia(dateStr) {
 }
 
 function render() {
+  const y = window.__agendaRestoreY != null ? window.__agendaRestoreY : window.scrollY;
+  window.__agendaRestoreY = null;
   const main = document.getElementById('main-content'); main.textContent = '';
   const h = document.createElement('h1'); h.className = 'page-title'; h.textContent = 'Agenda'; main.appendChild(h);
   const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-4px 0 8px;';
@@ -332,6 +354,7 @@ function render() {
     fab.style.position = 'static';
     linhaAcoes.insertBefore(fab, alvoFiltro);
   }
+  requestAnimationFrame(() => window.scrollTo({ left:0, top:y, behavior:'instant' }));
 }
 
 function renderCalBody(main) {
@@ -363,7 +386,7 @@ function renderCalBody(main) {
     if (temCeleb) { const dt = document.createElement('span'); dt.className = 'cal-dot celeb'; dots.appendChild(dt); }
     tiposEv.slice(0, 3).forEach(t => { const dt = document.createElement('span'); dt.className = 'cal-dot'; dt.style.background = evtInfo(t).cor; dots.appendChild(dt); });
     cell.appendChild(dots);
-    cell.onclick = () => { selDate = ds; render(); };
+    cell.onclick = () => { selDate = ds; salvarEstadoAgenda(); render(); };
     grid.appendChild(cell);
   }
   main.appendChild(grid);
@@ -774,9 +797,9 @@ async function excluirEvento(e, ov) {
 
 function mudaMes(delta) {
   curM += delta; if (curM < 0) { curM = 11; curY--; } else if (curM > 11) { curM = 0; curY++; }
-  loadMes();
+  salvarEstadoAgenda(); loadMes();
 }
-function irHoje() { const h = new Date(); curY = h.getFullYear(); curM = h.getMonth(); selDate = ymd(h); loadMes(); }
+function irHoje() { const h = new Date(); curY = h.getFullYear(); curM = h.getMonth(); selDate = ymd(h); window.scrollTo({ left:0, top:0, behavior:'instant' }); salvarEstadoAgenda(); loadMes(); }
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 
 init();

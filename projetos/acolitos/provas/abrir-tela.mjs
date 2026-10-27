@@ -108,6 +108,7 @@ export async function iniciarProvas() {
       const tipo = ext === '.html' ? 'text/html; charset=utf-8'
         : ext === '.js' || ext === '.mjs' ? 'text/javascript; charset=utf-8'
         : ext === '.css' ? 'text/css; charset=utf-8'
+        : ext === '.svg' ? 'image/svg+xml'
         : ext === '.json' ? 'application/json; charset=utf-8'
         : 'application/octet-stream';
       res.writeHead(200, { 'Content-Type': tipo });
@@ -203,7 +204,8 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
     if (api) {
       let corpo = null; try { corpo = JSON.parse(r.postData() || 'null'); } catch (e) { corpo = r.postData() || null; }
       chamadasApi.push({ rota, corpo });
-      const { __status, ...resposta } = api;
+      const selected=api.__acoes?.[corpo?.action]||api;
+      const { __status, __acoes, ...resposta } = selected;
       return r.respond({ status: __status || 200, contentType: 'application/json', body: JSON.stringify(resposta) });
     }
     if (r.url().split('?')[0] === url) {

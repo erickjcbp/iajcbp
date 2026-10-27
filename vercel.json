@@ -1,38 +1,102 @@
 {
   "crons": [
-    { "path": "/api/cron-crm?turno=manha", "schedule": "0 11 * * *" },
-    { "path": "/api/cron-crm?turno=tarde", "schedule": "0 21 * * *" }
+    {
+      "path": "/api/cron-crm?turno=manha",
+      "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/cron-crm?turno=tarde",
+      "schedule": "0 21 * * *"
+    }
   ],
   "redirects": [
-    { "source": "/", "has": [{ "type": "host", "value": "coroinhas.jcbplimeira.com.br" }], "destination": "/projetos/acolitos/login.html", "permanent": false },
-    { "source": "/",          "destination": "/projetos/central/login.html",     "permanent": false },
-    { "source": "/central",   "destination": "/projetos/central/central.html",   "permanent": false },
-    { "source": "/pastorais", "destination": "/projetos/central/pastorais.html", "permanent": false },
-    { "source": "/acolitos",  "destination": "/projetos/acolitos/index.html",     "permanent": false }
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "coroinhas.jcbplimeira.com.br"
+        }
+      ],
+      "destination": "/projetos/acolitos/login.html",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "destination": "/projetos/central/login.html",
+      "permanent": false
+    },
+    {
+      "source": "/central",
+      "destination": "/projetos/central/central.html",
+      "permanent": false
+    },
+    {
+      "source": "/pastorais",
+      "destination": "/projetos/central/pastorais.html",
+      "permanent": false
+    },
+    {
+      "source": "/acolitos",
+      "destination": "/projetos/acolitos/index.html",
+      "permanent": false
+    }
   ],
   "rewrites": [
-    { "source": "/ausencias",
-      "has": [{ "type": "host", "value": "coroinhas.jcbplimeira.com.br" }],
-      "destination": "/projetos/acolitos/ausencias-publica.html" },
-    { "source": "/pastoral",
-      "has": [{ "type": "host", "value": "coroinhas.jcbplimeira.com.br" }],
-      "destination": "/projetos/acolitos/pastoral.html" },
-    { "source": "/novena",
-      "has": [{ "type": "host", "value": "coroinhas.jcbplimeira.com.br" }],
-      "destination": "/projetos/acolitos/novena-publica.html" }
+    {
+      "source": "/ausencias",
+      "has": [
+        {
+          "type": "host",
+          "value": "coroinhas.jcbplimeira.com.br"
+        }
+      ],
+      "destination": "/projetos/acolitos/ausencias-publica.html"
+    },
+    {
+      "source": "/pastoral",
+      "has": [
+        {
+          "type": "host",
+          "value": "coroinhas.jcbplimeira.com.br"
+        }
+      ],
+      "destination": "/projetos/acolitos/pastoral.html"
+    },
+    {
+      "source": "/novena",
+      "has": [
+        {
+          "type": "host",
+          "value": "coroinhas.jcbplimeira.com.br"
+        }
+      ],
+      "destination": "/projetos/acolitos/novena-publica.html"
+    }
   ],
   "headers": [
     {
       "source": "/(.*\\.html)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate"
+        }
       ]
     },
     {
       "source": "/(ausencias|pastoral|novena)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate"
+        }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/acolito-admin.js": {
+      "maxDuration": 60
+    }
+  }
 }

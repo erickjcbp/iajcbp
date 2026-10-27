@@ -31,7 +31,7 @@
     .chamada-fn    { font-size:11px; color:var(--gold); font-family:var(--font-body); }
     .r-btns { display:flex; gap:8px; flex-shrink:0; }
     .r-btn {
-      width:38px; height:38px; border-radius:50%; border:1px solid var(--border);
+      width:44px; height:44px; border-radius:50%; border:1px solid var(--border);
       background:var(--surface2); cursor:pointer; font-size:15px;
       display:flex; align-items:center; justify-content:center;
       transition:all .2s; -webkit-tap-highlight-color:transparent;
@@ -354,7 +354,7 @@ async function abrirChamada(celeb) {
 
   // Botões
   const btnConf=document.createElement('button');btnConf.className='btn gold';
-  btnConf.style.marginTop='20px';btnConf.textContent='Confirmar Chamada';
+  btnConf.style.marginTop='20px';btnConf.textContent='Finalizar chamada';
   btnConf.id='btn-conf-ch';btnConf.onclick=confirmarChamada;
   const btnVolt=document.createElement('button');btnVolt.className='btn';
   btnVolt.style.cssText='margin-top:8px;background:transparent;border:1px solid var(--border);color:var(--text-muted);';
@@ -483,42 +483,25 @@ async function confirmarChamada(){
 
   btn.disabled=true;btn.textContent='Salvando...';
 
-  // Cria ou reutiliza chamada
-  let chamadaId;
-  const {data:ex}=await sb.from('acolitos_chamadas').select('id').eq('celebracao_id',celebAtual.id).maybeSingle();
-  if(ex){
-    chamadaId=ex.id;
-    await sb.from('acolitos_chamadas_itens').delete().eq('chamada_id',chamadaId);
-  }else{
-    const{data:nova,error:e1}=await sb.from('acolitos_chamadas').insert({
-      celebracao_id:celebAtual.id,realizada_por:ctx.user.id
-    }).select('id').single();
-    if(e1){btn.disabled=false;btn.textContent='Confirmar Chamada';return;}
-    chamadaId=nova?.id;
-  }
-  if(!chamadaId){btn.disabled=false;btn.textContent='Confirmar Chamada';return;}
-
-  // Insere itens (com substituto quando ausente)
-  const itens=Object.entries(resultados).map(([escalaId,resultado])=>({
-    chamada_id:chamadaId,escala_id:escalaId,resultado,
-    substituto_id: resultado==='ausente' ? (substitutos[escalaId]||null) : null
+  // Salva a chamada inteira e credita o XP em uma transação autorizada no servidor.
+  const itens=escalasAtuais.map(e=>({
+    escala_id:e.id,resultado:resultados[e.id],
+    substituto_id:resultados[e.id]==='ausente'?(substitutos[e.id]||null):null
   }));
-  if(itens.length)await sb.from('acolitos_chamadas_itens').insert(itens);
-
-  // Atualiza status das escalas (ausente com substituto → 'substituido')
-  for(const[escalaId,resultado]of Object.entries(resultados)){
-    const sub = resultado==='ausente' ? (substitutos[escalaId]||null) : null;
-    const upd = sub ? { status:'substituido', substituto_id:sub } : { status:resultado, substituto_id:null };
-    await sb.from('acolitos_escalas').update(upd).eq('id',escalaId);
+  try {
+    const {data,error}=await sb.rpc('acolitos_chamada_finalizar',{p_celebracao:celebAtual.id,p_itens:itens});
+    if(error || !data?.ok){
+      toast(error?.message || data?.erro || 'Não foi possível finalizar. Suas marcações continuam aqui.','error');
+      btn.disabled=false;btn.textContent='Finalizar chamada';return;
+    }
+  } catch (_) {
+    toast('A conexão falhou. Suas marcações continuam aqui; tente finalizar novamente.','error');
+    btn.disabled=false;btn.textContent='Finalizar chamada';return;
   }
+  // Só o responsável pelo primeiro fechamento recebe os 10 XP. Atualizações não duplicam.
+  await carregarXpServico(ctx.conta || ctx.membro, 'chamada');
 
-  // Credita o substituto: conta como missa servida (via referência) + ganha +10 XP (estilo avulso)
-  for(const[escalaId,resultado]of Object.entries(resultados)){
-    const sub = resultado==='ausente' ? (substitutos[escalaId]||null) : null;
-    if(sub) await sb.rpc('acolitos_substituto_creditar',{p_celebracao:celebAtual.id, p_substituto:sub});
-  }
-
-  btn.textContent='Chamada Confirmada ✓';
+  btn.textContent='Chamada finalizada ✓';
   const { data: resp } = await sb.rpc('acolitos_chamada_responsavel',{p_celebracao:celebAtual.id});
   mostrarResponsavel(resp);
   window.scrollTo({top:0,behavior:'smooth'});

@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="jornada-quests.css">
+  <link rel="stylesheet" href="bonus-semana.css">
   <link rel="stylesheet" href="matriz-lote.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
@@ -78,6 +80,10 @@
 <script src="identidade-core.js"></script>
 <script src="rodizio-core.js"></script>
 <script src="shared.js"></script>
+<script src="jornada-core.js"></script>
+<script src="jornada-quests.js"></script>
+<script src="jornada-autoria.js"></script>
+<script src="jornada-programacao.js"></script>
 <script src="ficha-rapida.js"></script>
 <script src="historico-membro.js"></script>
 <script src="matriz-lote.js"></script>
@@ -86,6 +92,7 @@ const NIVEIS_SLUGS = () => NIVEIS.map(n => n.slug);
 let ctx = null;
 
 async function init() {
+  const destino=new URLSearchParams(location.search).get('aba');if(['quests','conteudo','programacao','evolucao'].includes(destino))abaJornada=destino;
   ctx = await initModulo(['coord_admin', 'subadmin', 'membro_equipe'], { perm: 'jornada' });
   if (!ctx) return;
   renderHeader(ctx, 'jornada');
@@ -120,11 +127,15 @@ async function renderAll() {
     // provas — já existe.
     // A matriz abre a aba; o acompanhamento da Formação vem logo depois dela.
     await renderDesenvolvimento(box, renderSinalDaFormacao);
-  } else {
-    await renderFilas(box);
-    await renderTemporadaAdmin(box);
+  } else if(abaJornada==='conteudo') {
+    await JornadaAutoria.render(box, { sb, niveis: NIVEIS });
     await renderSemanaAdmin(box);
     await renderCriarQuest(box);
+    await renderTemporadaAdmin(box);
+  } else if(abaJornada==='programacao') {
+    await JornadaProgramacao.render(box,{sb});
+  } else {
+    await renderFilas(box);
   }
   box.style.animation='none';main.textContent = ''; main.appendChild(box);
   atualizarSelecaoMatriz();restaurarEstadoJornada(estado);   // troca atômica: só zera o main quando tudo está pronto
@@ -143,7 +154,11 @@ async function renderFilas(box) {
     const lbl = document.createElement('div'); lbl.style.fontSize = '13px'; lbl.innerHTML = '<b>' + escHtml(item.membro) + '</b> — ' + escHtml(item.titulo);
     const xp = document.createElement('span'); xp.className = 'mx-q-xp'; xp.textContent = '+' + item.xp + ' XP';
     top.append(lbl, xp); it.appendChild(top);
-    if (item.evidencia) { const ev = document.createElement('div'); ev.className = 'mx-q-sub'; ev.textContent = '“' + item.evidencia + '”'; it.appendChild(ev); }
+    if (item.evidencia) {
+      let evidencia=null;try{const parsed=JSON.parse(item.evidencia);if(parsed.tipo==='bonus_evidencia')evidencia=parsed;}catch{}
+      const ev=document.createElement('div');ev.className='mx-q-sub';ev.textContent=evidencia?evidencia.relato:'“'+item.evidencia+'”';it.appendChild(ev);
+      if(evidencia?.foto){const ver=document.createElement('button');ver.className='bw-button';ver.textContent='Conferir foto da missão';ver.onclick=async()=>{ver.disabled=true;const {data,error}=await sb.storage.from('acolitos-quests-evidencias').createSignedUrl(evidencia.foto,120);if(error){toast('Não foi possível abrir a evidência.','error');ver.disabled=false;return;}const img=document.createElement('img');img.className='bw-evidence-photo';img.alt='Evidência enviada para esta missão';img.src=data.signedUrl;it.insertBefore(img,ver);ver.remove();};it.appendChild(ver);}
+    }
     if (item.envolvidos) { const en = document.createElement('div'); en.className = 'mx-q-sub'; en.style.color = 'var(--gold-light)'; comIcone(en, 'users', 'Com: ' + item.envolvidos + ' (ganham XP ao aprovar)'); it.appendChild(en); }
     const acts = document.createElement('div'); acts.className = 'mx-fila-acts';
     const ok = document.createElement('button'); ok.className = 'mx-mini ok'; ok.textContent = '✓ Aprovar'; ok.onclick = () => decidir(item.missao_id, item.membro_id, 'aprovar');
@@ -163,7 +178,11 @@ async function renderFilas(box) {
     const top = document.createElement('div'); top.className = 'mx-fila-top';
     const lbl = document.createElement('div'); lbl.style.fontSize = '13px'; lbl.innerHTML = '<b>' + escHtml(item.membro) + '</b> diz que já faz: <b style="color:var(--gold-light)">' + escHtml(item.label) + '</b>';
     top.appendChild(lbl); it.appendChild(top);
-    if (item.evidencia) { const ev = document.createElement('div'); ev.className = 'mx-q-sub'; ev.textContent = '“' + item.evidencia + '”'; it.appendChild(ev); }
+    if (item.evidencia) {
+      let evidencia=null;try{const parsed=JSON.parse(item.evidencia);if(parsed.tipo==='bonus_evidencia')evidencia=parsed;}catch{}
+      const ev=document.createElement('div');ev.className='mx-q-sub';ev.textContent=evidencia?evidencia.relato:'“'+item.evidencia+'”';it.appendChild(ev);
+      if(evidencia?.foto){const ver=document.createElement('button');ver.className='bw-button';ver.textContent='Conferir foto da missão';ver.onclick=async()=>{ver.disabled=true;const {data,error}=await sb.storage.from('acolitos-quests-evidencias').createSignedUrl(evidencia.foto,120);if(error){toast('Não foi possível abrir a evidência.','error');ver.disabled=false;return;}const img=document.createElement('img');img.className='bw-evidence-photo';img.alt='Evidência enviada para esta missão';img.src=data.signedUrl;it.insertBefore(img,ver);ver.remove();};it.appendChild(ver);}
+    }
     const acts = document.createElement('div'); acts.className = 'mx-fila-acts';
     const ok = document.createElement('button'); ok.className = 'mx-mini ok'; ok.textContent = '✓ Marcar Apto'; ok.onclick = () => decidirHab(item.id, 'aprovar');
     const rev = document.createElement('button'); rev.className = 'mx-mini'; rev.textContent = '✎ Revisar'; rev.onclick = () => abrirRevisar(item.label, (msg) => decidirHab(item.id, 'revisar', msg));
@@ -217,7 +236,7 @@ let abaJornada = 'quests';
 try { abaJornada = localStorage.getItem('jornada-aba') || 'quests'; } catch (e) {}
 function renderAbasDaJornada(box) {
   const tabs = document.createElement('div'); tabs.className = 'view-tabs';
-  [['quests', 'Quests'], ['evolucao', 'Evolução']].forEach(([id, label]) => {
+  [['quests', 'Aprovações'], ['conteudo','Conteúdo'], ['programacao','Programação'], ['evolucao', 'Evolução']].forEach(([id, label]) => {
     const b = document.createElement('button'); b.type = 'button';
     b.className = abaJornada === id ? 'on' : '';
     b.textContent = label;

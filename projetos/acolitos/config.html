@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
-  <link rel="stylesheet" href="tarcisio-painel.css">
+  <link rel="stylesheet" href="tarcisio-painel.css?v=20261025-conversas-envios">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
   <link rel="icon" href="icon-192.png">
@@ -89,7 +89,7 @@
 <script src="gerador-substituto.js"></script>
 <script src="identidade-core.js"></script>
 <script src="shared.js"></script>
-<script src="tarcisio-painel.js"></script>
+<script src="tarcisio-painel.js?v=20261025-conversas-envios"></script>
 <script src="escala-ministros-core.js"></script>
 <script src="ministros-painel.js"></script>
 <script>
@@ -184,7 +184,18 @@ async function init(){
   renderHeader(ctx, soCoord ? 'escala' : 'config'); renderBottomNav(ctx, soCoord ? 'escala' : 'config');
   const pedida = (location.hash || '').slice(1);
   const inicial = SECOES.some(([id]) => id === pedida) ? pedida : SECOES[0][0];
-  if (!noCelular() || SECOES.some(([id]) => id === pedida)) secaoAtual = inicial;
+  const deepLinkCelular = noCelular() && SECOES.some(([id]) => id === pedida);
+  if (!noCelular() || deepLinkCelular) secaoAtual = inicial;
+  if (deepLinkCelular) {
+    // Um atalho como Escala → WhatsApp também precisa voltar primeiro à lista da Configuração.
+    try {
+      const detalhe = new URL(location.href);
+      const lista = new URL(location.href); lista.hash = '';
+      const base = Object.assign({}, history.state || {}, { cfgListaY:0, cfgListaLateral:0 });
+      history.replaceState(base, '', lista);
+      history.pushState(Object.assign({}, base, { cfgSecao:inicial }), '', detalhe);
+    } catch (e) {}
+  }
   render();
 
   // Girar o aparelho ou abrir no computador não pode deixar a tela em branco: no celular sem
@@ -202,17 +213,36 @@ async function init(){
   window.addEventListener('popstate', () => {
     if (!noCelular()) return;
     const st = history.state;
-    if (!st || !st.cfgSecao) { if (secaoAtual) { secaoAtual = null; render(); } }
+    if (!st || !st.cfgSecao) {
+      if (secaoAtual) {
+        secaoAtual = null;
+        render({ scrollY: Number(st && st.cfgListaY) || 0, scrollLateral: Number(st && st.cfgListaLateral) || 0 });
+      }
+    }
   });
 }
 
 // Abrir uma seção no celular é uma ida: entra no histórico para o Voltar desfazer.
 function abrirSecao(id){
+  const celular = noCelular();
+  const lateral = document.querySelector('.cfg-side');
+  const yLista = window.scrollY;
+  const yLateral = lateral ? lateral.scrollTop : 0;
   secaoAtual = id;
-  if (noCelular()) { try { history.pushState({ cfgSecao:id }, ''); } catch(e){} }
-  render();
+  if (celular) {
+    try {
+      const base = Object.assign({}, history.state || {}, { cfgListaY:yLista, cfgListaLateral:yLateral });
+      history.replaceState(base, '', location.href);
+      history.pushState(Object.assign({}, base, { cfgSecao:id }), '', location.href);
+    } catch(e){}
+  }
+  render({ scrollY:celular ? 0 : yLista, scrollLateral:yLateral });
 }
-function render(){
+function render(opcoes){
+  opcoes = opcoes || {};
+  const yJanela = opcoes.scrollY == null ? window.scrollY : opcoes.scrollY;
+  const lateralAntiga = document.querySelector('.cfg-side');
+  const yLateral = opcoes.scrollLateral == null ? (lateralAntiga ? lateralAntiga.scrollTop : 0) : opcoes.scrollLateral;
   const main = document.getElementById('main-content'); main.textContent='';
   const t = document.createElement('h1'); t.className='page-title'; t.textContent='Configuração'; main.appendChild(t);
   const wrap = document.createElement('div'); wrap.className='cfg-wrap';
@@ -253,6 +283,13 @@ function render(){
   }
   main.appendChild(wrap);
   if (!soLista) desenharSecao(body);
+  requestAnimationFrame(() => {
+    if (!noCelular()) {
+      const lateralNova = document.querySelector('.cfg-side');
+      if (lateralNova) lateralNova.scrollTop = yLateral;
+    }
+    window.scrollTo({ left:0, top:yJanela, behavior:'instant' });
+  });
 }
 
 // Desenha a seção aberta. Uma coisa dentro: entra direto. Mais de uma: sub-abas primeiro.

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Prévia de pop-ups — Acólitos JCBP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="jornada-quests.css">
+  <link rel="stylesheet" href="bonus-semana.css">
+  <link rel="stylesheet" href="quests-vivas.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#150a0d">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>.preview-actions{display:flex;gap:12px;flex-wrap:wrap;margin:24px 0}.preview-progress{position:fixed;inset:0 0 auto;z-index:40000;padding:calc(9px + env(safe-area-inset-top)) 16px 9px;background:#190e12;color:#f0d39b;text-align:center;font:600 12px var(--font-body)}.preview-note{font-size:16px;line-height:1.7;color:var(--text-muted)}.celeb-card{max-height:calc(100dvh - 80px);overflow:auto}.levelup-card{max-height:calc(100dvh - 80px);overflow:auto}@media(max-width:639px){.xpg-card{padding-top:calc(60px + env(safe-area-inset-top))!important;padding-bottom:calc(28px + env(safe-area-inset-bottom))!important}.celeb-overlay{padding:60px 22px 28px!important}.levelup-card{padding:60px 22px 28px!important}}</style>
+  <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
+</head>
+<body><main class="main"><h1 class="page-title">Prévia dos pop-ups</h1><p class="preview-note" id="status">Conferindo sua sessão de superadmin…</p><div class="preview-actions"><button class="bw-button gold" id="start" disabled>Ver sequência completa</button><a class="bw-button" href="missoes.html">Voltar às Quests</a></div></main><div id="preview-progress" class="preview-progress" hidden></div><script src="navegacao-core.js"></script>
+<script src="portao-notificacoes-core.js"></script>
+<script src="boas-vindas-core.js"></script>
+<script src="foto-recado-core.js"></script>
+<script src="horario-core.js"></script>
+<script src="filtro-lista-core.js"></script>
+<script src="senha-nova-core.js"></script>
+<script src="telefones-core.js"></script>
+<script src="identidade-core.js"></script>
+<script src="shared.js"></script>
+<script>
+function showLevelUp(nivel, nome, done) {
+  try { if (typeof _celebrate === 'function') _celebrate(playLevelUpSound); } catch (e) {}
+  const info = nivelInfo(nivel);
+  const ov = document.createElement('div'); ov.className = 'levelup-overlay';
+  const card = document.createElement('div'); card.className = 'levelup-card';
+  const rays = document.createElement('div'); rays.className = 'levelup-rays';
+  const burst = document.createElement('div'); burst.className = 'levelup-burst';
+  const flash = document.createElement('div'); flash.className = 'levelup-flash';
+  const patchWrap = document.createElement('div'); patchWrap.className = 'levelup-patchwrap';
+  const ring = document.createElement('div'); ring.className = 'levelup-ring';
+  const rsparks = document.createElement('div'); rsparks.className = 'levelup-rsparks';
+  for (let i = 0; i < 14; i++) {
+    const ang = (i / 14) * Math.PI * 2, r = 86 + Math.random() * 26;
+    const sp = document.createElement('i');
+    sp.style.setProperty('--dx', (Math.cos(ang) * r).toFixed(0) + 'px');
+    sp.style.setProperty('--dy', (Math.sin(ang) * r).toFixed(0) + 'px');
+    sp.style.animationDelay = (0.3 + Math.random() * 0.15).toFixed(2) + 's';
+    rsparks.appendChild(sp);
+  }
+  const patch = document.createElement('div'); patch.className = 'levelup-patch';
+  patch.appendChild(buildRankEmblem(nivel, 132));
+  patchWrap.append(ring, rsparks, patch);
+  const tag = document.createElement('div'); tag.className = 'levelup-tag'; tag.textContent = 'NÍVEL ALCANÇADO';
+  const cong = document.createElement('div'); cong.className = 'levelup-congrats'; cong.textContent = 'Parabéns!';
+  const txt = document.createElement('div'); txt.className = 'levelup-text'; txt.textContent = 'Você avançou na sua jornada';
+  const rank = document.createElement('div'); rank.className = 'levelup-rank'; rank.textContent = info.label;
+  const tit = document.createElement('div'); tit.className = 'levelup-titulo'; tit.textContent = info.titulo ? '🏆 ' + info.titulo : '';
+  const share = document.createElement('button'); share.className = 'levelup-btn share'; comIcone(share, 'celular', 'Compartilhar');
+  share.onclick = () => shareLevelUp(nivel, nome || '', share);
+  const btn = document.createElement('button'); btn.className = 'levelup-btn ghost'; btn.textContent = 'Continuar';
+  btn.onclick = () => { ov.classList.add('closing'); setTimeout(() => { ov.remove(); if (typeof done === 'function') done(); }, 300); };
+  const conf = document.createElement('div'); conf.className = 'levelup-confetti';
+  const cores = ['var(--red-soft)', 'var(--gold)', 'var(--gold-light)', '#fff'];
+  for (let i = 0; i < 22; i++) {
+    const c = document.createElement('i');
+    c.style.cssText = `left:${Math.random()*100}%;animation-delay:${(Math.random()*0.7).toFixed(2)}s;background:${cores[i%4]};`;
+    conf.appendChild(c);
+  }
+  card.append(rays, burst, flash, patchWrap, tag, cong, txt, rank, tit, share, btn);
+  ov.append(conf, card);
+  document.body.appendChild(ov);
+}
+
+let busy=false,ready=false;
+function sequence(){if(!ready||busy)return;busy=true;const bar=document.getElementById('preview-progress');bar.hidden=false;let i=0;const xp=(gain,title)=>done=>showXpGain(gain,0,title,()=>{setTimeout(done,80);},{avulso:true});const steps=[['Chamada finalizada',xp(10,'Chamada finalizada · prévia')],['Missa servida',xp(20,'Missa servida · prévia')],['Jogo concluído',xp(15,'A sequência embaralhada · prévia')],['Aventura aprovada',xp(25,'Caça ao detalhe · prévia')],['Nova estrela',done=>showStarUp(1,done)],['Medalha',done=>showCeleb({icon:'🏅',tag:'MEDALHA CONQUISTADA',hero:'Espírito de equipe',sub:'Uma nova medalha brilha no seu mural de conquistas!',sound:'level',done,actions:[{label:'Próximo pop-up',primary:true}]})],['Novo nível',done=>{showLevelUp('acolito_aspirante','Erick',done);document.querySelector('.levelup-btn.share')?.remove();}]];
+ function next(){if(i===steps.length){bar.hidden=true;busy=false;document.getElementById('status').textContent='Você viu os sete pop-ups. Seu XP, nível e conquistas reais continuam iguais.';return;}const [name,fn]=steps[i++];bar.textContent='PRÉVIA · '+i+'/'+steps.length+' · '+name+' · sem alterar seu progresso';fn(next);}next();}
+async function init(){const {data:{session}}=await sb.auth.getSession();if(!session){location.href='login.html';return;}await loadConfig();if(!isSuperadmin({user:session.user})){document.getElementById('status').textContent='Esta prévia é exclusiva do superadmin.';return;}ready=true;document.getElementById('start').disabled=false;document.getElementById('start').onclick=sequence;document.getElementById('status').textContent='Sete pop-ups reais do app, em sequência. É só uma demonstração; nenhum XP ou progresso será alterado.';hideSplash();sequence();}
+init();
+</script></body></html>

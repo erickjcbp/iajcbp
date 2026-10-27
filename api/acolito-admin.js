@@ -1,7 +1,132 @@
+import bonusHandler from './_bonus.js';
+import {rotina as rotinaJornada} from './_bonus-rotina.js';
+import jornadaHandler from './_jornada.js';
+import quizHandler from './_quiz.js';
+import { createHash, randomBytes } from 'node:crypto';
 // Vercel serverless — Gestão de Acessos (admin do módulo Acólitos).
 // Ações: create (criar conta+vincular membro), password (resetar), username (trocar).
 // Exige que o chamador seja coord_admin/subadmin no módulo acolitos. Usa service key.
 const DOMINIO = '@coroinhas.jcbplimeira.com.br';
+const hash = (value) => createHash('sha256').update(value).digest('hex');
+
+async function resetRest(URL, key, path, options = {}) {
+  const response = await fetch(`${URL}/rest/v1/${path}`, {
+    ...options,
+    headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', ...(options.headers || {}) },
+  });
+  const text = await response.text();
+  if (!response.ok) throw new Error(`Supabase ${response.status}: ${text.slice(0, 240)}`);
+  return text ? JSON.parse(text) : null;
+}
+
+function resetNumero(value) {
+  let n = String(value || '').replace(/\D/g, '').replace(/^0+/, '');
+  if (n.length === 10 || n.length === 11) n = '55' + n;
+  if (n.length === 12 && n.startsWith('55') && /[6-9]/.test(n[4])) n = n.slice(0, 4) + '9' + n.slice(4);
+  return /^55\d{2}9\d{8}$/.test(n) ? n : null;
+}
+
+function resetNumeroMembro(m) {
+  const pessoal = resetNumero(m.telefone);
+  const responsavel = resetNumero(m.celular_recado) || resetNumero(m.celular_responsavel) || resetNumero(m.celular_mae);
+  const cerimonario = ['cerimoniario_aspirante', 'cerimoniario_guardiao', 'cerimoniario_magistral', 'cerimoniario_mor'].includes(m.nivel);
+  const nascimento = m.data_nascimento && new Date(m.data_nascimento + 'T12:00:00-03:00');
+  const idade = nascimento ? Math.floor((Date.now() - nascimento.getTime()) / 31_556_952_000) : null;
+  if (cerimonario && pessoal) return pessoal;
+  return idade == null || idade < 18 ? responsavel || pessoal : pessoal || responsavel;
+}
+
+async function pedirRedefinicao(req, res, URL, KEY) {
+  const usuario = String(req.body?.usuario || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 60);
+  const ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim();
+  const ipHash = hash(`${KEY}:${ip}`);
+  const agora = new Date();
+  const umaHora = new Date(agora.getTime() - 60 * 60 * 1000).toISOString();
+  const resposta = { ok: true, mensagem: 'Se a conta estiver ativa e tiver um WhatsApp cadastrado, enviaremos um link seguro em instantes.' };
+  try {
+    const porIp = await resetRest(URL, KEY, `acolitos_password_resets?select=id&ip_hash=eq.${ipHash}&created_at=gte.${encodeURIComponent(umaHora)}&limit=4`);
+    if (porIp.length >= 3) return res.status(200).setHeader('Cache-Control', 'no-store').json(resposta);
+    const trilha = { ip_hash: ipHash, user_id: null };
+    let membro = null;
+    if (usuario) {
+      const logins = await resetRest(URL, KEY, `acolitos_logins?select=membro_id&usuario=eq.${encodeURIComponent(usuario)}&limit=1`);
+      const authMap = logins?.[0]?.membro_id ? null : await resetRest(URL, KEY, 'rpc/acolitos_membro_por_usuario', {
+        method: 'POST', body: JSON.stringify({ p_usuario: usuario }),
+      });
+      const membroId = logins?.[0]?.membro_id || authMap?.[0]?.membro_id;
+      if (membroId) {
+        const membros = await resetRest(URL, KEY, `acolitos_membros?select=id,user_id,nome,apelido,nivel,status,data_nascimento,telefone,celular_recado,celular_responsavel,celular_mae&id=eq.${membroId}&limit=1`);
+        membro = membros?.[0] || null;
+      }
+    }
+    if (!membro?.user_id || membro.status !== 'ativo') {
+      await resetRest(URL, KEY, 'acolitos_password_resets', { method: 'POST', body: JSON.stringify(trilha), headers: { Prefer: 'return=minimal' } });
+      return res.status(200).setHeader('Cache-Control', 'no-store').json(resposta);
+    }
+    trilha.user_id = membro.user_id;
+    const porUsuario = await resetRest(URL, KEY, `acolitos_password_resets?select=id&user_id=eq.${membro.user_id}&created_at=gte.${encodeURIComponent(umaHora)}&limit=3`);
+    if (porUsuario.length >= 2) {
+      await resetRest(URL, KEY, 'acolitos_password_resets', { method: 'POST', body: JSON.stringify(trilha), headers: { Prefer: 'return=minimal' } });
+      return res.status(200).setHeader('Cache-Control', 'no-store').json(resposta);
+    }
+    const numero = resetNumeroMembro(membro);
+    if (!numero) {
+      await resetRest(URL, KEY, 'acolitos_password_resets', { method: 'POST', body: JSON.stringify(trilha), headers: { Prefer: 'return=minimal' } });
+      return res.status(200).setHeader('Cache-Control', 'no-store').json(resposta);
+    }
+    const token = randomBytes(32).toString('base64url');
+    const tokenHash = hash(token);
+    await resetRest(URL, KEY, `acolitos_password_resets?user_id=eq.${membro.user_id}&consumed_at=is.null&revoked_at=is.null`, {
+      method: 'PATCH', body: JSON.stringify({ revoked_at: agora.toISOString() }), headers: { Prefer: 'return=minimal' },
+    });
+    await resetRest(URL, KEY, 'acolitos_password_resets', {
+      method: 'POST', body: JSON.stringify({ ...trilha, token_hash: tokenHash, expires_at: new Date(agora.getTime() + 15 * 60 * 1000).toISOString() }),
+      headers: { Prefer: 'return=minimal' },
+    });
+    const primeiroNome = membro.apelido || membro.nome.split(/\s+/)[0];
+    await resetRest(URL, KEY, 'tarcisio_envios', {
+      method: 'POST', body: JSON.stringify({ tipo: 'aviso', estado: 'pendente', destino_numero: numero, destino_nome: membro.nome,
+        membro_id: membro.id, agendado_para: agora.toISOString(), chave_unica: `senha-reset:${tokenHash}`,
+        texto: `Oi, ${primeiroNome}! Este é seu link seguro para redefinir a senha do app São Tarcísio: https://coroinhas.jcbplimeira.com.br/projetos/acolitos/login.html?redefinir=${token}\n\nO link vale por 15 minutos e só pode ser usado uma vez. Não encaminhe esta mensagem.` }),
+      headers: { Prefer: 'return=minimal' },
+    });
+  } catch (error) {
+    console.error('Falha ao solicitar redefinição de senha:', error?.message || 'erro desconhecido');
+  }
+  return res.status(200).setHeader('Cache-Control', 'no-store').json(resposta);
+}
+
+async function confirmarRedefinicao(req, res, URL, KEY) {
+  const token = String(req.body?.token || '');
+  const password = String(req.body?.password || '');
+  if (!/^[A-Za-z0-9_-]{40,50}$/.test(token)) return res.status(400).setHeader('Cache-Control', 'no-store').json({ error: 'Este link expirou ou já foi usado. Solicite outro.' });
+  if (password.length < 10 || password.length > 128 || !password.trim()) return res.status(400).setHeader('Cache-Control', 'no-store').json({ error: 'Crie uma senha com pelo menos 10 caracteres.' });
+  const tokenHash = hash(token);
+  const agora = new Date().toISOString();
+  try {
+    const rows = await resetRest(URL, KEY, `acolitos_password_resets?select=id,user_id&token_hash=eq.${tokenHash}&expires_at=gt.${encodeURIComponent(agora)}&consumed_at=is.null&revoked_at=is.null&limit=1`);
+    const reset = rows?.[0];
+    if (!reset?.user_id) return res.status(400).setHeader('Cache-Control', 'no-store').json({ error: 'Este link expirou ou já foi usado. Solicite outro.' });
+    const claimed = await resetRest(URL, KEY, `acolitos_password_resets?id=eq.${reset.id}&consumed_at=is.null&revoked_at=is.null&expires_at=gt.${encodeURIComponent(agora)}`, {
+      method: 'PATCH', body: JSON.stringify({ consumed_at: agora }), headers: { Prefer: 'return=representation' },
+    });
+    if (!claimed?.length) return res.status(400).setHeader('Cache-Control', 'no-store').json({ error: 'Este link expirou ou já foi usado. Solicite outro.' });
+    const update = await fetch(`${URL}/auth/v1/admin/users/${reset.user_id}`, {
+      method: 'PUT', headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    if (!update.ok) {
+      await resetRest(URL, KEY, `acolitos_password_resets?id=eq.${reset.id}&token_hash=eq.${tokenHash}`, {
+        method: 'PATCH', body: JSON.stringify({ consumed_at: null }), headers: { Prefer: 'return=minimal' },
+      }).catch(() => {});
+      return res.status(502).setHeader('Cache-Control', 'no-store').json({ error: 'Não foi possível trocar a senha. Tente novamente ou fale com a coordenação.' });
+    }
+    return res.status(200).setHeader('Cache-Control', 'no-store').json({ ok: true, mensagem: 'Senha atualizada. Agora entre no app com seu usuário e a senha nova.' });
+  } catch (error) {
+    console.error('Falha ao confirmar redefinição de senha:', error?.message || 'erro desconhecido');
+    return res.status(500).setHeader('Cache-Control', 'no-store').json({ error: 'Não foi possível trocar a senha agora. Tente novamente.' });
+  }
+}
 
 function synthEmail(u) {
   const c = String(u || '').trim().toLowerCase();
@@ -10,11 +135,18 @@ function synthEmail(u) {
 }
 
 export default async function handler(req, res) {
+  if (req.method==='GET' && req.query?.action==='jornada_rotina') return rotinaJornada(req,res);
+  if (typeof req.body?.action==='string' && req.body.action.startsWith('bonus_')) return bonusHandler(req,res);
+  if (typeof req.body?.action === 'string' && req.body.action.startsWith('jornada_')) return jornadaHandler(req, res);
+  if (typeof req.body?.action === 'string' && req.body.action.startsWith('quiz_')) return quizHandler(req, res);
   if (req.method !== 'POST') return res.status(405).end();
   const URL = process.env.SUPABASE_URL;
   const ANON = process.env.SUPABASE_ANON_KEY;
   const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!URL || !ANON || !SRK) return res.status(500).json({ error: 'Server misconfigured' });
+
+  if (req.body?.action === 'password_reset_request') return pedirRedefinicao(req, res, URL, SRK);
+  if (req.body?.action === 'password_reset_confirm') return confirmarRedefinicao(req, res, URL, SRK);
 
   const token = (req.headers.authorization || '').replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Token ausente' });
@@ -124,7 +256,7 @@ export default async function handler(req, res) {
     if (!(await podeMexer(user_id))) return res.status(403).json({ error: 'Sem permissão sobre este usuário.' });
     const r = await fetch(`${URL}/auth/v1/admin/users/${user_id}`, { method: 'PUT', headers: jh, body: JSON.stringify({ password }) });
     const d = await r.json(); if (!r.ok) return res.status(r.status).json({ error: d.msg || d.message || 'Erro' });
-    await addAviso(user_id, { msg: 'Sua senha foi redefinida pela coordenação para: ' + password + '.' + SESSAO_MSG, logout: true, seen: false, ts: Date.now() });
+    await addAviso(user_id, { msg: 'Sua senha foi redefinida pela coordenação. Por segurança, ela não é exibida neste aviso. Se você não recebeu a orientação em particular, peça ajuda à coordenação.', logout: true, seen: false, ts: Date.now() });
     return res.status(200).json({ ok: true });
   }
 

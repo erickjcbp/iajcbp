@@ -108,6 +108,8 @@ let ctx = null;
 let areas = [], resumos = {}, membros = [], fornecedores = [];
 let area = null, itens = [], compras = [], lancs = [], equipes = [], pessoas = [];
 let aba = 'cronograma', mostrarArquivadas = false;
+let rotaRetiroAtual = location.pathname + location.search;
+let restaurarRolagemRetiro = null;
 
 // ── helpers de DOM ───────────────────────────────────────────────────────
 function h(tag, cls, texto, attrs) {
@@ -217,8 +219,34 @@ async function init() {
     sb.from('acolitos_retiro_fornecedores').select('*').order('nome'),
   ]);
   membros = m.data || []; fornecedores = f.data || [];
-  const id = new URLSearchParams(location.search).get('area');
-  if (id) { await abrirArea(id); } else { await carregarLista(); }
+  const params = new URLSearchParams(location.search);
+  const id = params.get('area');
+  if (id) {
+    aba = ABAS.some(([k]) => k === params.get('aba')) ? params.get('aba') : 'cronograma';
+    const lista = new URL(location.href); lista.searchParams.delete('area'); lista.searchParams.delete('aba');
+    history.replaceState(Object.assign({}, history.state || {}, { retirosView:'lista', scrollY:0 }), '', lista);
+    const detalhe = new URL(location.href); detalhe.searchParams.set('area', id);
+    if (aba === 'cronograma') detalhe.searchParams.delete('aba'); else detalhe.searchParams.set('aba', aba);
+    history.pushState({ retirosView:'area', areaId:id, aba, scrollListaY:0, scrollY:0, veioDaLista:true }, '', detalhe);
+    rotaRetiroAtual = location.pathname + location.search;
+    restaurarRolagemRetiro = 0;
+    await abrirArea(id);
+  } else {
+    history.replaceState(Object.assign({}, history.state || {}, { retirosView:'lista', scrollY:window.scrollY }), '', location.href);
+    rotaRetiroAtual = location.pathname + location.search;
+    await carregarLista();
+  }
+  window.addEventListener('popstate', aoMudarRotaRetiro);
+  let rolagemAgendada = false;
+  window.addEventListener('scroll', () => {
+    if (rolagemAgendada) return;
+    rolagemAgendada = true;
+    requestAnimationFrame(() => {
+      rolagemAgendada = false;
+      const st = history.state || {};
+      if (st.retirosView) history.replaceState(Object.assign({}, st, { scrollY:window.scrollY }), '', location.href);
+    });
+  }, { passive:true });
 }
 
 async function carregarLista() {
@@ -246,6 +274,20 @@ async function carregarLista() {
   renderLista();
 }
 
+function urlRetirosLista() {
+  const u = new URL(location.href); u.searchParams.delete('area'); u.searchParams.delete('aba'); return u;
+}
+function estadoRetiros(extra) { return Object.assign({}, history.state || {}, extra); }
+function abrirAreaDaLista(id) {
+  const scrollListaY = window.scrollY;
+  history.replaceState(estadoRetiros({ retirosView:'lista', scrollY:scrollListaY }), '', urlRetirosLista());
+  aba = 'cronograma';
+  const u = new URL(location.href); u.searchParams.set('area', id); u.searchParams.delete('aba');
+  history.pushState({ retirosView:'area', areaId:id, aba, scrollListaY, scrollY:0, veioDaLista:true }, '', u);
+  rotaRetiroAtual = location.pathname + location.search;
+  restaurarRolagemRetiro = 0;
+  abrirArea(id);
+}
 async function abrirArea(id) {
   const main = document.getElementById('main-content');
   const [a, i, c, l, eq, pe] = await Promise.all([
@@ -266,11 +308,41 @@ async function abrirArea(id) {
   equipes = eq.data || [];
   const idsEq = new Set(equipes.map(x => x.id));
   pessoas = (pe.data || []).filter(x => idsEq.has(x.equipe_id));
-  const u = new URL(location.href); u.searchParams.set('area', id); history.replaceState(null, '', u);
+  if (new URLSearchParams(location.search).get('area') !== id) return;
+  const u = new URL(location.href); u.searchParams.set('area', id);
+  if (aba === 'cronograma') u.searchParams.delete('aba'); else u.searchParams.set('aba', aba);
+  history.replaceState(estadoRetiros({ retirosView:'area', areaId:id, aba, scrollY:window.scrollY }), '', u);
+  rotaRetiroAtual = location.pathname + location.search;
   renderArea();
 }
-function voltar() { const u = new URL(location.href); u.searchParams.delete('area'); history.replaceState(null, '', u); carregarLista(); }
+function voltar() {
+  if (history.state && history.state.retirosView === 'area' && history.state.veioDaLista) {
+    history.replaceState(estadoRetiros({ scrollY:window.scrollY }), '', location.href);
+    history.back(); return;
+  }
+  const u = urlRetirosLista();
+  history.replaceState(estadoRetiros({ retirosView:'lista', scrollY:0 }), '', u);
+  rotaRetiroAtual = location.pathname + location.search;
+  aba = 'cronograma'; carregarLista();
+}
 const recarregarArea = () => abrirArea(area.id);
+
+async function aoMudarRotaRetiro() {
+  const rota = location.pathname + location.search;
+  if (rota === rotaRetiroAtual) return; // Fechar modal altera o history.state, não a rota.
+  rotaRetiroAtual = rota;
+  const params = new URLSearchParams(location.search), id = params.get('area'), st = history.state || {};
+  if (id) {
+    aba = ABAS.some(([k]) => k === (st.aba || params.get('aba'))) ? (st.aba || params.get('aba')) : 'cronograma';
+    restaurarRolagemRetiro = Number.isFinite(st.scrollY) ? st.scrollY : 0;
+    await abrirArea(id);
+    return;
+  }
+  aba = 'cronograma';
+  await carregarLista();
+  const y = Number.isFinite(st.scrollY) ? st.scrollY : 0;
+  requestAnimationFrame(() => window.scrollTo({ left:0, top:y, behavior:'instant' }));
+}
 
 // ── lista de áreas ───────────────────────────────────────────────────────
 function renderLista() {
@@ -284,7 +356,7 @@ function renderLista() {
   visiveis.forEach(x => {
     const r = resumos[x.id] || RetirosCore.resumoDaArea({}, hojeLocal());
     const card = h('div', 'rt-card clic' + (r.atrasados ? ' atraso' : ''));
-    card.onclick = () => { aba = 'cronograma'; abrirArea(x.id); };
+    card.onclick = () => abrirAreaDaLista(x.id);
     const topo = h('div', 'rt-linha');
     const corpo = h('div', 'rt-corpo');
     corpo.append(h('div', 'rt-tit', x.nome));
@@ -333,6 +405,8 @@ function editarArea(a) {
 
 // ── dentro da área ──────────────────────────────────────────────────────
 function renderArea() {
+  const y = restaurarRolagemRetiro == null ? window.scrollY : restaurarRolagemRetiro;
+  restaurarRolagemRetiro = null;
   const main = document.getElementById('main-content'); main.textContent = '';
   const topo = h('div', 'rt-topo');
   topo.appendChild(botao('← Retiros', 'gray', voltar));
@@ -356,16 +430,30 @@ function renderArea() {
   const tabs = h('div', 'rt-tabs');
   ABAS.forEach(([k, l]) => {
     const n = k === 'compras' ? compras.length : k === 'caixa' ? lancs.length : k === 'equipes' ? equipes.length : itens.filter(i => i.secao === k).length;
-    tabs.appendChild(botao(l + (n ? ' · ' + n : ''), '', () => { aba = k; renderArea(); }));
+    tabs.appendChild(botao(l + (n ? ' · ' + n : ''), '', () => {
+      aba = k;
+      const u = new URL(location.href); u.searchParams.set('area', area.id);
+      if (aba === 'cronograma') u.searchParams.delete('aba'); else u.searchParams.set('aba', aba);
+      history.replaceState(estadoRetiros({ retirosView:'area', areaId:area.id, aba, scrollY:window.scrollY, veioDaLista:true }), '', u);
+      rotaRetiroAtual = location.pathname + location.search;
+      renderArea();
+    }));
     tabs.lastChild.className = aba === k ? 'on' : '';
   });
   main.appendChild(tabs);
   const corpo = h('div'); main.appendChild(corpo);
+  if (area.tipo === 'retiro' && (aba === 'dinamica' || aba === 'gincana')) {
+    const acesso = h('section', 'rt-card');
+    acesso.append(h('h2', 'rt-tit', 'Temporada das casas'), h('p', 'rt-meta', 'Placar, quiz ao vivo e pontos deste retiro ficam em Dinâmicas.'));
+    acesso.appendChild(botao('Abrir temporada e placar', 'gold', () => { location.href = 'quizzes.html?retiro=' + encodeURIComponent(area.id); }));
+    corpo.appendChild(acesso);
+  }
   if (aba === 'equipes') renderEquipes(corpo);
   else if (aba === 'compras') renderCompras(corpo, r);
   else if (aba === 'caixa') renderCaixa(corpo, r);
   else renderPlano(corpo, aba);
   const ativa = tabs.querySelector('.on'); if (ativa && ativa.scrollIntoView) ativa.scrollIntoView({ inline:'center', block:'nearest' });
+  requestAnimationFrame(() => window.scrollTo({ left:0, top:y, behavior:'instant' }));
 }
 
 // ── plano: cronograma, pregações, dinâmicas, gincanas, refeições ────────

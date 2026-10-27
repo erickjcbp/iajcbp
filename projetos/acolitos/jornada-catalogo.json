@@ -1,0 +1,502 @@
+[
+  {
+    "versao": 1,
+    "nivel": "aspirante",
+    "titulo": "Missão: achar a base",
+    "gancho": "Tem três lugares que todo mundo parece conhecer. Hoje você vai descobrir quais são — e criar sua própria pista para não se perder.",
+    "objetivo": "Reconhecer onde encontrar a equipe, se preparar e pedir orientação.",
+    "tempo": "5–10 min · no encontro",
+    "criterios": [
+      "Encontrar os três pontos combinados, com ajuda se precisar.",
+      "Mostrar um caminho de volta e dizer a quem pedir orientação."
+    ],
+    "pistas": [
+      "Pergunte: onde a equipe se encontra antes de começar?",
+      "Vale desenhar só setas ou fazer o caminho acompanhado."
+    ],
+    "caminhos": [
+      {
+        "titulo": "Mapa de bolso",
+        "passos": [
+          "Combine com alguém da equipe uma volta pelos três pontos. Peça permissão antes de entrar em qualquer espaço.",
+          "Faça um mapa de três símbolos ou setas e use para mostrar o caminho de volta."
+        ]
+      },
+      {
+        "titulo": "Você guia a volta",
+        "passos": [
+          "Peça para alguém mostrar os três pontos enquanto você observa.",
+          "Na volta, você escolhe o caminho e seu guia acompanha. Se der branco, vale pedir uma pista."
+        ]
+      }
+    ],
+    "cena": {
+      "texto": "Você encontrou o grupo, mas ainda não sabe onde esperar. Uma porta está fechada e um colega já saiu andando.",
+      "escolhas": [
+        {
+          "texto": "Ir atrás do colega para ver onde ele vai.",
+          "retorno": "Pode até dar certo, mas você continua sem saber se aquele é o seu lugar. Que pergunta resolveria isso?"
+        },
+        {
+          "texto": "Perguntar a quem está orientando onde você deve esperar.",
+          "retorno": "Agora você tem um ponto de encontro e alguém a quem recorrer. Primeira pista encontrada."
+        },
+        {
+          "texto": "Abrir a porta e procurar sozinho.",
+          "retorno": "Pode ser um espaço com acesso combinado. Confirme com a equipe antes de entrar."
+        }
+      ]
+    },
+    "fecho": "Agora você tem uma base. Qual pista daria para quem chegar pela primeira vez?"
+  },
+  {
+    "versao": 1,
+    "nivel": "coroinha",
+    "titulo": "A sequência embaralhada",
+    "gancho": "Parece fácil quando alguém faz. Mas você consegue montar a sequência e descobrir o porquê de cada parte?",
+    "objetivo": "Demonstrar uma tarefa que a equipe já autorizou você a treinar e explicar seus passos.",
+    "tempo": "10 min · treino acompanhado",
+    "criterios": [
+      "Organizar a sequência de uma tarefa autorizada conforme a orientação local.",
+      "Demonstrar os passos e identificar onde pedir ajuda."
+    ],
+    "pistas": [
+      "Escolha uma tarefa que você já começou a aprender. Seu orientador ajuda a delimitar.",
+      "Se esquecer um passo, observe de novo. Entender vem antes de decorar."
+    ],
+    "caminhos": [
+      {
+        "titulo": "Três cartões",
+        "passos": [
+          "Peça ao orientador para dividir a tarefa em três momentos e escreva ou desenhe um cartão para cada um.",
+          "Embaralhem os cartões. Monte a sequência, explique uma escolha e faça o treino acompanhado."
+        ]
+      },
+      {
+        "titulo": "Replay comentado",
+        "passos": [
+          "Veja o orientador demonstrar a tarefa uma vez.",
+          "Repita no treino e narre o que vem a seguir. Pare para perguntar quando faltar uma informação."
+        ]
+      }
+    ],
+    "cena": {
+      "texto": "No treino, você lembra o começo e o fim. A parte do meio sumiu da cabeça e o colega aprendeu de outro jeito.",
+      "escolhas": [
+        {
+          "texto": "Copiar o jeito do colega sem confirmar.",
+          "retorno": "Os combinados podem ser diferentes. Antes de repetir, descubra qual orientação vale nesse treino."
+        },
+        {
+          "texto": "Pular a parte que esqueceu.",
+          "retorno": "A sequência fica com um buraco. Que pista ajudaria você a reconstruir essa parte?"
+        },
+        {
+          "texto": "Pedir uma demonstração só da parte que faltou.",
+          "retorno": "Você encontrou a dúvida exata. Ver, tentar e receber retorno ajuda a fechar a sequência."
+        }
+      ]
+    },
+    "fecho": "Qual parte deixou de ser um mistério depois do treino?"
+  },
+  {
+    "versao": 1,
+    "nivel": "acolito_aspirante",
+    "titulo": "Bastidores em dupla",
+    "gancho": "Sua dupla recebe uma missão: deixar uma parte da preparação pronta. O desafio é perceber o que falta antes de dizer “fechou”.",
+    "objetivo": "Preparar uma tarefa autorizada e conferir sua conclusão com outra pessoa.",
+    "tempo": "10–15 min · preparação ou ensaio",
+    "criterios": [
+      "Combinar a tarefa e seus limites com o orientador.",
+      "Conferir o resultado com a dupla e explicar um ajuste necessário."
+    ],
+    "pistas": [
+      "Antes de começar, perguntem o que significa pronto nessa tarefa.",
+      "Uma boa conferência olha o resultado, não só marca itens na lista."
+    ],
+    "caminhos": [
+      {
+        "titulo": "Checklist invertido",
+        "passos": [
+          "A equipe escolhe uma preparação que vocês podem fazer e define o resultado esperado.",
+          "Sua dupla descreve como ficaria pronto; vocês fazem a tarefa e conferem de trás para frente com o orientador."
+        ]
+      },
+      {
+        "titulo": "Um faz, outro confere",
+        "passos": [
+          "Combinem uma tarefa autorizada. Uma pessoa prepara, a outra acompanha os pontos de conferência.",
+          "Troquem os papéis num treino da mesma tarefa. Escolha um detalhe que sua dupla ajudou a perceber."
+        ]
+      }
+    ],
+    "cena": {
+      "texto": "Você terminou sua parte. Sua dupla encontrou algo diferente do combinado, mas ainda não sabe se precisa mudar.",
+      "escolhas": [
+        {
+          "texto": "Confirmar a diferença com o orientador antes de mexer.",
+          "retorno": "Vocês transformaram uma impressão numa conferência. Assim evitam corrigir algo que já estava certo."
+        },
+        {
+          "texto": "Mudar logo para ganhar tempo.",
+          "retorno": "Rapidez sem confirmar pode criar outro problema. Qual informação falta antes de agir?"
+        },
+        {
+          "texto": "Deixar assim porque a sua parte acabou.",
+          "retorno": "A preparação é da equipe. Sinalizar a dúvida faz parte de entregar o trabalho."
+        }
+      ]
+    },
+    "fecho": "Qual detalhe sua dupla encontrou que você teria deixado passar?"
+  },
+  {
+    "versao": 1,
+    "nivel": "acolito_guardiao",
+    "titulo": "Detetive dos bastidores",
+    "gancho": "O orientador monta um cenário de treino com um detalhe fora do combinado. Você precisa achar a pista, explicar o efeito e combinar a solução.",
+    "objetivo": "Identificar uma necessidade numa preparação simulada e propor uma resposta segura.",
+    "tempo": "10–15 min · cenário de treino",
+    "criterios": [
+      "Encontrar uma diferença em relação ao combinado fornecido.",
+      "Explicar o efeito e confirmar quem pode fazer o ajuste."
+    ],
+    "pistas": [
+      "Peça o combinado por escrito ou falado antes de começar a busca.",
+      "Procure uma diferença por vez. Nenhum objeto real precisa ser escondido ou movido."
+    ],
+    "caminhos": [
+      {
+        "titulo": "Ache a diferença",
+        "passos": [
+          "O orientador cria um desenho ou lista com um único detalhe diferente do combinado.",
+          "Encontre a diferença e explique o que ela afetaria. Combine uma resposta e teste no papel."
+        ]
+      },
+      {
+        "titulo": "Antes e depois",
+        "passos": [
+          "O orientador apresenta verbalmente um caso com uma preparação incompleta.",
+          "Faça até três perguntas para descobrir o detalhe. Explique o que faria e com quem confirmaria."
+        ]
+      }
+    ],
+    "cena": {
+      "texto": "Num cenário fictício, o combinado diz que uma pessoa recebe quem chega. No desenho, ninguém ficou com essa tarefa.",
+      "escolhas": [
+        {
+          "texto": "Assumir e deixar sua própria tarefa sem avisar.",
+          "retorno": "Você resolveu uma ponta, mas abriu outra. Quem precisa participar dessa troca?"
+        },
+        {
+          "texto": "Avisar o orientador e propor uma divisão que cubra as duas tarefas.",
+          "retorno": "Você enxergou o efeito no conjunto. Agora a equipe pode confirmar uma divisão possível."
+        },
+        {
+          "texto": "Esperar alguém perceber.",
+          "retorno": "A pista já apareceu para você. Como sinalizar sem atropelar a orientação da equipe?"
+        }
+      ]
+    },
+    "fecho": "O que mudou quando você olhou para a preparação inteira?"
+  },
+  {
+    "versao": 1,
+    "nivel": "acolito_sentinela",
+    "titulo": "Uma mudança, três efeitos",
+    "gancho": "Uma parte mudou. Parece pequena, mas mexe em outras duas. Seu desafio é ligar os pontos antes que o plano vire um nó.",
+    "objetivo": "Relacionar tarefas e comunicar os efeitos de uma mudança num plano simulado.",
+    "tempo": "15 min · com mentor",
+    "criterios": [
+      "Identificar duas tarefas afetadas por uma mudança fictícia.",
+      "Propor uma sequência e confirmar as orientações com o mentor."
+    ],
+    "pistas": [
+      "Desenhe cada tarefa num cartão e ligue as que dependem uma da outra.",
+      "Se duas pessoas precisam do mesmo recurso, a ordem merece uma pergunta."
+    ],
+    "caminhos": [
+      {
+        "titulo": "Mapa de conexões",
+        "passos": [
+          "O mentor fornece um plano fictício com três tarefas e suas dependências.",
+          "Desenhe as conexões. Receba uma mudança e reorganize o plano explicando dois efeitos."
+        ]
+      },
+      {
+        "titulo": "Plano em voz alta",
+        "passos": [
+          "O mentor narra três tarefas conectadas e uma mudança. Anote só palavras-chave, se quiser.",
+          "Explique para sua dupla quem precisa saber da mudança e em que ordem vocês confirmariam o plano."
+        ]
+      }
+    ],
+    "cena": {
+      "texto": "No ensaio fictício, a explicação inicial mudou de lugar. Duas pessoas novas ainda esperam no ponto antigo e uma atividade depende dessa explicação.",
+      "escolhas": [
+        {
+          "texto": "Avisar só quem já está com você.",
+          "retorno": "O aviso não chegou a quem mais precisa dele. Quem continua sem informação?"
+        },
+        {
+          "texto": "Começar a atividade e explicar depois.",
+          "retorno": "A atividade depende da orientação inicial. O que pode ficar confuso se ela vier só no fim?"
+        },
+        {
+          "texto": "Combinar quem avisa os dois colegas e ajustar o início com o mentor.",
+          "retorno": "Você cobriu comunicação e sequência. Confirme os dois pontos antes de seguir."
+        }
+      ]
+    },
+    "fecho": "Qual efeito da mudança você só percebeu depois de ligar as tarefas?"
+  },
+  {
+    "versao": 1,
+    "nivel": "aspirante_cerimoniario",
+    "titulo": "Sua vez de puxar o treino",
+    "gancho": "Você vai conduzir uma parte curta do ensaio. Tem um mentor por perto, um começo claro e espaço para tentar de novo.",
+    "objetivo": "Conduzir uma atividade curta e autorizada, com orientação e retorno.",
+    "tempo": "15–20 min · ensaio combinado",
+    "criterios": [
+      "Combinar objetivo, duração e sinal de apoio com o mentor.",
+      "Dar uma orientação clara, conferir se foi entendida e ajustar após o retorno."
+    ],
+    "pistas": [
+      "Prepare só uma instrução por vez e uma forma de conferir se funcionou.",
+      "Pedir ao mentor para entrar faz parte do plano, não significa perder a missão."
+    ],
+    "caminhos": [
+      {
+        "titulo": "Treino de uma rodada",
+        "passos": [
+          "Escolha com o mentor uma atividade curta que você já conhece. Combinem quem participa e quando ele entra para ajudar.",
+          "Conduza uma rodada, peça um retorno concreto e repita o trecho que pode melhorar."
+        ]
+      },
+      {
+        "titulo": "Ensaio primeiro com a dupla",
+        "passos": [
+          "Explique a atividade para uma dupla num treino. Peça que ela conte o que entendeu.",
+          "Ajuste a explicação e conduza a mesma atividade com o mentor acompanhando."
+        ]
+      }
+    ],
+    "cena": {
+      "texto": "Você explicou a atividade, mas duas pessoas começaram de jeitos diferentes. Ainda é treino e o mentor está ao lado.",
+      "escolhas": [
+        {
+          "texto": "Repetir exatamente a mesma frase, mais alto.",
+          "retorno": "O volume não mostra onde a explicação ficou confusa. Que parte você pode demonstrar?"
+        },
+        {
+          "texto": "Pausar, ouvir o que entenderam e mostrar o primeiro passo.",
+          "retorno": "Agora você pode ajustar a instrução certa. Combine com o mentor se precisa de outra demonstração."
+        },
+        {
+          "texto": "Seguir e corrigir tudo só no final.",
+          "retorno": "A dúvida pode crescer durante o treino. Uma pausa curta agora pode ajudar o grupo inteiro."
+        }
+      ]
+    },
+    "fecho": "Qual ajuste na sua explicação fez diferença na segunda rodada?"
+  },
+  {
+    "versao": 1,
+    "nivel": "cerimoniario_aspirante",
+    "titulo": "Mudou o plano",
+    "gancho": "Três tarefas, uma ausência e dois jeitos de reorganizar. Você vai precisar escolher, ouvir a equipe e explicar o que abriu mão.",
+    "objetivo": "Reorganizar um cenário de equipe considerando habilidades, limites e apoio.",
+    "tempo": "15–20 min · simulação com mentor",
+    "criterios": [
+      "Propor uma divisão usando somente habilidades autorizadas no cenário.",
+      "Explicar uma troca, comunicar às pessoas afetadas e pedir apoio quando necessário."
+    ],
+    "pistas": [
+      "Liste primeiro o que cada pessoa pode fazer. O plano tem que caber nessas habilidades.",
+      "Se não houver cobertura segura, sinalize a limitação em vez de inventar uma habilitação."
+    ],
+    "caminhos": [
+      {
+        "titulo": "Mesa de decisões",
+        "passos": [
+          "O mentor entrega cartões com três tarefas, habilidades das pessoas fictícias e uma ausência.",
+          "Monte uma divisão e receba uma segunda mudança. Ajuste o plano e explique por que ele continua possível."
+        ]
+      },
+      {
+        "titulo": "Duas soluções, uma escolha",
+        "passos": [
+          "Receba o mesmo cenário com tarefas e habilidades definidas. Crie duas divisões possíveis com sua dupla.",
+          "Compare as perdas de cada opção. Escolha uma com o mentor e ensaie como avisaria a equipe."
+        ]
+      }
+    ],
+    "cena": {
+      "texto": "No cenário, a tarefa A exige uma habilidade autorizada. Só uma pessoa presente tem essa habilidade, e ela também cobre B. Outra pessoa pode fazer B, mas ainda não A.",
+      "escolhas": [
+        {
+          "texto": "Colocar quem ainda aprende diretamente em A.",
+          "retorno": "O plano ultrapassa a habilidade autorizada. Como cobrir B sem criar esse risco?"
+        },
+        {
+          "texto": "Manter tudo igual e torcer para dar.",
+          "retorno": "As duas tarefas continuam na mesma pessoa. Qual troca possível o cenário já oferece?"
+        },
+        {
+          "texto": "Propor a troca em B e confirmar a cobertura de A com o mentor.",
+          "retorno": "A proposta usa as habilidades disponíveis. Falta combinar a mudança com todos e conferir se há outros limites."
+        }
+      ]
+    },
+    "fecho": "Qual foi a troca mais difícil de decidir — e por quê?"
+  },
+  {
+    "versao": 1,
+    "nivel": "cerimoniario_guardiao",
+    "titulo": "Me ensina sem me enrolar",
+    "gancho": "Você tem poucos passos para ensinar algo que já sabe. A surpresa: quem aprende pode precisar de outro jeito de explicar.",
+    "objetivo": "Ensinar uma tarefa autorizada e adaptar a explicação após observar quem aprende.",
+    "tempo": "20 min · treino acompanhado",
+    "criterios": [
+      "Ensinar uma tarefa dentro da sua habilitação e oferecer apoio.",
+      "Observar uma tentativa e mudar uma parte da explicação a partir da dificuldade real."
+    ],
+    "pistas": [
+      "Pergunte como a pessoa prefere começar: vendo, ouvindo ou tentando junto.",
+      "Trocar o jeito da explicação é mais útil do que apenas repetir mais rápido."
+    ],
+    "caminhos": [
+      {
+        "titulo": "Mostra, tenta, ajusta",
+        "passos": [
+          "Combine com o mentor uma tarefa que você pode ensinar e uma pessoa que queira aprender.",
+          "Demonstre, acompanhe uma tentativa e adapte a explicação. Peça uma segunda tentativa e um retorno."
+        ]
+      },
+      {
+        "titulo": "Guia de três passos",
+        "passos": [
+          "Prepare um guia curto, desenhado ou falado, de uma tarefa autorizada. O mentor revisa antes do uso.",
+          "Teste com alguém que aceite aprender. Descubra onde o guia confundiu e faça uma segunda versão."
+        ]
+      }
+    ],
+    "cena": {
+      "texto": "A pessoa entende sua fala, mas se perde ao executar. Ela diz que aprende melhor vendo a sequência.",
+      "escolhas": [
+        {
+          "texto": "Pedir que decore a explicação antes de tentar.",
+          "retorno": "Talvez o formato continue sendo a barreira. Como você pode tornar a sequência visível?"
+        },
+        {
+          "texto": "Mostrar um passo por vez e deixar que tente com apoio.",
+          "retorno": "Você adaptou o formato ao retorno recebido. Observe a próxima tentativa antes de decidir outro ajuste."
+        },
+        {
+          "texto": "Terminar a tarefa por ela para não atrasar.",
+          "retorno": "Você resolve a tarefa, mas perde a chance de observar a aprendizagem. Onde cabe uma tentativa acompanhada?"
+        }
+      ]
+    },
+    "fecho": "O que você mudou depois de ouvir quem estava aprendendo?"
+  },
+  {
+    "versao": 1,
+    "nivel": "cerimoniario_magistral",
+    "titulo": "O desafio é criar o desafio",
+    "gancho": "Crie uma pequena missão para alguém aprender uma habilidade. Depois assista ao teste: será que ela funciona sem você explicar cada linha?",
+    "objetivo": "Criar, testar e melhorar um recurso de formação revisado pela equipe.",
+    "tempo": "Duas rodadas curtas · em encontros combinados",
+    "criterios": [
+      "Criar uma atividade com objetivo, escolha e critério observável, revisada antes do teste.",
+      "Testar com participantes voluntários e registrar uma melhoria baseada no uso."
+    ],
+    "pistas": [
+      "Comece com uma habilidade só. Uma missão curta é mais fácil de testar.",
+      "Pergunte onde a pessoa travou e o que deu vontade de tentar. As respostas viram mudanças."
+    ],
+    "caminhos": [
+      {
+        "titulo": "Protótipo no papel",
+        "passos": [
+          "Escolha com o mentor uma habilidade e monte uma missão com duas maneiras equivalentes de praticar.",
+          "A equipe revisa. Teste com uma dupla voluntária, observe uma rodada e ajuste o ponto mais confuso."
+        ]
+      },
+      {
+        "titulo": "Remix de uma missão",
+        "passos": [
+          "Escolha com a equipe uma atividade já aprovada que costuma gerar dúvida.",
+          "Crie uma nova forma de apresentar o mesmo objetivo, teste com uma dupla voluntária e compare o retorno."
+        ]
+      }
+    ],
+    "cena": {
+      "texto": "Na primeira rodada, todos chegam ao fim, mas só porque você explica cada passo. No papel parecia autoexplicativo.",
+      "escolhas": [
+        {
+          "texto": "Considerar pronto porque todos terminaram.",
+          "retorno": "A conclusão teve bastante ajuda sua. O teste mostrou uma chance de melhorar a instrução."
+        },
+        {
+          "texto": "Observar onde pediram ajuda e reescrever esse trecho antes de testar de novo.",
+          "retorno": "Você encontrou uma mudança baseada no uso real. A próxima rodada mostra se a nova versão ajudou."
+        },
+        {
+          "texto": "Adicionar mais três páginas de explicação.",
+          "retorno": "Mais texto pode esconder a dúvida principal. Qual instrução precisa ficar mais clara primeiro?"
+        }
+      ]
+    },
+    "fecho": "Qual mudança do seu protótipo nasceu do teste, e não de um palpite?"
+  },
+  {
+    "versao": 1,
+    "nivel": "cerimoniario_mor",
+    "titulo": "Passa o bastão",
+    "gancho": "Sua missão termina quando outra pessoa consegue orientar alguém com apoio — e melhorar o recurso sem depender de você em cada passo.",
+    "objetivo": "Acompanhar um novo mentor e deixar um recurso de formação que possa continuar evoluindo.",
+    "tempo": "Duas rodadas de mentoria · agenda combinada",
+    "criterios": [
+      "Combinar limites e critérios com o novo mentor e com a coordenação.",
+      "Observar uma condução, dar retorno concreto e testar uma melhoria em outra rodada."
+    ],
+    "pistas": [
+      "Combine como oferecer ajuda sem tomar a atividade para você.",
+      "O retorno funciona melhor com um exemplo observado e um próximo passo possível."
+    ],
+    "caminhos": [
+      {
+        "titulo": "Mentoria em dupla",
+        "passos": [
+          "Convide com a coordenação alguém que queira começar a ensinar. Planejem uma atividade já autorizada e o sinal para pedir apoio.",
+          "Observe a condução sem assumir tudo. Conversem sobre um ponto concreto, melhorem o recurso e acompanhem outra rodada."
+        ]
+      },
+      {
+        "titulo": "Kit que ganha outra voz",
+        "passos": [
+          "Escolham um guia aprovado e adaptem juntos para o novo mentor conduzir. A coordenação confere os limites da função.",
+          "Acompanhe o uso, peça o retorno de quem aprendeu e registre com o mentor a versão melhorada para a equipe."
+        ]
+      }
+    ],
+    "cena": {
+      "texto": "O novo mentor se enrola numa explicação, mas a atividade está segura e há tempo. Ele olha para você pedindo apoio.",
+      "escolhas": [
+        {
+          "texto": "Assumir toda a atividade sem combinar.",
+          "retorno": "A equipe segue, mas o novo mentor perde espaço para aprender. Que apoio menor resolveria a dúvida?"
+        },
+        {
+          "texto": "Não ajudar para testar se ele aguenta.",
+          "retorno": "O pedido de apoio faz parte da mentoria. Autonomia cresce com suporte e limites claros."
+        },
+        {
+          "texto": "Usar o sinal combinado, apoiar o trecho e devolver a condução.",
+          "retorno": "Você ajuda no ponto necessário e preserva a experiência de quem está aprendendo a orientar."
+        }
+      ]
+    },
+    "fecho": "O que o novo mentor já consegue conduzir e qual apoio ainda faz sentido?"
+  }
+]

@@ -1,0 +1,311 @@
+{
+  "versao": "piloto-1",
+  "origem": "aspirante",
+  "destino": "coroinha",
+  "titulo": "Seu lugar no altar começa aqui.",
+  "subtitulo": "Descubra os bastidores, experimente com a equipe e encontre seu jeito de servir.",
+  "capitulos": [
+    {
+      "id": "chegar",
+      "titulo": "Você faz parte",
+      "resumo": "Conheça os lugares e encontre quem caminha com você.",
+      "recompensa": "Mapa de chegada",
+      "objetivos": [
+        {
+          "id": "localizar",
+          "titulo": "Encontre seu ponto de partida",
+          "xp": 10,
+          "opcoes": [
+            {
+              "id": "mapa",
+              "titulo": "O mapa que ninguém te entregou",
+              "formato": "pratica",
+              "tempo": "5 min · no próximo encontro",
+              "gancho": "Toda equipe tem seus bastidores. Descubra três lugares que vão ajudar no seu primeiro dia.",
+              "passos": [
+                "Convide alguém da equipe para mostrar onde guardar seus pertences, onde se preparar e onde esperar as orientações.",
+                "Escolha um desses lugares e explique para que ele serve. Você pode falar, apontar ou pedir ajuda para responder."
+              ],
+              "criterio": "Reconhecer os três lugares combinados com a equipe. Não é preciso tocar nos objetos nem decorar os nomes de todos.",
+              "pergunta": "Qual lugar você descobriu e como ele vai ajudar você?",
+              "pistas": [
+                "Comece perguntando: onde eu espero quando chego?",
+                "Você pode fazer o percurso acompanhado e responder apontando. Não precisa decorar tudo de uma vez."
+              ]
+            },
+            {
+              "id": "dupla",
+              "titulo": "Uma volta com quem já conhece",
+              "formato": "pratica",
+              "tempo": "5 min · no próximo encontro",
+              "gancho": "Escolha alguém da equipe para ser seu guia por alguns minutos.",
+              "passos": [
+                "Peça ao seu guia para mostrar a preparação, o ponto de encontro e onde buscar orientação.",
+                "No fim, mostre o caminho de volta ao ponto de encontro. Se precisar, façam o percurso juntos novamente."
+              ],
+              "criterio": "Reconhecer os mesmos três lugares da missão do mapa, com apoio quando necessário.",
+              "pergunta": "Onde você vai encontrar a equipe e quem pode orientar você?",
+              "pistas": [
+                "Se você ainda não conhece ninguém, peça à coordenação para apresentar um guia.",
+                "Vale observar primeiro e repetir o caminho acompanhado."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "pedir_ajuda",
+          "titulo": "Saiba a quem recorrer",
+          "xp": 5,
+          "opcoes": [
+            {
+              "id": "e_agora",
+              "titulo": "Cheguei. E agora?",
+              "formato": "cenario",
+              "tempo": "2 min · aqui no app",
+              "gancho": "Você chega para servir e ainda não sabe qual será sua função. A equipe está se preparando. Qual é um bom próximo passo?",
+              "alternativas": [
+                "Acompanhar um colega e assumir a mesma tarefa sem confirmar.",
+                "Procurar a pessoa responsável e combinar onde você pode ajudar.",
+                "Esperar a equipe entrar, mesmo sem saber onde você deve ficar."
+              ],
+              "correta": 1,
+              "feedback": "Pedir orientação faz parte de aprender. A pessoa responsável combina a função com você e acompanha sua preparação.",
+              "criterio": "Identificar uma forma de pedir orientação. Pode tentar de novo sem perder pontos.",
+              "pistas": [
+                "Você não precisa adivinhar a função nem provar que sabe tudo.",
+                "Procure quem está orientando a equipe e diga que você está começando."
+              ]
+            },
+            {
+              "id": "deu_branco",
+              "titulo": "Deu branco no meio do caminho",
+              "formato": "cenario",
+              "tempo": "2 min · aqui no app",
+              "gancho": "Durante uma orientação, você não entendeu uma parte. O que ajuda a equipe e você?",
+              "alternativas": [
+                "Repetir os movimentos de um colega, mesmo sem entender a orientação.",
+                "Guardar a dúvida para depois, mesmo precisando executar essa parte agora.",
+                "Pedir que a pessoa mostre de novo e acompanhar com calma."
+              ],
+              "correta": 2,
+              "feedback": "Uma dúvida dita a tempo ajuda a equipe. Aprender inclui perguntar, observar e tentar novamente com apoio.",
+              "criterio": "Reconhecer que pedir ajuda é uma atitude responsável.",
+              "pistas": [
+                "Qual escolha permite aprender sem precisar fingir segurança?",
+                "Uma frase possível: pode me mostrar essa parte de novo?"
+              ]
+            }
+          ]
+        }
+      ],
+      "guia": {
+        "titulo": "Seu mapa de chegada",
+        "itens": [
+          "Descubra com a equipe o ponto de encontro, o lugar de preparação e onde guardar seus pertences.",
+          "Combine quem orienta você. Se essa pessoa não estiver, procure a coordenação.",
+          "Você pode pedir uma nova demonstração e usar as adaptações de que precisa."
+        ]
+      }
+    },
+    {
+      "id": "perceber",
+      "titulo": "O que passa despercebido",
+      "resumo": "Observe uma necessidade e entenda como ajudar.",
+      "recompensa": "Olhar atento",
+      "objetivos": [
+        {
+          "id": "observar",
+          "titulo": "Perceba antes de agir",
+          "xp": 5,
+          "opcoes": [
+            {
+              "id": "objeto",
+              "titulo": "Um objeto fora do lugar",
+              "formato": "cenario",
+              "tempo": "2 min · aqui no app",
+              "gancho": "Você encontra um objeto litúrgico num lugar diferente e não sabe se alguém o deixou preparado ali. Como pode ajudar?",
+              "alternativas": [
+                "Guardar onde você acha que deveria ficar.",
+                "Perguntar à pessoa responsável se ele está preparado para a celebração.",
+                "Passar o objeto para um colega decidir sozinho."
+              ],
+              "correta": 1,
+              "feedback": "Observar e confirmar evita desfazer uma preparação. Quando conhecer a orientação local, você poderá ajudar na tarefa combinada.",
+              "criterio": "Distinguir iniciativa de uma mudança feita sem orientação.",
+              "pistas": [
+                "O lugar pode ter sido escolhido por um motivo que você ainda não conhece.",
+                "Uma boa iniciativa começa por confirmar o que a equipe precisa."
+              ]
+            },
+            {
+              "id": "colega",
+              "titulo": "Alguém também está começando",
+              "formato": "cenario",
+              "tempo": "2 min · aqui no app",
+              "gancho": "Um colega novo parece sem saber onde ficar antes da celebração. Você já conhece o ponto de encontro. O que pode oferecer?",
+              "alternativas": [
+                "Inventar uma função para ele ocupar.",
+                "Fazer uma brincadeira para ver se ele se solta.",
+                "Oferecer companhia até o ponto de encontro e apresentar quem orienta a equipe."
+              ],
+              "correta": 2,
+              "feedback": "Um gesto simples pode ajudar alguém a se sentir parte. Ofereça companhia, respeitando se a pessoa preferir esperar por quem a acompanha.",
+              "criterio": "Escolher uma ajuda concreta e respeitosa, dentro do que já conhece.",
+              "pistas": [
+                "Você não precisa fazer um discurso nem assumir a função de coordenar.",
+                "Mostrar um caminho e apresentar uma pessoa já pode ajudar bastante."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "preparar",
+          "titulo": "Experimente um cuidado da equipe",
+          "xp": 10,
+          "opcoes": [
+            {
+              "id": "preparacao",
+              "titulo": "Bastidores em dupla",
+              "formato": "pratica",
+              "tempo": "5 min · com a equipe",
+              "gancho": "Uma celebração começa a ser preparada antes de a equipe entrar. Conheça uma parte desse cuidado.",
+              "passos": [
+                "Combine com quem orienta uma tarefa simples de preparação adequada à sua experiência.",
+                "Observe a demonstração, participe com o apoio necessário e explique o que aquela tarefa ajuda a organizar."
+              ],
+              "criterio": "Participar de uma tarefa combinada e reconhecer sua finalidade. Avaliar o aprendizado, com adaptações necessárias.",
+              "pergunta": "Qual tarefa você experimentou e para que ela serve?",
+              "pistas": [
+                "A tarefa pode ser preparar seu próprio espaço ou conferir um item junto com o orientador.",
+                "Peça uma tarefa acessível para você. Objetos quentes, pesados ou desconhecidos ficam sob responsabilidade de quem orienta."
+              ]
+            },
+            {
+              "id": "observar_preparo",
+              "titulo": "Observe, escolha, explique",
+              "formato": "pratica",
+              "tempo": "5 min · com a equipe",
+              "gancho": "Também dá para aprender acompanhando uma preparação de perto.",
+              "passos": [
+                "Acompanhe uma tarefa demonstrada pelo orientador.",
+                "Mostre, fale ou organize com ele a sequência que você percebeu e indique para que ela serve."
+              ],
+              "criterio": "Reconhecer a sequência e a finalidade da mesma habilidade de preparação. Alternativa equivalente quando a execução física precisar de adaptação.",
+              "pergunta": "O que aconteceu primeiro e por que essa preparação importa?",
+              "pistas": [
+                "Peça para o orientador dividir a tarefa em duas ou três partes.",
+                "Você pode responder oralmente ou por apontamento ao orientador; escrever no app não é obrigatório."
+              ]
+            }
+          ]
+        }
+      ],
+      "guia": {
+        "titulo": "Observe, confirme, participe",
+        "itens": [
+          "Observe a preparação antes de mudar um objeto de lugar.",
+          "Confirme com quem orienta qual tarefa é adequada para você.",
+          "Uma boa pergunta: o que esta preparação ajuda a equipe a fazer?"
+        ]
+      }
+    },
+    {
+      "id": "servir",
+      "titulo": "Sua primeira contribuição",
+      "resumo": "Leve o que descobriu para a equipe e reconheça seu avanço.",
+      "recompensa": "Meu lugar na equipe",
+      "objetivos": [
+        {
+          "id": "participar",
+          "titulo": "Participe com acompanhamento",
+          "xp": 15,
+          "opcoes": [
+            {
+              "id": "primeiro_servico",
+              "titulo": "Uma função, um passo de cada vez",
+              "formato": "pratica",
+              "tempo": "Na próxima oportunidade combinada",
+              "gancho": "Chegou a hora de experimentar uma participação adequada ao que você já aprendeu.",
+              "passos": [
+                "Combine com a coordenação uma função, preparação ou prática acompanhada adequada ao seu momento.",
+                "Participe com o apoio necessário. Depois, conversem sobre uma coisa que você aprendeu e um próximo passo."
+              ],
+              "criterio": "O orientador confirma participação acompanhada e compreensão de um próximo passo. Uma prática orientada pode demonstrar a habilidade; eventual presença mínima da pastoral continua sendo uma regra própria.",
+              "pergunta": "O que você experimentou e o que quer aprender na próxima vez?",
+              "pistas": [
+                "Você pode pedir à coordenação uma oportunidade de prática se ainda não houver escala.",
+                "Seu orientador pode registrar a observação após uma conversa. Pedir ajuda faz parte da missão."
+              ]
+            },
+            {
+              "id": "treino_acompanhado",
+              "titulo": "Ensaie a sua primeira vez",
+              "formato": "pratica",
+              "tempo": "Em uma prática combinada",
+              "gancho": "Quer experimentar o caminho antes de servir? Combine uma prática curta com quem orienta.",
+              "passos": [
+                "Peça uma demonstração da participação que a equipe considera adequada para você.",
+                "Experimente a sequência com orientação e explique o que fará se surgir uma dúvida."
+              ],
+              "criterio": "Demonstrar a mesma habilidade em prática acompanhada. Não concede automaticamente aptidão, presença em missa ou promoção.",
+              "pergunta": "Qual sequência você praticou e a quem vai recorrer se precisar?",
+              "pistas": [
+                "A prática pode ser combinada com o orientador; não depende de uma data anual específica.",
+                "A missão reconhece seu aprendizado. A autorização para cada função continua com a coordenação."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "reconhecer",
+          "titulo": "Reconheça uma conquista sua",
+          "xp": 5,
+          "opcoes": [
+            {
+              "id": "aprendi",
+              "titulo": "Antes eu não sabia…",
+              "formato": "reflexao",
+              "tempo": "2 min · aqui ou com seu orientador",
+              "gancho": "Pense no seu primeiro dia. Escolha uma descoberta que agora faz sentido para você.",
+              "passos": [
+                "Complete: antes eu não sabia… agora eu sei…",
+                "Escolha uma dúvida ou algo que gostaria de experimentar a seguir. Pode conversar com o orientador em vez de escrever."
+              ],
+              "criterio": "Identificar um aprendizado e um interesse seguinte, sem avaliar intimidade, fé pessoal, eloquência ou tamanho do texto.",
+              "pergunta": "O que mudou do seu primeiro dia para agora?",
+              "pistas": [
+                "Pode ser algo pequeno: conhecer um lugar, pedir ajuda ou entender uma preparação.",
+                "Uma frase já basta. Não precisa contar nada pessoal."
+              ]
+            },
+            {
+              "id": "guia_proximo",
+              "titulo": "Uma dica para quem vai chegar",
+              "formato": "reflexao",
+              "tempo": "2 min · aqui ou com seu orientador",
+              "gancho": "Imagine alguém chegando amanhã. Qual dica concreta teria ajudado você no começo?",
+              "passos": [
+                "Escolha uma dica sobre um lugar, uma orientação ou uma preparação que aprendeu.",
+                "Conte ao orientador ou escreva uma frase. A dica não será publicada automaticamente."
+              ],
+              "criterio": "Usar um aprendizado real para formular uma orientação simples. Mesma competência de reconhecer o próprio avanço.",
+              "pergunta": "Qual dica você daria?",
+              "pistas": [
+                "Tente começar com: quando você chegar, pode…",
+                "A dica pode falar de pedir ajuda. Não precisa ser uma grande descoberta."
+              ]
+            }
+          ]
+        }
+      ],
+      "guia": {
+        "titulo": "Seu próximo passo",
+        "itens": [
+          "Converse com seu orientador sobre um aprendizado que já consegue demonstrar.",
+          "Escolha uma habilidade que quer praticar a seguir.",
+          "Aprender inclui pedir ajuda. A coordenação confirma funções e mudanças de nível."
+        ]
+      }
+    }
+  ]
+}
