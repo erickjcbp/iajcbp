@@ -1,8 +1,9 @@
 // Service worker do app Acólitos — network-first (sempre o conteúdo mais novo), cache só p/ fallback offline.
 // O fetch handler "de verdade" é o que torna o app instalável no Chrome.
-const BUILD = '20261022105143'; // versão do cache offline; atualiza sem interromper telas abertas
+const BUILD = '20261028143500'; // versão do cache offline; atualiza sem interromper telas abertas
 const CACHE = 'acolitos-' + BUILD;
-const SHELL = ['/editor-foto-loader.js', '/editor-foto.js', '/editor-foto.css', './login.html', './index.html', './shared.css', './publico-acessibilidade.css', './navegacao-core.js', './shared.js', './manifest.json', './icon-192.png', './icon-512.png'];
+const EMBLEMAS = ["./emblemas/aspirante.webp", "./emblemas/coroinha.webp", "./emblemas/acolito_aspirante.webp", "./emblemas/acolito_guardiao.webp", "./emblemas/acolito_sentinela.webp", "./emblemas/aspirante_cerimoniario.webp", "./emblemas/cerimoniario_aspirante.webp", "./emblemas/cerimoniario_guardiao.webp", "./emblemas/cerimoniario_magistral.webp", "./emblemas/cerimoniario_mor.webp"];
+const SHELL = [...EMBLEMAS, '/editor-foto-loader.js', '/editor-foto.js', '/editor-foto.css', './login.html', './index.html', './shared.css', './publico-acessibilidade.css', './navegacao-core.js', './shared.js', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).catch(() => {}));

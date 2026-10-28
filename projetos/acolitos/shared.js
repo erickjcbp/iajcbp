@@ -3161,11 +3161,107 @@ function specPadraoNivel(slug) {
   const d = _NIVEL_COMP[slug] || { esquema: cer?'roxo':'ouro', forma: cer?'pontuda':'arredondada', anel:true, simbolos:['cruz'] };
   return { esquema:d.esquema, forma:d.forma, anel:d.anel, simbolos:d.simbolos.slice(), pips:(inf.pips||0), glow:(inf.int!=null?inf.int:0) };
 }
+// Artes aprovadas em 28/10/2026, vinculadas à composição salva no Config.
+// Se o dono editar a composição, o gerador SVG volta a representar a nova escolha.
+const NIVEL_ARTES = {
+  "aspirante": {
+    "esquema": "prata",
+    "forma": "ogival",
+    "anel": true,
+    "simbolos": [
+      "cruz"
+    ]
+  },
+  "coroinha": {
+    "esquema": "azul",
+    "forma": "ogival",
+    "anel": true,
+    "simbolos": [
+      "cruz"
+    ]
+  },
+  "acolito_aspirante": {
+    "esquema": "ouro",
+    "forma": "arredondada",
+    "anel": false,
+    "simbolos": [
+      "cruz"
+    ]
+  },
+  "acolito_guardiao": {
+    "esquema": "bronze",
+    "forma": "arredondada",
+    "anel": true,
+    "simbolos": [
+      "cruz"
+    ]
+  },
+  "acolito_sentinela": {
+    "esquema": "verde",
+    "forma": "arredondada",
+    "anel": true,
+    "simbolos": [
+      "espada"
+    ]
+  },
+  "aspirante_cerimoniario": {
+    "esquema": "esmeralda",
+    "forma": "arredondada",
+    "anel": true,
+    "simbolos": [
+      "turibulo"
+    ]
+  },
+  "cerimoniario_aspirante": {
+    "esquema": "roxo",
+    "forma": "pontuda",
+    "anel": false,
+    "simbolos": [
+      "turibulo"
+    ]
+  },
+  "cerimoniario_guardiao": {
+    "esquema": "safira",
+    "forma": "pontuda",
+    "anel": true,
+    "simbolos": [
+      "turibulo"
+    ]
+  },
+  "cerimoniario_magistral": {
+    "esquema": "rubi",
+    "forma": "pontuda",
+    "anel": true,
+    "simbolos": [
+      "espadas",
+      "turibulo"
+    ]
+  },
+  "cerimoniario_mor": {
+    "esquema": "vermelho",
+    "forma": "pontuda",
+    "anel": true,
+    "simbolos": [
+      "coroa",
+      "turibulo"
+    ]
+  }
+};
+let _nivelArteId = 0;
+function nivelArteUrl(slug, spec) {
+  const approved = Object.prototype.hasOwnProperty.call(NIVEL_ARTES, slug) ? NIVEL_ARTES[slug] : null;
+  if (!approved || !spec || approved.esquema !== spec.esquema ||
+      approved.forma !== spec.forma || approved.anel !== !!spec.anel ||
+      JSON.stringify(approved.simbolos.slice().sort()) !== JSON.stringify((spec.simbolos || []).slice().sort())) return null;
+  return '/projetos/acolitos/emblemas/' + slug + '.webp';
+}
 function getNivelSvg(slug, size, spec) {
-  size = size || 80;
-  // sem spec: usa o patch customizado salvo no nível, senão a spec PADRÃO do nível — tudo via _patchSvg
-  if (!spec) { const _inf = (typeof nivelInfo === 'function') ? nivelInfo(slug) : null; spec = (_inf && _inf._patch) ? _inf._patch : specPadraoNivel(slug); }
-  return _patchSvg(spec, size);
+  size = Math.max(1, Math.min(2048, Number(size) || 80));
+  if (!spec) { const inf = nivelInfo(slug); spec = inf && inf._patch ? inf._patch : specPadraoNivel(slug); }
+  const url = nivelArteUrl(slug, spec);
+  if (!url) return _patchSvg(spec, size);
+  const id = 'nivel-arte-' + (++_nivelArteId);
+  return `<svg class="nivel-arte" width="${size}" height="${size}" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><mask id="${id}-mask" mask-type="alpha"><image href="${url}" width="320" height="320" preserveAspectRatio="xMidYMid meet"/></mask><linearGradient id="${id}-luz"><stop stop-color="white" stop-opacity="0"/><stop offset=".5" stop-color="white" stop-opacity=".42"/><stop offset="1" stop-color="white" stop-opacity="0"/></linearGradient></defs><image href="${url}" width="320" height="320" preserveAspectRatio="xMidYMid meet"/><g mask="url(#${id}-mask)"><path class="nivel-arte-reflexo" d="M-170 0H-80L70 320H-20Z" fill="url(#${id}-luz)"/></g></svg>`;
 }
 
 // Emblema do rank com animação que intensifica por nível (patch + raios + pips).
@@ -3173,6 +3269,8 @@ function getNivelSvg(slug, size, spec) {
 function buildRankEmblem(slug, size, spec) {
   const info = nivelInfo(slug); size = size || 80;
   spec = spec || info._patch || null;
+  const activeSpec = spec || info._patch || specPadraoNivel(slug);
+  const color = (PATCH_ESQUEMAS[activeSpec.esquema] || PATCH_ESQUEMAS.ouro).edge;
   const intEff = (spec && spec.glow != null) ? Number(spec.glow) : info.int;
   const pipsEff = (spec && spec.pips != null) ? Number(spec.pips) : info.pips;
   const glow = 6 + intEff * 3, glow2 = 12 + intEff * 5;
@@ -3181,6 +3279,9 @@ function buildRankEmblem(slug, size, spec) {
 
   const wrap = document.createElement('div');
   wrap.style.cssText = 'display:inline-flex;flex-direction:column;align-items:center;gap:9px;';
+  wrap.style.setProperty('--emblem-color', color);
+  wrap.style.setProperty('--red-glow', color);
+  wrap.style.setProperty('--red-soft', color);
   const core = document.createElement('div');
   core.style.cssText = 'position:relative;display:inline-flex;align-items:center;justify-content:center;line-height:0;';
   if (intEff >= 6) {
@@ -3189,7 +3290,9 @@ function buildRankEmblem(slug, size, spec) {
     for (let k = 0; k < 3; k++) { const ring = document.createElement('i'); ring.style.animationDelay = (k * 0.8) + 's'; halo.appendChild(ring); }
     core.appendChild(halo);
   }
+  if (intEff >= 6) { const rays = document.createElement('div'); rays.className = 'emblem-rays'; core.appendChild(rays); }
   const pdiv = document.createElement('div');
+  pdiv.className = 'rank-emblem-core';
   pdiv.style.cssText = `position:relative;z-index:1;line-height:0;--glow:${glow}px;--glow2:${glow2}px;--spd:${spd}s;--sc:${sc};animation:emblemPulse var(--spd) ease-in-out infinite;`;
   pdiv.innerHTML = getNivelSvg(slug, size, spec); // SVG controlado (spec do gerador ou padrão)
   core.appendChild(pdiv);

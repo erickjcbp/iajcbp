@@ -1094,3 +1094,15 @@ a.btn-sm { text-decoration: none; }
   .modal-title { margin-bottom: 6px; }
   .modal p, .modal .form-hint { line-height: 1.35; }
 }
+
+/* Arte dos níveis: movimento existente, cores da composição ativa e reflexo no metal. */
+@keyframes nivelMetal { 0%,20% { transform: translateX(-90px); opacity: 0; } 35% { opacity: 1; } 65%,100% { transform: translateX(540px); opacity: 0; } }
+.nivel-arte { display: block; overflow: visible; }
+.nivel-arte-reflexo { animation: nivelMetal 5s ease-in-out infinite; }
+.emblem-rays { position: absolute; inset: -22%; pointer-events: none; border-radius: 50%; background: repeating-conic-gradient(transparent 0deg 27deg, var(--emblem-color, var(--gold)) 28deg 30deg, transparent 31deg 45deg); mask-image: radial-gradient(circle, transparent 33%, #000 50%, transparent 70%); opacity: .2; animation: nivelRays 32s linear infinite; }
+@keyframes nivelRays { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .nivel-arte-reflexo, .emblem-rays { animation: none; }
+  .nivel-arte-reflexo { opacity: 0; }
+  .rank-emblem-core { animation: none !important; }
+}

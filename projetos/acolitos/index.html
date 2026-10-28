@@ -305,7 +305,29 @@ async function renderStatusCrm(ctx) {
 // aqui só definimos showLevelUp(), que a fila chama na home.
 
 // Renderiza o emblema (SVG) como imagem para uso em canvas
-function svgToImage(svgStr) {
+async function svgToImage(svgStr) {
+  // O SVG exportado precisa incorporar a arte para o canvas carregar o escudo.
+  const doc = new DOMParser().parseFromString(svgStr, 'image/svg+xml');
+  const images = Array.from(doc.querySelectorAll('image[href]'));
+  const embedded = new Map();
+  for (const image of images) {
+    const href = image.getAttribute('href');
+    if (!href || href.startsWith('data:')) continue;
+    if (!embedded.has(href)) {
+      const url = new URL(href, location.href);
+      if (url.origin !== location.origin) throw new Error('Origem de emblema inválida');
+      const response = await fetch(url.href);
+      if (!response.ok) throw new Error('Não foi possível carregar o escudo');
+      const blob = await response.blob();
+      const data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(blob);
+      });
+      embedded.set(href, data);
+    }
+    image.setAttribute('href', embedded.get(href));
+  }
+  svgStr = new XMLSerializer().serializeToString(doc.documentElement);
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
