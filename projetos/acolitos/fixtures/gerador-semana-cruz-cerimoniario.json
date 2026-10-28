@@ -1,0 +1,299 @@
+{
+  "regra": "Preferência de cerimoniário elegível na cruz da Matriz, solicitada em 27/10/2026",
+  "esperado": [
+    {
+      "celebracao_id": "c1",
+      "membro_id": "m34",
+      "funcao": "cruz"
+    },
+    {
+      "celebracao_id": "c4",
+      "membro_id": "m41",
+      "funcao": "cruz"
+    },
+    {
+      "celebracao_id": "c1",
+      "membro_id": "m38",
+      "funcao": "vela"
+    },
+    {
+      "celebracao_id": "c1",
+      "membro_id": "m44",
+      "funcao": "vela"
+    },
+    {
+      "celebracao_id": "c1",
+      "membro_id": "m30",
+      "funcao": "naveta"
+    },
+    {
+      "celebracao_id": "c2",
+      "membro_id": "m29",
+      "funcao": "apoio"
+    },
+    {
+      "celebracao_id": "c2",
+      "membro_id": "m32",
+      "funcao": "apoio"
+    },
+    {
+      "celebracao_id": "c1",
+      "membro_id": "m05",
+      "funcao": "missal"
+    },
+    {
+      "celebracao_id": "c1",
+      "membro_id": "m08",
+      "funcao": "cred_altar"
+    },
+    {
+      "celebracao_id": "c4",
+      "membro_id": "m20",
+      "funcao": "apoio"
+    },
+    {
+      "celebracao_id": "c4",
+      "membro_id": "m21",
+      "funcao": "vela"
+    },
+    {
+      "celebracao_id": "c4",
+      "membro_id": "m35",
+      "funcao": "turibulo"
+    },
+    {
+      "celebracao_id": "c3",
+      "membro_id": "m39",
+      "funcao": "apoio"
+    },
+    {
+      "celebracao_id": "c1",
+      "membro_id": "m24",
+      "funcao": "turibulo"
+    },
+    {
+      "celebracao_id": "c4",
+      "membro_id": "m02",
+      "funcao": "missal"
+    },
+    {
+      "celebracao_id": "c4",
+      "membro_id": "m36",
+      "funcao": "naveta"
+    },
+    {
+      "celebracao_id": "c4",
+      "membro_id": "m12",
+      "funcao": "cred_altar"
+    },
+    {
+      "celebracao_id": "c2",
+      "membro_id": "m26",
+      "funcao": "cred_altar"
+    },
+    {
+      "celebracao_id": "c2",
+      "membro_id": "m11",
+      "funcao": "naveta"
+    },
+    {
+      "celebracao_id": "c2",
+      "membro_id": "m27",
+      "funcao": "mitra"
+    },
+    {
+      "celebracao_id": "c3",
+      "membro_id": "m15",
+      "funcao": "missal"
+    },
+    {
+      "celebracao_id": "c2",
+      "membro_id": "m33",
+      "funcao": "missal"
+    },
+    {
+      "celebracao_id": "c4",
+      "membro_id": "m40",
+      "funcao": "vela"
+    },
+    {
+      "celebracao_id": "c2",
+      "membro_id": "m28",
+      "funcao": "vela"
+    },
+    {
+      "celebracao_id": "c2",
+      "membro_id": "m16",
+      "funcao": "vela"
+    },
+    {
+      "celebracao_id": "c3",
+      "membro_id": "m06",
+      "funcao": "cruz"
+    },
+    {
+      "celebracao_id": "c3",
+      "membro_id": "m42",
+      "funcao": "vela"
+    },
+    {
+      "celebracao_id": "c3",
+      "membro_id": "m04",
+      "funcao": "vela"
+    }
+  ],
+  "esperadoSemTodosDaSemana": [
+    {
+      "celebracao_id": "c1",
+      "membro_id": "m17",
+      "funcao": "cruz"
+    },
+    {
+      "celebracao_id": "c4",
+      "membro_id": "m41",
+      "funcao": "cruz"
+    },
+    {
+      "celebracao_id": "c1",
+      "membro_id": "m38",
+      "funcao": "vela"
+    },
+    {
+      "celebracao_id": "c1",
+      "membro_id": "m44",
+      "funcao": "vela"
+    },
+    {
+      "celebracao_id": "c1",
+      "membro_id": "m30",
+      "funcao": "naveta"
+    },
+    {
+      "celebracao_id": "c2",
+      "membro_id": "m29",
+      "funcao": "apoio"
+    },
+    {
+      "celebracao_id": "c2",
+      "membro_id": "m32",
+      "funcao": "apoio"
+    },
+    {
+      "celebracao_id": "c3",
+      "membro_id": "m15",
+      "funcao": "apoio"
+    },
+    {
+      "celebracao_id": "c1",
+      "membro_id": "m05",
+      "funcao": "turibulo"
+    },
+    {
+      "celebracao_id": "c4",
+      "membro_id": "m20",
+      "funcao": "turibulo"
+    },
+    {
+      "celebracao_id": "c4",
+      "membro_id": "m21",
+      "funcao": "vela"
+    },
+    {
+      "celebracao_id": "c4",
+      "membro_id": "m08",
+      "funcao": "apoio"
+    },
+    {
+      "celebracao_id": "c1",
+      "membro_id": "m14",
+      "funcao": "cred_altar"
+    },
+    {
+      "celebracao_id": "c1",
+      "membro_id": "m35",
+      "funcao": "missal"
+    },
+    {
+      "celebracao_id": "c4",
+      "membro_id": "m02",
+      "funcao": "missal"
+    },
+    {
+      "celebracao_id": "c3",
+      "membro_id": "m39",
+      "funcao": "missal"
+    },
+    {
+      "celebracao_id": "c4",
+      "membro_id": "m23",
+      "funcao": "naveta"
+    },
+    {
+      "celebracao_id": "c4",
+      "membro_id": "m36",
+      "funcao": "cred_altar"
+    },
+    {
+      "celebracao_id": "c4",
+      "membro_id": "m40",
+      "funcao": "vela"
+    },
+    {
+      "celebracao_id": "c2",
+      "membro_id": "m26",
+      "funcao": "missal"
+    },
+    {
+      "celebracao_id": "c2",
+      "membro_id": "m12",
+      "funcao": "cred_altar"
+    },
+    {
+      "celebracao_id": "c2",
+      "membro_id": "m11",
+      "funcao": "naveta"
+    },
+    {
+      "celebracao_id": "c2",
+      "membro_id": "m24",
+      "funcao": "mitra"
+    },
+    {
+      "celebracao_id": "c2",
+      "membro_id": "m16",
+      "funcao": "vela"
+    },
+    {
+      "celebracao_id": "c2",
+      "membro_id": "m22",
+      "funcao": "vela"
+    },
+    {
+      "celebracao_id": "c3",
+      "membro_id": "m42",
+      "funcao": "cruz"
+    },
+    {
+      "celebracao_id": "c3",
+      "membro_id": "m06",
+      "funcao": "vela"
+    },
+    {
+      "celebracao_id": "c3",
+      "membro_id": "m27",
+      "funcao": "vela"
+    }
+  ],
+  "planejar": [
+    "m17",
+    "m44",
+    "m38",
+    "m29",
+    "m02",
+    "m26",
+    "m41",
+    "m14",
+    "m32",
+    "m23"
+  ]
+}

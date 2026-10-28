@@ -95,6 +95,17 @@
       return true;
     }
 
+    // Matriz: reserva a cruz para um cerimoniário elegível antes das demais funções.
+    // O pool mantém idade/kit, habilitação, disponibilidade, ausência e plano semanal.
+    if (comKey === 'matriz') livres().filter(i => vagas[i] === 'cruz').forEach(i => {
+      const pool = cands(i).filter(m => ehCerimo(m) && !usadoFds.has(m.id));
+      if (!pool.length) return;
+      const mesma = m => (m.comunidade || '') === comKey;
+      const grupo = [pool.filter(mesma), pool.filter(m => !mesma(m) && m.pode_outras_comunidades), pool].find(t => t.length).slice();
+      grupo.sort((a,b) => ((carga[a.id] || 0) - (carga[b.id] || 0)) || (rnd() - 0.5));
+      assign(i, grupo[0].id);
+    });
+
     if (membros.some(m => m.servir_toda_semana)) {
       const slots = livres(), pools = new Map(slots.map(i => [i, new Set(cands(i).map(m => m.id))]));
       SemanalCore.reservar(membros, slots, (m, i) => pools.get(i).has(m.id)).forEach(({ slot, membro }) => assign(slot, membro.id));
@@ -240,9 +251,33 @@
       novas.push({ celebracao_id: s.c.id, membro_id: m.id, funcao: s.funcao }); (novasPorMes[mesDe(s.c)] = novasPorMes[mesDe(s.c)] || {})[m.id] = novasDe(m.id, mesDe(s.c)) + 1;
       historico.push({ celebracao_id: s.c.id, membro_id: m.id, funcao: s.funcao, data: s.c.data });
     };
+    // A cruz da Matriz tem preferência de cerimoniário, antes das outras reservas.
+    // Filho de ministro continua reservado às missas em que os pais servem.
+    const coincideMinistro = (e,c) => e.data === c.data && compararHorario(e.horario,c.horario) === 0
+      && e.comunidade !== 'outra' && (!e.comunidade || !c.comunidade || e.comunidade === c.comunidade);
+    // O vínculo importado pode estar em apenas um irmão. Só quem optou por
+    // acompanhar os pais herda a missa; a opção individual falsa permanece livre.
+    const ministros = [];
+    (entrada.ministros || []).forEach(e => {
+      const origem = membros.find(m => m.id === e.membro_id);
+      if (!origem || origem.escalar_com_pais !== false) ministros.push(e);
+      if (origem && origem.grupo_irmaos) membros.forEach(m => {
+        if (m.id !== origem.id && m.grupo_irmaos === origem.grupo_irmaos && m.escalar_com_pais === true)
+          ministros.push(Object.assign({}, e, { membro_id: m.id }));
+      });
+    });
+    const respeitaMinistro = (m,s) => {
+      const vinculos = ministros.filter(e => e.membro_id === m.id && ordc.some(c => coincideMinistro(e,c)));
+      return !vinculos.length || vinculos.some(e => coincideMinistro(e,s.c));
+    };
+    for (const s of slots.filter(s => s.com === 'matriz' && s.funcao === 'cruz')) {
+      const pool = candsDe(s).filter(m => ehCerimo(m) && respeitaMinistro(m,s));
+      if (pool.length) colocar(s, escolher(s, pool));
+    }
     if (membros.some(m => m.servir_toda_semana)) {
-      const pools = new Map(slots.map(s => [s, new Set(candsDe(s).map(m => m.id))]));
-      SemanalCore.reservar(membros, slots, (m, s) => pools.get(s).has(m.id)).forEach(({ slot, membro }) => colocar(slot, membro));
+      const livresSemanal = slots.filter(s => !s.filled);
+      const pools = new Map(livresSemanal.map(s => [s, new Set(candsDe(s).map(m => m.id))]));
+      SemanalCore.reservar(membros, livresSemanal, (m, s) => pools.get(s).has(m.id)).forEach(({ slot, membro }) => colocar(slot, membro));
     }
     // FILHO DE MINISTRO: entrada.ministros = [{data, horario, comunidade, membro_id}] (membro_id = o FILHO).
     // Reserva antes do greedy, na missa em que o pai/mãe serve; as regras duras continuam valendo.
@@ -251,7 +286,7 @@
     const casaMissa = (e, c) => e.data === c.data && compararHorario(e.horario, c.horario) === 0
       && e.comunidade !== 'outra' && (!e.comunidade || !c.comunidade || e.comunidade === c.comunidade);
     const porFilho = new Map();
-    (entrada.ministros || []).forEach(e => { if (e && e.membro_id) { if (!porFilho.has(e.membro_id)) porFilho.set(e.membro_id, []); porFilho.get(e.membro_id).push(e); } });
+    ministros.forEach(e => { if (e && e.membro_id) { if (!porFilho.has(e.membro_id)) porFilho.set(e.membro_id, []); porFilho.get(e.membro_id).push(e); } });
     const membroPorId = {}; membros.forEach(m => { membroPorId[m.id] = m; });
     porFilho.forEach((lista, id) => {
       if (usadoFds.has(id)) return;                      // já escalado no fim de semana: nada a reservar

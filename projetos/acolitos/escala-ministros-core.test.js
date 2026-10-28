@@ -105,9 +105,10 @@ test('nome com inicial casa só quem tem a inicial', () => {
   const r = casarNomes(lido(['Rita E.']), membros, []);
   assert.deepStrictEqual(r.casados, [{ data: '2026-10-24', horario: '17h', comunidade: 'matriz', membro_id: 'm1', pai_ou_mae: 'mae', nome: 'Rita E.' }]);
   assert.deepStrictEqual(r.duvidas, []);
-  // pai sem segundo nome aceita inicial; mãe com flag falsa não entra
+  // pai sem sobrenome precisa de validação; mãe com flag falsa não entra
   const r2 = casarNomes(lido(['Eder X.', 'Fabiana', 'Marcos']), membros, []);
-  assert.deepStrictEqual(r2.casados.map((c) => [c.membro_id, c.pai_ou_mae, c.nome]), [['m3', 'pai', 'Eder X.']]);
+  assert.deepStrictEqual(r2.casados, []);
+  assert.deepStrictEqual(r2.duvidas.map(d=>d.nome), ['Eder X.']);
   assert.deepStrictEqual(r2.ignorados, ['Fabiana', 'Marcos']);
 });
 
@@ -130,11 +131,11 @@ test('sim lembrado casa sozinho', () => {
   assert.deepStrictEqual(r.casados.map((c) => [c.membro_id, c.pai_ou_mae, c.nome]), [['m2', 'pai', 'Luís']]);
 });
 
-test('não lembrado não volta como dúvida', () => {
+test('não exclui um candidato, mas não confirma o outro por eliminação', () => {
   const ap = [{ nome_pdf: 'luis', membro_id: 'm1', pai_ou_mae: 'pai', resposta: 'nao' }];
   const r = casarNomes(lido(['Luís']), membros, ap);
-  assert.deepStrictEqual(r.duvidas, []);
-  assert.deepStrictEqual(r.casados.map((c) => [c.membro_id, c.pai_ou_mae]), [['m2', 'pai']]);
+  assert.deepStrictEqual(r.casados, []);
+  assert.deepStrictEqual(r.duvidas[0].opcoes.map(c=>c.membro_id), ['m2']);
   // os dois "não": sobra nada → ignorado, não dúvida
   const ap2 = ap.concat([{ nome_pdf: 'luis', membro_id: 'm2', pai_ou_mae: 'pai', resposta: 'nao' }]);
   const r2 = casarNomes(lido(['Luís']), membros, ap2);
@@ -155,7 +156,8 @@ test('memória de pai que mudou de nome é ignorada', () => {
   const ap3 = [{ nome_pdf: 'luis', membro_id: 'm1', pai_ou_mae: 'pai', resposta: 'sim' }];
   const trocou = membros.map((m) => (m.id === 'm1' ? { ...m, nome_pai_ministro: 'Paulo Prado' } : m));
   const r3 = casarNomes(lido(['Luís']), trocou, ap3);
-  assert.deepStrictEqual(r3.casados.map((c) => [c.membro_id, c.pai_ou_mae]), [['m2', 'pai']]);
+  assert.deepStrictEqual(r3.casados, []);
+  assert.deepStrictEqual(r3.duvidas[0].opcoes.map(c=>c.membro_id), ['m2']);
 });
 
 // ---------- Fix round 1: travas de mês ilegível, inicial, maiúsculas, sim com dois pais ----------
@@ -227,4 +229,14 @@ test('anoDoTexto e mesDosLidos', () => {
   assert.equal(anoDoTexto('sem ano', new Date('2030-06-01')), 2030);
   assert.equal(mesDosLidos([{ data: '2026-10-03' }, { data: '2026-10-04' }, { data: '2026-11-01' }]), '2026-10');
   assert.equal(mesDosLidos([]), null);
+});
+
+
+test('primeiro nome único ainda exige validação; Leandro H. pode ser identificado pela inicial', () => {
+ const ms=[{id:'filha',nome:'Filha teste',tem_pai_ministro:true,nome_pai_ministro:'Leandro Heydman dos Santos'}];
+ const r=casarNomes(lido(['Leandro','Leandro H.']),ms,[]);
+ assert.deepStrictEqual(r.casados.map(c=>c.nome),['Leandro H.']);
+ assert.deepStrictEqual(r.duvidas.map(d=>d.nome),['Leandro']);
+ const validado=casarNomes(lido(['Leandro']),ms,[{nome_pdf:'leandro',membro_id:'filha',pai_ou_mae:'pai',resposta:'sim'}]);
+ assert.equal(validado.casados.length,1);
 });

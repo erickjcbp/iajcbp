@@ -171,11 +171,16 @@
             : candidatos(nome, membros).filter(function (o) {
                 return !memorias.some(function (a) { return a.resposta === 'nao' && a.membro_id === o.membro_id && a.pai_ou_mae === o.pai_ou_mae; });
               });
-          if (sims.length || opcoes.length === 1) {
+          // Um primeiro nome isolado não identifica uma pessoa fora do cadastro.
+          // Só a confirmação explícita ou uma inicial compatível permitem casar.
+          var inicial = partesDoPdf(nome).inicial;
+          var opcaoUnica = opcoes.length === 1 ? opcoes[0] : null;
+          var identificado = inicial && opcaoUnica && partesDoPai(nomeDoPai(porId[opcaoUnica.membro_id], opcaoUnica.pai_ou_mae)).iniciais.indexOf(inicial) >= 0;
+          if (sims.length || (opcoes.length === 1 && identificado)) {
             opcoes.forEach(function (o) {
               r.casados.push({ data: l.data, horario: l.horario, comunidade: l.comunidade, membro_id: o.membro_id, pai_ou_mae: o.pai_ou_mae, nome: nome });
             });
-          } else if (opcoes.length > 1) {
+          } else if (opcoes.length > 0) {
             if (!jaDuvida[chave]) { jaDuvida[chave] = true; r.duvidas.push({ nome: nome, opcoes: opcoes }); }
           } else if (!jaIgnorado[chave]) { jaIgnorado[chave] = true; r.ignorados.push(nome); }
         });

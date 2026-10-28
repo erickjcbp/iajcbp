@@ -2,9 +2,10 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { gerarSemana, planejarVagas } = require('./gerador-escala-core.js');
 const fx = require('./fixtures/gerador-semana.json');
+const preferencia = require('./fixtures/gerador-semana-cruz-cerimoniario.json');
 
-// Fixture SINTÉTICA e anonimizada (nenhum dado real). `esperado` foi gravado rodando o código
-// ANTIGO do gerador (que morava em escala.html) com o mesmo sorteio semeado.
+// Fixture SINTÉTICA e anonimizada (nenhum dado real). A fixture original guarda o código
+// ANTIGO; a expectativa atual fica em gerador-semana-cruz-cerimoniario.json. O gerador original (que morava em escala.html) com o mesmo sorteio semeado.
 function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const modeloFor = (tipo, com) => (fx.modelos[tipo + '|' + com] || fx.modelos['missa_comum|' + com] || []).map(f => ({ funcao: f }));
 function toSets(o) { const r = {}; for (const k in o) r[k] = new Set(o[k]); return r; }
@@ -17,20 +18,20 @@ function entrada(extra) {
   }, extra || {});
 }
 
-test('mesmo resultado do código antigo na semana de referência', () => {
-  assert.deepEqual(gerarSemana(entrada()).novas, fx.esperado);
+test('semana de referência com preferência de cerimoniário na cruz da Matriz', () => {
+  assert.deepEqual(gerarSemana(entrada()).novas, preferencia.esperado);
 });
 
-test('mesmo resultado do código antigo sem informar as missas fora da seleção', () => {
-  assert.deepEqual(gerarSemana(entrada({ todosDaSemana: undefined })).novas, fx.esperadoSemTodosDaSemana);
+test('referência com cruz preferencial sem informar missas fora da seleção', () => {
+  assert.deepEqual(gerarSemana(entrada({ todosDaSemana: undefined })).novas, preferencia.esperadoSemTodosDaSemana);
 });
 
-test('mesmo resultado do código antigo na geração de uma missa (planejarVagas)', () => {
+test('referência com cruz preferencial na geração de uma missa (planejarVagas)', () => {
   const p = fx.planejar, e = entrada();
   const ctx = { membros: e.membros, habMap: e.habMap, dispMap: e.dispMap, config: e.config, rnd: mulberry32(p.seed), hoje: e.hoje };
   const res = planejarVagas(ctx, p.vagas, p.horKey, new Set(p.ausentes), new Set(p.usados), Object.assign({}, e.carga),
     new Set(p.usadoFds), p.comunidade, p.data, e.historicoSemanal.slice());
-  assert.deepEqual(res, p.esperado);
+  assert.deepEqual(res, preferencia.planejar);
 });
 
 test('ninguém repete no fim de semana nem na mesma missa, e ausente fica de fora', () => {
@@ -184,4 +185,47 @@ test('fim de semana que cruza o mês: a missa de novembro não herda as vezes de
 test('vezesNoMes simples (sem meses) continua valendo para todas as missas', () => {
   const e = mundo(['a', 'b'], { celebs: [SAB, DOM], extra: { vezesNoMes: { a: 2, b: 2 } } });
   assert.equal(gerarSemana(e).alemDoMinimo.length, 2);
+});
+
+
+test('Matriz: cerimoniário ganha preferência na cruz antes das outras funções, nos dois geradores',()=>{
+ const e=mundo(['jovem','cerimo'],{vagas:['vela','cruz'],campos:{jovem:{data_nascimento:'2008-01-01'},cerimo:{nivel:'cerimoniario_guardiao',data_nascimento:'2000-01-01'}},extra:{carga:{jovem:0,cerimo:100}}});
+ const r=gerarSemana(e);assert.equal(r.novas.find(n=>n.funcao==='cruz').membro_id,'cerimo');assert.equal(r.novas.find(n=>n.funcao==='vela').membro_id,'jovem');
+ const ctx={membros:e.membros,habMap:e.habMap,dispMap:e.dispMap,config:e.config,rnd:e.rnd,hoje:e.hoje};
+ assert.deepEqual(planejarVagas(ctx,['vela','cruz'],'sabado_19h',new Set(),new Set(),{jovem:0,cerimo:100},new Set(),'matriz',SAB.data,[]),['jovem','cerimo']);
+});
+
+test('preferência na cruz não ignora ausência, disponibilidade, habilitação, kit ou escolha manual',()=>{
+ const criar=()=>mundo(['jovem','cerimo'],{campos:{jovem:{data_nascimento:'2008-01-01'},cerimo:{nivel:'cerimoniario_guardiao',data_nascimento:'2000-01-01'}},extra:{carga:{jovem:0,cerimo:100}}});
+ for(const ajuste of [e=>e.ausencias={sab:new Set(['cerimo'])},e=>e.dispMap.cerimo=[],e=>e.habMap.cerimo={},e=>{e.config.gerador.kits=[{id:'proc',ativo:true,modo:'trava',comunidades:['matriz'],funcoes:['cruz'],idade_min:14,liberados:[]}];e.membros.find(m=>m.id==='cerimo').data_nascimento='2015-01-01';}]){const e=criar();ajuste(e);assert.equal(gerarSemana(e).novas.find(n=>n.funcao==='cruz').membro_id,'jovem');}
+ const e=criar();e.escalasExistentes={sab:[{membro_id:'jovem',funcao:'cruz'}]};assert.equal(gerarSemana(e).novas.length,0);
+ const outra=criar();outra.celebracoes=[{...SAB,comunidade:'santo_antonio'}];outra.membros.forEach(m=>m.comunidade='santo_antonio');assert.equal(gerarSemana(outra).novas[0].membro_id,'jovem');
+});
+
+test('reserva da cruz não duplica cerimoniário que serve toda semana',()=>{
+ const e=mundo(['jovem','cerimo'],{vagas:['cruz','vela'],campos:{cerimo:{nivel:'cerimoniario_guardiao',servir_toda_semana:true,data_nascimento:'2000-01-01'}}});
+ const r=gerarSemana(e);assert.equal(r.novas.filter(n=>n.membro_id==='cerimo').length,1);assert.equal(r.novas.find(n=>n.membro_id==='cerimo').funcao,'cruz');
+});
+
+
+test('preferência da cruz preserva a missa em que o pai/mãe ministro serve',()=>{
+ const e=mundo(['jovem','cerimo'],{celebs:[SAB,DOM],campos:{cerimo:{nivel:'cerimoniario_guardiao',data_nascimento:'2000-01-01'}},extra:{ministros:[{membro_id:'cerimo',data:DOM.data,horario:DOM.horario,comunidade:'matriz'}]}});
+ const r=gerarSemana(e);assert.equal(r.novas.find(n=>n.membro_id==='cerimo').celebracao_id,'dom');assert.equal(r.novas.find(n=>n.membro_id==='cerimo').funcao,'cruz');
+});
+
+
+test('irmão autorizado herda missa do vínculo importado, mesmo quando o titular não acompanha os pais', () => {
+  const e = mundo(['titular','irmao','outro'], {celebs:[SAB,DOM], vagas:['vela','vela'], campos:{
+    titular:{grupo_irmaos:'familia',escalar_com_pais:false},irmao:{grupo_irmaos:'familia',escalar_com_pais:true}
+  },extra:{ministros:[min(DOM,'titular')]}});
+  const r=gerarSemana(e);
+  assert.equal(r.novas.find(n=>n.membro_id==='irmao').celebracao_id,'dom');
+  assert.equal(r.novas.find(n=>n.membro_id==='titular').celebracao_id,'sab');
+});
+test('irmãos com opção ativa acompanham juntos a missa dos pais', () => {
+  const e=mundo(['titular','irmao','outro'], {celebs:[SAB,DOM],vagas:['vela','vela'],campos:{
+    titular:{grupo_irmaos:'familia',escalar_com_pais:true},irmao:{grupo_irmaos:'familia',escalar_com_pais:true}
+  },extra:{ministros:[min(DOM,'titular')]}});
+  const r=gerarSemana(e);
+  for(const id of ['titular','irmao']) assert.equal(r.novas.find(n=>n.membro_id===id).celebracao_id,'dom');
 });

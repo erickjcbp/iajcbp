@@ -1260,7 +1260,7 @@ async function carregarVezesEMinistros(ordc){
     const r = await sb.from('acolitos_escala_ministros').select('data,horario,comunidade,membro_id').gte('data', datas[0]).lte('data', datas[datas.length - 1]);
     if (r.error) throw r.error;
     // "Escalar junto com os pais" desmarcado explicitamente (false) tira o filho da reserva
-    extras.ministros = (r.data || []).filter(x => (membros.find(m => m.id === x.membro_id) || {}).escalar_com_pais !== false);
+    extras.ministros = r.data || []; // o núcleo aplica a opção individual e os irmãos autorizados
   } catch (e) { console.warn('Escala: escala dos ministros indisponível, gerando sem a reserva dos filhos', e); }
   return extras;
 }

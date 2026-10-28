@@ -155,6 +155,17 @@
       const apel2 = novos.length ? await lerApelidos() : apelidos;
       if (!apel2) return;
       const r2 = EscalaMinistrosCore.casarNomes(lidos, membros, apel2);
+      const cfgValidacao = await sb.from('tarcisio_config').select('numero_conferencia').eq('id',1).maybeSingle();
+      if (falhou(cfgValidacao,'ler o responsável pela validação')) return;
+      const abertas = await sb.from('tarcisio_pendencias').select('id,dados').eq('tipo','coordenacao').eq('estado','aberta');
+      if (falhou(abertas,'ler validações da Caixa')) return;
+      for (const d of r2.duvidas) {
+        const chave = 'ministro:'+mes+':'+EscalaMinistrosCore.nomeLimpo(d.nome);
+        if ((abertas.data||[]).some(p=>p.dados?.chave===chave)) continue;
+        const resumo = 'Validar ministro “'+d.nome+'” ('+nomeDoMes(mes)+'): '+d.opcoes.map(o=>papel(o.pai_ou_mae)+' de '+nomeMembro(o.membro_id)).join(' ou ')+'. Não alterar escala nem avisar família antes da validação.';
+        const p = await sb.from('tarcisio_pendencias').insert({tipo:'coordenacao',estado:'aberta',numero:cfgValidacao.data?.numero_conferencia||'',resumo,dados:{chave,origem:'escala_ministros',mes,arquivo:arquivo.name,nome_pdf:d.nome,candidatos:d.opcoes,ocorrencias:lidos.filter(l=>l.nomes.some(n=>EscalaMinistrosCore.nomeLimpo(n)===EscalaMinistrosCore.nomeLimpo(d.nome)))}});
+        if (falhou(p,'abrir validação na Caixa')) return;
+      }
       if (!await gravarMes(linhasParaGravar(r2.casados, mes, arquivo.name), mes)) return;
       const faltam = r2.duvidas.length;
       toast(faltam ? `Escala salva. ${faltam} dúvida(s) continuam sem resposta.` : 'Escala dos ministros salva.');
