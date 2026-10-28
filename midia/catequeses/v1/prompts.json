@@ -1,0 +1,91 @@
+{
+  "ferramenta": "image_gen built-in",
+  "estado": "aprovadas pelo dono e integradas em produção em 27/10/2026",
+  "style": "Use case: illustration-story. Create ONE standalone premium illustration for a Catholic formation chapter sent by WhatsApp to Brazilian young altar servers and families. Portrait 4:5 composition, full bleed. Consistent series art direction: exquisite hand-painted gouache and soft watercolor on subtle paper grain, refined contemporary sacred storybook illustration, believable human proportions, expressive gentle faces, rich deep blue, warm ivory, ochre and soft gold, delicate light, poetic and emotionally inviting rather than cartoonish, clear focal point readable on a phone. Liturgically respectful and plausible Roman Catholic setting. No text, no letters, no chapter number, no watermark, no logos, no graphic frames. Scene: ",
+  "images": [
+    {
+      "capitulo": 1,
+      "arquivo": "01-servir-no-altar.png",
+      "source": "/Users/erickmartins/.codex/generated_images/01a17e3d-b532-7af0-949c-24d612e18562/exec-d5092979-6cbd-4b9d-af8d-ea59dd71f924.png",
+      "prompt": "Use case: illustration-story. Create ONE standalone premium illustration for a Catholic formation chapter sent by WhatsApp to Brazilian young altar servers and families. Portrait 4:5 composition, full bleed. Consistent series art direction: exquisite hand-painted gouache and soft watercolor on subtle paper grain, refined contemporary sacred storybook illustration, believable human proportions, expressive gentle faces, rich deep blue, warm ivory, ochre and soft gold, delicate light, poetic and emotionally inviting rather than cartoonish, clear focal point readable on a phone. Liturgically respectful and plausible Roman Catholic setting. No text, no letters, no chapter number, no watermark, no logos, no graphic frames. Scene: A Brazilian adolescent altar server in a simple white alb reverently lighting a candle before Mass, small act of service illuminated by warm light, community softly visible in background."
+    },
+    {
+      "capitulo": 2,
+      "arquivo": "02-o-que-celebramos.png",
+      "source": "/Users/erickmartins/.codex/generated_images/01a17e3d-b532-7af0-949c-24d612e18562/exec-db288953-130c-4641-b680-93b93cf6a33d.png",
+      "prompt": "Use case: illustration-story. Create ONE standalone premium illustration for a Catholic formation chapter sent by WhatsApp to Brazilian young altar servers and families. Portrait 4:5 composition, full bleed. Consistent series art direction: exquisite hand-painted gouache and soft watercolor on subtle paper grain, refined contemporary sacred storybook illustration, believable human proportions, expressive gentle faces, rich deep blue, warm ivory, ochre and soft gold, delicate light, poetic and emotionally inviting rather than cartoonish, clear focal point readable on a phone. Liturgically respectful and plausible Roman Catholic setting. No text, no letters, no chapter number, no watermark, no logos, no graphic frames. Scene: Catholic Mass seen from the nave, priest at altar with chalice and host, a subtle luminous artistic evocation of Christ's cross and risen light behind the sanctuary, reverent Eucharistic theology, no magical effects."
+    },
+    {
+      "capitulo": 3,
+      "arquivo": "03-duas-partes-da-missa.png",
+      "source": "/Users/erickmartins/.codex/generated_images/01a17e3d-b532-7af0-949c-24d612e18562/exec-0b914647-cbda-4de9-b7aa-c36b4bd89a40.png",
+      "prompt": "Use case: illustration-story. Create ONE standalone premium illustration for a Catholic formation chapter sent by WhatsApp to Brazilian young altar servers and families. Portrait 4:5 composition, full bleed. Consistent series art direction: exquisite hand-painted gouache and soft watercolor on subtle paper grain, refined contemporary sacred storybook illustration, believable human proportions, expressive gentle faces, rich deep blue, warm ivory, ochre and soft gold, delicate light, poetic and emotionally inviting rather than cartoonish, clear focal point readable on a phone. Liturgically respectful and plausible Roman Catholic setting. No text, no letters, no chapter number, no watermark, no logos, no graphic frames. Scene: A single harmonious church interior composition uniting an open lectionary on an ambo in foreground and the Eucharistic altar with chalice in background, a gentle path of warm light connecting Word and Eucharist, no panels."
+    },
+    {
+      "capitulo": 4,
+      "arquivo": "04-altar-ambao-sacrario.png",
+      "source": "/Users/erickmartins/.codex/generated_images/01a17e3d-b532-7af0-949c-24d612e18562/exec-296798f4-9b49-430b-9b1a-21de86fc2919.png",
+      "prompt": "Use case: illustration-story. Create ONE standalone premium illustration for a Catholic formation chapter sent by WhatsApp to Brazilian young altar servers and families. Portrait 4:5 composition, full bleed. Consistent series art direction: exquisite hand-painted gouache and soft watercolor on subtle paper grain, refined contemporary sacred storybook illustration, believable human proportions, expressive gentle faces, rich deep blue, warm ivory, ochre and soft gold, delicate light, poetic and emotionally inviting rather than cartoonish, clear focal point readable on a phone. Liturgically respectful and plausible Roman Catholic setting. No text, no letters, no chapter number, no watermark, no logos, no graphic frames. Scene: Beautiful Catholic sanctuary showing three clearly distinct furnishings: stone altar in center, wooden ambo with open lectionary to side, dignified gold tabernacle in a separate chapel niche with red sanctuary lamp. Architecturally plausible, no clutter."
+    },
+    {
+      "capitulo": 5,
+      "arquivo": "05-silencio.png",
+      "source": "/Users/erickmartins/.codex/generated_images/01a17e3d-b532-7af0-949c-24d612e18562/exec-e40ced2d-1478-43e8-b728-011a2ad6c835.png",
+      "prompt": "Use case: illustration-story. Create ONE standalone premium illustration for a Catholic formation chapter sent by WhatsApp to Brazilian young altar servers and families. Portrait 4:5 composition, full bleed. Consistent series art direction: exquisite hand-painted gouache and soft watercolor on subtle paper grain, refined contemporary sacred storybook illustration, believable human proportions, expressive gentle faces, rich deep blue, warm ivory, ochre and soft gold, delicate light, poetic and emotionally inviting rather than cartoonish, clear focal point readable on a phone. Liturgically respectful and plausible Roman Catholic setting. No text, no letters, no chapter number, no watermark, no logos, no graphic frames. Scene: A Brazilian young altar server seated quietly in a pew before Mass with hands resting together, serene church, slanting morning sunlight and dust motes, intimate contemplative mood, silence made visible."
+    },
+    {
+      "capitulo": 6,
+      "arquivo": "06-palavra-de-deus.png",
+      "source": "/Users/erickmartins/.codex/generated_images/01a17e3d-b532-7af0-949c-24d612e18562/exec-0924d4e3-83bd-44d0-b7ae-7f888df8c33c.png",
+      "prompt": "Use case: illustration-story. Create ONE standalone premium illustration for a Catholic formation chapter sent by WhatsApp to Brazilian young altar servers and families. Portrait 4:5 composition, full bleed. Consistent series art direction: exquisite hand-painted gouache and soft watercolor on subtle paper grain, refined contemporary sacred storybook illustration, believable human proportions, expressive gentle faces, rich deep blue, warm ivory, ochre and soft gold, delicate light, poetic and emotionally inviting rather than cartoonish, clear focal point readable on a phone. Liturgically respectful and plausible Roman Catholic setting. No text, no letters, no chapter number, no watermark, no logos, no graphic frames. Scene: Close view of a richly bound open Gospel book on a wooden ambo, a diverse Brazilian congregation softly visible listening in background, warm luminous pages without readable writing, visual sense of receiving the Word."
+    },
+    {
+      "capitulo": 7,
+      "arquivo": "07-apresentacao-oferendas.png",
+      "source": "/Users/erickmartins/.codex/generated_images/01a17e3d-b532-7af0-949c-24d612e18562/exec-958fb1cc-2b60-4d3b-a1f4-2c6009a053d6.png",
+      "prompt": "Use case: illustration-story. Create ONE standalone premium illustration for a Catholic formation chapter sent by WhatsApp to Brazilian young altar servers and families. Portrait 4:5 composition, full bleed. Consistent series art direction: exquisite hand-painted gouache and soft watercolor on subtle paper grain, refined contemporary sacred storybook illustration, believable human proportions, expressive gentle faces, rich deep blue, warm ivory, ochre and soft gold, delicate light, poetic and emotionally inviting rather than cartoonish, clear focal point readable on a phone. Liturgically respectful and plausible Roman Catholic setting. No text, no letters, no chapter number, no watermark, no logos, no graphic frames. Scene: Reverent close composition of hands presenting a simple paten with unleavened altar bread and a small clear cruet of red wine beside a linen-covered Catholic altar, delicate wheat and grapevine motifs in the environment."
+    },
+    {
+      "capitulo": 8,
+      "arquivo": "08-oracao-eucaristica.png",
+      "source": "/Users/erickmartins/.codex/generated_images/01a17e3d-b532-7af0-949c-24d612e18562/exec-7b883d86-d2be-4839-8ba3-af9743e47beb.png",
+      "prompt": "Use case: illustration-story. Create ONE standalone premium illustration for a Catholic formation chapter sent by WhatsApp to Brazilian young altar servers and families. Portrait 4:5 composition, full bleed. Consistent series art direction: exquisite hand-painted gouache and soft watercolor on subtle paper grain, refined contemporary sacred storybook illustration, believable human proportions, expressive gentle faces, rich deep blue, warm ivory, ochre and soft gold, delicate light, poetic and emotionally inviting rather than cartoonish, clear focal point readable on a phone. Liturgically respectful and plausible Roman Catholic setting. No text, no letters, no chapter number, no watermark, no logos, no graphic frames. Scene: Catholic priest in white and gold vestments seen from a respectful side angle elevating a single round white host above the altar during consecration, gold chalice resting on white corporal, altar servers kneeling in background, quiet luminous sacred atmosphere."
+    },
+    {
+      "capitulo": 9,
+      "arquivo": "09-objetos-liturgicos.png",
+      "source": "/Users/erickmartins/.codex/generated_images/01a17e3d-b532-7af0-949c-24d612e18562/exec-7a504857-b5e4-488f-9056-a0a625ad2324.png",
+      "prompt": "Use case: illustration-story. Create ONE standalone premium illustration for a Catholic formation chapter sent by WhatsApp to Brazilian young altar servers and families. Portrait 4:5 composition, full bleed. Consistent series art direction: exquisite hand-painted gouache and soft watercolor on subtle paper grain, refined contemporary sacred storybook illustration, believable human proportions, expressive gentle faces, rich deep blue, warm ivory, ochre and soft gold, delicate light, poetic and emotionally inviting rather than cartoonish, clear focal point readable on a phone. Liturgically respectful and plausible Roman Catholic setting. No text, no letters, no chapter number, no watermark, no logos, no graphic frames. Scene: An elegant educational still life on a church sacristy table: golden chalice, shallow golden paten with a round white host, a folded white corporal and a narrow white purificator with a tiny embroidered cross. Clear separate readable silhouettes, correct proportions, no labels."
+    },
+    {
+      "capitulo": 10,
+      "arquivo": "10-cores-liturgicas.png",
+      "source": "/Users/erickmartins/.codex/generated_images/01a17e3d-b532-7af0-949c-24d612e18562/exec-7f5c44b8-c2e3-4dd5-aca1-e43a259aadc5.png",
+      "prompt": "Use case: illustration-story. Create ONE standalone premium illustration for a Catholic formation chapter sent by WhatsApp to Brazilian young altar servers and families. Portrait 4:5 composition, full bleed. Consistent series art direction: exquisite hand-painted gouache and soft watercolor on subtle paper grain, refined contemporary sacred storybook illustration, believable human proportions, expressive gentle faces, rich deep blue, warm ivory, ochre and soft gold, delicate light, poetic and emotionally inviting rather than cartoonish, clear focal point readable on a phone. Liturgically respectful and plausible Roman Catholic setting. No text, no letters, no chapter number, no watermark, no logos, no graphic frames. Scene: Five elegant Catholic chasubles in white-gold, green, red, violet and rose, hanging respectfully in a warm wooden sacristy, subtle church window light, dignified textiles and delicate embroidery, poetic color harmony."
+    },
+    {
+      "capitulo": 11,
+      "arquivo": "11-posturas.png",
+      "source": "/Users/erickmartins/.codex/generated_images/01a17e3d-b532-7af0-949c-24d612e18562/exec-12f53f7c-68fc-4fae-bd44-3d66ec793105.png",
+      "prompt": "Use case: illustration-story. Create ONE standalone premium illustration for a Catholic formation chapter sent by WhatsApp to Brazilian young altar servers and families. Portrait 4:5 composition, full bleed. Consistent series art direction: exquisite hand-painted gouache and soft watercolor on subtle paper grain, refined contemporary sacred storybook illustration, believable human proportions, expressive gentle faces, rich deep blue, warm ivory, ochre and soft gold, delicate light, poetic and emotionally inviting rather than cartoonish, clear focal point readable on a phone. Liturgically respectful and plausible Roman Catholic setting. No text, no letters, no chapter number, no watermark, no logos, no graphic frames. Scene: One poetic continuous church composition featuring three young Brazilian parishioners at different depths: standing attentively, seated listening, kneeling in prayer at a pew. Anatomically natural, modest clothing, clear expressive postures, no duplicated bodies."
+    },
+    {
+      "capitulo": 12,
+      "arquivo": "12-cuidado-tunica.png",
+      "source": "/Users/erickmartins/.codex/generated_images/01a17e3d-b532-7af0-949c-24d612e18562/exec-717a0f47-854b-49d6-8a5d-571a909773e0.png",
+      "prompt": "Use case: illustration-story. Create ONE standalone premium illustration for a Catholic formation chapter sent by WhatsApp to Brazilian young altar servers and families. Portrait 4:5 composition, full bleed. Consistent series art direction: exquisite hand-painted gouache and soft watercolor on subtle paper grain, refined contemporary sacred storybook illustration, believable human proportions, expressive gentle faces, rich deep blue, warm ivory, ochre and soft gold, delicate light, poetic and emotionally inviting rather than cartoonish, clear focal point readable on a phone. Liturgically respectful and plausible Roman Catholic setting. No text, no letters, no chapter number, no watermark, no logos, no graphic frames. Scene: A young Brazilian altar server carefully folding a clean simple white alb on a wooden sacristy table, another neatly hanging alb in background, tactile clean fabric, sense of responsibility and tender care."
+    },
+    {
+      "capitulo": 13,
+      "arquivo": "13-errar-aprender.png",
+      "source": "/Users/erickmartins/.codex/generated_images/01a17e3d-b532-7af0-949c-24d612e18562/exec-823c9360-a32c-495c-85b0-c520df46e734.png",
+      "prompt": "Use case: illustration-story. Create ONE standalone premium illustration for a Catholic formation chapter sent by WhatsApp to Brazilian young altar servers and families. Portrait 4:5 composition, full bleed. Consistent series art direction: exquisite hand-painted gouache and soft watercolor on subtle paper grain, refined contemporary sacred storybook illustration, believable human proportions, expressive gentle faces, rich deep blue, warm ivory, ochre and soft gold, delicate light, poetic and emotionally inviting rather than cartoonish, clear focal point readable on a phone. Liturgically respectful and plausible Roman Catholic setting. No text, no letters, no chapter number, no watermark, no logos, no graphic frames. Scene: Two young Brazilian altar servers in simple white albs, one reassuring the other with a gentle supportive gesture in a sacristy after Mass, a fallen unlit candle lying safely on a wooden table, kind faces, no mockery, no broken sacred vessels, emotional warmth."
+    },
+    {
+      "capitulo": 14,
+      "arquivo": "14-servico-continua.png",
+      "source": "/Users/erickmartins/.codex/generated_images/01a17e3d-b532-7af0-949c-24d612e18562/exec-ec85475e-2144-4f61-a3bc-4372148c2696.png",
+      "prompt": "Use case: illustration-story. Create ONE standalone premium illustration for a Catholic formation chapter sent by WhatsApp to Brazilian young altar servers and families. Portrait 4:5 composition, full bleed. Consistent series art direction: exquisite hand-painted gouache and soft watercolor on subtle paper grain, refined contemporary sacred storybook illustration, believable human proportions, expressive gentle faces, rich deep blue, warm ivory, ochre and soft gold, delicate light, poetic and emotionally inviting rather than cartoonish, clear focal point readable on a phone. Liturgically respectful and plausible Roman Catholic setting. No text, no letters, no chapter number, no watermark, no logos, no graphic frames. Scene: A young Brazilian altar server now in ordinary modest clothes helping an elderly neighbor carry a small basket of groceries outside a parish church at sunset, open church doors in background, service flowing into everyday life, warm hopeful mood."
+    }
+  ]
+}
