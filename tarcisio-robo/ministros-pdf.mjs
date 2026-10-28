@@ -236,13 +236,29 @@ export function criarMinistrosPdf({ db, evo, nucleo, extrairTexto = extrairTexto
     const mes = mesDosLidos(lidos) + '-01'
     const [membros, apelidos] = await Promise.all([lerMembros(), lerApelidos()])
     const r = casarNomes(lidos, membros, apelidos)
+    // Dúvidas ficam visíveis na Caixa; não entram na escala nem geram aviso à família.
+    const abertas = exigir(await db.from('tarcisio_pendencias').select('id,dados').eq('tipo','coordenacao').eq('estado','aberta'), 'ler validações de ministros')
+    for (const d of r.duvidas) {
+      const chave = `ministro:${mes}:${nomeLimpo(d.nome)}`
+      if (abertas.some(p => p.dados?.chave === chave)) continue
+      const candidatos = d.opcoes.map(o => {
+        const m = membros.find(x => x.id === o.membro_id)
+        return { ...o, membro_nome:m?.nome, nome_ministro:o.pai_ou_mae==='pai'?m?.nome_pai_ministro:m?.nome_mae_ministro,
+          outro_ministro:o.pai_ou_mae==='pai'?m?.nome_mae_ministro:m?.nome_pai_ministro }
+      })
+      const ocorrencias=lidos.filter(l=>l.nomes.some(n=>nomeLimpo(n)===nomeLimpo(d.nome)))
+        .map(l=>({data:l.data,horario:l.horario,comunidade:l.comunidade,nomes:l.nomes}))
+      exigir(await db.from('tarcisio_pendencias').insert({tipo:'coordenacao',estado:'aberta',numero:num,
+        resumo:`Validar ministro “${d.nome}” (${nomeDoMes(mes)}): ${candidatos.map(c=>`${c.nome_ministro}, ${c.pai_ou_mae==='pai'?'pai':'mãe'} de ${c.membro_nome}`).join(' ou ')}. Conferir identidade e casal; não alterar escala nem avisar família antes da validação.`,
+        dados:{chave,origem:'escala_ministros',mes,arquivo,nome_pdf:d.nome,candidatos,ocorrencias}}), 'abrir validação de ministro na Caixa')
+    }
     const linhas = linhasParaGravar(r.casados, mes, arquivo)
     const velhas = exigir(await db.from('acolitos_escala_ministros').select('id').eq('mes', mes), 'ler escala dos ministros do mês').map((x) => x.id)
     await substituir(linhas, velhas)
 
     const perguntas = r.duvidas.flatMap((d) => d.opcoes.map((o) => ({ nome: d.nome, membro_id: o.membro_id, pai_ou_mae: o.pai_ou_mae })))
     const resumo = `Li a escala dos ministros de ${nomeDoMes(mes)}: ${linhas.length} casos, ${r.duvidas.length} com dúvida.`
-      + (perguntas.length ? ' Vou perguntar as dúvidas, uma por vez.' : ' Já vale para o gerador.')
+      + (perguntas.length ? ' As dúvidas estão na Caixa para validação; também podem ser respondidas por aqui.' : ' Já vale para o gerador.')
     await evo.enviarTexto(num, resumo)
     const [linha] = exigir(await db.from('tarcisio_mensagens').insert({
       numero: num, direcao: 'saida', texto: resumo, respondida: true,

@@ -269,7 +269,7 @@ test('fim de semana que já tem escala montada: não grava nada, manda só para 
   const db = c.db
   const auto = criarEscalaAuto({ db, evo: { enviarBotoes: async (d, texto, botoes) => { c.enviados.push({ d, texto, botoes }); return { key: { id: 'm' } } }, enviarTexto: async () => {} },
     log: silencioso, rnd: () => 0.5,
-    carregarEntrada: async () => ({ celebracoes: CELS, membros: MEMBROS, escalasExistentes: { c1: [{ celebracao_id: 'c1', membro_id: 'm2', funcao: 'cruz', status: 'escalado' }] } }),
+    carregarEntrada: async () => ({ celebracoes: CELS, membros: MEMBROS, modeloFor: (_tipo,com) => com==='matriz'?[{funcao:'cruz'}]:[], escalasExistentes: { c1: [{ celebracao_id: 'c1', membro_id: 'm2', funcao: 'cruz', status: 'escalado' }] } }),
     gerarSemana: () => { c.chamadas.gerar++; return RESULTADO } })
   await auto.cuidar(new Date(TERCA_1801), CFG)
   assert.equal(c.chamadas.gerar, 0)
@@ -368,3 +368,14 @@ test('conferência envia imagens antes dos botões; imagem falhando impede botõ
   assert.equal(f.db.t.acolitos_escalas.length, 0)
   assert.ok(f.enviados.every((e) => !e.botoes))
 })
+
+
+test('pré-escala parcial mantém os nomes existentes e completa vagas antes de pedir arte',async()=>{
+ const antiga={id:'manual',celebracao_id:'c1',membro_id:'m2',funcao:'cruz'},c=cenario({banco:{acolitos_escalas:[antiga]}});let gerou=0,pediuArte=0;
+ const entrada={celebracoes:CELS,membros:MEMBROS,modeloFor:()=>[{funcao:'cruz'}],escalasExistentes:{c1:[antiga]}};
+ const auto=criarEscalaAuto({db:c.db,log:silencioso,rnd:()=>0.5,carregarEntrada:async()=>entrada,
+  gerarSemana:e=>{gerou++;assert.deepEqual(e.escalasExistentes.c1,[antiga]);return {novas:[{celebracao_id:'c2',membro_id:'m1',funcao:'cruz'}]};},
+  enviarImagensConferencia:async()=>{pediuArte++;assert.equal(c.db.t.acolitos_escalas.length,2);},
+  evo:{enviarBotoes:async()=>({key:{id:'previa'}}),enviarTexto:async()=>{throw Error('Não deve avisar falha')}}});
+ await auto.cuidar(new Date(TERCA_1801),CFG);assert.equal(gerou,1);assert.equal(pediuArte,1);assert.deepEqual(c.db.t.acolitos_escalas[0],antiga);assert.equal(linhaSemana(c.db).estado,'aguardando');
+});

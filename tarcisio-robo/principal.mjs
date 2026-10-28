@@ -24,7 +24,7 @@ const precisa = (nome) => {
 const db = createClient(precisa('SUPABASE_URL'), precisa('SUPABASE_SERVICE_KEY'), { auth: { persistSession: false } })
 const evo = criarEvolution({ url: precisa('EVOLUTION_URL'), chave: precisa('EVOLUTION_API_KEY'), instancia: process.env.EVOLUTION_INSTANCIA || 'SaoTarcisio' })
 const ia = process.env.ANTHROPIC_API_KEY ? criarIA({ chave: process.env.ANTHROPIC_API_KEY }) : null
-const acolhida = criarAcolhida({ db, evo, videoIntegracao: `${String(process.env.SUPABASE_URL).replace(/\/$/, '')}/storage/v1/object/public/tarcisio/integracao/apresentacao-pastoral-v1.mp4` })
+const acolhida = criarAcolhida({ db, evo, ia, supabaseUrl: process.env.SUPABASE_URL, videoIntegracao: `${String(process.env.SUPABASE_URL).replace(/\/$/, '')}/storage/v1/object/public/tarcisio/integracao/apresentacao-pastoral-v1.mp4` })
 const assistente = criarAssistente({ db, evo, ia, acolhida })
 // Escala automática de terça: o gerador e os núcleos puros são os MESMOS da tela (projetos/acolitos),
 // lidos só na hora de usar. Se faltarem na imagem, a geração falha, o estado vira 'falhou' e o dono

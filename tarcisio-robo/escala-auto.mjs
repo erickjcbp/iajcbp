@@ -30,6 +30,20 @@ const rotuloFuncao = (f) => FUNCOES[f] || f
 const ORDEM_FUNCAO = Object.keys(FUNCOES)
 const ordemFuncao = (f) => { const i = ORDEM_FUNCAO.indexOf(f); return i < 0 ? 99 : i }
 
+// Uma pré-escala parcial não é uma semana pronta: usa a mesma contagem por função do gerador.
+export function temVagasAbertas(entrada) {
+  if (typeof entrada.modeloFor !== 'function') throw new Error('Modelo de vagas indisponível para conferir a escala existente')
+  return entrada.celebracoes.some(c => {
+    const existentes = {}
+    for (const e of entrada.escalasExistentes?.[c.id] || []) existentes[e.funcao] = (existentes[e.funcao] || 0) + 1
+    const pedidos = {}
+    return entrada.modeloFor(c.tipo, c.comunidade).some(v => {
+      pedidos[v.funcao] = (pedidos[v.funcao] || 0) + 1
+      return pedidos[v.funcao] > (existentes[v.funcao] || 0)
+    })
+  })
+}
+
 // Terça a partir das 18:01 (Brasília) → o sábado que vem. Fora disso, null.
 export function semanaParaGerar(sp) {
   if (diaDaSemana(sp.data) !== 2 || sp.hm < HORA_GERAR) return null
@@ -155,9 +169,8 @@ export function criarEscalaAuto({ db, evo, push = null, gerarSemana, carregarEnt
         await avisarDono(cfg, `Não há nenhuma missa cadastrada no fim de semana ${fds}. Não gerei a escala.`)
         return
       }
-      // Já tem escala montada (o dono gerou ou editou no app): o robô não gera por cima. Manda a
-      // escala como está, só para conferir, com os mesmos botões; nada é gravado.
-      if (Object.values(entrada.escalasExistentes || {}).some((l) => l?.length)) {
+      // Escala completa: só confere. Parcial: o gerador preenche apenas vagas abertas e preserva as existentes.
+      if (Object.values(entrada.escalasExistentes || {}).some((l) => l?.length) && !temVagasAbertas(entrada)) {
         const texto = `O fim de semana ${fds} já tinha escala montada no app: não gerei nem gravei nada. Segue como está, só para conferir.\n\n`
           + montarMensagem({ sabado, ...entrada }, { novas: [] })
         const id = await enviarConferencia(cfg, texto, sabado, true)
@@ -378,7 +391,7 @@ export function criarCarregarEntrada({ RodizioCore, SemanalCore, lerTudo }) {
       config: { gerador, funcoes_maiores: appConfig.funcoes_maiores ?? null, minimo_mes: gerador.minimo_mes ?? appConfig.minimo_mes },
       appConfig, modeloFor,
       // membro_id = o FILHO; quem marcou "não escalar junto com os pais" (explicitamente false) fica de fora.
-      ministros: ministros.filter((r) => membros.find((m) => m.id === r.membro_id)?.escalar_com_pais !== false),
+      ministros, // o núcleo respeita a opção individual e compartilha o vínculo entre irmãos autorizados
       semMinistros: temFilhoDeMinistro && !ministrosMes.length,
     }
   }

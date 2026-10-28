@@ -48,7 +48,7 @@ function cenario({ item, enviadosHoje = 0, cfg = {}, falha = null, aviso = null,
   const evo = {
     estado: async () => 'open', numeroConectado: async () => '5519900000000',
     enviarTexto: async (d, t) => { if (falha) throw falha; enviados.push({ d, t }) },
-    enviarImagem: async (d, u) => { if (falha) throw falha; enviados.push({ d, u }) },
+    enviarImagem: async (d, u, t) => { if (falha) throw falha; enviados.push({ d, u, ...(String(u).includes("/catequeses/") ? {t} : {}) }) },
     enviarVideo: async (d, v, t) => { if (falha) throw falha; enviados.push({ d, v, t }) },
   }
   const robo = criarRobo({ db, evo, supabaseUrl: 'https://p.supabase.co', relogio: () => new Date(hora), rnd: () => 0, log: silencioso })
@@ -376,3 +376,14 @@ test('acolhida com vídeo da integração sai como vídeo, com a legenda; sem v�
   await robo.rodada()
   assert.equal(enviados.filter((e) => e.v === url && e.t === 'Apresentação 1 de 4').length, 1)
 })
+
+
+test('catequese usa arte própria e preserva texto longo sem cortar a legenda',async()=>{
+ const url='https://p.supabase.co/storage/v1/object/public/tarcisio/catequeses/v1/01.jpg';
+ for(const texto of ['Texto 1 de 14 — Servir no altar','Texto 1 de 14 — Servir no altar\n'+ 'Ensino completo. '.repeat(100)]){
+  const c=cenario({item:{...ITEM,tipo:'aviso',chave_unica:'acolhida:teste:2026-10-27',imagem_url:url,texto}});await c.robo.rodada();
+  assert.equal(c.enviados[0].u,url);assert.equal(c.updates.at(-1).estado,'enviado');
+  if(texto.length>1024){assert.equal(c.enviados.length,2);assert.equal(c.enviados[1].t,texto);}else{assert.equal(c.enviados.length,1);assert.equal(c.enviados[0].t,texto);}
+ }
+ const sem=cenario({item:{...ITEM,tipo:'aviso',chave_unica:'acolhida:teste',imagem_url:null}});await sem.robo.rodada();assert.deepEqual(sem.enviados,[{d:ITEM.destino_numero,t:ITEM.texto}]);
+});

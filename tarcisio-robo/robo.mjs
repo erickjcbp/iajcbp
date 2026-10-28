@@ -299,7 +299,8 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
     // Avisos e comunicados sem arte própria levam a peça oficial ATENÇÃO.
     const avisoGrupoTexto = item.tipo === 'aviso' && String(item.destino_jid || '').endsWith('@g.us')
       && (!item.imagem_url || /\/avisos\/atencao-pastoral-v1\.png(?:\?|$)/.test(item.imagem_url))
-    const imagem = avisoGrupoTexto || (String(item.chave_unica || '').startsWith('senha-reset:')||String(item.chave_unica || '').startsWith('acolhida:') && !/\.mp4(?:\?|$)/.test(item.imagem_url || '')) || pai?.configuracao?.sem_arte ? null : item.imagem_url || (item.tipo === 'aviso'
+    const arteCatequese = /\/storage\/v1\/object\/public\/tarcisio\/catequeses\/v1\/(?:0[1-9]|1[0-4])\.jpg$/.test(item.imagem_url || '')
+    const imagem = avisoGrupoTexto || (String(item.chave_unica || '').startsWith('senha-reset:')||String(item.chave_unica || '').startsWith('acolhida:') && !/\.mp4(?:\?|$)/.test(item.imagem_url || '') && !arteCatequese) || pai?.configuracao?.sem_arte ? null : item.imagem_url || (item.tipo === 'aviso'
       ? `${String(supabaseUrl).replace(/\/$/, '')}/storage/v1/object/public/tarcisio/avisos/atencao-pastoral-v1.png` : null)
     if (!imagemPermitida(imagem, supabaseUrl)) {
       exigir(await db.from('tarcisio_envios').update({ estado: 'falhou', erro: 'Imagem fora da pasta do São Tarcísio: não enviada' }).eq('id', item.id), 'recusar imagem')
@@ -311,6 +312,11 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
       if ((item.tipo === 'aviso' || !imagem) && (typeof texto !== 'string' || !texto.trim()))
         throw new Error('Mensagem vazia: envio bloqueado; revise o texto do aviso.')
       if (imagem && /\.mp4(?:\?|$)/.test(imagem)) await evo.enviarVideo(destino, imagem, texto)
+      else if (imagem && arteCatequese && texto.length > 1024) {
+        // Legendas longas variam por cliente do WhatsApp: mantém o capítulo inteiro em texto separado.
+        await evo.enviarImagem(destino, imagem, texto.split('\n').find(l=>l.startsWith('Texto ')) || 'Formação da pastoral')
+        await evo.enviarTexto(destino, texto)
+      }
       else if (imagem) await evo.enviarImagem(destino, imagem, texto)
       else await evo.enviarTexto(destino, texto)
       exigir(await db.from('tarcisio_envios').update({ estado: 'enviado', enviado_em: agora.toISOString(), erro: null }).eq('id', item.id), 'marcar enviado')

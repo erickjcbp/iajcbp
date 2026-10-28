@@ -73,3 +73,44 @@ test('grupos: sem confirmação da coordenação o Tarcísio só propõe (não a
  const sem=await rodar([]);assert.equal(sem.adds.length,0);assert.ok(sem.rpcs.includes('tarcisio_acolhida_propor'));
  for(const estado of ['pendente','recusada']){const r=await rodar([{membro_id:'m1',acao:'grupos',estado}]);assert.equal(r.adds.length,0);assert.ok(!r.rpcs.includes('tarcisio_acolhida_propor'));}
 });
+
+
+test('arte corresponde ao índice validado da catequese, incluindo fila antiga e capítulo 14',async()=>{
+ for(const indice of [1,14,15]){
+  const db=bancoMemoria({tarcisio_acolhida_config:[{id:true,ativa:true}],acolitos_crm:[c],acolitos_membros:[m],tarcisio_acolhida:[{membro_id:'m1',marcos:{respondeu_tunica:{em:'x'}}}],tarcisio_acolhida_envios:[{envio_id:'e',tipo:'catequese',indice,data_sp:'2026-10-27',membros:['m1']}],tarcisio_envios:[{id:'e',estado:'pendente'}]});
+  const item={id:'e',chave_unica:'acolhida:x',destino_numero:'5519995903905',imagem_url:null};const a=criarAcolhida({db,relogio:()=>agora,supabaseUrl:'https://p.supabase.co'});
+  assert.equal(await a.validarEnvio(item),indice<=14);
+  if(indice<=14){assert.equal(item.imagem_url,'https://p.supabase.co/storage/v1/object/public/tarcisio/catequeses/v1/'+String(indice).padStart(2,'0')+'.jpg');assert.equal(db.t.tarcisio_envios[0].imagem_url,item.imagem_url);}
+ }
+});
+
+
+test('semântica substitui palavras-chave e preserva vínculo, origem e etapa',async()=>{
+ const calls=[],avaliacoes=[];let aceita=true;const db=bancoMemoria({tarcisio_config:[{id:1,ia_modelo:'teste'}],tarcisio_acolhida_config:[{id:true,ativa:true}],acolitos_crm:[c],acolitos_membros:[m],tarcisio_acolhida:[]});db.rpc=async(n,a)=>{calls.push(a);return {data:{ok:true}};};
+ const ia={avaliarAcolhida:async x=>{avaliacoes.push(x);return {confirmado:aceita,membro_id:x.membro_id,marco:x.marco,evidencia:x.mensagem.texto,motivo:'ambiguidade'};}};
+ const a=criarAcolhida({db,ia,relogio:()=>agora}),msg={id:'x',texto:'Já estou com ela'},hist=[{direcao:'saida',texto:'Você já recebeu a túnica?'}];
+ assert.ok((await a.executar('5519995903905',{membro_id:'m1',mensagem_id:'x',marco:'tunica_recebida'},[msg],hist)).ok);assert.equal(calls.length,1);assert.deepEqual(avaliacoes[0].historico,hist);
+ aceita=false;assert.equal((await a.executar('5519995903905',{membro_id:'m1',mensagem_id:'x',marco:'tunica_recebida'},[msg],hist)).confirmacao_necessaria,true);assert.equal(calls.length,1);
+ for(const input of [{membro_id:'m2',mensagem_id:'x',marco:'tunica_recebida'},{membro_id:'m1',mensagem_id:'de-outra-conversa',marco:'tunica_recebida'},{membro_id:'m1',mensagem_id:'x',marco:'integracao_realizada'}])assert.ok((await a.executar('5519995903905',input,[msg],hist)).erro);
+ assert.equal(calls.length,1);
+ const indisponivel=criarAcolhida({db,ia:{avaliarAcolhida:async()=>{throw Error('offline');}},relogio:()=>agora});assert.ok((await indisponivel.executar('5519995903905',{membro_id:'m1',mensagem_id:'x',marco:'tunica_recebida'},[msg],hist)).erro);assert.equal(calls.length,1);
+});
+
+
+test('troca de responsável: entra o novo antes de sair o antigo, preserva mãe e acompanhamento',async()=>{
+ const numero='5519995903905',novo='5519992114793',msg={id:'troca-1',texto:'Coloque o pai como responsável, 992114793, depois me tire do grupo.'},ordem=[];
+ const db=bancoMemoria({acolitos_membros:[{...m,celular_responsavel:null}],tarcisio_config:[{id:1,ia_modelo:'teste'}],tarcisio_grupos:[{papel:'pais',jid:'pais@g.us',nome:'Pais'}],tarcisio_mensagens:[{...msg,numero,direcao:'entrada',created_at:agora.toISOString()}]});
+ const participantes=new Set([numero]);let permite=true;
+ const ia={avaliarTrocaResponsavel:async()=>({confirmado:permite})};
+ const evo={numerosComWhatsapp:async()=>[{numero:novo,existe:true}],participantes:async()=>[...participantes],adicionarAoGrupo:async(_g,ns)=>{ordem.push('adicionar');ns.forEach(n=>participantes.add(n));},removerDoGrupo:async(_g,ns)=>{assert.ok(participantes.has(novo));ordem.push('remover');ns.forEach(n=>participantes.delete(n));}};
+ const a=criarAcolhida({db,ia,evo,relogio:()=>agora});const input={membro_id:'m1',mensagem_id:msg.id,novo_numero:'992114793',retirar_solicitante:true};
+ permite=false;assert.ok((await a.trocarResponsavel(numero,input,[msg])).erro);assert.equal(ordem.length,0);
+ permite=true;assert.ok((await a.trocarResponsavel('5511999999999',input,[msg])).erro);assert.equal(ordem.length,0);
+ const r=await a.trocarResponsavel(numero,input,[msg]);assert.equal(r.ok,true);assert.equal(r.solicitante_fora_do_grupo,true);assert.deepEqual(ordem,['adicionar','remover']);assert.equal(db.t.acolitos_membros[0].celular_responsavel,novo);assert.equal(db.t.acolitos_membros[0].celular_mae,m.celular_mae);assert.equal(db.t.acolitos_membros[0].status,m.status);assert.equal(db.t.tarcisio_acolhida?.length||0,0);
+});
+
+test('se novo responsável não entra no grupo, não remove antigo nem muda cadastro',async()=>{
+ const numero='5519995903905',msg={id:'troca-2',texto:'Pai vai assumir, telefone 992114793, me tire depois.'},db=bancoMemoria({acolitos_membros:[{...m,celular_responsavel:null}],tarcisio_config:[{id:1,ia_modelo:'teste'}],tarcisio_grupos:[{papel:'pais',jid:'pais@g.us'}],tarcisio_mensagens:[{...msg,numero,direcao:'entrada',created_at:agora.toISOString()}]});
+ let removeu=false;const a=criarAcolhida({db,ia:{avaliarTrocaResponsavel:async()=>({confirmado:true})},evo:{numerosComWhatsapp:async()=>[{numero:'5519992114793',existe:true}],participantes:async()=>[numero],adicionarAoGrupo:async()=>{},removerDoGrupo:async()=>{removeu=true;}},relogio:()=>agora});
+ const r=await a.trocarResponsavel(numero,{membro_id:'m1',mensagem_id:msg.id,novo_numero:'992114793',retirar_solicitante:true},[msg]);assert.equal(r.entrada_pendente,true);assert.equal(removeu,false);assert.equal(db.t.acolitos_membros[0].celular_responsavel,null);
+});

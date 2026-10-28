@@ -14,3 +14,18 @@ test('frases reais de 27/10: quem já tem/usa a túnica, com quebra de linha; me
  assert.equal(confirmacaoExplicita('respondeu_tunica','Vamos no sábado tirar as medidas na costureira'),true);
  assert.equal(confirmacaoExplicita('respondeu_tunica','Olá bom dia'),false);
 });
+
+
+test('recebimento na voz passiva é fato; previsão, dúvida e negativa não são',()=>{
+ for(const t of ['Ola Tarcísio, minha túnica já foi recebida','A túnica foi retirada hoje','Minha túnica já foi buscada'])assert.equal(confirmacaoExplicita('tunica_recebida',t),true,t);
+ for(const t of ['Minha túnica não foi recebida','Minha túnica ainda não foi recebida','Se a túnica foi recebida, o que acontece?','A túnica será recebida amanhã','Acho que minha túnica foi recebida','Minha túnica já está pronta, irei buscar hoje'])assert.equal(confirmacaoExplicita('tunica_recebida',t),false,t);
+});
+
+
+test('responsável definido explicitamente tem prioridade sobre mãe e recado, sem mudar o jovem com WhatsApp próprio',()=>{
+ const base={...m,data_nascimento:'2018-01-01',celular_responsavel:'19992114793',celular_mae:'19991352387',celular_recado:'19986048535',responsavel_whatsapp:true};
+ assert.equal(destinatario(base,[base],'2026-10-27').numero,'5519992114793');
+ assert.equal(destinatario({...base,celular_responsavel:null},[base],'2026-10-27').numero,'5519991352387');
+ assert.equal(destinatario({...base,celular_responsavel:null,celular_mae:null},[base],'2026-10-27').numero,'5519986048535');
+ const jovem={...base,data_nascimento:'2010-01-01',telefone:'19998090669',telefone_whatsapp:true};assert.equal(destinatario(jovem,[jovem],'2026-10-27').canal,'jovem');
+});

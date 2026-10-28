@@ -203,7 +203,7 @@ test('PDF do dono grava casados e pergunta só as dúvidas', async () => {
   // Rita E. (mãe da Maria) casou; os dois Luís ficam de fora até a resposta
   assert.ok(linhas.some((l) => l.membro_id === 'm1' && l.data === '2026-10-24' && l.horario === '17h' && l.comunidade === 'matriz' && l.pai_ou_mae === 'mae'))
   assert.ok(linhas.every((l) => l.membro_id === 'm1' && l.mes === '2026-10-01' && l.arquivo === 'ESCALA OUTUBRO REV01.pdf'))
-  assert.equal(c.enviados[0].t, `Li a escala dos ministros de outubro: ${linhas.length} casos, 1 com dúvida. Vou perguntar as dúvidas, uma por vez.`)
+  assert.equal(c.enviados[0].t, `Li a escala dos ministros de outubro: ${linhas.length} casos, 2 com dúvida. As dúvidas estão na Caixa para validação; também podem ser respondidas por aqui.`)
   // uma pergunta só (a do Luís), com os botões apelido:sim/nao
   const perguntas = c.enviados.filter((e) => e.botoes)
   assert.equal(perguntas.length, 1)
@@ -213,6 +213,8 @@ test('PDF do dono grava casados e pergunta só as dúvidas', async () => {
   // de novo o mesmo mês: substitui, não duplica
   await receber(c, pdf(DONO, 'PDF2'))
   assert.equal(c.db.t.acolitos_escala_ministros.length, linhas.length)
+  assert.equal(c.db.t.tarcisio_pendencias.length,2,'as duas dúvidas ficam na Caixa, sem duplicar no reenvio');
+  assert.ok(c.db.t.tarcisio_pendencias.every(p=>p.tipo==='coordenacao'&&p.dados.ocorrencias.length));
   // coordenador listado em remetentes_pdf também pode mandar
   const d = cenario()
   await receber(d, pdf(COORD))
@@ -221,7 +223,7 @@ test('PDF do dono grava casados e pergunta só as dúvidas', async () => {
 })
 
 test('sim grava apelido e o próximo mês não pergunta', async () => {
-  const c = cenario()
+  const c = cenario({texto:TEXTO_OUTUBRO.replace(/\bRita\b(?! E\.)/g,'Outra')})
   await receber(c, pdf(DONO, 'PDF1'))
   const pergunta = c.enviados.find((e) => e.botoes)
   const opcao = /Carlos/.test(pergunta.t) ? 'm2' : 'm3'

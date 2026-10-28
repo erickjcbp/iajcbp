@@ -92,6 +92,7 @@ export function criarEvolution({ url, chave, instancia, fetchFn = fetch }) {
       const g = await chamar(`/group/findGroupInfos/${nome}?groupJid=${encodeURIComponent(jid)}`)
       return (g?.participants || []).map((p) => String(p.phoneNumber || p.id || '').split('@')[0].replace(/\D/g, '')).filter(Boolean)
     },
+    removerDoGrupo: (jid, numeros) => chamar(`/group/updateParticipant/${nome}?groupJid=${encodeURIComponent(jid)}`, { metodo: 'POST', corpo: { action: 'remove', participants: numeros } }),
     adicionarAoGrupo: (jid, numeros) => chamar(`/group/updateParticipant/${nome}?groupJid=${encodeURIComponent(jid)}`, { metodo: 'POST', corpo: { action: 'add', participants: numeros } }),
     linkConvite: async (jid) => {
       const r = await chamar(`/group/inviteCode/${nome}?groupJid=${encodeURIComponent(jid)}`)
