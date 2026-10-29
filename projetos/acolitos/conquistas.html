@@ -47,6 +47,7 @@
       .cq-lock { top:3px; right:4px; }
       .cq-trofeu { padding:8px 10px; margin-bottom:6px; }
     }
+    @media(max-width:639px){.cq-medal-overlay{padding:0!important}.cq-medal-modal{height:100dvh!important;max-height:100dvh!important;border-radius:0!important;padding-top:calc(16px + env(safe-area-inset-top))}}
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -65,6 +66,7 @@
 <script src="telefones-core.js"></script>
 <script src="identidade-core.js"></script>
 <script src="shared.js"></script>
+<script src="medalhas-arte.js"></script>
 <script>
 let ctx = null;
 const LIGA_LABEL = { iniciantes:'Iniciantes', acolitos:'Acólitos', cerimoniarios:'Cerimoniários' };
@@ -83,6 +85,8 @@ function tierDe(nivel) {
 let _medalN = 0;
 function medalSvg(simbolo, tier, size) {
   size = size || 64;
+  const arteNova = window.MedalhasArte && window.MedalhasArte.html(simbolo, tier, size);
+  if (arteNova) return arteNova;
   const id = 'mgr' + (_medalN++);
   const T = {
     bronze: { hi:'#f0b878', mid:'#cf8842', lo:'#8a4f20', ring:'#6e3c18', disc:'#f1e3c8', ribbon:'#8a4a22', ribbonD:'#5e3214' },
@@ -207,8 +211,8 @@ async function init() {
   }
 }
 function abrirMedalha(b) {
-  const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const md = document.createElement('div'); md.className = 'modal'; md.style.cssText = 'max-width:360px;text-align:center;';
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open cq-medal-overlay'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+  const md = document.createElement('div'); md.className = 'modal cq-medal-modal'; md.style.cssText = 'text-align:center;';
   const ico = document.createElement('div'); ico.style.cssText = 'display:flex;justify-content:center;margin:6px 0 4px;' + (b.ganho ? '' : 'filter:grayscale(1) opacity(.5);'); ico.innerHTML = medalSvg(b.icone, b.tier || tierDe(b.nivel), 92);
   const nm = document.createElement('div'); nm.style.cssText = 'font-family:var(--font-title);font-weight:800;font-size:18px;color:var(--gold-light);margin-top:6px;'; nm.textContent = b.label;
   const st = document.createElement('div'); st.style.cssText = 'font-size:12px;font-weight:700;margin:4px 0 12px;color:' + (b.ganho ? 'var(--success-text)' : 'var(--text-muted)') + ';'; st.textContent = b.ganho ? '✓ Conquistada' : '🔒 Ainda não conquistada';
