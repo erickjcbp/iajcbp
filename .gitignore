@@ -21,3 +21,11 @@ entregas/
 # Espaços isolados de trabalho do Claude Code (git worktree). Cada um é uma cópia
 # inteira do projeto: sem esta linha, o commit levaria o site duplicado junto.
 /.claude/worktrees/
+
+# Material de trabalho com nome e telefone de gente real, e cópias pesadas.
+# O site inteiro é publicado a partir da raiz: nada disto pode subir.
+/historico-tarcisio/
+/materiais-paroquia/
+/publicacoes/
+/estudos/
+/docs/encontros-nov-2026/
