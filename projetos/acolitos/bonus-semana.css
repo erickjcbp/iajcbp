@@ -3,3 +3,6 @@
 .bw-routine select{appearance:none;background:var(--surface2);color:var(--text);font-size:16px;min-height:46px;width:100%;border:1px solid var(--border-wine);border-radius:8px;padding:10px}.jq-chapters .mx-mini{min-height:44px;min-width:44px}
 
 .bw-routine input[type=checkbox]{accent-color:var(--gold);width:22px;height:22px;flex-shrink:0;margin-right:10px;vertical-align:middle}.bw-routine label{display:flex;align-items:center;min-height:44px}.bw-routine .bw-times label{display:block}
+.bw-routine input[type=time],.bw-routine input[type=date]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+.bw-times>*{min-width:0}.bw-times label,.bw-routine label{overflow-wrap:anywhere}
+@media(max-width:340px){#main .view-tabs button{padding-left:4px;padding-right:4px;font-size:11px;letter-spacing:0}}
