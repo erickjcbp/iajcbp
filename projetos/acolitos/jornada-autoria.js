@@ -4,10 +4,10 @@
  async function render(main,{sb,niveis}){
   const box=el('section',null,'jq-author');box.append(el('h2','Episódios da Jornada'),el('p','Crie uma aventura curta, teste como o jovem vai ver e revise antes de publicar. Cada episódio oferece dois caminhos para o mesmo objetivo. Os desafios crescem junto com o nível.'));main.append(box);
   const status=el('p','', 'jq-status');status.setAttribute('role','status');
-  const lab=el('label','Para qual nível?');lab.htmlFor='ja-nivel';const select=el('select');select.id='ja-nivel';niveis.forEach(n=>{const op=el('option',n.label);op.value=n.slug;select.append(op);});
+  const lab=el('label','Para qual nível?');lab.htmlFor='ja-nivel';const select=el('select',null,'form-input');select.id='ja-nivel';niveis.forEach(n=>{const op=el('option',n.label);op.value=n.slug;select.append(op);});
   const objLab=el('label','O que você quer que o jovem consiga fazer?');objLab.htmlFor='ja-objetivo';const objetivo=el('textarea');objetivo.id='ja-objetivo';objetivo.maxLength=800;objetivo.rows=2;objetivo.placeholder='Ex.: perceber quem precisa de orientação e combinar uma resposta com a equipe.';
   const refLab=el('label','Orientações e referências aprovadas');refLab.htmlFor='ja-referencias';const refs=el('textarea');refs.id='ja-referencias';refs.maxLength=5000;refs.rows=3;refs.placeholder='Cole as orientações da equipe que a IA deve respeitar. Não inclua nomes ou dados dos membros.';
-  const focoLabel=el('label','Qual é o foco deste episódio?');focoLabel.htmlFor='ja-foco';const foco=el('select');foco.id='ja-foco';Object.entries(JornadaCore.focos).forEach(([value,label])=>{const op=el('option',label);op.value=value;foco.append(op);});
+  const focoLabel=el('label','Qual é o foco deste episódio?');focoLabel.htmlFor='ja-foco';const foco=el('select',null,'form-input');foco.id='ja-foco';Object.entries(JornadaCore.focos).forEach(([value,label])=>{const op=el('option',label);op.value=value;foco.append(op);});
   const difficulty=el('p','', 'jq-tag');function nivel(){difficulty.textContent='Desafio do nível: '+JornadaCore.desafios[JornadaCore.niveis.indexOf(select.value)];}select.onchange=nivel;nivel();box.append(lab,select,difficulty,focoLabel,foco,objLab,objetivo,refLab,refs);
   const reserve=el('div',null,'jq-reserve');reserve.setAttribute('aria-label','Reserva de episódios por nível');
   const editor=el('div'),list=el('div',null,'jq-list');let current=null,dirty=false;

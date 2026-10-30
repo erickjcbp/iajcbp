@@ -128,6 +128,7 @@ async function renderAll() {
     // A matriz abre a aba; o acompanhamento da Formação vem logo depois dela.
     await renderDesenvolvimento(box, renderSinalDaFormacao);
   } else if(abaJornada==='conteudo') {
+    { const intro = document.createElement('p'); intro.style.cssText = 'color:var(--text-muted);font-size:14px;line-height:1.5;margin:0 0 16px'; intro.textContent = 'Aqui você cria o que os jovens vão fazer na Jornada: episódios, a missão da semana, quests exclusivas e a temporada com ranking.'; box.appendChild(intro); }
     await JornadaAutoria.render(box, { sb, niveis: NIVEIS });
     await renderSemanaAdmin(box);
     await renderCriarQuest(box);
@@ -236,7 +237,7 @@ let abaJornada = 'quests';
 try { abaJornada = localStorage.getItem('jornada-aba') || 'quests'; } catch (e) {}
 function renderAbasDaJornada(box) {
   const tabs = document.createElement('div'); tabs.className = 'view-tabs';
-  [['quests', 'Aprovações'], ['conteudo','Conteúdo'], ['programacao','Programação'], ['evolucao', 'Evolução']].forEach(([id, label]) => {
+  [['quests', 'Aprovações'], ['conteudo','Criar missões'], ['programacao','Automático'], ['evolucao', 'Evolução']].forEach(([id, label]) => {
     const b = document.createElement('button'); b.type = 'button';
     b.className = abaJornada === id ? 'on' : '';
     b.textContent = label;
