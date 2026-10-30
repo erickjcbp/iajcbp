@@ -74,8 +74,6 @@
     .cq-sort { grid-column:1 / -1; display:flex; align-items:center; gap:10px; }
     .cq-sort label { font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; }
     .cq-sort .app-select { flex:1; min-width:0; }
-    .cq-sort select { min-height:48px; padding:10px 12px; font:inherit; font-size:16px; color:var(--text); background:var(--surface2); border:1px solid var(--border-wine); border-radius:8px; }
-    .cq-sort select:focus-visible { outline:2px solid var(--gold-light); outline-offset:3px; }
     .cq-filter:focus-visible,.cq-clear:focus-visible,.cq-search input:focus-visible { outline:2px solid var(--gold-light); outline-offset:3px; }
     .cq-results { font-size:13px; line-height:1.5; color:var(--text-muted); margin:0 0 14px; }
     .cq-medal[hidden],.cq-no-results[hidden] { display:none !important; }
@@ -301,7 +299,7 @@ function montarColecaoMedalhas(main, badges) {
   });
   const ordem = document.createElement('div'); ordem.className = 'cq-sort';
   const ordemLabel = document.createElement('label'); ordemLabel.htmlFor = 'cq-medal-ordem'; ordemLabel.textContent = 'Ordenar por';
-  const ordemSel = document.createElement('select'); ordemSel.id = 'cq-medal-ordem'; ordemSel.setAttribute('aria-controls', 'cq-medalhas');
+  const ordemSel = document.createElement('select'); ordemSel.id = 'cq-medal-ordem'; ordemSel.className = 'form-input'; ordemSel.setAttribute('aria-controls', 'cq-medalhas');
   [['padrao', 'Padrão (por nível)'], ['recentes', 'Mais recentes'], ['az', 'A a Z']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; ordemSel.appendChild(o); });
   ordem.append(ordemLabel, ordemSel);
   toolbar.append(busca, filtros, ordem);
