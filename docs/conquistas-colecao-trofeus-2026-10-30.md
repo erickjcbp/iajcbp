@@ -38,3 +38,11 @@ Troféus aprovados pelo dono em 30/10/2026: “aprovado os trofeus”. Etapa pub
 A etapa anterior do commit 6bec9a7 foi preservada, acrescentando busca, filtros, requisitos e os três troféus.
 As três artes foram acrescentadas ao cache do sw.js, com BUILD atualizado para publicação.
 Publicar só a etapa aprovada a partir de uma base remota limpa; o main local preserva trabalho do Tarcísio que não deve ser enviado junto.
+
+## Ordenação das medalhas ("mais recentes") — 30/10/2026
+Pedido do dono: opção 2 (data de conquista de verdade, com migration).
+- Migration `docs/migrations/119_badges_ganho_em.sql`, aplicada na produção (ensaio antes em transação revertida): tabela `acolitos_badge_ganhos` (RLS ligada, sem acesso direto), função `acolitos_badges_registrar` (o app chama ao abrir Conquistas; só o dono da conta registra), `acolitos_badges_membro` passa a devolver `ganho_em`.
+- Backfill: 1.028 conquistas existentes, 159 com data exata (missão avaliada, idade, missas, ensaios, solícitos, troféus, tempo de pastoral). As 869 de habilitação/funções aptas ficam SEM data: o banco não guarda quando a habilitação foi dada (`updated_at` muda a cada edição). Elas só ganham data a partir de agora, na 1ª vez que o app as detecta.
+- Tela: seletor "Ordenar por" (Padrão por nível, Mais recentes, A a Z). Em "Mais recentes": datadas por data, depois conquistadas sem data, depois pendentes; o aviso diz quantas estão sem data. Modal mostra "Conquistada em dd/mm/aaaa".
+- Conferência: estudos/medalhas/ordem-2026-10-30/verificar.cjs (360–2560 px, sem rolagem horizontal, seletor da casa com 16 px/44 px) e regressão da coleção, saída 0.
+- Limite: a data de quem ganha medalha de habilitação é a do 1º acesso à tela de Conquistas depois de ganhar.

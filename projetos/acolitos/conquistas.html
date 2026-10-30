@@ -71,6 +71,11 @@
     .cq-filters { display:flex; gap:6px; }
     .cq-filter,.cq-clear { min-height:48px; padding:10px 14px; border:1px solid var(--border-wine); border-radius:8px; font:inherit; font-size:13px; font-weight:700; color:var(--text-muted); background:var(--surface); cursor:pointer; }
     .cq-filter[aria-pressed="true"] { border-color:var(--gold-dim); color:var(--gold-light); background:rgba(232,185,74,.08); }
+    .cq-sort { grid-column:1 / -1; display:flex; align-items:center; gap:10px; }
+    .cq-sort label { font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; }
+    .cq-sort .app-select { flex:1; min-width:0; }
+    .cq-sort select { min-height:48px; padding:10px 12px; font:inherit; font-size:16px; color:var(--text); background:var(--surface2); border:1px solid var(--border-wine); border-radius:8px; }
+    .cq-sort select:focus-visible { outline:2px solid var(--gold-light); outline-offset:3px; }
     .cq-filter:focus-visible,.cq-clear:focus-visible,.cq-search input:focus-visible { outline:2px solid var(--gold-light); outline-offset:3px; }
     .cq-results { font-size:13px; line-height:1.5; color:var(--text-muted); margin:0 0 14px; }
     .cq-medal[hidden],.cq-no-results[hidden] { display:none !important; }
@@ -223,6 +228,7 @@ async function init() {
   let campeoes = [], badges = [];
   if (ctx.membro) {
     try { const { data } = await sb.rpc('acolitos_campeoes'); campeoes = (data || []).filter(c => c.membro_id === ctx.membro.id); } catch (e) {}
+    try { await sb.rpc('acolitos_badges_registrar', { p_membro: ctx.membro.id }); } catch (e) {}
     try { const { data } = await sb.rpc('acolitos_badges_membro', { p_membro: ctx.membro.id }); badges = data || []; } catch (e) {}
   }
   const medGanhas = badges.filter(b => b.ganho).length;
@@ -293,7 +299,12 @@ function montarColecaoMedalhas(main, badges) {
     const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'cq-filter'; btn.dataset.filtro = valor; btn.textContent = texto + ' (' + contagens[valor] + ')'; btn.setAttribute('aria-pressed', String(valor === filtro)); btn.setAttribute('aria-controls', 'cq-medalhas');
     btn.onclick = () => { filtro = valor; atualizar(); }; botoes.push(btn); filtros.appendChild(btn);
   });
-  toolbar.append(busca, filtros);
+  const ordem = document.createElement('div'); ordem.className = 'cq-sort';
+  const ordemLabel = document.createElement('label'); ordemLabel.htmlFor = 'cq-medal-ordem'; ordemLabel.textContent = 'Ordenar por';
+  const ordemSel = document.createElement('select'); ordemSel.id = 'cq-medal-ordem'; ordemSel.setAttribute('aria-controls', 'cq-medalhas');
+  [['padrao', 'Padrão (por nível)'], ['recentes', 'Mais recentes'], ['az', 'A a Z']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; ordemSel.appendChild(o); });
+  ordem.append(ordemLabel, ordemSel);
+  toolbar.append(busca, filtros, ordem);
   const resultado = document.createElement('p'); resultado.className = 'cq-results'; resultado.setAttribute('role', 'status'); resultado.setAttribute('aria-live', 'polite');
   const mg = document.createElement('div'); mg.className = 'cq-grid cq-medal-grid'; mg.id = 'cq-medalhas';
   const normalizar = texto => String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
@@ -309,7 +320,7 @@ function montarColecaoMedalhas(main, badges) {
       requisito.append(reqLabel, document.createTextNode(b.requisito || 'Abra para ver os detalhes desta medalha.')); cell.appendChild(requisito);
       if (!b.ganho) { const lk = document.createElement('div'); lk.className = 'cq-lock'; comIcone(lk, 'lock', '', 'Bloqueado'); cell.appendChild(lk); }
       mg.appendChild(cell);
-      return { badge:b, cell, texto:normalizar([b.label, b.requisito, b.desc].join(' ')) };
+      return { badge:b, cell, pos:i, texto:normalizar([b.label, b.requisito, b.desc].join(' ')) };
   });
   const vazio = document.createElement('div'); vazio.className = 'cq-no-results'; vazio.hidden = true;
   const aviso = document.createElement('p'); aviso.textContent = 'Nenhuma medalha corresponde a este filtro e busca.';
@@ -318,6 +329,15 @@ function montarColecaoMedalhas(main, badges) {
   function atualizar() {
     const termos = normalizar(input.value).trim().split(/\s+/).filter(Boolean);
     let visiveis = 0;
+    const modo = ordemSel.value;
+    const tempo = b => b.ganho_em ? Date.parse(b.ganho_em) : NaN;
+    const ordenados = cartoes.slice().sort((x, y) => {
+      if (modo === 'az') return x.badge.label.localeCompare(y.badge.label, 'pt-BR');
+      if (modo !== 'recentes') return x.pos - y.pos;
+      const gx = x.badge.ganho ? (isNaN(tempo(x.badge)) ? 1 : 0) : 2, gy = y.badge.ganho ? (isNaN(tempo(y.badge)) ? 1 : 0) : 2;
+      return gx - gy || (gx === 0 ? tempo(y.badge) - tempo(x.badge) : 0) || x.pos - y.pos;
+    });
+    ordenados.forEach(c => mg.appendChild(c.cell));
     cartoes.forEach(({badge, cell, texto}) => {
       const status = filtro === 'todas' || (filtro === 'conquistadas' ? badge.ganho : !badge.ganho);
       cell.hidden = !(status && termos.every(termo => texto.includes(termo)));
@@ -327,9 +347,11 @@ function montarColecaoMedalhas(main, badges) {
     mg.classList.toggle('show-requisitos', filtro === 'pendentes');
     vazio.hidden = visiveis > 0;
     const nome = visiveis === 1 ? 'medalha' : 'medalhas';
-    resultado.textContent = visiveis + ' ' + nome + (filtro === 'pendentes' ? ' para conquistar. Veja como ganhar cada uma.' : filtro === 'conquistadas' ? ' conquistadas.' : ' na coleção.') + (termos.length ? ' Resultado da busca.' : '');
+    const semData = modo === 'recentes' ? cartoes.filter(c => !c.cell.hidden && c.badge.ganho && isNaN(tempo(c.badge))).length : 0;
+    resultado.textContent = visiveis + ' ' + nome + (filtro === 'pendentes' ? ' para conquistar. Veja como ganhar cada uma.' : filtro === 'conquistadas' ? ' conquistadas.' : ' na coleção.') + (termos.length ? ' Resultado da busca.' : '') + (semData ? ' ' + semData + ' conquistada' + (semData === 1 ? '' : 's') + ' sem data registrada ' + (semData === 1 ? 'aparece' : 'aparecem') + ' depois das datadas.' : '');
   }
   input.addEventListener('input', atualizar);
+  ordemSel.addEventListener('change', atualizar);
   limpar.onclick = () => { input.value = ''; atualizar(); input.focus(); };
   atualizar();
 }
@@ -343,7 +365,7 @@ function abrirMedalha(b) {
   const ico = document.createElement('div'); ico.className = 'cq-medal-visual' + (b.ganho ? '' : ' locked'); ico.innerHTML = medalSvg(b.icone, b.tier || tierDe(b.nivel), 240);
   const info = document.createElement('div'); info.className = 'cq-medal-info';
   const nm = document.createElement('h2'); nm.id = 'cq-medal-title-' + (++_cqDialogN); nm.className = 'cq-medal-title'; nm.textContent = b.label; md.setAttribute('aria-labelledby', nm.id);
-  const st = document.createElement('p'); st.className = 'cq-medal-status' + (b.ganho ? ' ganha' : ''); st.textContent = b.ganho ? '✓ Conquistada' : '🔒 Ainda não conquistada';
+  const st = document.createElement('p'); st.className = 'cq-medal-status' + (b.ganho ? ' ganha' : ''); st.textContent = b.ganho ? '✓ Conquistada' + (b.ganho_em ? ' em ' + new Date(b.ganho_em).toLocaleDateString('pt-BR', { timeZone:'America/Sao_Paulo' }) : '') : '🔒 Ainda não conquistada';
   const desc = document.createElement('p'); desc.id = 'cq-medal-desc-' + _cqDialogN; desc.className = 'cq-medal-desc'; desc.textContent = b.desc || ''; md.setAttribute('aria-describedby', desc.id);
   const requisito = document.createElement('div'); requisito.className = 'cq-medal-requisito';
   const reqL = document.createElement('strong'); reqL.textContent = 'Como ganhar';
