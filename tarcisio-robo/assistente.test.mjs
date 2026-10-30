@@ -151,3 +151,22 @@ test('chamar_coordenacao: sem pendência aberta, abre uma', async () => {
   await a.executorPara(NUM_MAE, [joao], TODOS)('chamar_coordenacao', { resumo: 'saída às 17h' })
   assert.equal(db.gravado.filter((g) => g.tabela === 'tarcisio_pendencias' && g.op === 'insert').length, 1)
 })
+
+test('robô de empresa: encerra sem responder, sem IA e deixa pendência na Caixa', async () => {
+  const NUM = '5519988887777'
+  const db = bancoFalso((tabela, ops) => {
+    if (tabela === 'tarcisio_mensagens' && ops.some((o) => o[0] === 'select')) {
+      return { data: [{ id: 'm1', texto: 'Olá! Sou a assistente virtual da Loja X. Digite 1 para vendas.', midia: null, created_at: '2026-10-21T14:59:50Z', direcao: 'entrada' }] }
+    }
+    return { data: [] }
+  })
+  let chamadasIA = 0
+  const enviados = []
+  const ia = { conversar: async () => { chamadasIA++; return { texto: 'oi', usadas: [] } } }
+  const a = criarAssistente({ db, evo: { enviarTexto: async (n, t) => enviados.push({ n, t }) }, ia, relogio: () => new Date('2026-10-21T15:00:00Z'), log: silencioso })
+  await a.responder({ ia_modelo: 'x', persona_nome: 'T', persona_tom: '', persona_regras: '' }, NUM, true)
+  assert.equal(chamadasIA, 0)
+  assert.equal(enviados.length, 0)
+  const pend = db.gravado.find((g) => g.tabela === 'tarcisio_pendencias' && g.op === 'insert')
+  assert.equal(pend.dados.dados.contato_automatico, true)
+})

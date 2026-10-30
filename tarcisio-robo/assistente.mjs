@@ -2,9 +2,10 @@
 // A IA decide o QUE fazer; o código decide o que é PERMITIDO (servo ligado ao número, data futura,
 // semana não confirmada). A IA nunca liga número a cadastro: isso é da coordenação, pela Caixa.
 import {
-  agoraSP, somarDias, membrosDoNumero, comIrmaosJuntos, semanaConfirmada, candidatosPorNome,
+  agoraSP, normalizarNumero, somarDias, membrosDoNumero, comIrmaosJuntos, semanaConfirmada, candidatosPorNome,
   diaPorExtenso, rotuloMissa, FUNCOES, primeiroNome,
 } from './regras.mjs'
+import { avaliarContato } from './contato-automatico.mjs'
 
 const CAMPOS = 'id,nome,apelido,nivel,user_id,data_nascimento,telefone,celular_recado,celular_responsavel,celular_mae,grupo_irmaos,escalar_com_irmao'
 const MOTIVOS = ['doenca', 'viagem', 'familia', 'outro']
@@ -128,9 +129,27 @@ export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log =
     ].join('\n')
   }
 
+  // Número que é robô de empresa: encerra a conversa SEM responder (qualquer despedida alimentaria o laço
+  // e gastaria chave de IA). Fica uma pendência aberta na Caixa; descartá-la libera o número.
+  async function contatoAutomatico(cfg, numero, pendentes, conhecido) {
+    if (cfg?.numero_conferencia && normalizarNumero(cfg.numero_conferencia) === numero) return false
+    const marca = { contato_automatico: true }
+    const bloqueio = exigir(await db.from('tarcisio_pendencias').select('id').eq('tipo', 'coordenacao').eq('numero', numero)
+      .eq('estado', 'aberta').contains('dados', marca).limit(1), 'ler bloqueio de robô')
+    if (bloqueio?.length) return true
+    const agora = relogio()
+    const historico = exigir(await db.from('tarcisio_mensagens').select('id,direcao,texto,created_at').eq('numero', numero)
+      .gte('created_at', new Date(+agora - 24 * 3600 * 1000).toISOString()).order('created_at', { ascending: false }).limit(80), 'ler histórico do robô') || []
+    const r = avaliarContato({ historico, novas: pendentes.map((p) => ({ ...p, created_at: p.created_at })), conhecido, agora })
+    if (!r.automatico) return false
+    await pendencia('coordenacao', numero, `Parece atendimento automático (robô de empresa): parei de responder. ${r.motivo}. Se for pessoa, descarte esta pendência para liberar o número.`, { ...marca, motivo: r.motivo })
+    log.warn(`robô de empresa ${numero.slice(0, 4)}…${numero.slice(-2)}: conversa encerrada (${r.motivo})`)
+    return true
+  }
+
   // Responde um número: junta o histórico recente, conversa com a IA e envia a resposta.
   async function responder(cfg, numero, chaveIA) {
-    const pendentes = exigir(await db.from('tarcisio_mensagens').select('id,texto,midia').eq('numero', numero)
+    const pendentes = exigir(await db.from('tarcisio_mensagens').select('id,texto,midia,created_at').eq('numero', numero)
       .eq('direcao', 'entrada').eq('respondida', false).order('created_at'), 'ler mensagens novas')
     if (!pendentes.length) return
     const marcar = async (extra = {}) => exigir(await db.from('tarcisio_mensagens').update({ respondida: true, ...extra })
@@ -138,6 +157,7 @@ export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log =
     const todos = await membrosQueServem()
     const acolhimento=await acolhida?.contexto(numero);
     const ligados = membrosDoNumero(numero, todos);for(const a of acolhimento||[])if(!ligados.some(m=>m.id===a.membro.id))ligados.push(a.membro)
+    if (await contatoAutomatico(cfg, numero, pendentes, ligados.length > 0)) return marcar()
     let texto
     let usadas = []
     const comandoAcolhida=acolhimento?.length?await acolhida.comando(numero,pendentes):null;
