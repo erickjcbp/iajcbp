@@ -18,7 +18,7 @@
     .cq-stat { flex:1; background:var(--surface2); border:1px solid var(--border-wine); border-radius:8px; padding:10px 6px; text-align:center; }
     .cq-stat b { display:block; font-family:var(--font-body); font-weight:800; font-size:20px; color:var(--gold); }
     .cq-stat span { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
-    .cq-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    .cq-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(148px,1fr)); gap:12px; }
     .cq-ins { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 6px; text-align:center; position:relative; transition:border-color .2s; }
     .cq-ins.ganha { border-color:var(--gold-dim); background:linear-gradient(165deg,rgba(232,185,74,.08),var(--surface)); }
     .cq-ins.locked .cq-patch { filter:grayscale(1) brightness(.45); opacity:.6; }
@@ -34,6 +34,32 @@
       .cq-stat b { font-family:var(--font-title); }
     .cq-grid > .cq-ins { display:flex; flex-direction:column; align-items:center; }
     .cq-grid > .cq-ins > .cq-nome { margin-top:auto; }
+    .cq-page { background-image:none; }
+    .cq-page #pwa-banner { display:none !important; }
+    button.cq-medal { appearance:none; font:inherit; color:var(--text); cursor:pointer; min-width:0; }
+    .cq-medal { padding:18px 10px 14px; gap:8px; }
+    .cq-medal.ganha { border-color:var(--border-wine); }
+    .cq-medal .cq-patch { --medal-size:96px; margin:0; }
+    .cq-medal .cq-patch > :is(img,svg) { width:var(--medal-size); height:calc(var(--medal-size) * 88 / 72); object-fit:contain; }
+    .cq-medal .cq-nome { font-size:13px; line-height:1.4; overflow-wrap:anywhere; }
+    .cq-medal.locked .cq-patch { filter:grayscale(.9) brightness(.85); opacity:.82; }
+    .cq-medal:hover { border-color:var(--gold-dim); }
+    .cq-medal:focus-visible { outline:2px solid var(--gold-light); outline-offset:3px; }
+    .cq-medal-overlay .cq-medal-modal { display:flex; flex-direction:column; gap:18px; max-width:none; text-align:center; }
+    .cq-medal-content { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:center; gap:clamp(20px,4vw,64px); padding:20px 0; }
+    .cq-medal-visual { display:flex; align-items:center; justify-content:center; }
+    .cq-medal-visual > :is(img,svg) { width:clamp(176px,22vw,320px); height:auto; aspect-ratio:72 / 88; object-fit:contain; }
+    .cq-medal-visual.locked { filter:grayscale(.9) brightness(.85); opacity:.82; }
+    .cq-medal-info { min-width:0; text-align:left; }
+    .cq-medal-title { font-family:var(--font-title); font-size:clamp(22px,2vw,32px); line-height:1.25; color:var(--gold-light); margin:0 0 10px; overflow-wrap:anywhere; }
+    .cq-medal-status { font-size:13px; font-weight:700; color:var(--text-muted); margin:0 0 20px; }
+    .cq-medal-status.ganha { color:var(--success-text); }
+    .cq-medal-desc { font-size:15px; line-height:1.65; color:var(--text); margin:0 0 22px; max-width:65ch; }
+    .cq-medal-requisito { padding:16px; border:1px solid var(--border-wine); border-radius:10px; background:var(--surface2); }
+    .cq-medal-requisito strong { display:block; font-size:13px; color:var(--gold); margin-bottom:7px; }
+    .cq-medal-requisito p { font-size:14px; line-height:1.6; margin:0; overflow-wrap:anywhere; }
+    .cq-medal-fechar { align-self:flex-end; width:auto; min-width:140px; min-height:48px; padding-inline:32px; }
+    @media(min-width:1900px){ .cq-medal .cq-patch { --medal-size:112px; } }
     /* Compacto no celular (21/10/2026): 4 insígnias por linha e respiros menores. */
     @media(max-width:639px){
       .cq-sec { margin:14px 0 2px; }
@@ -46,12 +72,24 @@
       .cq-nome { font-size:11px; overflow-wrap:anywhere; }
       .cq-lock { top:3px; right:4px; }
       .cq-trofeu { padding:8px 10px; margin-bottom:6px; }
+      .cq-grid > .cq-medal { padding:10px 3px 9px; gap:7px; }
+      .cq-medal .cq-patch { --medal-size:60px; }
+      .cq-medal .cq-nome { font-size:12px; line-height:1.35; }
+      .cq-medal-overlay .cq-medal-modal { gap:12px; }
+      .cq-medal-content { display:flex; flex:1; flex-direction:column; justify-content:center; gap:14px; padding:24px 0 12px; }
+      .cq-medal-visual > :is(img,svg) { width:176px; }
+      .cq-medal-info { width:100%; text-align:center; }
+      .cq-medal-title { font-size:23px; }
+      .cq-medal-status { margin-bottom:14px; }
+      .cq-medal-desc { font-size:14px; line-height:1.6; margin-bottom:18px; }
+      .cq-medal-requisito { text-align:left; padding:14px; }
+      .cq-medal-fechar { width:100%; }
     }
     @media(max-width:639px){.cq-medal-overlay{padding:0!important}.cq-medal-modal{height:100dvh!important;max-height:100dvh!important;border-radius:0!important;padding-top:calc(16px + env(safe-area-inset-top))}}
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
-<body>
+<body class="cq-page">
 <div id="app-header"></div>
 <div id="app-nav"></div>
 <div class="main" id="main-content"><span class="loading">Carregando...</span></div>
@@ -200,9 +238,10 @@ async function init() {
   else {
     const mg = document.createElement('div'); mg.className = 'cq-grid'; main.appendChild(mg);
     badges.forEach(b => {
-      const cell = document.createElement('div'); cell.className = 'cq-ins' + (b.ganho ? ' ganha' : ' locked');
-      cell.style.cursor = 'pointer'; cell.onclick = () => abrirMedalha(b);
-      const ico = document.createElement('div'); ico.className = 'cq-patch'; ico.innerHTML = medalSvg(b.icone, b.tier || tierDe(b.nivel), innerWidth < 640 ? 46 : 58);
+      const cell = document.createElement('button'); cell.type = 'button'; cell.className = 'cq-ins cq-medal' + (b.ganho ? ' ganha' : ' locked');
+      cell.setAttribute('aria-label', b.label + (b.ganho ? ' — Conquistada' : ' — Ainda não conquistada'));
+      cell.onclick = () => abrirMedalha(b);
+      const ico = document.createElement('div'); ico.className = 'cq-patch'; ico.innerHTML = medalSvg(b.icone, b.tier || tierDe(b.nivel), 96);
       const nome = document.createElement('div'); nome.className = 'cq-nome'; nome.textContent = b.label;
       cell.append(ico, nome);
       if (!b.ganho) { const lk = document.createElement('div'); lk.className = 'cq-lock'; comIcone(lk, 'lock', '', 'Bloqueado'); cell.appendChild(lk); }
@@ -210,17 +249,32 @@ async function init() {
     });
   }
 }
+let _cqDialogN = 0;
 function abrirMedalha(b) {
-  const ov = document.createElement('div'); ov.className = 'modal-overlay open cq-medal-overlay'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const md = document.createElement('div'); md.className = 'modal cq-medal-modal'; md.style.cssText = 'text-align:center;';
-  const ico = document.createElement('div'); ico.style.cssText = 'display:flex;justify-content:center;margin:6px 0 4px;' + (b.ganho ? '' : 'filter:grayscale(1) opacity(.5);'); ico.innerHTML = medalSvg(b.icone, b.tier || tierDe(b.nivel), 92);
-  const nm = document.createElement('div'); nm.style.cssText = 'font-family:var(--font-title);font-weight:800;font-size:18px;color:var(--gold-light);margin-top:6px;'; nm.textContent = b.label;
-  const st = document.createElement('div'); st.style.cssText = 'font-size:12px;font-weight:700;margin:4px 0 12px;color:' + (b.ganho ? 'var(--success-text)' : 'var(--text-muted)') + ';'; st.textContent = b.ganho ? '✓ Conquistada' : '🔒 Ainda não conquistada';
-  const desc = document.createElement('div'); desc.style.cssText = 'font-size:13px;color:var(--text);line-height:1.5;margin-bottom:12px;'; desc.textContent = b.desc || '';
-  const reqL = document.createElement('div'); reqL.style.cssText = 'font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;'; reqL.textContent = 'Como ganhar';
-  const req = document.createElement('div'); req.style.cssText = 'font-size:13px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px;margin-bottom:14px;'; req.textContent = b.requisito || '';
-  const btn = document.createElement('button'); btn.className = 'btn gold'; btn.style.width = '100%'; btn.textContent = 'Fechar'; btn.onclick = () => ov.remove();
-  md.append(ico, nm, st, desc, reqL, req, btn); ov.appendChild(md); document.body.appendChild(ov);
+  const origem = document.activeElement;
+  const fechar = () => { ov.remove(); if (origem && origem.isConnected) origem.focus({ preventScroll:true }); };
+  const ov = document.createElement('div'); ov.className = 'modal-overlay open cq-medal-overlay'; ov._acResolveClose = fechar; ov.onclick = (e) => { if (e.target === ov) fechar(); };
+  const md = document.createElement('div'); md.className = 'modal cq-medal-modal'; md.setAttribute('role', 'dialog'); md.setAttribute('aria-modal', 'true');
+  const corpo = document.createElement('div'); corpo.className = 'cq-medal-content';
+  const ico = document.createElement('div'); ico.className = 'cq-medal-visual' + (b.ganho ? '' : ' locked'); ico.innerHTML = medalSvg(b.icone, b.tier || tierDe(b.nivel), 240);
+  const info = document.createElement('div'); info.className = 'cq-medal-info';
+  const nm = document.createElement('h2'); nm.id = 'cq-medal-title-' + (++_cqDialogN); nm.className = 'cq-medal-title'; nm.textContent = b.label; md.setAttribute('aria-labelledby', nm.id);
+  const st = document.createElement('p'); st.className = 'cq-medal-status' + (b.ganho ? ' ganha' : ''); st.textContent = b.ganho ? '✓ Conquistada' : '🔒 Ainda não conquistada';
+  const desc = document.createElement('p'); desc.id = 'cq-medal-desc-' + _cqDialogN; desc.className = 'cq-medal-desc'; desc.textContent = b.desc || ''; md.setAttribute('aria-describedby', desc.id);
+  const requisito = document.createElement('div'); requisito.className = 'cq-medal-requisito';
+  const reqL = document.createElement('strong'); reqL.textContent = 'Como ganhar';
+  const req = document.createElement('p'); req.textContent = b.requisito || '';
+  requisito.append(reqL, req); info.append(nm, st, desc, requisito); corpo.append(ico, info);
+  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn gold cq-medal-fechar'; btn.textContent = 'Fechar'; btn.onclick = fechar;
+  md.append(corpo, btn); ov.appendChild(md); document.body.appendChild(ov);
+  md.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const botoes = md.querySelectorAll('button:not([disabled])');
+    const primeiro = botoes[0], ultimo = botoes[botoes.length - 1];
+    if (e.shiftKey && document.activeElement === primeiro) { e.preventDefault(); ultimo.focus(); }
+    else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primeiro.focus(); }
+  });
+  btn.focus({ preventScroll:true });
 }
 init();
 </script>
