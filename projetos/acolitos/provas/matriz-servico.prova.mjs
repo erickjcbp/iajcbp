@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';import fs from 'node:fs';import {iniciarProvas,PAPEIS} from './abrir-tela.mjs';
-const dir='/Users/erickmartins/arquivos/projetos/paroquia/auditorias/2026-10-13-matriz-servico';fs.mkdirSync(dir,{recursive:true});
+const dir='/Users/erickmartins/projetos/iajcbp/materiais-paroquia/auditorias/2026-10-13-matriz-servico';fs.mkdirSync(dir,{recursive:true});
 const tabelas={acolitos_membros:{data:[{id:'m1',nome:'Maria Clara',apelido:'Maria',nivel:'coroinha',status:'ativo',serve:true,created_at:'2025-01-10T12:00:00Z',data_nascimento:'2012-05-11'},{id:'m2',nome:'Daiane Silva',nivel:'coroinha',serve:false,status:'ativo'},{id:'m3',nome:'Edilaine Nunes',nivel:'coroinha',serve:false,status:'ativo'}]}};
 const p=await iniciarProvas();try{for(const width of [360,768,1366,2560]){
  const r=await p.abrir('jornada-admin.html',{papel:PAPEIS.admin,tabelas,largura:width,altura:900,avaliar:`abaJornada='evolucao';await renderAll();document.getElementById('splash')?.remove();document.getElementById('pwa-banner')?.remove();let pdf,csv;abrirRelatorio=v=>pdf=v;baixarCSV=(nome,linhas)=>csv=linhas;gerarRelatorioPDF();baixarRelatorioCSV();

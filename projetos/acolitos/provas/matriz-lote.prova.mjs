@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';import fs from 'node:fs';import {iniciarProvas,PAPEIS} from './abrir-tela.mjs';
-const dir='/Users/erickmartins/arquivos/projetos/paroquia/auditorias/2026-10-13-matriz-lote';fs.mkdirSync(dir,{recursive:true});
+const dir='/Users/erickmartins/projetos/iajcbp/materiais-paroquia/auditorias/2026-10-13-matriz-lote';fs.mkdirSync(dir,{recursive:true});
 const membros=Array.from({length:24},(_,i)=>({id:'m'+i,nome:'Membro de prova '+i,apelido:'Membro '+i,nivel:'coroinha',status:'ativo',created_at:'2025-01-10T12:00:00Z',data_nascimento:'2012-05-11'}));
 const tabelas={acolitos_membros:{data:membros},acolitos_habilitacoes:{data:[]}};const rpcs={acolitos_jornada_editar_lote:{data:{ok:true,total:2}}};const p=await iniciarProvas();
 try{

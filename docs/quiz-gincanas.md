@@ -27,7 +27,7 @@ Migração: `supabase/migrations/20261022120000_quiz_gincanas.sql`, aplicada ao 
 - `npm run provar-regras`: 505 testes passaram.
 - `node projetos/acolitos/provas/quiz-banco.prova.mjs`: 19 verificações no PostgreSQL 17 isolado, incluindo RLS real, concorrência entre dois responsáveis, duplicidade, isolamento entre eventos, estorno e encerramento.
 - `node projetos/acolitos/provas/quiz-telas.prova.mjs`: fluxo completo com autenticação simulada e persistência no banco local real; 18 capturas, dois PDFs, nenhum erro de JavaScript e nenhuma rolagem horizontal verificada em 390, 768, 1366 e 2560px.
-- Capturas e PDFs em `/Users/erickmartins/arquivos/quiz-catolico-validacao`.
+- Capturas e PDFs em `/Users/erickmartins/projetos/iajcbp/materiais-paroquia/provas/quiz-catolico-validacao`.
 - Produção: conta/projeto Vercel confirmados, migração aplicada, grants conferidos. O fluxo de usuário autenticado em produção não foi executado; a prova funcional usa banco isolado e sessão simulada. A geração real foi comprovada com uma pergunta na Anthropic; o login de produção não foi usado na prova isolada.
 
 As provas locais usam porta 55439 e banco `quiz_validacao`; não leem `.env` e não usam dados ou credenciais de produção. Servidor de prova na porta 5189. Para repetir, iniciar o PostgreSQL isolado, executar a prova de banco, iniciar `quiz-ui-servidor.mjs` e executar a prova de telas. Não rodar o servidor de provas como servidor do aplicativo.
@@ -43,7 +43,7 @@ O telão abre em outra janela autenticada e acompanha a condução por polling a
 
 Migração adicional: `20261022170000_dinamicas_temporadas.sql`. Preserva o livro e as permissões da primeira versão; a RPC anterior vira helper privado sem EXECUTE para clientes. A lista de retiros disponível a Dinâmicas contém apenas resumo de retiros, sem conceder escrita ou acesso às equipes/compras do módulo Retiros.
 
-Validação adicional: `dinamicas-telas.prova.mjs` executa seleção do nível, alternativa, casa, revelação sincronizada em outra janela, pontuação, recarregamento, estorno e nova temporada com saldo zero. Capturas atualizadas em `/Users/erickmartins/arquivos/quiz-catolico-validacao/dinamicas-v2`, nas larguras 390, 768, 1366 e 2560px. Banco de prova isolado, autenticação simulada. A suíte geral passou com 506 testes; a prova de banco foi ampliada para 25 verificações.
+Validação adicional: `dinamicas-telas.prova.mjs` executa seleção do nível, alternativa, casa, revelação sincronizada em outra janela, pontuação, recarregamento, estorno e nova temporada com saldo zero. Capturas atualizadas em `/Users/erickmartins/projetos/iajcbp/materiais-paroquia/provas/quiz-catolico-validacao/dinamicas-v2`, nas larguras 390, 768, 1366 e 2560px. Banco de prova isolado, autenticação simulada. A suíte geral passou com 506 testes; a prova de banco foi ampliada para 25 verificações.
 
 
 ## Correção de navegação e quantidades (22/10/2026)
@@ -54,7 +54,7 @@ A entrada renderiza sem esperar quiz_config. As abas internas usam os dados já 
 
 A arquitetura do app continua sendo de páginas HTML: ir para outro módulo usa a navegação normal do projeto. Não foi introduzido outro roteador ou um app embutido. O retorno agora restaura a seção em vez de abrir o placar do zero.
 
-Prova nova: `dinamicas-navegacao.prova.mjs`, com a consulta de configuração de IA artificialmente pendente, contagem de consultas por troca de aba, verificação de DOM preservado no polling, clique no módulo ativo e rota de retorno montada pelo menu de outra seção. Capturas em `/Users/erickmartins/arquivos/quiz-catolico-validacao/navegacao-v3`. A suíte geral passou com 509 testes.
+Prova nova: `dinamicas-navegacao.prova.mjs`, com a consulta de configuração de IA artificialmente pendente, contagem de consultas por troca de aba, verificação de DOM preservado no polling, clique no módulo ativo e rota de retorno montada pelo menu de outra seção. Capturas em `/Users/erickmartins/projetos/iajcbp/materiais-paroquia/provas/quiz-catolico-validacao/navegacao-v3`. A suíte geral passou com 509 testes.
 
 
 ## Recusa do esquema em quizzes de 24 perguntas (22/10/2026)

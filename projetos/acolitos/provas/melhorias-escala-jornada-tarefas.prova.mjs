@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { iniciarProvas, PAPEIS } from './abrir-tela.mjs';
-const destino='/Users/erickmartins/arquivos/projetos/paroquia/auditorias/2026-10-13-melhorias';
+const destino='/Users/erickmartins/projetos/iajcbp/materiais-paroquia/auditorias/2026-10-13-melhorias';
 fs.mkdirSync(destino,{recursive:true});
 const maria={id:'m1',nome:'Maria Clara',apelido:'Maria',nivel:'coroinha',data_nascimento:'2012-05-11',status:'ativo',serve:true,comunidade:'matriz',user_id:'u1'};
 const tabelas={acolitos_membros:{data:[maria,{...maria,id:'m2',nome:'João',apelido:'João',nivel:'acolito_guardiao',data_nascimento:null}]},acolitos_listas:{data:[{tipo:'setor',valor:'secretaria',label:'Secretaria',meta:{cor:'#579bfc'}}]},acolitos_tarefas:{data:[{id:'t1',titulo:'Preparar acolhida',time_slug:'secretaria',responsavel_id:'m1',responsavel:{nome:'Maria Clara',apelido:'Maria'},prazo:'2026-10-18',recorrencia:'nenhuma'}]},acolitos_habilitacoes:{data:[]},acolitos_celebracoes:{data:[]},acolitos_modelos:{data:[]}};

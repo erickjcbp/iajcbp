@@ -17,4 +17,4 @@
 - [x] Interface: mapa de capítulos preservado, aventuras da semana, jogos/fotos e revisão por abas.
 - [x] Operação: teste real sem disparar convites de teste a membros, agendamento na VPS e confirmação pública.
 
-Verificado em produção em 26/10/2026. Publicação dpl_3Q6bWUeZtVc4vTkvByAy1WZSNBbb; migração109 aplicada; timer jornada-semanal ativo e primeiro ciclo com0 convites. Prova autenticada: jogo único sob concorrência, foto privada, outro usuário negado, aprovação única. Evidências em /Users/erickmartins/arquivos/sao-tarcisio/jornada-semanal-2026-10-26.
+Verificado em produção em 26/10/2026. Publicação dpl_3Q6bWUeZtVc4vTkvByAy1WZSNBbb; migração109 aplicada; timer jornada-semanal ativo e primeiro ciclo com0 convites. Prova autenticada: jogo único sob concorrência, foto privada, outro usuário negado, aprovação única. Evidências em /Users/erickmartins/projetos/iajcbp/historico-tarcisio/jornada-semanal-2026-10-26.

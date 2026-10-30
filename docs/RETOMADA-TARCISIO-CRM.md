@@ -20,7 +20,7 @@
 - Sem novos envios WhatsApp, push ou alterações dos9cadastros reais por esta feature. Provas de banco usam transação com rollback.
 - Auditoria sem expor telefones:9em acompanhamento (1integracao,8tunica),2com contato direto apto,5por responsável,2bloqueados por contato não confirmado.18integrados fora do fluxo.
 - Config geral do robô estava pausado=false,respostas_ligadas=true,janela08-21h,teto150. Não alterar a pausa global por causa desta feature.
-- Cópia segura das fontes.mjs da VPS em `/Users/erickmartins/arquivos/sao-tarcisio/acolhida-crm-2026-10-26/robo-live`. Antes das mudanças, os módulos locais eram iguais aos publicados. A primeira tentativa de tar com wildcard entre aspas falhou; segunda corrigida, snapshot completo obtido. Nenhum.env foi copiado.
+- Cópia segura das fontes.mjs da VPS em `/Users/erickmartins/projetos/iajcbp/historico-tarcisio/acolhida-crm-2026-10-26/robo-live`. Antes das mudanças, os módulos locais eram iguais aos publicados. A primeira tentativa de tar com wildcard entre aspas falhou; segunda corrigida, snapshot completo obtido. Nenhum.env foi copiado.
 
 ## Fontes e responsabilidades
 1. `tarcisio-robo/acolhida-core.mjs`: seleção de destinatário, bloqueio de telefone próprio compartilhado, janela terça/quinta18-20h SP, validação textual conservadora de marcos,14encontros, apresentações da Raquel/família. Conteúdos usam paráfrases e referências Sacrosanctum Concilium/IGMR; não conferem aptidão/XP.
@@ -33,7 +33,7 @@
 8. `docs/superpowers/specs/2026-10-26-tarcisio-acolhida-crm.md` e plano em`docs/superpowers/plans/2026-10-26-tarcisio-acolhida-crm.md`.
 
 ## Provas já feitas
-- **150testes do robô passaram**, log em`/Users/erickmartins/arquivos/sao-tarcisio/acolhida-crm-2026-10-26/testes-robo.txt`.
+- **150testes do robô passaram**, log em`/Users/erickmartins/projetos/iajcbp/historico-tarcisio/acolhida-crm-2026-10-26/testes-robo.txt`.
 - Novos testes: `node --test tarcisio-robo/acolhida-core.test.mjs tarcisio-robo/acolhida.test.mjs` —15casos, incluindo11/12anos, mãe, telefone partilhado, família dedup, agenda, texto negativo, outro filho, pausa negativa,14encontros sem encerrar prazo e envio após avanço cancelado.
 - Prova SQL em **produção com rollback**, sem envio externo: reserva única/dia, entrega/histórico únicos, registro/transição, idempotência, marcos fora da ordem e RLS (conta sem permissão vê0linhas). Arquivo preservado `docs/provas/acolhida-crm-rollback-2026-10-26.sql`; contém as definições e fixtures sintéticas, encerraROLLBACK. Para repetir, usar psql comON_ERROR_STOP; revisar primeiro.
 - `node projetos/acolitos/provas/crm-acolhida.prova.mjs`: passou em390/768/1440/2560, controles, ficha, marcos, sem overflow. Imagens na pasta da entrega; ficha390 foi inspecionada visualmente.
@@ -62,7 +62,7 @@ Agente somente leitura`/root/revisao_acolhida` encontrou5casos; todos receberam 
 ## Acessos sem segredos
 - LerAGENTS.md eCLAUDE.md; nunca trocar contas globais.
 - Vercel projetoiajcbp,scopeerickjcbp-1650s-projects,sempre `vercel --global-config ~/.vercel-iajcbp`.
-- Staging isolado: `/Users/erickmartins/arquivos/sao-tarcisio/jornada-implementacao-2026-10-25/publicacao`. Última produção anterior é a prévia de pop-ups `dpl_vUmQ6sa7VRPBaMmLMNM4SuU6BkGK`; esta featureCRM não foi publicada.
+- Staging isolado: `/Users/erickmartins/projetos/iajcbp/historico-tarcisio/jornada-implementacao-2026-10-25/publicacao`. Última produção anterior é a prévia de pop-ups `dpl_vUmQ6sa7VRPBaMmLMNM4SuU6BkGK`; esta featureCRM não foi publicada.
 - `.env` possuiSUPABASE_DB_URL; helper seguro`/tmp/tarcisio-psql.cjs` valida ref e passaPGPASSWORD só por ambiente. Não imprimirURI/chaves.
 - SSH`root@179.198.107.71`,chave`~/.ssh/sator_whatsapp_gateway_ed25519`; diretório`/opt/whatsapp/tarcisio`; container`wa-tarcisio-robo-1`. Variáveis do container nunca devem aparecer emlogs.
 - O worktree tem MUITAS mudanças anteriores não relacionadas. Não resetar, não masscommit, não publicar o diretório inteiro. Sem commit desta feature até aqui.
@@ -91,7 +91,7 @@ Agente somente leitura`/root/revisao_acolhida` encontrou5casos; todos receberam 
 - Tarcísio APROVA cadastro (aprovacao_cadastro → integracao) quando há nome completo, nascimento e contato com WhatsApp confirmado; senão abre pendência na Caixa com o que falta. Nunca recusa.
 - Integração pelo WhatsApp: 4 apresentações (pastoral+missas vindas das celebrações, escala/ausências, vestes/roupas, chegada/conduta), uma por dia, qualquer dia 08–20h. Após a 4ª, "li e entendi" registra integracao_realizada (→ etapa whatsapp, grupo é com a coordenação).
 - Vestes/roupas: fonte = avisos antigos ("roupa discreta e adequada, sapato fechado, evitar chinelos"). Roupas curtas/vestidos/saias valem só para o retiro. Dono pode ter regra mais rígida para missas — perguntar.
-- Prévia das 4 mensagens enviada ao número de conferência. Vídeo motion: pacote em ~/Downloads/Compactados/2026-10/motion-claude-code é de After Effects (não instalado); aproveitar só os princípios (mola, curva .86/0/.07/1, entrada em cascata, voz manda no tempo).
+- Prévia das 4 mensagens enviada ao número de conferência. Vídeo motion: pacote em ~/projetos/materiais-recebidos/compactados/2026-10/motion-claude-code é de After Effects (não instalado); aproveitar só os princípios (mola, curva .86/0/.07/1, entrada em cascata, voz manda no tempo).
 
 ## 27/10 — integração = UM vídeo (migração 115)
 - Vídeo: `midia/video-integracao/` (roteiro, voz do dono em audio/, ilustrações em arte/, SFX do pacote motion). Versão leve de 5,5 MB hospedada em `tarcisio/integracao/apresentacao-pastoral-v1.mp4`. Para refazer: `node voz.mjs && node quadros.mjs todos && node montar.mjs`.
@@ -117,7 +117,7 @@ Agente somente leitura`/root/revisao_acolhida` encontrou5casos; todos receberam 
 - Suíte existente `node --test --test-reporter=dot tarcisio-robo/*.test.mjs` passou. Conferidas as 28 mensagens renderizadas (14 por canal), de 694 a 1119 caracteres, sem campos vazios ou rótulos antigos de tarefas.
 - Publicado SOMENTE acolhida-core.mjs na VPS, com backup anterior `/opt/whatsapp/tarcisio/robo/acolhida-core.mjs.bak-20261027-catequeses`; imagem reconstruída e robô reiniciado. Hash conferido DENTRO do container: `8438c5ed3cdac06c31d81c347c834c18710f8ac2a61149bcc182cd6c3ea0b57d`.
 - Pós-publicação: WhatsApp `open`, acolhida ativa; simulação somente leitura para 29/10 18h gerou 5 catequeses de índice 1, todas com conteúdo novo e sem tarefas. Nenhum disparo manual nesta atualização.
-- Prévia integral dos dois canais: `/Users/erickmartins/arquivos/sao-tarcisio/catequeses-aprovadas-2026-10-27/previa-mensagens.md`.
+- Prévia integral dos dois canais: `/Users/erickmartins/projetos/iajcbp/historico-tarcisio/catequeses-aprovadas-2026-10-27/previa-mensagens.md`.
 
 
 ## 27/10 — 14 artes aprovadas e integradas aos envios
@@ -127,14 +127,14 @@ Agente somente leitura`/root/revisao_acolhida` encontrou5casos; todos receberam 
 - Legenda de até 1024 caracteres segue junto da imagem; acima disso envia a imagem com título e depois o texto completo. A entrega só termina após ambos; falha de acolhida permanece sem repetição automática.
 - Suíte completa do robô passou, incluindo novos casos de capítulos 1/14, índice inválido, fila antiga e texto longo. Publicados apenas os 3 módulos alterados; backups `.bak-20261027-artes` no diretório do robô da VPS.
 - Conferência dentro do container: hashes dos 3 módulos iguais aos locais; WhatsApp open; acolhida ativa; robô não pausado e respostas ligadas. Simulação com dados atuais e escrita apenas em memória: 5 catequeses para 29/10 18h, todas capítulo 1 + arte 01, texto integral. Nenhum disparo manual.
-- Evidência: `/Users/erickmartins/arquivos/sao-tarcisio/catequeses-artes-2026-10-27/verificacao-publicacao.json`.
+- Evidência: `/Users/erickmartins/projetos/iajcbp/historico-tarcisio/catequeses-artes-2026-10-27/verificacao-publicacao.json`.
 
 
 ## 27/10 — correção do recebimento da túnica do Henzo
 - Mensagem real `983b9fe1-b94b-4bee-86a7-d2f42ddc0278`: “Ola Tarcísio, minha túnica já foi recebida”. IA chamou registrar_acolhida corretamente, mas confirmacaoExplicita não reconhecia a voz passiva; ferramenta recusou e abriu pendência de coordenação.
 - Validador aceita “túnica foi recebida/retirada/buscada”; mantém bloqueio de negativa, previsão e hipótese (incluindo “se a túnica foi recebida”). Suíte completa passou. Publicado só acolhida-core.mjs, backup `.bak-20261027-recebimento-passivo`; hash no container `eb08215523a8587033ebca198d5d24358262ccf2d18b77dc96d4f39290139655`.
 - Reaplicada a mensagem original pelo executor normal, sem envio de WhatsApp: Henzo agora tem_tunica=true, etapa disponivel_escala. Proposta integrado pendente `28061b28-340d-40cd-9e93-e5f0a82ea80e`, decisão permanece com a coordenação. Só a pendência técnica antiga específica foi resolvida, com justificativa.
-- Evidência em `/Users/erickmartins/arquivos/sao-tarcisio/catequeses-artes-2026-10-27/correcao-henzo.json`. WhatsApp open, nenhuma mensagem manual enviada.
+- Evidência em `/Users/erickmartins/projetos/iajcbp/historico-tarcisio/catequeses-artes-2026-10-27/correcao-henzo.json`. WhatsApp open, nenhuma mensagem manual enviada.
 
 
 ## 27/10 — interpretação semântica publicada (autorizada pelo dono)
@@ -145,7 +145,7 @@ Agente somente leitura`/root/revisao_acolhida` encontrou5casos; todos receberam 
 - Validação: 170 testes locais passaram; 20/20 classificações com IA real (afirmação indireta, voz passiva, pronome, sim contextual, negativa, futuro, hipótese, outra pessoa, dois irmãos, vídeo, contato Raquel, tentativa de manipular instruções). Primeira rodada teve 2 falsos negativos, corrigidos com exemplos explícitos; rodada final 20/20.
 - Prova ponta a ponta com IA real em banco em memória e gateway falso: 4/4 passaram. “Minha túnica já foi recebida” e “Já estou com ela” registraram tunica_recebida; “pronta, vou buscar” só respondeu_tunica; frase ambígua pediu esclarecimento, sem registro e sem coordenação.
 - Publicados somente ia.mjs, acolhida.mjs, assistente.mjs e principal.mjs. Backup prévio `.bak-20261027-semantica` no diretório do robô da VPS. Após build/reinício, hashes conferidos dentro do container, interpretação conectada no principal, WhatsApp open, robô e respostas ativos, acolhida ativa, 0 entradas pendentes. Nenhuma mensagem manual ou alteração de cadastro nesta atualização; Henzo continua disponivel_escala com proposta integrado aguardando coordenação.
-- Evidências e scripts: `/Users/erickmartins/arquivos/sao-tarcisio/interpretacao-semantica-2026-10-27/` (`prova-ia-real-final.jsonl`, `prova-fluxo-ia-real.jsonl`, `hashes-publicados.json`, `verificacao-producao.json`).
+- Evidências e scripts: `/Users/erickmartins/projetos/iajcbp/historico-tarcisio/interpretacao-semantica-2026-10-27/` (`prova-ia-real-final.jsonl`, `prova-fluxo-ia-real.jsonl`, `hashes-publicados.json`, `verificacao-producao.json`).
 
 
 ## 27/10 — concluir CRM ativa toda a grade da Matriz
@@ -161,8 +161,8 @@ Agente somente leitura`/root/revisao_acolhida` encontrou5casos; todos receberam 
 - Dono recebeu push “escala ainda não montada”, sem arte no WhatsApp. Causa comprovada: semana 31/10–01/11 tinha só 4 linhas em 2 de 5 missas; escala-auto tratava QUALQUER linha existente como semana pronta e não chamava o gerador. Workflow 40583165127 falhou às 21:01 UTC porque 3/5 missas estavam vazias; o push foi consequência correta desse bloqueio.
 - `escala-auto.mjs`: `temVagasAbertas` compara o modelo por função/quantidade com posições existentes. Semana completa segue somente para conferência; parcial passa pelo mesmo gerador da tela, que preserva linhas existentes e completa vagas. 171 testes do robô passaram, incluindo regressão de parcial preservada e arte pedida após completar.
 - Publicado SOMENTE escala-auto.mjs; backup remoto `.bak-20261027-escala-parcial`; hash dentro do container `a1c3f4b53862465e84e249f047aa7f0dd805f34845501c3774198ec556a32ad8`.
-- Após reinício (para interromper a espera antiga da arte falhada), estado anterior da tentativa foi salvo em `/Users/erickmartins/arquivos/sao-tarcisio/escala-parcial-2026-10-27/estado-anterior.json`. Reaberta exclusivamente a semana 2026-10-31 em gerando/falhou, sem mensagem_dono_id, para uma tentativa corrigida.
-- Resultado real: 92 posições, 4 anteriores preservadas + 88 novas, 0 vagas vazias; semMinistros=false. Workflow 40584252303 SUCCESS, arte de 01/11 gerada às 21:08:54 UTC, HTTP 200. Imagem salva e inspecionada em `/Users/erickmartins/arquivos/sao-tarcisio/escala-parcial-2026-10-27/previa-2026-11-01.png`.
+- Após reinício (para interromper a espera antiga da arte falhada), estado anterior da tentativa foi salvo em `/Users/erickmartins/projetos/iajcbp/historico-tarcisio/escala-parcial-2026-10-27/estado-anterior.json`. Reaberta exclusivamente a semana 2026-10-31 em gerando/falhou, sem mensagem_dono_id, para uma tentativa corrigida.
+- Resultado real: 92 posições, 4 anteriores preservadas + 88 novas, 0 vagas vazias; semMinistros=false. Workflow 40584252303 SUCCESS, arte de 01/11 gerada às 21:08:54 UTC, HTTP 200. Imagem salva e inspecionada em `/Users/erickmartins/projetos/iajcbp/historico-tarcisio/escala-parcial-2026-10-27/previa-2026-11-01.png`.
 - Pipeline enviou arte ao número de conferência e registrou botões/texto ID `3EB0D537EAACE7EF3F6145`, estado aguardando. Durante a conferência final mudou para confirmada pelo fluxo existente; 92 registros de aviso da semana e pedido `escala:2026-11-01` criado. Esta execução NÃO chamou a confirmação diretamente.
 
 
@@ -174,7 +174,7 @@ Agente somente leitura`/root/revisao_acolhida` encontrou5casos; todos receberam 
 - Dono criticou apresentações repetidas (“aqui é Tarcísio”). Prompt agora exige ler histórico e continuar o assunto, sem repetir Oi/Olá/apresentação a cada resposta. Apresentar-se apenas no primeiro contato ou quando perguntarem quem fala.
 - Validação: 174 testes locais passaram; 4 casos semânticos com IA real (troca clara, hipótese, saída não autorizada, cancelamento) + fluxo completo simulado com IA real passaram. Fluxo confirmou entrada→retirada e respondeu “Pronto...” sem reapresentação. Nenhuma mensagem real nos testes.
 - Publicados somente acolhida-core.mjs, acolhida.mjs, assistente.mjs, ia.mjs e evolution.mjs; backups `.bak-20261027-responsavel-continuacao`. Hashes dentro do container conferidos; WhatsApp open; pai no grupo e como destinatário da acolhida, mãe fora, acolhida sem pausa e retorno à mãe registrado.
-- Evidências: `/Users/erickmartins/arquivos/sao-tarcisio/troca-responsavel-2026-10-27/`.
+- Evidências: `/Users/erickmartins/projetos/iajcbp/historico-tarcisio/troca-responsavel-2026-10-27/`.
 
 
 ## 27/10 — cerimoniário com preferência na cruz da Matriz
@@ -184,7 +184,7 @@ Agente somente leitura`/root/revisao_acolhida` encontrou5casos; todos receberam 
 - Fixture histórica original preservada; expectativas da regra nova em `fixtures/gerador-semana-cruz-cerimoniario.json`. Suíte conjunta de regras/API e robô passou (719 testes).
 - Publicado só o núcleo alterado no staging Vercel isolado (arquivos app/API do staging conferidos contra HEAD; divergências anteriores eram apenas 2 provas). Projeto e conta confirmados. Produção Vercel `dpl_4MJzxz6C5waWFJJbtaNF4uvotvZ8` READY, domínio público devolve hash novo.
 - Mesmo núcleo publicado na VPS em robo/cores e imagem reconstruída; backup `.bak-20261027-cruz-cerimoniario`. Hash no app público e dentro do container: `f71b390b63a4f18d1e9e3a6368704825cb15aeea001044d04b70955e93e63d31`. Simulação sintética dentro do container confirmou preferência; nenhuma escala real ou envio foi alterado. Semana atual permanece confirmada.
-- Evidências em `/Users/erickmartins/arquivos/sao-tarcisio/cruz-cerimoniario-2026-10-27/`.
+- Evidências em `/Users/erickmartins/projetos/iajcbp/historico-tarcisio/cruz-cerimoniario-2026-10-27/`.
 
 ## 27/10 — pais ministros, exceção Assis e conversas
 - Dono autorizou acompanhar os pais nos itens 2,3,4,5,6,7,9,10,11,12 da lista (Jullyana, Lucas Fernandes, Manuela, Maria Clara Amador, Maria Clara Matias, Maria Clara Pereira, Miguel dos Santos, Pedro Miguel, Rayssa, Sophia), incluindo irmãos. Ativados também Laura Manuele, Matheus Fernandes Lima e Rafaela Rodrigues.
@@ -196,7 +196,7 @@ Agente somente leitura`/root/revisao_acolhida` encontrou5casos; todos receberam 
 - Arte regenerada após os ajustes: workflow 40604496880 sucesso; acolitos_escala_artes de 01/11 gerado_em 2026-10-27T23:47:43.494Z. Não reenfileirada publicação nos grupos já enviada.
 - Robô publicado e ativo: gerador SHA256 a57a80b8e1c9a7ba9344f25bbe6f2d0c6ec903c5a07f722c6fa2f46aa1225f2c; escala-auto 6b246bee76654661491ab3267f5f48dadcd76d15df7a1293a5f5dd6d748c00a3. Hashes conferidos no contêiner e log de inicialização com IA.
 - Conversas: lista com busca/filtros e pendências, histórico com busca e datas, envios automáticos, contexto do membro/CRM/túnica, atalhos para Caixa e WhatsApp. Sem compositor fictício nem confirmação de leitura inventada. Celular abre histórico em tela cheia; desktop ocupa a largura disponível.
-- Prova nova projetos/acolitos/provas/tarcisio-conversas.prova.mjs com dados sintéticos: lista/chat a 360,390,768,1440,2560; busca geral e no histórico, sem overflow, alvos >=44, campos >=16, tela cheia móvel e largura total desktop. Fotos inspecionadas em /Users/erickmartins/arquivos/sao-tarcisio/conversas-2026-10-27. Remover splash na prova; aguardar transição antes de medir (medição intermediária pode dar falsa falha no tablet).
+- Prova nova projetos/acolitos/provas/tarcisio-conversas.prova.mjs com dados sintéticos: lista/chat a 360,390,768,1440,2560; busca geral e no histórico, sem overflow, alvos >=44, campos >=16, tela cheia móvel e largura total desktop. Fotos inspecionadas em /Users/erickmartins/projetos/iajcbp/historico-tarcisio/conversas-2026-10-27. Remover splash na prova; aguardar transição antes de medir (medição intermediária pode dar falsa falha no tablet).
 - Suíte completa passou: node --test --test-reporter=dot projetos/acolitos/*.test.js testes-api/*.test.mjs tarcisio-robo/*.test.mjs. Publicação Vercel isolada inclui somente config.html, escala.html, gerador-escala-core.js, tarcisio-painel.css e tarcisio-painel.js; manter demais alterações locais e arquivos LEIA-ME alheios.
 - Vercel final dpl_D1RH6x7FY2awetDjEqsSQG9mbnCb READY, https://iajcbp-6t5gh8ked-erickjcbp-1650s-projects.vercel.app. Os cinco arquivos publicados foram novamente baixados do domínio coroinhas.jcbplimeira.com.br e os hashes conferem com os locais.
 

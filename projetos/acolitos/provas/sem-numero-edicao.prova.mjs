@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { iniciarProvas,PAPEIS } from './abrir-tela.mjs'
-const destino='/Users/erickmartins/arquivos/auditorias/coroinhas/2026-10/sem-numero-edicao';fs.mkdirSync(destino,{recursive:true})
+const destino='/Users/erickmartins/projetos/iajcbp/materiais-paroquia/auditorias/2026-10/sem-numero-edicao';fs.mkdirSync(destino,{recursive:true})
 const provas=await iniciarProvas()
 try{
  for(const [largura,relacao,erro]of [[375,'proprio',false],[768,'proprio',false],[1366,'proprio',false],[2560,'proprio',false],[375,'responsavel',false],[375,'proprio',true]]){

@@ -8,4 +8,4 @@ Navegação: construir atualização fora do DOM e trocar ao concluir, manter al
 
 Verificar manual/automático, aprovação, interativas, jogo/foto, voltar/cancelar/enviar/reabrir, teclado e responsividade 390/768/1440/2560. Publicar somente arquivos desta etapa no staging isolado.
 
-Concluído: dpl_Hz9HotBsRqgrWsQA1ZXqgM3qQ5t7. Fontes públicas conferidas; roteiros110 e formação243 verificados. Evidências em /Users/erickmartins/arquivos/sao-tarcisio/quests-repaginacao-2026-10-26.
+Concluído: dpl_Hz9HotBsRqgrWsQA1ZXqgM3qQ5t7. Fontes públicas conferidas; roteiros110 e formação243 verificados. Evidências em /Users/erickmartins/projetos/iajcbp/historico-tarcisio/quests-repaginacao-2026-10-26.

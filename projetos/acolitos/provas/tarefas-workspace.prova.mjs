@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';import fs from 'node:fs';import {iniciarProvas,PAPEIS} from './abrir-tela.mjs';
-const dir='/Users/erickmartins/arquivos/projetos/paroquia/auditorias/2026-10-13-tarefas-revisao';fs.mkdirSync(dir,{recursive:true});
+const dir='/Users/erickmartins/projetos/iajcbp/materiais-paroquia/auditorias/2026-10-13-tarefas-revisao';fs.mkdirSync(dir,{recursive:true});
 const task=(id,titulo,time_slug,extra={})=>({id,titulo,time_slug,prazo:'2026-10-18',responsavel_id:'m1',responsavel:{nome:'Maria Clara',apelido:'Maria'},...extra});
 const tabelas={acolitos_tarefas:{data:[task('t1','Conferir estoque de velas','liturgia',{prazo:'2026-10-10',observacao:'Verificar as velas e separar as peças para as missas.'}),task('t2','Preparar acolhida das famílias','secretaria',{andamento_em:'2026-10-11T12:00:00Z'}),task('t3','Organizar lista de membros','secretaria',{concluida_em:'2026-10-12T12:00:00Z'}),task('t4','Revisar os paramentos','liturgia')]},acolitos_listas:{data:[{tipo:'setor',valor:'liturgia',label:'Liturgia',meta:{cor:'#9c8cf5'}},{tipo:'setor',valor:'secretaria',label:'Secretaria',meta:{cor:'#579bfc'}}]},acolitos_config:{data:[{chave:'responsabilidades',valor:{liturgia:'Preparar o altar e cuidar dos materiais litúrgicos.',secretaria:'Organizar cadastros e acompanhar a comunicação.'}}]}};
 const provas=await iniciarProvas();

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {iniciarProvas,PAPEIS} from './abrir-tela.mjs';
-const destino='/Users/erickmartins/arquivos/projetos/paroquia/auditorias/2026-10-13-matriz';fs.mkdirSync(destino,{recursive:true});
+const destino='/Users/erickmartins/projetos/iajcbp/materiais-paroquia/auditorias/2026-10-13-matriz';fs.mkdirSync(destino,{recursive:true});
 const membro={id:'m1',nome:'Maria Clara',apelido:'Maria',nivel:'coroinha',status:'ativo',serve:true,created_at:'2025-01-10T12:00:00Z',telefone:'19999999999',data_nascimento:'2012-05-11'};
 const hoje=new Date().toLocaleDateString('en-CA');
 const tabelas={acolitos_membros:{data:[membro]},acolitos_escalas:{data:[{membro_id:'m1',status:'presente',acolitos_celebracoes:{data:hoje,horario:'10:00'}},{membro_id:'m2',substituto_id:'m1',status:'substituido',acolitos_celebracoes:{data:hoje,horario:'19:00'}}]}};

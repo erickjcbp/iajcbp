@@ -34,7 +34,7 @@ A prévia usa progresso e temporadas demonstrativos, identificados no topo, com 
 Critérios consultados em modo somente leitura; nenhum dado de membro consultado ou alterado.
 
 ## Publicação
-Troféus aprovados pelo dono em 30/10/2026: “aprovado os trofeus”. Integração e publicação da etapa em preparação.
-A etapa anterior publicada continua no commit 6bec9a7.
+Troféus aprovados pelo dono em 30/10/2026: “aprovado os trofeus”. Etapa publicada no commit 90daff8, enviado ao GitHub. Deploy dpl_7SHS69pJivVpMXJdzXctM5vkYnDd READY e domínio público conferido: 33 arquivos HTTP 200, idênticos à versão aprovada. Evidências em estudos/medalhas/colecao-2026-10-30/publicacao.json.
+A etapa anterior do commit 6bec9a7 foi preservada, acrescentando busca, filtros, requisitos e os três troféus.
 As três artes foram acrescentadas ao cache do sw.js, com BUILD atualizado para publicação.
 Publicar só a etapa aprovada a partir de uma base remota limpa; o main local preserva trabalho do Tarcísio que não deve ser enviado junto.

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {iniciarProvas,PAPEIS} from './abrir-tela.mjs';
-const destino='/Users/erickmartins/arquivos/sao-tarcisio/conversas-2026-10-27';
+const destino='/Users/erickmartins/projetos/iajcbp/historico-tarcisio/conversas-2026-10-27';
 fs.mkdirSync(destino,{recursive:true});
 const agora=new Date().toISOString(),antes=new Date(Date.now()-3600000).toISOString();
 const tabelas={

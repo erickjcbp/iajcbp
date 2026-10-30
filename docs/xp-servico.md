@@ -10,7 +10,7 @@ Os bônus de ajuda extra já existentes para substitutos/avulsos continuam separ
 
 `acolitos_xp_servico_meus` só retorna eventos da própria conta ou perfil familiar permitido. A leitura é confirmada por `acolitos_xp_servico_visto` depois que o popup fecha. Falha de leitura não inventa crédito; falha de confirmação não trava a fila e permite reapresentação futura. Na finalização mostra os 10 XP; os 20 XP de missa aparecem no próximo acesso ao perfil após a chamada finalizada.
 
-Migração: `docs/migrations/108_xp_missas_chamadas.sql`, aplicada ao projeto fttjgsotuosjfrasttds. Sem backfill de presenças antigas. SQL de teste local: `provas/xp-servico-banco.prova.cjs`, banco descartável em 127.0.0.1:55440. Prova no esquema real: `provas/xp-servico-producao.prova.cjs --producao`, com dados de celebração/XP em transação revertida e conta Auth temporária removida. Fotografias e relatórios: `~/arquivos/sao-tarcisio/xp-missas-2026-10-26`.
+Migração: `docs/migrations/108_xp_missas_chamadas.sql`, aplicada ao projeto fttjgsotuosjfrasttds. Sem backfill de presenças antigas. SQL de teste local: `provas/xp-servico-banco.prova.cjs`, banco descartável em 127.0.0.1:55440. Prova no esquema real: `provas/xp-servico-producao.prova.cjs --producao`, com dados de celebração/XP em transação revertida e conta Auth temporária removida. Fotografias e relatórios: `~/projetos/iajcbp/historico-tarcisio/xp-missas-2026-10-26`.
 
 Aceite conferido: autorização, uma transação, repetição e concorrência sem duplicar, estorno, substituição/atraso, leitura e confirmação de popup, preservação das marcações após falha, 390/768/1440/2560 px e regressões da Jornada. Publicação isolada: somente shared.js e chamada.html alterados sobre o pacote anteriormente publicado.
 

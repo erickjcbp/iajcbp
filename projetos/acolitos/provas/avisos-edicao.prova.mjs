@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { iniciarProvas, PAPEIS } from './abrir-tela.mjs'
-const destino='/Users/erickmartins/arquivos/auditorias/coroinhas/2026-10/avisos-edicao'
+const destino='/Users/erickmartins/projetos/iajcbp/materiais-paroquia/auditorias/2026-10/avisos-edicao'
 fs.mkdirSync(destino,{recursive:true})
 const aviso={id:'a1',titulo:'Retiro +14 — sexta',texto:'Mensagem original',imagem_url:null,grupos:['cerimoniarios'],privado:['pais'],quando:'2026-10-23T21:00:00Z',repetir:'nao',ativo:true,configuracao:{tipo:'fila_existente',destinos_rotulo:'Participantes elegíveis + grupo de cerimoniários',horario_rotulo:'Disparo único'}}
 const provas=await iniciarProvas()

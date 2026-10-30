@@ -2,7 +2,7 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),http=require('node:http');
 const puppeteer=require('puppeteer-core');
 const base=path.resolve(__dirname,'..');
-const saida=process.env.JORNADA_PILOTO_SAIDA||path.join(os.homedir(),'arquivos/sao-tarcisio/jornada-piloto-2026-10-25');
+const saida=process.env.JORNADA_PILOTO_SAIDA||path.join(os.homedir(),'projetos/iajcbp/historico-tarcisio/jornada-piloto-2026-10-25');
 const ler=f=>fs.readFileSync(path.join(base,f),'utf8');
 const conteudo=JSON.parse(ler('jornada-piloto.json'));
 const js=ler('jornada-piloto.js').replace("fetch('jornada-piloto.json').then(r=>{if(!r.ok)throw Error('Não foi possível carregar o piloto.');return r.json();})",'Promise.resolve('+JSON.stringify(conteudo)+')').replace(/<\/script/gi,'<\\/script');

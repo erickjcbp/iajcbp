@@ -1,5 +1,5 @@
 import puppeteer from 'puppeteer-core';import assert from 'node:assert/strict';import fs from 'node:fs';
-const pasta='/Users/erickmartins/arquivos/quiz-catolico-validacao';fs.mkdirSync(pasta,{recursive:true});
+const pasta='/Users/erickmartins/projetos/iajcbp/materiais-paroquia/provas/quiz-catolico-validacao';fs.mkdirSync(pasta,{recursive:true});
 const browser=await puppeteer.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,userDataDir:pasta+'/chrome-provas'});
 const page=await browser.newPage(),erros=[];page.on('pageerror',e=>erros.push(e.message));page.on('dialog',async d=>d.type()==='prompt'?d.accept('Justificativa da prova visual'):d.accept());
 const base='http://127.0.0.1:5189/projetos/acolitos/quizzes.html';

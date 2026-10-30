@@ -1,7 +1,7 @@
 import puppeteer from 'puppeteer-core';import assert from 'node:assert/strict';import fs from 'node:fs';import {createRequire} from 'node:module';import {randomUUID} from 'node:crypto';
 import {rpc,sql,ids,quote} from './quiz-db.mjs';
 const require=createRequire(import.meta.url),C=require('../quiz-core.js');
-const out='/Users/erickmartins/arquivos/quiz-catolico-validacao/dinamicas-v2';fs.mkdirSync(out,{recursive:true});
+const out='/Users/erickmartins/projetos/iajcbp/materiais-paroquia/provas/quiz-catolico-validacao/dinamicas-v2';fs.mkdirSync(out,{recursive:true});
 const retiro='dddddddd-dddd-4ddd-8ddd-dddddddddddd';let estado=rpc('iniciar_temporada',{retiro_id:retiro});
 if(estado.gincana.status==='encerrada')rpc('status',{gincana_id:estado.gincana.id,status:'em_andamento',justificativa:'Retomar prova visual'});
 else if(estado.gincana.status==='preparacao')rpc('status',{gincana_id:estado.gincana.id,status:'em_andamento',justificativa:'Início da prova visual'});

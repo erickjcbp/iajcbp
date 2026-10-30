@@ -18,7 +18,7 @@ try{
  if(process.argv.includes('--somente-reserva')){
   const out={site,reserva:reserve.niveis,operacional:cfg.operacional};
   await request('/rest/v1/pastoral_members?id=eq.'+memberId,{method:'DELETE'});memberId=null;await request('/auth/v1/admin/users/'+uid,{method:'DELETE'});uid=null;
-  fs.writeFileSync('/Users/erickmartins/arquivos/sao-tarcisio/jornada-implementacao-2026-10-25/reserva-producao.json',JSON.stringify(out,null,2));console.log(JSON.stringify(out));
+  fs.writeFileSync('/Users/erickmartins/projetos/iajcbp/historico-tarcisio/jornada-implementacao-2026-10-25/reserva-producao.json',JSON.stringify(out,null,2));console.log(JSON.stringify(out));
  }else{
  const gen=await call('jornada_gerar',{pedido_id:randomUUID(),nivel:'aspirante',objetivo:'Descobrir o ponto de encontro, o local de preparação e a pessoa a quem pedir ajuda na chegada.',referencias:'Atividade somente acompanhada e combinada com a equipe. Não abrir portas fechadas nem manipular objetos. Os espaços e seus nomes são apresentados pelo orientador no encontro. O objetivo é reconhecer os três pontos de apoio, com conversa ou indicação visual; não decorar nomes. Não afirmar qualquer norma litúrgica.'});
  if(gen.rascunho?.estado!=='rascunho')throw Error('Geração não produziu rascunho.');
@@ -35,6 +35,6 @@ try{
  const result={site,geracao_real:true,rascunho_ia:iaDraft,titulo_ia:gen.rascunho.conteudo.titulo,episodios_publicados:created.length,quests:created,conta_temporaria_removida:false};
  // Relatório público de conteúdo/configuração, nunca tokens ou dados pessoais reais.
  await request('/rest/v1/pastoral_members?id=eq.'+memberId,{method:'DELETE'});memberId=null;await request('/auth/v1/admin/users/'+uid,{method:'DELETE'});uid=null;result.conta_temporaria_removida=true;
- const out='/Users/erickmartins/arquivos/sao-tarcisio/jornada-implementacao-2026-10-25/producao.json';fs.writeFileSync(out,JSON.stringify(result,null,2));console.log(JSON.stringify(result));
+ const out='/Users/erickmartins/projetos/iajcbp/historico-tarcisio/jornada-implementacao-2026-10-25/producao.json';fs.writeFileSync(out,JSON.stringify(result,null,2));console.log(JSON.stringify(result));
  }
 }finally{if(memberId)await request('/rest/v1/pastoral_members?id=eq.'+memberId,{method:'DELETE'}).catch(()=>{});if(uid)await request('/auth/v1/admin/users/'+uid,{method:'DELETE'}).catch(()=>{});}

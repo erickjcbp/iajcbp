@@ -8,6 +8,6 @@ Aplicada a migração `novena_independente_das_observacoes`: coluna `novena_publ
 
 A prova `db/provas/novena_observacoes.sql` passou no banco: três missas visíveis, edição de todas as observações sem perder visibilidade, inscrição, troca e saída. Tudo dentro de transação com ROLLBACK. Comparação integral das escalas confirmou preservação dos registros originais.
 
-Navegador sem login no link publicado: três cards (7h, 8h30, 11h), 8h30 lotada, nenhum erro JavaScript. Fotos em 390px, 768px, 1366px e 2560px em `/Users/erickmartins/arquivos/projetos/paroquia/provas/2026-10/provas-novena-2026-10-10`; sem rolagem horizontal. Layout não foi alterado. A página publicada apresenta 8h30 como Outras comunidades, pois a observação atual não contém o campo textual `Local:` utilizado pela RPC.
+Navegador sem login no link publicado: três cards (7h, 8h30, 11h), 8h30 lotada, nenhum erro JavaScript. Fotos em 390px, 768px, 1366px e 2560px em `/Users/erickmartins/projetos/iajcbp/materiais-paroquia/provas/2026-10/provas-novena-2026-10-10`; sem rolagem horizontal. Layout não foi alterado. A página publicada apresenta 8h30 como Outras comunidades, pois a observação atual não contém o campo textual `Local:` utilizado pela RPC.
 
 Alteração aplicada diretamente no Supabase; não exige nova publicação Vercel.

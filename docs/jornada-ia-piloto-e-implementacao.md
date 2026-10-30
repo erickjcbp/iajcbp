@@ -138,7 +138,7 @@ Para custo: conteúdo versionado e reutilizado; nenhuma geração a cada abertur
 
 Conteúdo e demonstração do piloto criados. Validação funcional e visual registrada na pasta de entrega. Integração real com IA, novo avaliador de progresso, migração e publicação de produção continuam como trabalho de implementação. Esta entrega não concede pontos, não muda níveis e não envia avisos.
 
-Prova reproduzível: `node projetos/acolitos/provas/jornada-piloto.prova.cjs`. O comando gera a versão HTML independente em `~/arquivos/sao-tarcisio/jornada-piloto-2026-10-25`, serve apenas esse HTML num servidor temporário local e encerra o navegador de teste e o servidor no fim. Não carrega credenciais do projeto.
+Prova reproduzível: `node projetos/acolitos/provas/jornada-piloto.prova.cjs`. O comando gera a versão HTML independente em `~/projetos/iajcbp/historico-tarcisio/jornada-piloto-2026-10-25`, serve apenas esse HTML num servidor temporário local e encerra o navegador de teste e o servidor no fim. Não carrega credenciais do projeto.
 
 Resultado: 12 opções visitadas; seis objetivos, três selos e 50 XP fictícios sem duplicação; erro com pista; espera por confirmação, revisão e reenvio; persistência; guias acessíveis; fechamento por Escape com foco restaurado. Fotografias em 390, 768, 1440 e 2560 px, sem transbordamento horizontal e com alvos de ao menos 44 px. Modal de 390 × 844 px ocupa a tela inteira. Nenhum erro JavaScript observado nesses fluxos. Evidência em `validacao.json` e nas imagens da pasta de entrega.
 
@@ -152,4 +152,4 @@ O gerador tem reserva persistida de pedidos, limite de 12 tentativas por usuári
 
 Conteúdo de reserva: a referência inicial é 3/4/5 episódios conforme o nível, com novidades extras enquanto requisitos formais ainda estão pendentes. Essa referência orienta reposição; não significa que todos esses episódios já foram escritos. A dificuldade deve crescer em decisões e responsabilidade, preservando leitura curta e práticas combinadas.
 
-Provas: `jornada-core.test.js`, `testes-api/jornada.test.mjs`, `provas/jornada-quests.prova.cjs`, `provas/jornada-producao.prova.mjs` e `provas/jornada-visibilidade.prova.mjs`. Relatórios e fotografias em `~/arquivos/sao-tarcisio/jornada-implementacao-2026-10-25`. Publicação isolada baseada nas fontes exatas do deployment anterior, preservando outras alterações locais.
+Provas: `jornada-core.test.js`, `testes-api/jornada.test.mjs`, `provas/jornada-quests.prova.cjs`, `provas/jornada-producao.prova.mjs` e `provas/jornada-visibilidade.prova.mjs`. Relatórios e fotografias em `~/projetos/iajcbp/historico-tarcisio/jornada-implementacao-2026-10-25`. Publicação isolada baseada nas fontes exatas do deployment anterior, preservando outras alterações locais.

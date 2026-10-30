@@ -1,5 +1,5 @@
 import puppeteer from 'puppeteer-core';import assert from 'node:assert/strict';import fs from 'node:fs';import {rpc,sql} from './quiz-db.mjs';
-const out='/Users/erickmartins/arquivos/quiz-catolico-validacao/navegacao-v3';fs.mkdirSync(out,{recursive:true});
+const out='/Users/erickmartins/projetos/iajcbp/materiais-paroquia/provas/quiz-catolico-validacao/navegacao-v3';fs.mkdirSync(out,{recursive:true});
 const estado=rpc('iniciar_temporada',{retiro_id:'dddddddd-dddd-4ddd-8ddd-dddddddddddd'});
 const browser=await puppeteer.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,userDataDir:out+'/chrome-'+Date.now()});
 const page=await browser.newPage();page.setDefaultTimeout(10000);const erros=[];page.on('pageerror',e=>erros.push(e.message));
