@@ -170,3 +170,34 @@ test('robô de empresa: encerra sem responder, sem IA e deixa pendência na Caix
   const pend = db.gravado.find((g) => g.tabela === 'tarcisio_pendencias' && g.op === 'insert')
   assert.equal(pend.dados.dados.contato_automatico, true)
 })
+
+test('despedida depois de conversa: não chama a IA e não responde, só marca como respondida', async () => {
+  let chamou = false; const atualizados = []
+  const db = bancoFalso((tabela, ops) => {
+    if (tabela === 'acolitos_membros') return { data: TODOS }
+    if (tabela === 'tarcisio_mensagens') {
+      if (ops.some((o) => o[0] === 'update')) atualizados.push(ops)
+      if (ops.some((o) => o[0] === 'eq' && o[2] === 'saida')) return { data: [{ id: 's1' }] }
+      return { data: [{ id: 'x', texto: 'Obrigada! 🙏', created_at: '2026-10-21T14:59:00Z' }] }
+    }
+    return { data: [] }
+  })
+  const enviados = []
+  const a = criarAssistente({ db, evo: { enviarTexto: async (n, t) => enviados.push(t) }, ia: { conversar: async () => { chamou = true } }, log: silencioso, relogio: () => new Date('2026-10-21T15:00:00Z') })
+  await a.responder({ ia_modelo: 'm' }, NUM_MAE, true)
+  assert.equal(chamou, false)
+  assert.equal(enviados.length, 0)
+  assert.ok(atualizados.length >= 1)
+})
+
+test('"obrigada" sem conversa anterior ainda passa pela IA (primeiro contato)', async () => {
+  let chamou = false
+  const db = bancoFalso((tabela, ops) => {
+    if (tabela === 'acolitos_membros') return { data: TODOS }
+    if (tabela === 'tarcisio_mensagens') return { data: ops.some((o) => o[0] === 'eq' && o[2] === 'saida') ? [] : [{ id: 'x', direcao: 'entrada', texto: 'Obrigada!', created_at: '2026-10-21T14:59:00Z' }] }
+    return { data: [] }
+  })
+  const a = criarAssistente({ db, evo: { enviarTexto: async () => {} }, ia: { conversar: async () => { chamou = true; return { texto: 'Disponha! 🙏', usadas: [] } } }, log: silencioso, relogio: () => new Date('2026-10-21T15:00:00Z') })
+  await a.responder({ ia_modelo: 'm' }, NUM_MAE, true)
+  assert.equal(chamou, true)
+})

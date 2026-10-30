@@ -286,3 +286,18 @@ export function lembreteAusenciaAgora(sp, cfg) {
     chave: `ausencia:${sp.data}:${slot.hm}`,
   }
 }
+
+// Mensagem que só encerra a conversa ("obrigado", "ok", "amém", 👍): quem manda isso não quer resposta.
+// Responder vira o "em que posso ajudar hoje?" que a IA inventa. Pergunta nunca é despedida.
+const PALAVRAS_FORTES = new Set(['obrigado', 'obrigada', 'obg', 'obgd', 'valeu', 'vlw', 'ok', 'okay', 'okk', 'blz', 'beleza', 'certo', 'combinado',
+  'show', 'perfeito', 'amem', 'tchau', 'ate', 'fechado', 'entendi', 'entendido', 'otimo', 'maravilha', 'disponha', 'deus', 'gracas', 'abencoe', 'tranquilo'])
+const PALAVRAS_LIGACAO = new Set(['muito', 'demais', 'a', 'de', 'nada', 'ta', 'bom', 'tudo', 'logo', 'mais', 'proxima', 'domingo', 'sabado', 'e', 'o', 'vcs', 'voces', 'pra', 'para', 'todos', 'vos', 'te', 'lhe', 'abencoar', 'bem', 'abencoa', 'obrigadinho', 'tarcisio'])
+export function ehDespedida(texto) {
+  const t = String(texto ?? '').trim()
+  if (!t || t.includes('?')) return false
+  const limpo = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!limpo) return !/[a-z0-9]/i.test(t.normalize('NFD').replace(/[\u0300-\u036f]/g, ''))   // só emoji e pontuação
+  const palavras = limpo.split(' ')
+  if (palavras.length > 7) return false
+  return palavras.every((w) => PALAVRAS_FORTES.has(w) || PALAVRAS_LIGACAO.has(w)) && palavras.some((w) => PALAVRAS_FORTES.has(w))
+}

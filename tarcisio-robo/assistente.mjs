@@ -2,7 +2,7 @@
 // A IA decide o QUE fazer; o código decide o que é PERMITIDO (servo ligado ao número, data futura,
 // semana não confirmada). A IA nunca liga número a cadastro: isso é da coordenação, pela Caixa.
 import {
-  agoraSP, normalizarNumero, somarDias, membrosDoNumero, comIrmaosJuntos, semanaConfirmada, candidatosPorNome,
+  ehDespedida, agoraSP, normalizarNumero, somarDias, membrosDoNumero, comIrmaosJuntos, semanaConfirmada, candidatosPorNome,
   diaPorExtenso, rotuloMissa, FUNCOES, primeiroNome,
 } from './regras.mjs'
 import { avaliarContato } from './contato-automatico.mjs'
@@ -123,6 +123,7 @@ export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log =
       'Só diga que fez algo (registrou, encaminhou, consultou) se chamou a ferramenta NESTA resposta e ela devolveu ok. Nunca prometa antes de chamar.',
       'Para dizer se uma semana está confirmada, chame escala_dos_meus de novo: o estado muda ao longo do dia. Nunca repita de memória.',
       'Se a pessoa diz que já registrou ausência pelo link ou já avisou antes, isso NÃO é pedido de ausência: agradeça, não registre e, se houver dúvida a resolver, chame chamar_coordenacao UMA vez para o assunto.',
+      'Se a mensagem só agradece, confirma ou se despede (obrigado, ok, amém), a conversa terminou: não pergunte "em que posso ajudar", não ofereça ajuda nem puxe assunto novo. Se precisar responder, uma frase curta de despedida.',
       'Responda só ao que a pessoa perguntou: uma saudação recebe uma saudação curta; não consulte escala nem traga assunto antigo da conversa se ninguém perguntou.',
       'Leia o histórico para dar continuidade natural. Se já houve conversa, não se reapresente nem repita Oi/Olá ou Aqui é o Tarcísio em cada resposta. Vá direto ao assunto com o contexto do que a pessoa acabou de dizer. Apresente-se apenas no primeiro contato ou se perguntarem quem está falando; uma saudação nova da pessoa pode receber saudação curta, sem reapresentação.',
       'Responda em português do Brasil, em mensagem curta de WhatsApp, sem markdown.',
@@ -147,6 +148,12 @@ export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log =
     return true
   }
 
+  async function jaConversou(numero) {
+    const desde = new Date(relogio().getTime() - 3 * 24 * 3600 * 1000).toISOString()
+    const saidas = exigir(await db.from('tarcisio_mensagens').select('id').eq('numero', numero).eq('direcao', 'saida').gte('created_at', desde).limit(1), 'ler conversa recente')
+    return !!saidas?.length
+  }
+
   // Responde um número: junta o histórico recente, conversa com a IA e envia a resposta.
   async function responder(cfg, numero, chaveIA) {
     const pendentes = exigir(await db.from('tarcisio_mensagens').select('id,texto,midia,created_at').eq('numero', numero)
@@ -163,6 +170,9 @@ export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log =
     const comandoAcolhida=acolhimento?.length?await acolhida.comando(numero,pendentes):null;
     if(comandoAcolhida){texto=comandoAcolhida;} else if (pendentes.every((p) => !p.texto)) {
       texto = 'Por aqui eu só consigo ler mensagens de texto. Pode escrever o que precisa? 🙏'
+    } else if (pendentes.every((p) => ehDespedida(p.texto)) && await jaConversou(numero)) {
+      // Só se despediu ("obrigado", "ok", 👍) depois de uma conversa: não há o que responder.
+      return marcar({ membro_ids: ligados.map((m) => m.id) })
     } else if (!chaveIA) {
       return   // sem chave da IA: fica guardado, sem resposta (Configurações mostra o aviso)
     } else {

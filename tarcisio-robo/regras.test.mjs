@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   agoraSP, dentroDaJanela, normalizarNumero, numeroDoMembro, numeroDoParticipante, montarLembretes,
-  montarAniversarios, fazAnosHoje, publicoPrivado, proximaVez, pausaEntreEnvios, idade,
+  montarAniversarios, fazAnosHoje, ehDespedida, publicoPrivado, proximaVez, pausaEntreEnvios, idade,
 } from './regras.mjs'
 
 const HOJE = '2026-10-20'
@@ -244,3 +244,8 @@ test('cerimoniário menor recebe no próprio; avisos aos pais continuam no respo
  assert.deepEqual(new Set(optar(['pais','cerimoniarios'])),new Set([normalizarNumero(m.telefone),normalizarNumero(m.celular_responsavel)]));
  assert.equal(numeroDoMembro({...m,telefone:null},HOJE),normalizarNumero(m.celular_responsavel));
 });
+
+test('despedida: agradecimento, ok e emoji encerram; pergunta, saudação e pedido não', () => {
+  for (const t of ['Obrigada!', 'ok', '👍', 'Amém 🙏', 'Muito obrigado, Deus abençoe', 'Tá bom, obrigada', 'Valeu!', 'Obrigada, Tarcísio!', 'Certo, combinado']) assert.equal(ehDespedida(t), true, t)
+  for (const t of ['Oi', 'Oi, tudo bem?', 'Ok?', 'Obrigado, e a escala?', 'Meu filho está doente, obrigada', 'Preciso avisar que não vai', '', null]) assert.equal(ehDespedida(t), false, String(t))
+})
