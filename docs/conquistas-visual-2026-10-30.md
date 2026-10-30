@@ -33,5 +33,5 @@ projetos/acolitos/conquistas.html
 - Novas artes dos troféus de temporada, com revisão visual antes da publicação.
 
 ## Publicação
-Etapa aprovada pelo dono em 30/10/2026: “aprovado, pode prosseguir”. Publicação em preparação, isolada das alterações do Tarcísio.
-A coleção das 43 medalhas publicada anteriormente no commit 4106191 permanece em produção.
+Etapa aprovada pelo dono e publicada em 30/10/2026. Commit 6bec9a7 enviado ao GitHub e deploy dpl_BMhypPZzyQhRNLV9jqqxAoYifoPP em estado READY. Domínio público conferido: 30 arquivos HTTP 200 e idênticos à versão aprovada, incluindo as 27 artes. Evidências em estudos/medalhas/layout-2026-10-30/publicacao.json. A publicação foi isolada do commit e das alterações locais do Tarcísio.
+As 43 medalhas aprovadas permanecem preservadas na apresentação renovada.

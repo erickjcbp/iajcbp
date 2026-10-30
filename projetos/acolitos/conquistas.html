@@ -26,11 +26,15 @@
     .cq-nome { font-family:var(--font-title); font-size:11px; font-weight:700; color:var(--text); line-height:1.2; }
     .cq-ins.locked .cq-nome { color:var(--text-muted); }
     .cq-lock { position:absolute; top:6px; right:8px; font-size:12px; opacity:.6; }
-    .cq-trofeu { display:flex; align-items:center; gap:12px; padding:11px 10px; border-radius:10px; margin-bottom:8px; background:linear-gradient(165deg,rgba(232,185,74,.1),var(--surface)); border:1px solid var(--gold-dim); }
-    .cq-tro-ico { flex:none; width:42px; height:42px; }
+    .cq-trofeus { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px; margin-bottom:8px; }
+    .cq-trofeu { display:flex; align-items:center; gap:18px; padding:18px; border-radius:10px; min-width:0; background:linear-gradient(165deg,rgba(232,185,74,.1),var(--surface)); border:1px solid var(--gold-dim); }
+    .cq-tro-ico { flex:none; width:112px; height:136px; display:grid; place-items:center; }
+    .cq-tro-ico > :is(img,svg) { width:100%; height:100%; object-fit:contain; }
     .cq-tro-info { flex:1; min-width:0; }
-    .cq-tro-tit { font-family:var(--font-body); font-weight:700; font-size:14px; color:var(--gold-light); }
-    .cq-tro-sub { font-size:11px; color:var(--text-muted); }
+    .cq-tro-tit { font-family:var(--font-body); font-weight:700; font-size:16px; line-height:1.4; color:var(--gold-light); }
+    .cq-tro-sub { font-size:13px; line-height:1.6; color:var(--text-muted); margin-top:8px; }
+    .cq-sem-trofeu { display:flex; align-items:center; gap:18px; padding:18px 0; color:var(--text-muted); font-size:14px; line-height:1.6; }
+    .cq-sem-trofeu .cq-tro-ico { filter:grayscale(1); opacity:.6; width:80px; height:96px; }
       .cq-stat b { font-family:var(--font-title); }
     .cq-grid > .cq-ins { display:flex; flex-direction:column; align-items:center; }
     .cq-grid > .cq-ins > .cq-nome { margin-top:auto; }
@@ -59,6 +63,23 @@
     .cq-medal-requisito strong { display:block; font-size:13px; color:var(--gold); margin-bottom:7px; }
     .cq-medal-requisito p { font-size:14px; line-height:1.6; margin:0; overflow-wrap:anywhere; }
     .cq-medal-fechar { align-self:flex-end; width:auto; min-width:140px; min-height:48px; padding-inline:32px; }
+    .cq-toolbar { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:16px; margin:18px 0 12px; }
+    .cq-search { min-width:0; }
+    .cq-search label { display:block; font-size:13px; font-weight:700; margin-bottom:7px; color:var(--text); }
+    .cq-search-field { display:flex; gap:8px; }
+    .cq-search input { flex:1; min-width:0; width:100%; min-height:48px; padding:10px 12px; font:inherit; font-size:16px; color:var(--text); background:var(--surface2); border:1px solid var(--border-wine); border-radius:8px; }
+    .cq-filters { display:flex; gap:6px; }
+    .cq-filter,.cq-clear { min-height:48px; padding:10px 14px; border:1px solid var(--border-wine); border-radius:8px; font:inherit; font-size:13px; font-weight:700; color:var(--text-muted); background:var(--surface); cursor:pointer; }
+    .cq-filter[aria-pressed="true"] { border-color:var(--gold-dim); color:var(--gold-light); background:rgba(232,185,74,.08); }
+    .cq-filter:focus-visible,.cq-clear:focus-visible,.cq-search input:focus-visible { outline:2px solid var(--gold-light); outline-offset:3px; }
+    .cq-results { font-size:13px; line-height:1.5; color:var(--text-muted); margin:0 0 14px; }
+    .cq-medal[hidden],.cq-no-results[hidden] { display:none !important; }
+    .cq-card-requisito { display:none; }
+    .cq-grid.show-requisitos { grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); }
+    .show-requisitos .cq-card-requisito { display:block; width:100%; font-size:13px; line-height:1.5; text-align:left; padding-top:12px; margin-top:4px; border-top:1px solid var(--border-wine); color:var(--text-muted); overflow-wrap:anywhere; }
+    .cq-card-requisito strong { display:block; color:var(--gold); margin-bottom:4px; font-size:12px; }
+    .cq-no-results { padding:24px 0; color:var(--text-muted); line-height:1.6; }
+    .cq-no-results p { margin:0 0 12px; }
     @media(min-width:1900px){ .cq-medal .cq-patch { --medal-size:112px; } }
     /* Compacto no celular (21/10/2026): 4 insígnias por linha e respiros menores. */
     @media(max-width:639px){
@@ -71,7 +92,8 @@
       .cq-patch { margin-bottom:4px; }
       .cq-nome { font-size:11px; overflow-wrap:anywhere; }
       .cq-lock { top:3px; right:4px; }
-      .cq-trofeu { padding:8px 10px; margin-bottom:6px; }
+      .cq-trofeu { padding:14px; gap:14px; }
+      .cq-tro-ico { width:88px; height:108px; }
       .cq-grid > .cq-medal { padding:10px 3px 9px; gap:7px; }
       .cq-medal .cq-patch { --medal-size:60px; }
       .cq-medal .cq-nome { font-size:12px; line-height:1.35; }
@@ -84,6 +106,11 @@
       .cq-medal-desc { font-size:14px; line-height:1.6; margin-bottom:18px; }
       .cq-medal-requisito { text-align:left; padding:14px; }
       .cq-medal-fechar { width:100%; }
+      .cq-toolbar { grid-template-columns:minmax(0,1fr); gap:12px; }
+      .cq-filters { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+      .cq-filter { padding:10px 5px; font-size:12px; line-height:1.4; }
+      .cq-grid.show-requisitos { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .cq-grid.show-requisitos > .cq-medal { padding:12px 10px; }
     }
     @media(max-width:639px){.cq-medal-overlay{padding:0!important}.cq-medal-modal{height:100dvh!important;max-height:100dvh!important;border-radius:0!important;padding-top:calc(16px + env(safe-area-inset-top))}}
   </style>
@@ -114,6 +141,12 @@ function trofeuSvg(size) {
     + '<path d="M14 10H9a4 4 0 0 0 0 8h6M34 10h5a4 4 0 0 1 0 8h-6" stroke="#b8860b" stroke-width="1.6" fill="none"/>'
     + '<path d="M21 23h6v5h-6z" fill="#e8b94a"/><path d="M17 36h14v3H17z" fill="#b8860b"/><path d="M19 31h10v5H19z" fill="#e8b94a" stroke="#b8860b" stroke-width="1"/>'
     + '<path d="M24 11.5l1.2 2.6 2.8.3-2.1 1.9.6 2.8-2.5-1.4-2.5 1.4.6-2.8-2.1-1.9 2.8-.3z" fill="#fff8e1"/></svg>';
+}
+function trofeuArte(liga, size) {
+  const ligas = ['iniciantes', 'acolitos', 'cerimoniarios'];
+  if (!ligas.includes(liga)) return trofeuSvg(size || 112);
+  const n = Math.max(24, Math.min(512, Number(size) || 112));
+  return '<img src="/projetos/acolitos/trofeus-arte/' + liga + '.webp" width="' + n + '" height="' + Math.round(n * 1.21) + '" alt="" decoding="async" style="object-fit:contain">';
 }
 function tierDe(nivel) {
   if (['coroinha', 'acolito_aspirante', 'aspirante'].includes(nivel)) return 'bronze';
@@ -219,35 +252,86 @@ async function init() {
   const s2 = document.createElement('div'); s2.className = 'cq-sec'; comIcone(s2, 'trophy', 'Troféus de Temporada'); main.appendChild(s2);
   const d2 = document.createElement('div'); d2.className = 'cq-desc'; d2.textContent = 'Cada vez que você fecha uma temporada como campeão da sua liga, ganha um troféu.'; main.appendChild(d2);
   if (!campeoes.length) {
-    const e = document.createElement('span'); e.className = 'empty'; e.textContent = 'Ainda sem troféus — a próxima temporada pode ser sua! 🏆'; main.appendChild(e);
+    const e = document.createElement('div'); e.className = 'cq-sem-trofeu';
+    const ico = document.createElement('div'); ico.className = 'cq-tro-ico'; ico.innerHTML = trofeuArte('iniciantes', 80);
+    const texto = document.createElement('span'); texto.textContent = 'Seu primeiro troféu está por vir. Vença uma temporada da sua liga para conquistar.';
+    e.append(ico, texto); main.appendChild(e);
   } else {
+    const trofeus = document.createElement('div'); trofeus.className = 'cq-trofeus'; main.appendChild(trofeus);
     campeoes.forEach(c => {
       const row = document.createElement('div'); row.className = 'cq-trofeu';
-      const ico = document.createElement('div'); ico.className = 'cq-tro-ico'; ico.innerHTML = trofeuSvg(42);
+      const ico = document.createElement('div'); ico.className = 'cq-tro-ico'; ico.innerHTML = trofeuArte(c.liga, 112);
       const info = document.createElement('div'); info.className = 'cq-tro-info';
       const t = document.createElement('div'); t.className = 'cq-tro-tit'; t.textContent = 'Campeão · ' + (LIGA_LABEL[c.liga] || c.liga);
       const sub = document.createElement('div'); sub.className = 'cq-tro-sub'; sub.textContent = 'Temporada ' + c.temporada + ' · ' + c.xp + ' XP';
-      info.append(t, sub); row.append(ico, info); main.appendChild(row);
+      info.append(t, sub); row.append(ico, info); trofeus.appendChild(row);
     });
   }
 
   // Medalhas de marcos
   const s3 = document.createElement('div'); s3.className = 'cq-sec'; comIcone(s3, 'award', 'Medalhas'); main.appendChild(s3);
-  const d3 = document.createElement('div'); d3.className = 'cq-desc'; d3.textContent = 'Medalhas por marcos importantes da jornada — aptidões e momentos especiais. Toque numa medalha para ver os detalhes.'; main.appendChild(d3);
+  const d3 = document.createElement('div'); d3.className = 'cq-desc'; d3.textContent = 'Explore sua coleção ou veja os requisitos das medalhas que ainda pode conquistar.'; main.appendChild(d3);
   if (!badges.length) { const e = document.createElement('span'); e.className = 'empty'; e.textContent = 'Sem medalhas por aqui ainda.'; main.appendChild(e); }
   else {
-    const mg = document.createElement('div'); mg.className = 'cq-grid'; main.appendChild(mg);
-    badges.forEach(b => {
+    montarColecaoMedalhas(main, badges);
+  }
+}
+
+function montarColecaoMedalhas(main, badges) {
+  const toolbar = document.createElement('div'); toolbar.className = 'cq-toolbar';
+  const busca = document.createElement('div'); busca.className = 'cq-search';
+  const label = document.createElement('label'); label.htmlFor = 'cq-medal-busca'; label.textContent = 'Buscar medalha';
+  const campo = document.createElement('div'); campo.className = 'cq-search-field';
+  const input = document.createElement('input'); input.type = 'search'; input.id = 'cq-medal-busca'; input.placeholder = 'Nome ou requisito'; input.setAttribute('aria-controls', 'cq-medalhas');
+  const limpar = document.createElement('button'); limpar.type = 'button'; limpar.className = 'cq-clear'; limpar.textContent = 'Limpar'; limpar.setAttribute('aria-label', 'Limpar busca de medalhas');
+  campo.append(input, limpar); busca.append(label, campo);
+  const filtros = document.createElement('div'); filtros.className = 'cq-filters'; filtros.setAttribute('role', 'group'); filtros.setAttribute('aria-label', 'Filtrar medalhas');
+  const contagens = { todas:badges.length, conquistadas:badges.filter(b => b.ganho).length, pendentes:badges.filter(b => !b.ganho).length };
+  let filtro = 'todas';
+  const botoes = [];
+  [['todas', 'Todas'], ['conquistadas', 'Conquistadas'], ['pendentes', 'Para conquistar']].forEach(([valor, texto]) => {
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'cq-filter'; btn.dataset.filtro = valor; btn.textContent = texto + ' (' + contagens[valor] + ')'; btn.setAttribute('aria-pressed', String(valor === filtro)); btn.setAttribute('aria-controls', 'cq-medalhas');
+    btn.onclick = () => { filtro = valor; atualizar(); }; botoes.push(btn); filtros.appendChild(btn);
+  });
+  toolbar.append(busca, filtros);
+  const resultado = document.createElement('p'); resultado.className = 'cq-results'; resultado.setAttribute('role', 'status'); resultado.setAttribute('aria-live', 'polite');
+  const mg = document.createElement('div'); mg.className = 'cq-grid cq-medal-grid'; mg.id = 'cq-medalhas';
+  const normalizar = texto => String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+  const cartoes = badges.map((b, i) => {
       const cell = document.createElement('button'); cell.type = 'button'; cell.className = 'cq-ins cq-medal' + (b.ganho ? ' ganha' : ' locked');
       cell.setAttribute('aria-label', b.label + (b.ganho ? ' — Conquistada' : ' — Ainda não conquistada'));
       cell.onclick = () => abrirMedalha(b);
       const ico = document.createElement('div'); ico.className = 'cq-patch'; ico.innerHTML = medalSvg(b.icone, b.tier || tierDe(b.nivel), 96);
       const nome = document.createElement('div'); nome.className = 'cq-nome'; nome.textContent = b.label;
       cell.append(ico, nome);
+      const requisito = document.createElement('span'); requisito.className = 'cq-card-requisito'; requisito.id = 'cq-card-requisito-' + i; cell.setAttribute('aria-describedby', requisito.id);
+      const reqLabel = document.createElement('strong'); reqLabel.textContent = 'Como ganhar';
+      requisito.append(reqLabel, document.createTextNode(b.requisito || 'Abra para ver os detalhes desta medalha.')); cell.appendChild(requisito);
       if (!b.ganho) { const lk = document.createElement('div'); lk.className = 'cq-lock'; comIcone(lk, 'lock', '', 'Bloqueado'); cell.appendChild(lk); }
       mg.appendChild(cell);
+      return { badge:b, cell, texto:normalizar([b.label, b.requisito, b.desc].join(' ')) };
+  });
+  const vazio = document.createElement('div'); vazio.className = 'cq-no-results'; vazio.hidden = true;
+  const aviso = document.createElement('p'); aviso.textContent = 'Nenhuma medalha corresponde a este filtro e busca.';
+  const todas = document.createElement('button'); todas.type = 'button'; todas.className = 'cq-clear'; todas.textContent = 'Ver todas as medalhas'; todas.onclick = () => { input.value = ''; filtro = 'todas'; atualizar(); input.focus(); };
+  vazio.append(aviso, todas); main.append(toolbar, resultado, mg, vazio);
+  function atualizar() {
+    const termos = normalizar(input.value).trim().split(/\s+/).filter(Boolean);
+    let visiveis = 0;
+    cartoes.forEach(({badge, cell, texto}) => {
+      const status = filtro === 'todas' || (filtro === 'conquistadas' ? badge.ganho : !badge.ganho);
+      cell.hidden = !(status && termos.every(termo => texto.includes(termo)));
+      if (!cell.hidden) visiveis++;
     });
+    botoes.forEach(btn => btn.setAttribute('aria-pressed', String(btn.dataset.filtro === filtro)));
+    mg.classList.toggle('show-requisitos', filtro === 'pendentes');
+    vazio.hidden = visiveis > 0;
+    const nome = visiveis === 1 ? 'medalha' : 'medalhas';
+    resultado.textContent = visiveis + ' ' + nome + (filtro === 'pendentes' ? ' para conquistar. Veja como ganhar cada uma.' : filtro === 'conquistadas' ? ' conquistadas.' : ' na coleção.') + (termos.length ? ' Resultado da busca.' : '');
   }
+  input.addEventListener('input', atualizar);
+  limpar.onclick = () => { input.value = ''; atualizar(); input.focus(); };
+  atualizar();
 }
 let _cqDialogN = 0;
 function abrirMedalha(b) {
