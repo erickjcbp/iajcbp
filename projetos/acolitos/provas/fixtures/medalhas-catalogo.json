@@ -19,7 +19,7 @@
     "nivel": null,
     "requisito": "Incluir ativamente quem estava isolado nas atividades. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue cultivando a empatia: converse com todos, escute com respeito e inclua quem estiver sozinho nas atividades."
   },
   {
     "id": "24accca7-a2f5-4758-b224-8704291c8448",
@@ -52,7 +52,7 @@
     "nivel": null,
     "requisito": "Participar de uma ação solidária e servir quem precisa. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue atento a quem precisa: ofereça ajuda com generosidade e participe das ações solidárias que estiverem ao seu alcance."
   },
   {
     "id": "9d9b4d6c-7540-4bb5-868a-b057b52d37fa",
@@ -85,7 +85,7 @@
     "nivel": null,
     "requisito": "Receber e acompanhar novos membros nos primeiros encontros. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue recebendo os novos pelo nome, apresentando a equipe e acompanhando seus primeiros passos para que se sintam parte da pastoral."
   },
   {
     "id": "52195a5a-166e-40dd-a514-e42c3ab5e0b5",
@@ -107,7 +107,7 @@
     "nivel": null,
     "requisito": "Retomar o serviço com responsabilidade após uma dificuldade. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue firme no seu recomeço: cumpra os combinados, peça ajuda nas dificuldades e retome o serviço quando algo não sair como esperado."
   },
   {
     "id": "02665df3-b6d6-49a9-8d84-d6354e6afe2d",
@@ -118,7 +118,7 @@
     "nivel": null,
     "requisito": "Reconhecido pela coordenação por uma vida de oração e devoção exemplar. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Cultive sua vida de oração e participe das celebrações com atenção, levando o respeito e a fé também para as atitudes do dia a dia."
   },
   {
     "id": "d741223a-252e-4e2d-ae53-56e8e2b38b4b",
@@ -140,7 +140,7 @@
     "nivel": null,
     "requisito": "Acolher uma orientação e demonstrar melhora concreta na prática. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue acolhendo as orientações com humildade, colocando em prática o que aprendeu e pedindo retorno sobre sua evolução."
   },
   {
     "id": "3e021564-887b-4aaf-92c2-65f63998395d",
@@ -151,7 +151,7 @@
     "nivel": null,
     "requisito": "Concedida a quem une a turma e serve com alegria ao lado de todos. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue cooperando com a equipe: compartilhe tarefas, respeite os combinados e ajude os colegas sem precisar ser o centro das atenções."
   },
   {
     "id": "e42a10d4-4ffa-4688-a936-26803434fb01",
@@ -173,7 +173,7 @@
     "nivel": null,
     "requisito": "Perseverança e fidelidade que atravessam qualquer dificuldade. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue servindo com constância e responsabilidade; avise quando não puder comparecer e procure apoio para atravessar as dificuldades."
   },
   {
     "id": "f55b34da-f14a-4b8d-84c5-64bd2887e7c9",
@@ -184,7 +184,7 @@
     "nivel": "cerimoniario_magistral",
     "requisito": "Ensine um acólito até ele ser habilitado numa função. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue acompanhando quem está aprendendo, ensine com paciência e dê espaço para que os novos sirvam com autonomia e confiança."
   },
   {
     "id": "2fbbe92b-3ce1-5bbc-82d9-7b03e985c5c5",
@@ -195,7 +195,7 @@
     "nivel": null,
     "requisito": "Cuidar dos recursos da pastoral, promovendo reutilização e evitando desperdícios. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue cuidando dos materiais e dos espaços da pastoral: evite desperdícios, reutilize o que puder e incentive a equipe a fazer o mesmo."
   },
   {
     "id": "f405eff3-faed-457e-960a-5436b5298da6",
@@ -228,7 +228,7 @@
     "nivel": "cerimoniario_mor",
     "requisito": "O ápice da jornada: reconhecido como Guardião Supremo das Celebrações. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue sendo exemplo de humildade, cuidado com a celebração e responsabilidade; acompanhe a equipe e ajude a formar novos servidores."
   },
   {
     "id": "4341f130-ed66-45e2-9b5d-933cbbcdaeae",
@@ -261,7 +261,7 @@
     "nivel": null,
     "requisito": "Capricho excepcional em tudo que faz no altar. Mãos de ouro. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Mantenha o capricho no serviço: prepare os materiais com cuidado, confira os detalhes e ensine os colegas a cuidar bem do que utilizam."
   },
   {
     "id": "6127d803-1e28-44fc-b127-1ed850cae96c",
@@ -283,7 +283,7 @@
     "nivel": null,
     "requisito": "Organizar e preservar materiais e aprendizados para as próximas equipes. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue organizando os materiais e registrando os aprendizados, mantendo tudo acessível e atualizado para quem vier depois."
   },
   {
     "id": "8bae204f-d1f6-441f-9b81-46939567eb06",
@@ -316,7 +316,7 @@
     "nivel": null,
     "requisito": "Trouxe novos servos para o altar. Verdadeiro missionário. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue convidando com respeito e acolhendo quem demonstrar interesse; acompanhe os novos para que o convite se transforme em participação."
   },
   {
     "id": "0a85674c-fb91-43c6-a2ca-0675daeff171",
@@ -327,7 +327,7 @@
     "nivel": "aspirante_cerimoniario",
     "requisito": "A coordenação admite você formalmente na formação de cerimoniário. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue comprometido com a formação de cerimoniário: participe dos encontros, estude e pratique as orientações com humildade."
   },
   {
     "id": "3d5d700e-dcc0-41a3-8f88-d8a691042fb0",
@@ -349,7 +349,7 @@
     "nivel": "cerimoniario_magistral",
     "requisito": "Você inspira e é procurado pelos demais. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue sendo alguém em quem a equipe pode confiar: cumpra os combinados, acolha as dúvidas e ajude sem diminuir ninguém."
   },
   {
     "id": "6e36739b-7ee6-4772-ba90-e3e2bcf8b256",
@@ -371,7 +371,7 @@
     "nivel": null,
     "requisito": "Ajudar a resolver um desentendimento com respeito e diálogo. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue promovendo o diálogo: escute os envolvidos sem alimentar fofocas e ajude a resolver os conflitos com respeito e serenidade."
   },
   {
     "id": "f247fb41-9758-480f-a2ba-29739987e09b",
@@ -382,7 +382,7 @@
     "nivel": null,
     "requisito": "Nunca se atrasa — chega antes e pronto. Pontualidade de lenda. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue chegando com antecedência para se preparar, respeite os horários e avise a equipe assim que perceber um imprevisto."
   },
   {
     "id": "6bc85f6a-6a9b-42a4-9b67-9e900ccf961c",
@@ -470,7 +470,7 @@
     "nivel": "cerimoniario_aspirante",
     "requisito": "A coordenação reconhece formalmente seu ingresso na Ordem dos Cerimoniários. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Honre seu compromisso com a Ordem dos Cerimoniários: mantenha a formação, respeite as orientações e sirva em união com toda a equipe."
   },
   {
     "id": "501749da-47ba-524c-b843-3342317d9434",
@@ -481,7 +481,7 @@
     "nivel": null,
     "requisito": "Preparar e partilhar uma reflexão do Evangelho na formação. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue lendo e refletindo o Evangelho, partilhando suas reflexões com simplicidade e procurando viver aquilo que anuncia."
   },
   {
     "id": "d3887cb8-15d6-4397-9f60-6ddc4529e340",
@@ -547,7 +547,7 @@
     "nivel": null,
     "requisito": "Ajudar na preparação e organização antes e depois das celebrações. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue percebendo o que precisa ser preparado e organizado, colaborando antes e depois das celebrações mesmo quando ninguém estiver olhando."
   },
   {
     "id": "38847531-7a8e-4f99-8847-0965f98f3045",
@@ -580,6 +580,6 @@
     "nivel": null,
     "requisito": "Inspira e lidera os mais novos com o exemplo. A voz da juventude da pastoral. Reconhecimento concedido pela coordenação.",
     "validacao": "avaliada",
-    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+    "manutencao": "Continue ouvindo os mais novos, incentivando sua participação e dando exemplo de respeito, alegria e responsabilidade no serviço."
   }
 ]
