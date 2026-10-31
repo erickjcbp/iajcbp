@@ -15,6 +15,18 @@
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
   <style>
+    .ja-competencia-add { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px; gap:8px; margin-top:10px; }
+    .ja-competencia-add > * { min-width:0; }
+    .ja-competencia-add > button { width:44px !important; height:44px !important; }
+    @media(max-width:639px){.ja-competencia-add { grid-template-columns:minmax(0,1fr) 44px; }.ja-competencia-add > input { grid-column:1/-1; }}
+    .ja-formation-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr)); gap:10px; margin:14px 0; }
+    .ja-formation-stat { min-width:0; padding:14px; background:var(--surface2); border:1px solid var(--border-wine); border-radius:10px; display:grid; gap:6px; }
+    .ja-formation-stat strong { font:700 26px var(--font-title); color:var(--gold-light); }
+    .ja-formation-stat span { font-size:13px; line-height:1.5; color:var(--text-muted); overflow-wrap:anywhere; }
+    .ja-coverage-toggle { display:block; width:100%; text-align:left; min-height:48px; margin-top:12px; padding:12px; background:var(--surface2); border:1px solid var(--border-wine); border-radius:8px; color:var(--gold-light); font:700 14px var(--font-body); cursor:pointer; }
+    .ja-coverage-row { display:block; width:100%; text-align:left; background:transparent; border:0; min-height:64px; font-family:var(--font-body); }
+    :is(.ja-coverage-toggle,.ja-coverage-row):focus-visible { outline:2px solid var(--gold); outline-offset:2px; }
+    @media(max-width:639px){.ja-formation-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }.ja-formation-stat { padding:12px; }}
     .ja-tools { display:grid; gap:12px; width:100%; min-width:0; }
     .ja-tool { min-width:0; border:1px solid var(--border-wine); border-radius:12px; background:var(--surface); }
     .ja-tool > summary { display:flex; align-items:center; gap:12px; min-height:76px; padding:16px; cursor:pointer; list-style:none; }
@@ -601,10 +613,10 @@ function renderCobertura(container, onClickFuncao){
     const b=bucketsFuncao(val);
     // DUAS LINHAS, de propósito. Em uma linha só, no celular, o nome da função ficava
     // cortado ("Cerimoniár…") e os números viravam "5 · 0 · 12", que não diz o que são.
-    const row=document.createElement('div'); row.style.cssText='padding:9px 4px;border-bottom:1px solid var(--border);cursor:pointer;';
+    const row=document.createElement('button'); row.type='button'; row.className='ja-coverage-row'; row.setAttribute('aria-label','Ver cobertura de '+label); row.style.cssText='padding:9px 4px;border-bottom:1px solid var(--border);cursor:pointer;';
     row.onclick=()=>onClickFuncao(val,label);
-    const topo=document.createElement('div'); topo.style.cssText='display:flex;align-items:center;gap:8px;';
-    const nm=document.createElement('div'); nm.style.cssText='flex:1;min-width:0;font-size:13px;color:var(--text);';
+    const topo=document.createElement('span'); topo.style.cssText='display:flex;align-items:center;gap:8px;';
+    const nm=document.createElement('span'); nm.style.cssText='flex:1;min-width:0;font-size:13px;color:var(--text);';
     nm.textContent=label;
     if(b.prontos<3){
       nm.style.color='var(--danger-text)';
@@ -613,11 +625,11 @@ function renderCobertura(container, onClickFuncao){
       tag.textContent='NO FIO';
       topo.append(nm, tag);
     } else { topo.appendChild(nm); }
-    const bar=document.createElement('div'); bar.style.cssText='display:flex;height:8px;border-radius:5px;overflow:hidden;background:var(--surface2);margin:6px 0 4px;';
-    const seg=(n,cor)=>{ if(!n) return; const s=document.createElement('div'); s.style.cssText='height:100%;background:'+cor+';flex:'+n+' 0 0;'; bar.appendChild(s); };
+    const bar=document.createElement('span'); bar.style.cssText='display:flex;height:8px;border-radius:5px;overflow:hidden;background:var(--surface2);margin:6px 0 4px;';
+    const seg=(n,cor)=>{ if(!n) return; const s=document.createElement('span'); s.style.cssText='height:100%;background:'+cor+';flex:'+n+' 0 0;'; bar.appendChild(s); };
     seg(b.prontos, PROF_COR.apto); seg(b.form, PROF_COR.em_formacao); seg(b.zero, 'var(--border)');
     // Número com NOME: "5 aptos" diz o que "5 · 0 · 12" escondia.
-    const cnt=document.createElement('div'); cnt.style.cssText='font-size:11px;color:var(--text-muted);';
+    const cnt=document.createElement('span'); cnt.style.cssText='display:block;font-size:11px;color:var(--text-muted);';
     const pedacos=[b.prontos+(b.prontos===1?' apto':' aptos')];
     if(b.form) pedacos.push(b.form+' em formação');
     if(b.zero) pedacos.push(b.zero+' sem treinar');
@@ -776,9 +788,9 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
   // resumo por função desce para baixo dela, recolhível.
   const matrizBox = document.createElement('div'); matrizBox.style.cssText = 'margin-top:4px;';
   const resumoBox = document.createElement('div'); resumoBox.style.display = estadoJornada.resumo?'':'none';
-  const toggle = document.createElement('div'); toggle.style.cssText = 'cursor:pointer;font-family:var(--font-body);font-weight:700;font-size:12px;color:var(--gold-light);margin-top:12px;';
+  const toggle = document.createElement('button'); toggle.type='button'; toggle.className='ja-coverage-toggle'; resumoBox.id='jornada-cobertura-funcoes'; toggle.setAttribute('aria-controls',resumoBox.id);
   let resumoAberto = estadoJornada.resumo;
-  const setToggle = () => { toggle.textContent = (resumoAberto ? '▾' : '▸') + ' Cobertura por função (onde faltam pessoas)'; };
+  const setToggle = () => { toggle.setAttribute('aria-expanded', String(resumoAberto)); toggle.textContent = (resumoAberto ? '▾' : '▸') + ' Cobertura por função (onde faltam pessoas)'; };
   _redrawCobertura = () => renderCobertura(resumoBox, abrirCoberturaFuncao);
   _redrawMatriz = () => renderMatriz(matrizBox);
   toggle.onclick = () => { resumoAberto = !resumoAberto;estadoJornada.resumo=resumoAberto; resumoBox.style.display = resumoAberto ? '' : 'none'; setToggle(); };
@@ -787,8 +799,8 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
   if (depoisDoMapa) await depoisDoMapa(main);
   const card = document.createElement('div'); card.className = 'mx-card';
   const filtros = document.createElement('div'); filtros.style.cssText = 'display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;';
-  const busca = document.createElement('input'); busca.id='dev-busca';busca.value=estadoJornada.busca;busca.className = 'form-input'; busca.placeholder = 'buscar membro…'; busca.style.cssText = 'flex:2;min-width:140px;';
-  const selNivel = document.createElement('select'); selNivel.id='dev-nivel';selNivel.className = 'form-input'; selNivel.style.cssText = 'flex:1;min-width:130px;';
+  const busca = document.createElement('input'); busca.id='dev-busca';busca.value=estadoJornada.busca;busca.className = 'form-input'; busca.placeholder = 'buscar membro…';busca.setAttribute('aria-label','Buscar membro na evolução'); busca.style.cssText = 'flex:2;min-width:140px;';
+  const selNivel = document.createElement('select'); selNivel.id='dev-nivel';selNivel.setAttribute('aria-label','Filtrar evolução por nível');selNivel.className = 'form-input'; selNivel.style.cssText = 'flex:1;min-width:130px;';
   const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Todos os níveis'; selNivel.appendChild(o0);
   (typeof NIVEIS !== 'undefined' ? NIVEIS : []).forEach(n => { const o = document.createElement('option'); o.value = n.slug; o.textContent = n.label; selNivel.appendChild(o); });
   selNivel.value=estadoJornada.nivel;
@@ -1128,11 +1140,11 @@ async function renderCompLista(b) {
     const del = mini('−', true); del.onclick = async () => { if (!await uiConfirm('Remover competência "' + (item.label || item.valor) + '"?')) return; await sb.from('acolitos_listas').delete().eq('id', item.id); renderCompLista(b); };
     row.append(nm, fsel, pesoLbl, lim, del); b.appendChild(row);
   });
-  const add = document.createElement('div'); add.style.cssText = 'display:flex;gap:8px;margin-top:10px;';
+  const add = document.createElement('div'); add.className='ja-competencia-add';
   const inp = document.createElement('input'); inp.className = 'form-input'; inp.placeholder = 'Nova competência (ex.: Liderança)';
-  const fadd = document.createElement('select'); fadd.style.cssText = 'font-size:12px;padding:6px;background:var(--surface);border:1px solid var(--border-wine);border-radius:4px;color:var(--text);';
+  const fadd = document.createElement('select'); fadd.className='form-input';fadd.setAttribute('aria-label','Faixa da nova competência');
   FAIXAS_DEV.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; fadd.appendChild(o); });
-  const bt = mini('+', false);
+  const bt = mini('+', false);bt.type='button';bt.setAttribute('aria-label','Adicionar competência');
   bt.onclick = async () => { const v = inp.value.trim(); if (!v) return; const slug = 'k_' + v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '_').replace(/^_|_$/g, '').slice(0, 24); await sb.from('acolitos_listas').insert({ tipo: 'competencia', valor: slug, label: v, meta: { faixa: fadd.value } }); inp.value = ''; renderCompLista(b); };
   add.append(inp, fadd, bt); b.appendChild(add);
 }
@@ -1284,7 +1296,7 @@ const ACOMP_MOSTRA = 8;   // quantos nomes por faixa antes do "ver todos"
 
 async function renderSinalDaFormacao(box) {
   const card = document.createElement('div'); card.className = 'mx-card';
-  const hd = document.createElement('div'); hd.className = 'mx-hd'; hd.textContent = 'Quem não está andando';
+  const hd = document.createElement('div'); hd.className = 'mx-hd'; hd.textContent = 'Acompanhamento da Formação';
   card.appendChild(hd);
   box.appendChild(card);
 
@@ -1310,25 +1322,24 @@ async function renderSinalDaFormacao(box) {
 
   // A faixa de números: o todo em uma olhada.
   const chips = document.createElement('div');
-  chips.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px;';
+  chips.className = 'ja-formation-stats';
   FormacaoAcompanhamento.FAIXAS.forEach((f) => {
-    const c = document.createElement('span');
-    c.style.cssText = 'font-size:11px;padding:3px 8px;border-radius:999px;white-space:nowrap;' +
-      'border:1px solid var(--border);color:var(--text-muted);';
-    if (f === 'andando') c.style.color = 'var(--gold-light)';
-    c.textContent = rotuloDaFaixa(f) + ': ' + r[f];
-    chips.appendChild(c);
+    const c = document.createElement('div'); c.className = 'ja-formation-stat';
+    const count = document.createElement('strong'); count.textContent = r[f];
+    const label = document.createElement('span'); label.textContent = rotuloDaFaixa(f);
+    c.append(count, label); chips.appendChild(c);
   });
   card.appendChild(chips);
 
   // A lista inteira (148 nomes) empurrava o mapa de cobertura para 2.000 pixels abaixo. Aqui
   // ela nasce fechada: o número é o que se bate o olho; o nome é quando se vai agir.
-  const dobra = document.createElement('div'); dobra.hidden = true;
+  const dobra = document.createElement('div'); dobra.id='jornada-formacao-pessoas'; dobra.hidden = true;
   const verQuem = document.createElement('button'); verQuem.className = 'mx-mini';
-  verQuem.style.marginTop = '8px';
+  verQuem.type='button';verQuem.setAttribute('aria-controls',dobra.id);verQuem.setAttribute('aria-expanded','false');verQuem.style.cssText = 'margin-top:8px;min-height:44px;';
   verQuem.textContent = 'Ver quem';
   verQuem.onclick = () => {
     dobra.hidden = !dobra.hidden;
+    verQuem.setAttribute('aria-expanded',String(!dobra.hidden));
     verQuem.textContent = dobra.hidden ? 'Ver quem' : 'Esconder';
   };
   card.append(verQuem, dobra);
