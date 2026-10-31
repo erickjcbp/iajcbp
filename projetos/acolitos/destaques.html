@@ -13,6 +13,26 @@
   <link rel="apple-touch-icon" href="icon-192.png">
   <script>window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__bip=e;});</script>
   <style>
+    .dest-member-overlay { padding:clamp(14px,2.4vw,44px); }
+    .dest-member-modal { width:100%!important;max-width:none!important;max-height:calc(100dvh - 40px);overflow:auto;clip-path:none!important;border-radius:16px!important;padding:clamp(20px,3vw,40px)!important; }
+    .dest-member-layout { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px; }
+    .dest-member-profile,.dest-member-recent { min-width:0;padding:20px;border:1px solid var(--border-wine);border-radius:12px;background:var(--surface2); }
+    .dest-member-head { display:flex;align-items:center;gap:20px;margin-bottom:24px;min-width:0; }
+    .dest-member-name { font:700 clamp(21px,2.3vw,30px)/1.4 var(--font-title);color:var(--gold-light);margin:0;overflow-wrap:anywhere; }
+    .dest-member-level { color:var(--text-muted);font-size:14px;line-height:1.6;margin-top:8px;overflow-wrap:anywhere; }
+    .dest-member-stats { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0; }
+    .dest-member-stat { display:flex;flex-direction:column; min-width:0;padding:14px 10px;border:1px solid var(--border-wine);border-radius:10px;background:var(--surface);text-align:center; }
+    .dest-member-stat dd { order:-1; margin:0 0 8px;font:700 22px/1.4 var(--font-title);color:var(--gold-light);overflow-wrap:anywhere; }
+    .dest-member-stat dt { font-size:13px;line-height:1.5;color:var(--text-muted);overflow-wrap:anywhere; }
+    .dest-member-recent h3 { margin:0 0 14px;font:700 18px var(--font-title);color:var(--gold-light); }
+    .dest-member-mass { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:14px 0;border-top:1px solid var(--border);font-size:14px;line-height:1.6; }
+    .dest-member-mass time { overflow-wrap:anywhere; }.dest-member-mass span { color:var(--gold-light);font-weight:700;text-align:right;overflow-wrap:anywhere; }
+    .dest-member-status { padding:20px 0;font-size:14px;color:var(--text-muted);line-height:1.7; }
+    .dest-member-actions { margin-top:20px;display:flex;justify-content:flex-end; }.dest-member-actions button,.dest-member-modal>.modal-close { min-height:44px;min-width:44px; }
+    .dest-member-modal>.dest-member-title { padding-right:48px;margin:0 0 20px;font:700 18px var(--font-title);color:var(--text-muted); }
+    .dest-member-modal :focus-visible { outline:2px solid var(--gold);outline-offset:3px; }
+    @media(max-width:1000px){.dest-member-layout{grid-template-columns:minmax(0,1fr)}}
+    @media(max-width:639px){.dest-member-overlay{padding:0!important;align-items:stretch}.dest-member-modal{height:100dvh!important;max-height:100dvh!important;border-radius:0!important;padding:calc(20px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))!important}.dest-member-layout{grid-template-columns:minmax(0,1fr);gap:14px}.dest-member-head{flex-direction:column;text-align:center;gap:14px}.dest-member-profile,.dest-member-recent{padding:14px}.dest-member-stats{gap:6px}.dest-member-stat{padding:12px 6px}.dest-member-stat dd{font-size:18px}.dest-member-stat dt{font-size:12px}.dest-member-actions button{width:100%}}
     .dest-tabs { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; margin-bottom:18px; }
     .dest-tab { flex:1 0 auto; min-width:0 !important;min-height:48px; padding:9px 12px; background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); border-radius:18px; font-family:var(--font-body); font-size:11px; font-weight:700; white-space:normal; line-height:1.5; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .dest-tab.active { border-color:var(--gold); color:var(--gold); background:rgba(232,185,74,.1); }
@@ -189,51 +209,36 @@ const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const FUNCAO_LABEL = { cred_altar:'Cerimonial de Altar', cred_credencia:'Cerimonial de Credência', missal:'Missal', turibulo:'Turíbulo', naveta:'Naveta', altar:'Altar', cruz:'Cruz', vela:'Vela', sineta:'Sineta', sinao:'Sinão', apoio:'Apoio', mitra:'Mitra', baculo:'Báculo' };
 function dataCurta(d){ const x=new Date(d+'T00:00:00'); return DIAS[x.getDay()]+' '+x.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}); }
 
+let _destCardN=0;
 async function abrirCard(id) {
-  const ov = document.createElement('div'); ov.className = 'modal-overlay open';
-  ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
-  const modal = document.createElement('div'); modal.className = 'modal'; modal.style.setProperty('--modal-max', '380px');
-  modal.innerHTML = '<div class="modal-handle"></div><div style="text-align:center;color:var(--text-muted);padding:20px;">Carregando...</div>';
-  ov.appendChild(modal); document.body.appendChild(ov);
-
-  const { data: m, error } = await sb.rpc('acolitos_membro_card', { p_id: id });
-  if (error || !m) { modal.innerHTML = '<div class="modal-handle"></div><div style="color:var(--text-muted);padding:16px;text-align:center;">Não foi possível carregar.</div>'; return; }
-  modal.innerHTML = ''; modal.appendChild(Object.assign(document.createElement('div'), { className:'modal-handle' }));
-
-  // cabeçalho: foto + nome + nível
-  const head = document.createElement('div'); head.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:14px;';
-  head.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 84, { nivelSlug: m.nivel||'aspirante', casaSlug: casaSlugDe(m) }));
-  const nmRow = document.createElement('div'); nmRow.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:6px;max-width:100%;';
-  const nm = document.createElement('div'); nm.style.cssText = 'font-family:var(--font-title);font-weight:700;font-size:15px;color:var(--text);text-align:center;min-width:0;'; nm.textContent = m.nome_completo || m.nome;
-  const stTag = estrelaTagAsync(id); stTag.style.fontSize = '14px';
-  nmRow.append(nm, stTag);
-  const nv = document.createElement('div'); nv.style.cssText = 'font-size:12px;color:var(--gold);font-style:italic;'; nv.textContent = nivelInfo(m.nivel||'aspirante').label + (nivelInfo(m.nivel||'aspirante').titulo ? ' · 🏆 ' + nivelInfo(m.nivel||'aspirante').titulo : '');
-  head.append(nmRow, nv); modal.appendChild(head);
-
-  // mini indicadores
-  const grid = document.createElement('div'); grid.style.cssText = 'display:flex;gap:8px;margin-bottom:14px;';
-  [['Serviu', m.total_servido, 'vezes'], ['Funções', m.funcoes, 'que domina'], ['Comunidade', m.comunidade==='matriz'?'Matriz':'Sto. Antônio', '']].forEach(([l,v,s]) => {
-    const c = document.createElement('div'); c.style.cssText = 'flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 6px;text-align:center;';
-    const vv = document.createElement('div'); vv.style.cssText = 'font-family:var(--font-title);font-weight:800;font-size:15px;color:var(--gold);'; vv.textContent = v;
-    const ll = document.createElement('div'); ll.style.cssText = 'font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;'; ll.textContent = l + (s?' · '+s:'');
-    c.append(vv, ll); grid.appendChild(c);
-  });
-  modal.appendChild(grid);
-
-  // últimas missas
-  const h2 = document.createElement('div'); h2.style.cssText = 'font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;'; h2.textContent = 'Últimas missas';
-  modal.appendChild(h2);
-  const ult = m.ultimas || [];
-  if (!ult.length) { const e = document.createElement('div'); e.style.cssText = 'font-size:13px;color:var(--text-muted);font-style:italic;'; e.textContent = 'Ainda não foi escalado em nenhuma missa.'; modal.appendChild(e); }
-  else ult.forEach(u => {
-    const row = document.createElement('div'); row.style.cssText = 'display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:6px 2px;border-bottom:1px solid var(--border);';
-    const dt = document.createElement('span'); dt.style.color = 'var(--text)'; dt.textContent = dataCurta(u.data) + ' ' + u.horario;
-    const fn = document.createElement('span'); fn.style.cssText = 'color:var(--gold);font-weight:700;text-align:right;'; fn.textContent = FUNCAO_LABEL[u.funcao] || u.funcao;
-    row.append(dt, fn); modal.appendChild(row);
-  });
-
-  const close = document.createElement('button'); close.className = 'btn-sm gray'; close.style.cssText = 'margin-top:16px;width:100%;'; close.textContent = 'Fechar'; close.onclick = () => ov.remove();
-  modal.appendChild(close);
+  const origem=document.activeElement,overflowAnterior=document.body.style.overflow;
+  const ov=document.createElement('div');ov.className='modal-overlay open dest-member-overlay';
+  const modal=document.createElement('div');modal.className='modal dest-member-modal';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');
+  const title=document.createElement('h2');title.className='dest-member-title';title.id='dest-member-title-'+(++_destCardN);title.textContent='Cartão do membro';modal.setAttribute('aria-labelledby',title.id);
+  const body=document.createElement('div');body.className='dest-member-status';body.setAttribute('role','status');body.textContent='Carregando cartão…';
+  let fechado=false;
+  const fechar=()=>{if(fechado)return;fechado=true;ov.remove();document.body.style.overflow=overflowAnterior;if(origem?.isConnected)origem.focus({preventScroll:true});};
+  ov._acResolveClose=fechar;ov.onclick=e=>{if(e.target===ov)fechar();};
+  const close=document.createElement('button');close.type='button';close.className='btn-sm gray';close.textContent='Fechar';close.onclick=fechar;
+  const actions=document.createElement('div');actions.className='dest-member-actions';actions.append(close);modal.append(title,body,actions);ov.append(modal);document.body.style.overflow='hidden';document.body.append(ov);close.focus({preventScroll:true});
+  modal.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();fechar();}if(e.key==='Tab'){const buttons=[...modal.querySelectorAll('button:not([disabled])')];const i=buttons.indexOf(document.activeElement);if(e.shiftKey&&i<=0){e.preventDefault();buttons.at(-1)?.focus();}else if(!e.shiftKey&&i===buttons.length-1){e.preventDefault();buttons[0]?.focus();}}});
+  let result;try{result=await sb.rpc('acolitos_membro_card',{p_id:id});}catch(e){result={error:e};}
+  if(fechado)return;
+  const m=result.data;if(result.error||!m){body.textContent='Não foi possível carregar o cartão. Feche e tente novamente.';return;}
+  body.removeAttribute('role');body.className='dest-member-layout';body.replaceChildren();
+  const profile=document.createElement('section');profile.className='dest-member-profile';
+  const head=document.createElement('div');head.className='dest-member-head';
+  const avatar=buildAvatarEl(m.foto_url,nivelInfo(m.nivel||'aspirante').base,84,{nivelSlug:m.nivel||'aspirante',casaSlug:casaSlugDe(m)});avatar.style.flex='none';
+  const info=document.createElement('div');info.style.minWidth='0';
+  const name=document.createElement('h3');name.className='dest-member-name';name.textContent=m.nome_completo||m.nome;info.append(name,estrelaTagAsync(id));
+  const level=document.createElement('p');level.className='dest-member-level';const ni=nivelInfo(m.nivel||'aspirante');level.textContent=ni.label+(ni.titulo?' · '+ni.titulo:'');info.append(level);head.append(avatar,info);profile.append(head);
+  const stats=document.createElement('dl');stats.className='dest-member-stats';
+  [['Celebrações servidas',m.total_servido??0],['Funções que domina',m.funcoes??0],['Comunidade',({matriz:'Matriz',santo_antonio:'Sto. Antônio'})[m.comunidade]||'Não informada']].forEach(([label,value])=>{const item=document.createElement('div');item.className='dest-member-stat';const dt=document.createElement('dt');dt.textContent=label;const dd=document.createElement('dd');dd.textContent=value;item.append(dt,dd);stats.append(item);});profile.append(stats);
+  const recent=document.createElement('section');recent.className='dest-member-recent';const h=document.createElement('h3');h.textContent='Últimas missas';recent.append(h);
+  const ult=m.ultimas||[];
+  if(!ult.length){const empty=document.createElement('p');empty.className='dest-member-level';empty.textContent='Ainda não foi escalado em nenhuma missa.';recent.append(empty);}
+  for(const u of ult){const row=document.createElement('div');row.className='dest-member-mass';const dt=document.createElement('time');dt.dateTime=u.data;dt.textContent=dataCurta(u.data)+' · '+u.horario;const fn=document.createElement('span');fn.textContent=FUNCAO_LABEL[u.funcao]||u.funcao;row.append(dt,fn);recent.append(row);}
+  body.append(profile,recent);
 }
 
 init();
