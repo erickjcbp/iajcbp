@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="jornada-quests.css">
   <link rel="stylesheet" href="bonus-semana.css">
   <link rel="stylesheet" href="matriz-lote.css">
+  <link rel="stylesheet" href="medalhas-admin.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
   <link rel="icon" href="icon-192.png">
@@ -142,6 +143,7 @@
 <script src="ficha-rapida.js"></script>
 <script src="historico-membro.js"></script>
 <script src="matriz-lote.js"></script>
+<script src="medalhas-admin.js"></script>
 <script>
 const NIVEIS_SLUGS = () => NIVEIS.map(n => n.slug);
 let ctx = null;
@@ -825,6 +827,7 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
   toggle.onclick = () => { resumoAberto = !resumoAberto;estadoJornada.resumo=resumoAberto; resumoBox.style.display = resumoAberto ? '' : 'none'; setToggle(); };
   setToggle(); _redrawCobertura(); renderMatriz(matrizBox);
   mapaSec.append(matrizBox, toggle, resumoBox); main.appendChild(mapaSec);
+  MedalhasAdmin.render(main,{sb,ctx,membros:_devMembros,selecionados:matrizSelecionados});
   if (depoisDoMapa) await depoisDoMapa(main);
   const card = document.createElement('div'); card.className = 'mx-card';
   const filtros = document.createElement('div'); filtros.style.cssText = 'display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;';

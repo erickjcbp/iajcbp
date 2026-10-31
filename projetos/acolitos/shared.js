@@ -874,15 +874,57 @@ function showStarUp(n, done) {
   });
 }
 // 🏅 Medalha conquistada (missão com concede_badge aprovada)
-function showMedalha(label, done) {
-  showCeleb({
-    icon: '🏅', tag: 'MEDALHA CONQUISTADA', hero: label || 'Nova insígnia',
-    sub: 'Uma nova medalha brilha no seu mural de conquistas!', sound: 'level', done: done,
-    actions: [
-      { label: '🎖️ Ver no mural', primary: true, onClick: (close) => { close(); if (!location.pathname.endsWith('conquistas.html')) location.href = 'conquistas.html'; } },
-      { label: 'Fechar' }
-    ]
-  });
+let _medalhasArtePromise = null, _medalhasCatalogoPromise = null;
+async function carregarMedalhasArte() {
+  if (window.MedalhasArte) return window.MedalhasArte;
+  if (!_medalhasArtePromise) _medalhasArtePromise = new Promise((resolve,reject) => {
+    const script=document.createElement('script');script.src='/projetos/acolitos/medalhas-arte.js';
+    const timer=setTimeout(()=>reject(new Error('A arte demorou para carregar.')),8000);
+    script.onload=()=>{clearTimeout(timer);resolve(window.MedalhasArte);};script.onerror=()=>{clearTimeout(timer);reject(new Error('Não foi possível carregar as artes.'));};document.head.appendChild(script);
+  }).catch(e=>{_medalhasArtePromise=null;throw e;});
+  return _medalhasArtePromise;
+}
+function medalhaTier(b) {
+  return b.tier || (['coroinha','acolito_aspirante','aspirante'].includes(b.nivel)?'bronze':['acolito_guardiao','acolito_sentinela'].includes(b.nivel)?'prata':'ouro');
+}
+async function showMedalha(aviso, done) {
+  if(typeof aviso==='string')aviso={label:aviso};aviso=aviso||{};
+  let medalha=aviso,arte='';
+  try {
+    const artes=await carregarMedalhasArte();
+    if(!medalha.icone){
+      if(!_medalhasCatalogoPromise)_medalhasCatalogoPromise=sb.rpc('acolitos_medalhas_catalogo').then(r=>{if(r.error)throw r.error;return r.data||[];}).catch(e=>{_medalhasCatalogoPromise=null;throw e;});
+      const catalogo=await _medalhasCatalogoPromise;
+      medalha=catalogo.find(b=>aviso.medalha_id?b.id===aviso.medalha_id:b.label===aviso.label)||aviso;
+    }
+    arte=artes.html(medalha.icone,medalhaTier(medalha),320);
+  } catch(e) { console.warn('Arte da medalha indisponível'); }
+  _celebInject();
+  if(!document.getElementById('medalha-celeb-style')){
+    const st=document.createElement('style');st.id='medalha-celeb-style';st.textContent=`
+    .medalha-celeb{padding:clamp(16px,2.4vw,44px)}
+    .medalha-celeb .celeb-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 28px;max-width:none;max-height:calc(100dvh - 40px);overflow:auto;padding:clamp(24px,4vw,64px);border:1px solid var(--gold-dim);border-radius:20px;background:var(--surface);text-align:left}
+    .medalha-celeb .celeb-iconwrap{grid-column:1;grid-row:1/5;width:100%;height:auto;min-height:260px;margin:0}
+    .medalha-celeb .celeb-icon{animation:none;transform:none;filter:drop-shadow(0 8px 24px #0008);font-size:0;width:100%}
+    .medalha-celeb .celeb-icon img,.medalha-celeb .celeb-icon svg{width:min(100%,420px);height:auto;max-height:55dvh;object-fit:contain;display:block;margin:auto}
+    .medalha-celeb :is(.celeb-tag,.celeb-hero,.celeb-sub,.celeb-actions){grid-column:2;margin:0;align-self:center;min-width:0;overflow-wrap:anywhere}
+    .medalha-celeb .celeb-tag{font-size:13px;letter-spacing:2px;align-self:end}
+    .medalha-celeb .celeb-hero{font-size:clamp(25px,3vw,42px);line-height:1.3}
+    .medalha-celeb .celeb-sub{font-size:15px;line-height:1.7}
+    .medalha-celeb .celeb-actions{align-self:start}.medalha-celeb .celeb-btn{min-height:48px}
+    @media(max-width:639px){.medalha-celeb{padding:0}.medalha-celeb .celeb-card{grid-template-columns:minmax(0,1fr);gap:14px;height:100dvh;max-height:100dvh;border:0;border-radius:0;padding:calc(24px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));text-align:center}.medalha-celeb .celeb-iconwrap{grid-column:1;grid-row:auto;min-height:0}.medalha-celeb .celeb-icon img,.medalha-celeb .celeb-icon svg{width:min(56vw,240px);max-height:36dvh}.medalha-celeb :is(.celeb-tag,.celeb-hero,.celeb-sub,.celeb-actions){grid-column:1}.medalha-celeb .celeb-hero{font-size:26px}}
+    @media(prefers-reduced-motion:reduce){.medalha-celeb *{animation:none!important;transition:none!important}}`;
+    document.head.appendChild(st);
+  }
+  const origem=document.activeElement,overflowAnterior=document.body.style.overflow;document.body.style.overflow='hidden';
+  const pop=showCeleb({icon:'',tag:'MEDALHA CONQUISTADA',hero:medalha.label||aviso.label||'Nova medalha',sub:medalha.desc||'Seu serviço foi reconhecido. Esta medalha já está na sua coleção.',sound:'level',done:()=>{document.body.style.overflow=overflowAnterior;if(origem?.isConnected)origem.focus({preventScroll:true});if(typeof done==='function')done();},actions:[
+    {label:'Ver minha coleção',primary:true,onClick:close=>{close();if(!location.pathname.endsWith('conquistas.html'))location.href='conquistas.html';}},
+    {label:'Continuar'}
+  ]});
+  pop.ov.classList.add('medalha-celeb');pop.ov.setAttribute('role','dialog');pop.ov.setAttribute('aria-modal','true');pop.ov.setAttribute('aria-label','Medalha conquistada: '+(medalha.label||aviso.label||''));pop.ov._acResolveClose=pop.close;
+  const icon=pop.ov.querySelector('.celeb-icon');icon.innerHTML=arte||'<svg viewBox="0 0 100 120" aria-label="Medalha"><path d="M20 0h25l15 50H35zM80 0H55L40 50h25z" fill="#842b40"/><circle cx="50" cy="75" r="35" fill="#e8b94a" stroke="#fff0b0" stroke-width="4"/><path d="m50 50 7 16 18 2-14 12 4 18-15-9-15 9 4-18-14-12 18-2z" fill="#8e5d13"/></svg>';
+  const img=icon.querySelector('img');if(img)img.alt=medalha.label||aviso.label||'Medalha conquistada';
+  pop.ov.addEventListener('keydown',e=>{const buttons=[...pop.ov.querySelectorAll('button')];if(e.key==='Escape'){e.preventDefault();pop.close();}if(e.key==='Tab'){const index=buttons.indexOf(document.activeElement);if(e.shiftKey&&index<=0){e.preventDefault();buttons.at(-1).focus();}else if(!e.shiftKey&&index===buttons.length-1){e.preventDefault();buttons[0].focus();}}});pop.ov.querySelector('button')?.focus({preventScroll:true});
 }
 // 🏆 Campeão de temporada (liga)
 function showCampeao(liga, temporada, done) {
@@ -1059,7 +1101,7 @@ function showAvisoUnico(aviso, membro, done) {
   if (aviso && aviso.tipo === 'quest_exclusiva') { showQuestExclusivaPop(aviso, done); return; }
   if (aviso && aviso.tipo === 'estrela_nova') { showStarUp(Number(aviso.n) || 1, done); return; }
   if (aviso && aviso.tipo === 'xp_ganho') { showXpGain(Number(aviso.gain) || 0, Number(aviso.from_xp) || 0, aviso.titulo || '', done); return; }
-  if (aviso && aviso.tipo === 'medalha') { showMedalha(aviso.label || '', done); return; }
+  if (aviso && aviso.tipo === 'medalha') { showMedalha(aviso, done); return; }
   if (aviso && aviso.tipo === 'campeao') { showCampeao(aviso.liga, aviso.temporada, done); return; }
   if (aviso && aviso.tipo === 'boas_vindas_time') { showBoasVindasTime(aviso, done); return; }
   if (aviso && aviso.tipo === TIPO_RECADO_DA_FOTO) { showFotoConsertoPop(membro, done); return; }

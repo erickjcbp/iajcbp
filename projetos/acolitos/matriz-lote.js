@@ -16,6 +16,7 @@ function atualizarSelecaoMatriz(){
   document.querySelectorAll('.matriz-all-check').forEach(c=>{const ids=c.dataset.ids?JSON.parse(c.dataset.ids):_devMembros.map(m=>m.id);const n=ids.filter(id=>matrizSelecionados.has(id)).length;c.checked=ids.length>0&&n===ids.length;c.indeterminate=n>0&&n<ids.length;});
   const count=document.querySelector('.matriz-lote-count');if(count)count.textContent=matrizSelecionados.size+' selecionados';
   document.querySelectorAll('.matriz-lote-action').forEach(b=>b.disabled=!matrizSelecionados.size);
+  document.dispatchEvent(new Event('matriz-selecao'));
 }
 function checkboxMatriz(label,ids){
  const wrap=document.createElement('label');wrap.className='matriz-select';
@@ -27,6 +28,7 @@ function checkboxMatriz(label,ids){
 function barraLoteMatriz(){
  const bar=document.createElement('div');bar.className='matriz-lote-bar';const count=document.createElement('span');count.className='matriz-lote-count';bar.appendChild(count);
  for(const [acao,label] of [['nivel','Alterar nível'],['funcoes','Aptidão por função'],['disponibilidade','Disponibilidade']]){const b=document.createElement('button');b.className='btn-sm gray matriz-lote-action';b.textContent=label;b.onclick=()=>abrirEdicaoMatrizLote(acao);bar.appendChild(b)}
+ if(globalThis.MedalhasAdmin?.permitida(ctx)){const medalhas=document.createElement('button');medalhas.type='button';medalhas.className='btn-sm gold matriz-lote-action';medalhas.textContent='Dar medalhas';medalhas.onclick=()=>MedalhasAdmin.abrir({sb,membros:_devMembros.filter(m=>matrizSelecionados.has(m.id))});bar.appendChild(medalhas);}
  const limpar=document.createElement('button');limpar.className='btn-sm gray';limpar.textContent='Limpar seleção';limpar.onclick=()=>{matrizSelecionados.clear();atualizarSelecaoMatriz()};bar.appendChild(limpar);return bar;
 }
 function abrirEdicaoMatrizLote(acao){
