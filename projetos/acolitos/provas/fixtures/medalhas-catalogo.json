@@ -1,1 +1,479 @@
-[{"id": "00c32196-809c-4335-b524-6bd44e24d946", "desc": "Marca a chegada da idade para avançar como Acólito. Paciência recompensada!", "tier": null, "icone": "vela", "label": "A Hora Chegou", "nivel": "acolito_aspirante", "validacao": "automatica"}, {"id": "24accca7-a2f5-4758-b224-8704291c8448", "desc": "30 vezes salvou a missa aparecendo. Um anjo da guarda do altar.", "tier": "ouro", "icone": "pomba", "label": "Anjo da Guarda", "nivel": null, "validacao": "automatica"}, {"id": "72957d92-db80-46e4-a409-e24253203d10", "desc": "Dois títulos de temporada. Dinastia no altar!", "tier": "ouro", "icone": "coroa", "label": "Bicampeão", "nivel": null, "validacao": "automatica"}, {"id": "9d9b4d6c-7540-4bb5-868a-b057b52d37fa", "desc": "Você venceu uma temporada — campeão da sua liga!", "tier": "ouro", "icone": "estrela", "label": "Campeão de Liga", "nivel": null, "validacao": "automatica"}, {"id": "1b3ada55-d665-498b-997d-91d76b19c558", "desc": "100 missas servidas. Um servo de verdade.", "tier": "ouro", "icone": "calice_sagrado", "label": "Cem ao Altar", "nivel": null, "validacao": "automatica"}, {"id": "52195a5a-166e-40dd-a514-e42c3ab5e0b5", "desc": "5 vezes serviu sem estar escalado. Coração sempre pronto.", "tier": "bronze", "icone": "coracao", "label": "Coração Solícito", "nivel": null, "validacao": "automatica"}, {"id": "02665df3-b6d6-49a9-8d84-d6354e6afe2d", "desc": "Reconhecido pela coordenação por uma vida de oração e devoção exemplar.", "tier": "ouro", "icone": "rosario", "label": "Devoto", "nivel": null, "validacao": "avaliada"}, {"id": "d741223a-252e-4e2d-ae53-56e8e2b38b4b", "desc": "O sinão é seu — anuncia os momentos solenes com firmeza.", "tier": null, "icone": "sino2", "label": "Eco da Solenidade", "nivel": "acolito_sentinela", "validacao": "automatica"}, {"id": "3e021564-887b-4aaf-92c2-65f63998395d", "desc": "Concedida a quem une a turma e serve com alegria ao lado de todos.", "tier": "prata", "icone": "coracao", "label": "Espírito de Equipe", "nivel": null, "validacao": "avaliada"}, {"id": "e42a10d4-4ffa-4688-a936-26803434fb01", "desc": "Apto em 8 funções. Onde precisar, você está pronto.", "tier": "prata", "icone": "coroa", "label": "Faz-Tudo do Altar", "nivel": null, "validacao": "automatica"}, {"id": "bf121e63-7f14-485f-b468-9b454a4bdcf1", "desc": "Perseverança e fidelidade que atravessam qualquer dificuldade.", "tier": "ouro", "icone": "crucifixo", "label": "Fiel até o Fim", "nivel": null, "validacao": "avaliada"}, {"id": "f55b34da-f14a-4b8d-84c5-64bd2887e7c9", "desc": "Você não só serve — forma novos servos do altar. Mestre que ensina.", "tier": null, "icone": "pomba", "label": "Forjador de Servos", "nivel": "cerimoniario_magistral", "validacao": "avaliada"}, {"id": "f405eff3-faed-457e-960a-5436b5298da6", "desc": "As velas nas suas mãos: você leva a luz de Cristo ao altar.", "tier": "bronze", "icone": "vela", "label": "Guardião da Luz", "nivel": null, "validacao": "automatica"}, {"id": "e34e2a4c-7f40-44e6-8b04-be9ca4308fbb", "desc": "Você conduz o missal com segurança, guiando a oração do celebrante.", "tier": null, "icone": "livro", "label": "Guardião da Palavra", "nivel": "aspirante_cerimoniario", "validacao": "automatica"}, {"id": "b08b7d6c-f4c5-498b-8caf-ff111c261f5f", "desc": "O ápice da jornada: você é o Guardião Supremo, o maior reconhecimento de todos.", "tier": null, "icone": "espadas", "label": "Guardião Supremo", "nivel": "cerimoniario_mor", "validacao": "avaliada"}, {"id": "4341f130-ed66-45e2-9b5d-933cbbcdaeae", "desc": "A primeira insígnia de quem sobe ao altar: você domina a função do Altar e serve de perto a celebração.", "tier": null, "icone": "calice", "label": "Junto ao Altar", "nivel": "acolito_aspirante", "validacao": "automatica"}, {"id": "ed29c4c0-aceb-4130-bc9b-dc88f350863c", "desc": "200 missas. Você é uma lenda viva do altar.", "tier": "ouro", "icone": "espadas", "label": "Lenda do Altar", "nivel": null, "validacao": "automatica"}, {"id": "d9574327-65f6-41b9-a2b9-296a8c6708e4", "desc": "Capricho excepcional em tudo que faz no altar. Mãos de ouro.", "tier": "ouro", "icone": "coroa", "label": "Mãos de Ouro", "nivel": null, "validacao": "avaliada"}, {"id": "6127d803-1e28-44fc-b127-1ed850cae96c", "desc": "50 missas! Meio centenário de dedicação ao Senhor.", "tier": "prata", "icone": "calice", "label": "Meio Centenário", "nivel": null, "validacao": "automatica"}, {"id": "8bae204f-d1f6-441f-9b81-46939567eb06", "desc": "Você organiza e conduz a credência com precisão — o coração logístico do altar.", "tier": null, "icone": "hostia", "label": "Mestre da Credência", "nivel": "cerimoniario_aspirante", "validacao": "automatica"}, {"id": "5b5e6396-e217-43bd-b4d3-ca5ef41cc0f9", "desc": "Apto em 12 funções — domina TODAS as artes do altar.", "tier": "ouro", "icone": "coroa", "label": "Mestre de Todas as Artes", "nivel": null, "validacao": "automatica"}, {"id": "b9a268d8-0c07-4714-8736-c5525a83965a", "desc": "Trouxe novos servos para o altar. Verdadeiro missionário.", "tier": "ouro", "icone": "pomba", "label": "Missionário", "nivel": null, "validacao": "avaliada"}, {"id": "0a85674c-fb91-43c6-a2ca-0675daeff171", "desc": "O convite formal para trilhar o caminho do cerimoniário — um marco de confiança da coordenação.", "tier": null, "icone": "pomba", "label": "O Chamado", "nivel": "aspirante_cerimoniario", "validacao": "avaliada"}, {"id": "3d5d700e-dcc0-41a3-8f88-d8a691042fb0", "desc": "Você domina o toque da sineta: pequeno gesto, grande responsabilidade.", "tier": null, "icone": "sino", "label": "O Toque Sagrado", "nivel": "acolito_guardiao", "validacao": "automatica"}, {"id": "72a6d0c9-1729-49f0-81f3-0ffcefe6e283", "desc": "Reconhecido por todos como exemplo e referência viva da pastoral.", "tier": null, "icone": "estrela", "label": "Pilar da Pastoral", "nivel": "cerimoniario_magistral", "validacao": "avaliada"}, {"id": "6e36739b-7ee6-4772-ba90-e3e2bcf8b256", "desc": "2 anos servindo. Um pilar que sustenta a pastoral.", "tier": "ouro", "icone": "rosario", "label": "Pilar do Tempo", "nivel": null, "validacao": "automatica"}, {"id": "f247fb41-9758-480f-a2ba-29739987e09b", "desc": "Nunca se atrasa — chega antes e pronto. Pontualidade de lenda.", "tier": "prata", "icone": "estrela", "label": "Pontualidade Lendária", "nivel": null, "validacao": "avaliada"}, {"id": "6bc85f6a-6a9b-42a4-9b67-9e900ccf961c", "desc": "Você carrega a cruz à frente da procissão — guia que abre o caminho da fé.", "tier": "prata", "icone": "crucifixo", "label": "Porta-Cruz", "nivel": null, "validacao": "automatica"}, {"id": "8e489203-b14c-4371-8741-46ad00fc3b7e", "desc": "Você cuida do incenso desde a naveta: o perfume da oração que sobe a Deus.", "tier": null, "icone": "trigo", "label": "Portador do Incenso", "nivel": "acolito_sentinela", "validacao": "automatica"}, {"id": "6a0574cc-fe3a-4b4e-b697-91710008aaf9", "desc": "10 ensaios — quem treina, brilha na missa.", "tier": "bronze", "icone": "livro", "label": "Presença Garantida", "nivel": null, "validacao": "automatica"}, {"id": "05f131ce-17e4-4ffd-b6e1-2f6fb1c98487", "desc": "O começo de tudo — você aprendeu a auxiliar a missa com humildade e atenção.", "tier": null, "icone": "coracao", "label": "Primeiras Mãos", "nivel": "acolito_aspirante", "validacao": "automatica"}, {"id": "641ccf2c-fbd0-47cd-871d-3f95d804ae08", "desc": "Suas 10 primeiras missas servidas. A jornada começou!", "tier": "bronze", "icone": "estrela", "label": "Primeiros Passos", "nivel": null, "validacao": "automatica"}, {"id": "e38aba98-bd7a-4279-8f6e-a66a0302a0d9", "desc": "3 anos! Suas raízes seguram a pastoral inteira.", "tier": "ouro", "icone": "coroa", "label": "Raiz da Pastoral", "nivel": null, "validacao": "automatica"}, {"id": "f72e6264-11a2-4197-9710-6e258444a477", "desc": "No comando do altar: você coordena os servos e o ritmo da celebração.", "tier": null, "icone": "calice_sagrado", "label": "Regente do Altar", "nivel": "cerimoniario_aspirante", "validacao": "automatica"}, {"id": "fb2b6ede-64b9-4601-91da-83287d325426", "desc": "Reconhecimento oficial de que você ingressou na Ordem dos Cerimoniários.", "tier": null, "icone": "crucifixo", "label": "Selo da Ordem", "nivel": "cerimoniario_aspirante", "validacao": "avaliada"}, {"id": "d3887cb8-15d6-4397-9f60-6ddc4529e340", "desc": "25 ensaios. Presença garantida, sempre.", "tier": "prata", "icone": "livro", "label": "Sempre nos Ensaios", "nivel": null, "validacao": "automatica"}, {"id": "51e7caba-e686-4e8d-bc36-43f08f36eb1e", "desc": "15 vezes solícito. Onde falta gente, você aparece.", "tier": "prata", "icone": "coracao", "label": "Sempre Pronto", "nivel": null, "validacao": "automatica"}, {"id": "df885504-5374-4355-8a32-33a045d5b4b3", "desc": "O turíbulo nas suas mãos: o incenso que envolve as celebrações mais solenes.", "tier": null, "icone": "turibulo", "label": "Senhor do Incenso", "nivel": "aspirante_cerimoniario", "validacao": "automatica"}, {"id": "c374af71-e659-4dbe-9a73-a31a61a0e987", "desc": "25 missas servidas — a constância de quem ama o altar.", "tier": "bronze", "icone": "trigo", "label": "Servo Constante", "nivel": null, "validacao": "automatica"}, {"id": "fa16cf42-18fa-430c-a834-39842cc75d30", "desc": "Mitra e báculo: você está pronto para servir até nas celebrações com o bispo.", "tier": null, "icone": "coroa", "label": "Servo do Pastor", "nivel": "cerimoniario_guardiao", "validacao": "automatica"}, {"id": "38847531-7a8e-4f99-8847-0965f98f3045", "desc": "Apto em 4 funções — você se vira em qualquer lugar do altar.", "tier": "bronze", "icone": "estrela", "label": "Versátil", "nivel": null, "validacao": "automatica"}, {"id": "0fba3b84-f070-4d67-af7e-c0ddc8086b2d", "desc": "1 ano de pastoral. Casa nova já virou lar.", "tier": "prata", "icone": "rosario", "label": "Veterano", "nivel": null, "validacao": "automatica"}, {"id": "54082821-ba5c-460c-8ba5-eaf7187c9d18", "desc": "Inspira e lidera os mais novos com o exemplo. A voz da juventude da pastoral.", "tier": "prata", "icone": "pomba", "label": "Voz da Juventude", "nivel": null, "validacao": "avaliada"}]
+[
+  {
+    "id": "00c32196-809c-4335-b524-6bd44e24d946",
+    "desc": "Marca a chegada da idade para avançar como Acólito. Paciência recompensada!",
+    "tier": null,
+    "icone": "vela",
+    "label": "A Hora Chegou",
+    "nivel": "acolito_aspirante",
+    "validacao": "automatica"
+  },
+  {
+    "id": "48c81656-d6db-5d56-a1f2-ca0301200696",
+    "label": "Amigo de Todos",
+    "icone": "amigo_todos",
+    "tier": "ouro",
+    "nivel": null,
+    "desc": "Incluir ativamente quem estava isolado nas atividades.",
+    "validacao": "avaliada"
+  },
+  {
+    "id": "24accca7-a2f5-4758-b224-8704291c8448",
+    "desc": "30 vezes salvou a missa aparecendo. Um anjo da guarda do altar.",
+    "tier": "ouro",
+    "icone": "pomba",
+    "label": "Anjo da Guarda",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "72957d92-db80-46e4-a409-e24253203d10",
+    "desc": "Dois títulos de temporada. Dinastia no altar!",
+    "tier": "ouro",
+    "icone": "coroa",
+    "label": "Bicampeão",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "ae02cb81-c38b-59ec-a46c-2b912e8f5436",
+    "label": "Bom Samaritano",
+    "icone": "samaritano",
+    "tier": "ouro",
+    "nivel": null,
+    "desc": "Participar de uma ação solidária e servir quem precisa.",
+    "validacao": "avaliada"
+  },
+  {
+    "id": "9d9b4d6c-7540-4bb5-868a-b057b52d37fa",
+    "desc": "Você venceu uma temporada — campeão da sua liga!",
+    "tier": "ouro",
+    "icone": "estrela",
+    "label": "Campeão de Liga",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "1b3ada55-d665-498b-997d-91d76b19c558",
+    "desc": "100 missas servidas. Um servo de verdade.",
+    "tier": "ouro",
+    "icone": "calice_sagrado",
+    "label": "Cem ao Altar",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "e3e89247-dbe8-5d0c-9490-9fef78462626",
+    "label": "Coragem de Recomeçar",
+    "icone": "recomecar",
+    "tier": "ouro",
+    "nivel": null,
+    "desc": "Retomar o serviço com responsabilidade após uma dificuldade.",
+    "validacao": "avaliada"
+  },
+  {
+    "id": "0e6fa658-90e8-54cd-ab96-5cc4fe0091a7",
+    "label": "Coração Acolhedor",
+    "icone": "acolhedor",
+    "tier": "ouro",
+    "nivel": null,
+    "desc": "Receber e acompanhar novos membros nos primeiros encontros.",
+    "validacao": "avaliada"
+  },
+  {
+    "id": "52195a5a-166e-40dd-a514-e42c3ab5e0b5",
+    "desc": "5 vezes serviu sem estar escalado. Coração sempre pronto.",
+    "tier": "bronze",
+    "icone": "coracao",
+    "label": "Coração Solícito",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "02665df3-b6d6-49a9-8d84-d6354e6afe2d",
+    "desc": "Reconhecido pela coordenação por uma vida de oração e devoção exemplar.",
+    "tier": "ouro",
+    "icone": "rosario",
+    "label": "Devoto",
+    "nivel": null,
+    "validacao": "avaliada"
+  },
+  {
+    "id": "d741223a-252e-4e2d-ae53-56e8e2b38b4b",
+    "desc": "O sinão é seu — anuncia os momentos solenes com firmeza.",
+    "tier": null,
+    "icone": "sino2",
+    "label": "Eco da Solenidade",
+    "nivel": "acolito_sentinela",
+    "validacao": "automatica"
+  },
+  {
+    "id": "64faf676-5d46-59c1-9b42-30e8d3fc7d21",
+    "label": "Escuta que Transforma",
+    "icone": "escuta",
+    "tier": "ouro",
+    "nivel": null,
+    "desc": "Acolher uma orientação e demonstrar melhora concreta na prática.",
+    "validacao": "avaliada"
+  },
+  {
+    "id": "3e021564-887b-4aaf-92c2-65f63998395d",
+    "desc": "Concedida a quem une a turma e serve com alegria ao lado de todos.",
+    "tier": "prata",
+    "icone": "coracao",
+    "label": "Espírito de Equipe",
+    "nivel": null,
+    "validacao": "avaliada"
+  },
+  {
+    "id": "e42a10d4-4ffa-4688-a936-26803434fb01",
+    "desc": "Apto em 8 funções. Onde precisar, você está pronto.",
+    "tier": "prata",
+    "icone": "coroa",
+    "label": "Faz-Tudo do Altar",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "bf121e63-7f14-485f-b468-9b454a4bdcf1",
+    "desc": "Perseverança e fidelidade que atravessam qualquer dificuldade.",
+    "tier": "ouro",
+    "icone": "crucifixo",
+    "label": "Fiel até o Fim",
+    "nivel": null,
+    "validacao": "avaliada"
+  },
+  {
+    "id": "f55b34da-f14a-4b8d-84c5-64bd2887e7c9",
+    "desc": "Você não só serve — forma novos servos do altar. Mestre que ensina.",
+    "tier": null,
+    "icone": "pomba",
+    "label": "Forjador de Servos",
+    "nivel": "cerimoniario_magistral",
+    "validacao": "avaliada"
+  },
+  {
+    "id": "2fbbe92b-3ce1-5bbc-82d9-7b03e985c5c5",
+    "label": "Guardião da Criação",
+    "icone": "criacao",
+    "tier": "ouro",
+    "nivel": null,
+    "desc": "Cuidar dos recursos da pastoral, promovendo reutilização e evitando desperdícios.",
+    "validacao": "avaliada"
+  },
+  {
+    "id": "f405eff3-faed-457e-960a-5436b5298da6",
+    "desc": "As velas nas suas mãos: você leva a luz de Cristo ao altar.",
+    "tier": "bronze",
+    "icone": "vela",
+    "label": "Guardião da Luz",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "e34e2a4c-7f40-44e6-8b04-be9ca4308fbb",
+    "desc": "Você conduz o missal com segurança, guiando a oração do celebrante.",
+    "tier": null,
+    "icone": "livro",
+    "label": "Guardião da Palavra",
+    "nivel": "aspirante_cerimoniario",
+    "validacao": "automatica"
+  },
+  {
+    "id": "b08b7d6c-f4c5-498b-8caf-ff111c261f5f",
+    "desc": "O ápice da jornada: você é o Guardião Supremo, o maior reconhecimento de todos.",
+    "tier": null,
+    "icone": "espadas",
+    "label": "Guardião Supremo",
+    "nivel": "cerimoniario_mor",
+    "validacao": "avaliada"
+  },
+  {
+    "id": "4341f130-ed66-45e2-9b5d-933cbbcdaeae",
+    "desc": "A primeira insígnia de quem sobe ao altar: você domina a função do Altar e serve de perto a celebração.",
+    "tier": null,
+    "icone": "calice",
+    "label": "Junto ao Altar",
+    "nivel": "acolito_aspirante",
+    "validacao": "automatica"
+  },
+  {
+    "id": "ed29c4c0-aceb-4130-bc9b-dc88f350863c",
+    "desc": "200 missas. Você é uma lenda viva do altar.",
+    "tier": "ouro",
+    "icone": "espadas",
+    "label": "Lenda do Altar",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "6127d803-1e28-44fc-b127-1ed850cae96c",
+    "desc": "50 missas! Meio centenário de dedicação ao Senhor.",
+    "tier": "prata",
+    "icone": "calice",
+    "label": "Meio Centenário",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "a4bdff49-ed32-519a-b3af-55458abec35d",
+    "label": "Memória Viva",
+    "icone": "memoria",
+    "tier": "ouro",
+    "nivel": null,
+    "desc": "Organizar e preservar materiais e aprendizados para as próximas equipes.",
+    "validacao": "avaliada"
+  },
+  {
+    "id": "8bae204f-d1f6-441f-9b81-46939567eb06",
+    "desc": "Você organiza e conduz a credência com precisão — o coração logístico do altar.",
+    "tier": null,
+    "icone": "hostia",
+    "label": "Mestre da Credência",
+    "nivel": "cerimoniario_aspirante",
+    "validacao": "automatica"
+  },
+  {
+    "id": "5b5e6396-e217-43bd-b4d3-ca5ef41cc0f9",
+    "desc": "Apto em 12 funções — domina TODAS as artes do altar.",
+    "tier": "ouro",
+    "icone": "coroa",
+    "label": "Mestre de Todas as Artes",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "b9a268d8-0c07-4714-8736-c5525a83965a",
+    "desc": "Trouxe novos servos para o altar. Verdadeiro missionário.",
+    "tier": "ouro",
+    "icone": "pomba",
+    "label": "Missionário",
+    "nivel": null,
+    "validacao": "avaliada"
+  },
+  {
+    "id": "d9574327-65f6-41b9-a2b9-296a8c6708e4",
+    "desc": "Capricho excepcional em tudo que faz no altar. Mãos de ouro.",
+    "tier": "ouro",
+    "icone": "coroa",
+    "label": "Mãos de Ouro",
+    "nivel": null,
+    "validacao": "avaliada"
+  },
+  {
+    "id": "0a85674c-fb91-43c6-a2ca-0675daeff171",
+    "desc": "O convite formal para trilhar o caminho do cerimoniário — um marco de confiança da coordenação.",
+    "tier": null,
+    "icone": "pomba",
+    "label": "O Chamado",
+    "nivel": "aspirante_cerimoniario",
+    "validacao": "avaliada"
+  },
+  {
+    "id": "3d5d700e-dcc0-41a3-8f88-d8a691042fb0",
+    "desc": "Você domina o toque da sineta: pequeno gesto, grande responsabilidade.",
+    "tier": null,
+    "icone": "sino",
+    "label": "O Toque Sagrado",
+    "nivel": "acolito_guardiao",
+    "validacao": "automatica"
+  },
+  {
+    "id": "72a6d0c9-1729-49f0-81f3-0ffcefe6e283",
+    "desc": "Reconhecido por todos como exemplo e referência viva da pastoral.",
+    "tier": null,
+    "icone": "estrela",
+    "label": "Pilar da Pastoral",
+    "nivel": "cerimoniario_magistral",
+    "validacao": "avaliada"
+  },
+  {
+    "id": "6e36739b-7ee6-4772-ba90-e3e2bcf8b256",
+    "desc": "2 anos servindo. Um pilar que sustenta a pastoral.",
+    "tier": "ouro",
+    "icone": "rosario",
+    "label": "Pilar do Tempo",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "ffddc9fa-ceb9-57a1-a533-1cbff8aac446",
+    "label": "Ponte da Paz",
+    "icone": "ponte_paz",
+    "tier": "ouro",
+    "nivel": null,
+    "desc": "Ajudar a resolver um desentendimento com respeito e diálogo.",
+    "validacao": "avaliada"
+  },
+  {
+    "id": "f247fb41-9758-480f-a2ba-29739987e09b",
+    "desc": "Nunca se atrasa — chega antes e pronto. Pontualidade de lenda.",
+    "tier": "prata",
+    "icone": "estrela",
+    "label": "Pontualidade Lendária",
+    "nivel": null,
+    "validacao": "avaliada"
+  },
+  {
+    "id": "6bc85f6a-6a9b-42a4-9b67-9e900ccf961c",
+    "desc": "Você carrega a cruz à frente da procissão — guia que abre o caminho da fé.",
+    "tier": "prata",
+    "icone": "crucifixo",
+    "label": "Porta-Cruz",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "8e489203-b14c-4371-8741-46ad00fc3b7e",
+    "desc": "Você cuida do incenso desde a naveta: o perfume da oração que sobe a Deus.",
+    "tier": null,
+    "icone": "trigo",
+    "label": "Portador do Incenso",
+    "nivel": "acolito_sentinela",
+    "validacao": "automatica"
+  },
+  {
+    "id": "6a0574cc-fe3a-4b4e-b697-91710008aaf9",
+    "desc": "10 ensaios — quem treina, brilha na missa.",
+    "tier": "bronze",
+    "icone": "livro",
+    "label": "Presença Garantida",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "05f131ce-17e4-4ffd-b6e1-2f6fb1c98487",
+    "desc": "O começo de tudo — você aprendeu a auxiliar a missa com humildade e atenção.",
+    "tier": null,
+    "icone": "coracao",
+    "label": "Primeiras Mãos",
+    "nivel": "acolito_aspirante",
+    "validacao": "automatica"
+  },
+  {
+    "id": "641ccf2c-fbd0-47cd-871d-3f95d804ae08",
+    "desc": "Suas 10 primeiras missas servidas. A jornada começou!",
+    "tier": "bronze",
+    "icone": "estrela",
+    "label": "Primeiros Passos",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "e38aba98-bd7a-4279-8f6e-a66a0302a0d9",
+    "desc": "3 anos! Suas raízes seguram a pastoral inteira.",
+    "tier": "ouro",
+    "icone": "coroa",
+    "label": "Raiz da Pastoral",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "f72e6264-11a2-4197-9710-6e258444a477",
+    "desc": "No comando do altar: você coordena os servos e o ritmo da celebração.",
+    "tier": null,
+    "icone": "calice_sagrado",
+    "label": "Regente do Altar",
+    "nivel": "cerimoniario_aspirante",
+    "validacao": "automatica"
+  },
+  {
+    "id": "fb2b6ede-64b9-4601-91da-83287d325426",
+    "desc": "Reconhecimento oficial de que você ingressou na Ordem dos Cerimoniários.",
+    "tier": null,
+    "icone": "crucifixo",
+    "label": "Selo da Ordem",
+    "nivel": "cerimoniario_aspirante",
+    "validacao": "avaliada"
+  },
+  {
+    "id": "501749da-47ba-524c-b843-3342317d9434",
+    "label": "Semeador da Palavra",
+    "icone": "palavra_semeada",
+    "tier": "ouro",
+    "nivel": null,
+    "desc": "Preparar e partilhar uma reflexão do Evangelho na formação.",
+    "validacao": "avaliada"
+  },
+  {
+    "id": "d3887cb8-15d6-4397-9f60-6ddc4529e340",
+    "desc": "25 ensaios. Presença garantida, sempre.",
+    "tier": "prata",
+    "icone": "livro",
+    "label": "Sempre nos Ensaios",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "51e7caba-e686-4e8d-bc36-43f08f36eb1e",
+    "desc": "15 vezes solícito. Onde falta gente, você aparece.",
+    "tier": "prata",
+    "icone": "coracao",
+    "label": "Sempre Pronto",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "df885504-5374-4355-8a32-33a045d5b4b3",
+    "desc": "O turíbulo nas suas mãos: o incenso que envolve as celebrações mais solenes.",
+    "tier": null,
+    "icone": "turibulo",
+    "label": "Senhor do Incenso",
+    "nivel": "aspirante_cerimoniario",
+    "validacao": "automatica"
+  },
+  {
+    "id": "c374af71-e659-4dbe-9a73-a31a61a0e987",
+    "desc": "25 missas servidas — a constância de quem ama o altar.",
+    "tier": "bronze",
+    "icone": "trigo",
+    "label": "Servo Constante",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "fa16cf42-18fa-430c-a834-39842cc75d30",
+    "desc": "Mitra e báculo: você está pronto para servir até nas celebrações com o bispo.",
+    "tier": null,
+    "icone": "coroa",
+    "label": "Servo do Pastor",
+    "nivel": "cerimoniario_guardiao",
+    "validacao": "automatica"
+  },
+  {
+    "id": "a188d83c-07db-5c1f-867e-257b9be8940a",
+    "label": "Servo dos Bastidores",
+    "icone": "bastidores",
+    "tier": "ouro",
+    "nivel": null,
+    "desc": "Ajudar na preparação e organização antes e depois das celebrações.",
+    "validacao": "avaliada"
+  },
+  {
+    "id": "38847531-7a8e-4f99-8847-0965f98f3045",
+    "desc": "Apto em 4 funções — você se vira em qualquer lugar do altar.",
+    "tier": "bronze",
+    "icone": "estrela",
+    "label": "Versátil",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "0fba3b84-f070-4d67-af7e-c0ddc8086b2d",
+    "desc": "1 ano de pastoral. Casa nova já virou lar.",
+    "tier": "prata",
+    "icone": "rosario",
+    "label": "Veterano",
+    "nivel": null,
+    "validacao": "automatica"
+  },
+  {
+    "id": "54082821-ba5c-460c-8ba5-eaf7187c9d18",
+    "desc": "Inspira e lidera os mais novos com o exemplo. A voz da juventude da pastoral.",
+    "tier": "prata",
+    "icone": "pomba",
+    "label": "Voz da Juventude",
+    "nivel": null,
+    "validacao": "avaliada"
+  }
+]

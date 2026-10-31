@@ -6,9 +6,9 @@ Na coleção, combina com busca, status conquistada/pendente e ordenação; cont
 
 Verificação: node projetos/acolitos/provas/medalhas-tipo.prova.mjs, saída 0. Coleção e gestor em 360, 390, 768, 1366 e 2560 px, filtros cruzados, restauração, preservação da seleção e ausência de rolagem horizontal. Fixture atual com 31 automáticas e 12 da coordenação. Regressão node projetos/acolitos/provas/medalhas-admin.prova.mjs, saída 0, incluindo galeria, múltiplos membros, concessão simulada e notificação. Fotos em estudos/medalhas/tipos-2026-10-31. git diff --check passou.
 
-## Propostas ainda não cadastradas
+## Dez medalhas aprovadas e cadastradas
 
-Todas seriam avaliadas e concedidas pela coordenação; nomes e critérios propostos após conferir as 43 medalhas existentes. Aguardar aprovação antes de criar registros e artes.
+Todas foram aprovadas pelo dono e recebem arte própria dourada com fundo transparente. Cadastro pela migração 123, com concessão manual registrada, sem XP nem requisito de nível. O catálogo passa de 43 para 53 medalhas: 31 automáticas e 22 da coordenação.
 
 | Medalha | Reconhecimento |
 |---|---|
@@ -23,4 +23,4 @@ Todas seriam avaliadas e concedidas pela coordenação; nomes e critérios propo
 | Amigo de Todos | Incluir ativamente quem estava isolado nas atividades. |
 | Memória Viva | Organizar e preservar materiais e aprendizados para as próximas equipes. |
 
-Filtro publicado no fluxo autorizado de commit, push e deploy. As propostas não alteram o catálogo.
+As dez artes estão em projetos/acolitos/medalhas-arte. Detalhes da implementação e validação em medalhas-dez-artes-2026-10-31.md.
