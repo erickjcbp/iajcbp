@@ -15,6 +15,18 @@
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
   <style>
+    .ja-competencias { padding:16px; border:1px solid var(--border-wine); border-radius:12px; background:var(--surface); margin-top:12px; }
+    .ja-comp-default { display:grid; grid-template-columns:minmax(0,1fr) 100px; align-items:center; gap:16px; margin-bottom:16px; padding:14px; background:var(--surface2); border-radius:10px; color:var(--text-muted); font-size:14px; line-height:1.5; }
+    .ja-comp-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); gap:12px; }
+    .ja-comp-card { min-width:0; padding:16px; border:1px solid var(--border-wine); border-radius:10px; background:var(--surface2); }
+    .ja-comp-card h3 { margin:0 0 14px!important; font:700 16px/1.5 var(--font-title); color:var(--gold-light); overflow-wrap:anywhere; }
+    .ja-comp-fields { display:grid; grid-template-columns:minmax(0,1fr) 100px; gap:12px; align-items:end; }
+    .ja-comp-fields label { display:grid; gap:7px; min-width:0; font-size:13px; line-height:1.5; color:var(--text-muted); }
+    .ja-competencias .form-input { min-width:0; min-height:44px; font-size:16px; width:100%; box-sizing:border-box; }
+    .ja-comp-note { font-size:12px; line-height:1.6; color:var(--text-muted); margin:12px 0; }
+    .ja-comp-remove { min-height:44px; padding:9px 12px; border:1px solid var(--border-wine); border-radius:8px; background:var(--surface); color:var(--danger-text); cursor:pointer; font:600 13px var(--font-body); }
+    .ja-comp-new-title { margin:22px 0 8px!important; font:700 15px var(--font-title); color:var(--gold-light); }
+    @media(max-width:639px){.ja-competencias{padding:12px}.ja-comp-card{padding:12px}.ja-comp-default{grid-template-columns:minmax(0,1fr) 80px;padding:12px}.ja-comp-fields{grid-template-columns:minmax(0,1fr) 86px}}
     .ja-competencia-add { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px; gap:8px; margin-top:10px; }
     .ja-competencia-add > * { min-width:0; }
     .ja-competencia-add > button { width:44px !important; height:44px !important; }
@@ -1117,34 +1129,40 @@ async function abrirCompetenciasEditor(m, onSaved) {
 const FAIXAS_DEV = [['iniciantes', '🟢 Iniciantes'], ['acolitos', '🔵 Acólitos'], ['cerimoniarios', '🟣 Cerimoniários']];
 const FAIXA_LABEL = { iniciantes: '🟢 Iniciantes', acolitos: '🔵 Acólitos', cerimoniarios: '🟣 Cerimoniários' };
 async function renderCompLista(b) {
-  b.textContent = '';
+  b.textContent = '';b.className='ja-competencias';
   const padraoAtual = (typeof cfg === 'function') ? cfg('competencia_limiar_padrao', 3) : 3;
-  const head = document.createElement('div'); head.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;color:var(--text-muted);';
-  const ht = document.createElement('span'); comIcone(ht, 'balanca', 'Peso padrão (quests p/ formar a virtude):');
-  const hi = document.createElement('input'); hi.type = 'number'; hi.min = '1'; hi.value = padraoAtual; hi.style.cssText = 'width:56px;font-size:12px;padding:4px;background:var(--surface);border:1px solid var(--border-wine);border-radius:4px;color:var(--text);';
+  const head = document.createElement('div'); head.className='ja-comp-default';
+  const ht = document.createElement('label'); ht.htmlFor='ja-comp-padrao';ht.textContent='Peso padrão · missões para formar uma virtude';
+  const hi = document.createElement('input'); hi.type = 'number'; hi.min = '1'; hi.value = padraoAtual; hi.id='ja-comp-padrao';hi.className='form-input';
   hi.onchange = async () => { const v = Math.max(1, parseInt(hi.value, 10) || 1); const { error } = await sb.from('acolitos_config').upsert({ chave: 'competencia_limiar_padrao', valor: v }, { onConflict: 'chave' }); if (error) { toast('Erro ao salvar limiar.', 'error'); return; } if (typeof _APP_CONFIG === 'object' && _APP_CONFIG) _APP_CONFIG['competencia_limiar_padrao'] = v; toast('✓ Limiar padrão atualizado'); };
   head.append(ht, hi); b.appendChild(head);
   const { data } = await sb.from('acolitos_listas').select('id,valor,label,meta').eq('tipo', 'competencia').order('label');
-  const mini = (txt, danger) => { const x = document.createElement('button'); x.textContent = txt; x.style.cssText = 'width:30px;height:30px;border-radius:6px;cursor:pointer;font-weight:700;border:1px solid ' + (danger ? 'var(--danger)' : 'var(--gold-dim)') + ';background:var(--surface2);color:' + (danger ? 'var(--danger-text)' : 'var(--gold-light)') + ';'; return x; };
+  const grid=document.createElement('div');grid.className='ja-comp-grid';b.appendChild(grid);
   (data || []).forEach(item => {
     const fx = item.meta && item.meta.faixa;
-    const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border);';
-    const nm = document.createElement('span'); nm.style.cssText = 'flex:1;font-size:13px;color:var(--text);'; nm.textContent = item.label || item.valor;
-    const fsel = document.createElement('select'); fsel.style.cssText = 'font-size:11px;padding:4px;background:var(--surface);border:1px solid var(--border-wine);border-radius:4px;color:var(--text);';
+    const row = document.createElement('article'); row.className='ja-comp-card';
+    const nm = document.createElement('h3'); nm.textContent = item.label || item.valor;
+    const fsel = document.createElement('select'); fsel.className='form-input';fsel.setAttribute('aria-label','Faixa de '+(item.label||item.valor));
     FAIXAS_DEV.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; if (v === fx) o.selected = true; fsel.appendChild(o); });
     if (!fx) { const o = document.createElement('option'); o.value = ''; o.textContent = '— faixa —'; o.selected = true; fsel.insertBefore(o, fsel.firstChild); }
     fsel.onchange = async () => { await sb.from('acolitos_listas').update({ meta: Object.assign({}, item.meta || {}, { faixa: fsel.value }) }).eq('id', item.id); item.meta = Object.assign({}, item.meta || {}, { faixa: fsel.value }); toast('✓ Faixa atualizada'); };
-    const pesoLbl = document.createElement('span'); comIcone(pesoLbl, 'balanca', '', 'Equilíbrio'); pesoLbl.title = 'Peso da virtude'; pesoLbl.style.cssText = 'font-size:12px;color:var(--gold-light);';
-    const lim = document.createElement('input'); lim.type = 'number'; lim.min = '1'; lim.value = (item.meta && item.meta.limiar) || ''; lim.title = 'Peso desta virtude: nº de quests p/ virar candidata (vazio = usa o padrão)'; lim.placeholder = 'peso'; lim.style.cssText = 'width:54px;font-size:11px;padding:4px;background:var(--surface);border:1px solid var(--border-wine);border-radius:4px;color:var(--text);';
+    const lim = document.createElement('input'); lim.type = 'number'; lim.min = '1'; lim.value = (item.meta && item.meta.limiar) || '';lim.className='form-input';lim.placeholder=String(padraoAtual);lim.setAttribute('aria-label','Peso de '+(item.label||item.valor));
     lim.onchange = async () => { const v = lim.value === '' ? null : Math.max(1, parseInt(lim.value, 10) || 1); await sb.from('acolitos_listas').update({ meta: Object.assign({}, item.meta || {}, { limiar: v }) }).eq('id', item.id); item.meta = Object.assign({}, item.meta || {}, { limiar: v }); toast('✓ Peso atualizado'); };
-    const del = mini('−', true); del.onclick = async () => { if (!await uiConfirm('Remover competência "' + (item.label || item.valor) + '"?')) return; await sb.from('acolitos_listas').delete().eq('id', item.id); renderCompLista(b); };
-    row.append(nm, fsel, pesoLbl, lim, del); b.appendChild(row);
+    const del = document.createElement('button');del.type='button';del.className='ja-comp-remove';del.textContent='Remover competência';del.setAttribute('aria-label','Remover '+(item.label||item.valor)); del.onclick = async () => { if (!await uiConfirm('Remover competência "' + (item.label || item.valor) + '"?')) return; await sb.from('acolitos_listas').delete().eq('id', item.id); renderCompLista(b); };
+    const fields=document.createElement('div');fields.className='ja-comp-fields';
+    const faixaLabel=document.createElement('label');faixaLabel.textContent='Faixa';faixaLabel.appendChild(fsel);
+    const pesoLabel=document.createElement('label');pesoLabel.textContent='Peso';pesoLabel.appendChild(lim);
+    fields.append(faixaLabel,pesoLabel);
+    const note=document.createElement('p');note.className='ja-comp-note';note.textContent='Peso = missões para formar esta virtude. Em branco, usa o padrão ('+padraoAtual+').';
+    row.append(nm,fields,note,del); grid.appendChild(row);
   });
+  if(!data?.length){const empty=document.createElement('p');empty.className='ja-comp-note';empty.textContent='Nenhuma competência cadastrada. Adicione a primeira abaixo.';grid.appendChild(empty);}
+  const newTitle=document.createElement('h3');newTitle.className='ja-comp-new-title';newTitle.textContent='Adicionar competência';b.appendChild(newTitle);
   const add = document.createElement('div'); add.className='ja-competencia-add';
-  const inp = document.createElement('input'); inp.className = 'form-input'; inp.placeholder = 'Nova competência (ex.: Liderança)';
+  const inp = document.createElement('input'); inp.className = 'form-input'; inp.placeholder = 'Nova competência (ex.: Liderança)';inp.setAttribute('aria-label','Nome da nova competência');
   const fadd = document.createElement('select'); fadd.className='form-input';fadd.setAttribute('aria-label','Faixa da nova competência');
   FAIXAS_DEV.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; fadd.appendChild(o); });
-  const bt = mini('+', false);bt.type='button';bt.setAttribute('aria-label','Adicionar competência');
+  const bt = document.createElement('button');bt.className='mx-mini go';bt.textContent='+';bt.type='button';bt.setAttribute('aria-label','Adicionar competência');
   bt.onclick = async () => { const v = inp.value.trim(); if (!v) return; const slug = 'k_' + v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '_').replace(/^_|_$/g, '').slice(0, 24); await sb.from('acolitos_listas').insert({ tipo: 'competencia', valor: slug, label: v, meta: { faixa: fadd.value } }); inp.value = ''; renderCompLista(b); };
   add.append(inp, fadd, bt); b.appendChild(add);
 }
