@@ -15,6 +15,22 @@
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
   <style>
+    .ja-approvals { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr)); gap:16px; align-items:start; }
+    .ja-approvals > .mx-card { min-width:0; margin:0; padding:18px; clip-path:none; border-radius:12px; }
+    .ja-approvals .mx-hd { font-size:13px; line-height:1.5; letter-spacing:.5px; padding-bottom:12px; margin-bottom:14px; }
+    .ja-approvals .mx-fila-item { min-width:0; padding:14px; border-radius:10px; margin-bottom:12px; }
+    .ja-approvals .mx-fila-item:last-child { margin-bottom:0; }
+    .ja-approvals .mx-fila-top { align-items:start; flex-wrap:wrap; gap:10px; }
+    .ja-approvals .mx-fila-top > div { flex:1; min-width:0; overflow-wrap:anywhere; line-height:1.6; }
+    .ja-request-name { display:block; font:700 15px/1.5 var(--font-title); color:var(--gold-light); margin-bottom:5px; }
+    .ja-request-title { font-size:14px; line-height:1.6; color:var(--text); }
+    .ja-approvals .mx-q-xp { padding:6px 9px; background:var(--surface); border:1px solid var(--gold-dim); border-radius:8px; }
+    .ja-approvals .mx-q-sub { margin-top:10px; font-size:13px; line-height:1.7; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .ja-approvals .mx-fila-acts { display:flex; flex-wrap:wrap; gap:8px; padding-top:12px; margin-top:12px; border-top:1px solid var(--border); }
+    .ja-approvals .mx-fila-acts > button { flex:1 1 100px; }
+    .ja-approvals .mx-mini { min-height:44px; min-width:44px; font-size:13px; padding:10px 12px; line-height:1.5; }
+    .ja-approvals .mx-empty { padding:16px 0; font-size:14px; line-height:1.6; }
+    @media(max-width:639px){.ja-approvals{gap:12px}.ja-approvals > .mx-card{padding:14px}.ja-approvals .mx-fila-item{padding:12px}}
     .ja-competencias { padding:16px; border:1px solid var(--border-wine); border-radius:12px; background:var(--surface); margin-top:12px; }
     .ja-comp-default { display:grid; grid-template-columns:minmax(0,1fr) 100px; align-items:center; gap:16px; margin-bottom:16px; padding:14px; background:var(--surface2); border-radius:10px; color:var(--text-muted); font-size:14px; line-height:1.5; }
     .ja-comp-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); gap:12px; }
@@ -206,7 +222,8 @@ async function renderAll() {
 }
 
 // As filas do dia: o que está esperando uma decisão da coordenação.
-async function renderFilas(box) {
+async function renderFilas(main) {
+  const box=document.createElement('div');box.className='ja-approvals';main.appendChild(box);
 
   // Fila de aprovação
   const { data: fila } = await sb.rpc('acolitos_missoes_fila');
@@ -215,7 +232,7 @@ async function renderFilas(box) {
   if (fila && fila.length) fila.forEach(item => {
     const it = document.createElement('div'); it.className = 'mx-fila-item';
     const top = document.createElement('div'); top.className = 'mx-fila-top';
-    const lbl = document.createElement('div'); lbl.style.fontSize = '13px'; lbl.innerHTML = '<b>' + escHtml(item.membro) + '</b> — ' + escHtml(item.titulo);
+    const lbl = document.createElement('div'); lbl.style.fontSize = '13px'; lbl.innerHTML = '<span class="ja-request-name">' + escHtml(item.membro) + '</span><span class="ja-request-title">' + escHtml(item.titulo) + '</span>';
     const xp = document.createElement('span'); xp.className = 'mx-q-xp'; xp.textContent = '+' + item.xp + ' XP';
     top.append(lbl, xp); it.appendChild(top);
     if (item.evidencia) {
@@ -240,7 +257,7 @@ async function renderFilas(box) {
   if (habFila && habFila.length) habFila.forEach(item => {
     const it = document.createElement('div'); it.className = 'mx-fila-item';
     const top = document.createElement('div'); top.className = 'mx-fila-top';
-    const lbl = document.createElement('div'); lbl.style.fontSize = '13px'; lbl.innerHTML = '<b>' + escHtml(item.membro) + '</b> diz que já faz: <b style="color:var(--gold-light)">' + escHtml(item.label) + '</b>';
+    const lbl = document.createElement('div'); lbl.style.fontSize = '13px'; lbl.innerHTML = '<span class="ja-request-name">' + escHtml(item.membro) + '</span><span class="ja-request-title">Diz que já faz: ' + escHtml(item.label) + '</span>';
     top.appendChild(lbl); it.appendChild(top);
     if (item.evidencia) {
       let evidencia=null;try{const parsed=JSON.parse(item.evidencia);if(parsed.tipo==='bonus_evidencia')evidencia=parsed;}catch{}
