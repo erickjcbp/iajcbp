@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>Novena de N. Sra. Aparecida — Acólitos JCBP</title>
+  <title>Liturgia de Finados — Acólitos JCBP</title>
   <link rel="icon" href="../../midia/logos/brasao-pastoral.png">
   <link rel="apple-touch-icon" href="../../midia/logos/brasao-pastoral.png">
   <link rel="preconnect" href="https://fttjgsotuosjfrasttds.supabase.co">
@@ -205,7 +205,7 @@
     <div id="form-screen">
       <div class="top">
         <img class="crest" src="../../midia/logos/brasao-pastoral.png" alt="Brasão da Pastoral" onerror="this.style.display='none'">
-        <h1>Novena de Nossa Senhora Aparecida</h1>
+        <h1>Liturgia de Finados</h1>
         <p class="sub">Confira o dia, horário e local de cada missa. Marque em quais você pode servir — escolha a função e ela entra na escala na hora.</p>
       </div>
 
@@ -343,7 +343,7 @@ const ICO_CHECK='<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d
         w.appendChild(a); box.appendChild(w); return;
       }
       missas = Array.isArray(data)?data:[];
-      if(!missas.length){ box.innerHTML='<div class="cels-empty">Nenhuma missa da novena aberta no momento.</div>'; return; }
+      if(!missas.length){ box.innerHTML='<div class="cels-empty">Nenhuma missa da liturgia de Finados aberta no momento.</div>'; return; }
       missas.forEach(c=>{
         const wrap=document.createElement('div'); wrap.className='cel-wrap';
         const row=document.createElement('div'); row.className='cel'; row.dataset.id=c.id;
