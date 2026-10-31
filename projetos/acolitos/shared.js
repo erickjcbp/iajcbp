@@ -887,12 +887,25 @@ async function carregarMedalhasArte() {
 function medalhaTier(b) {
   return b.tier || (['coroinha','acolito_aspirante','aspirante'].includes(b.nivel)?'bronze':['acolito_guardiao','acolito_sentinela'].includes(b.nivel)?'prata':'ouro');
 }
+// Mesmo conteúdo legível em toda superfície que apresenta uma medalha.
+let _medalhaDetalhesN=0;
+function medalhaDetalhes(b) {
+  const box=document.createElement('span');box.className='medalha-detalhes';box.id='medalha-detalhes-'+(++_medalhaDetalhesN);
+  const descricao=document.createElement('span');descricao.className='medalha-descricao';descricao.textContent=b.desc||'Descrição não informada.';box.append(descricao);
+  for(const [label,texto] of [['Missão para conquistar',b.requisito||'Condição não informada.'],['Para manter a posse',b.manutencao||'Condição de posse não informada.']]){
+    const item=document.createElement('span');item.className='medalha-condicao';
+    const titulo=document.createElement('strong');titulo.textContent=label;
+    const textoEl=document.createElement('span');textoEl.textContent=texto;item.append(titulo,textoEl);box.append(item);
+  }
+  return box;
+}
 async function showMedalha(aviso, done) {
   if(typeof aviso==='string')aviso={label:aviso};aviso=aviso||{};
   let medalha=aviso,arte='';
   try {
     const artes=await carregarMedalhasArte();
-    if(!medalha.icone){
+    arte=artes.html(medalha.icone,medalhaTier(medalha),320);
+    if(!medalha.icone||!medalha.requisito||!medalha.manutencao){
       if(!_medalhasCatalogoPromise)_medalhasCatalogoPromise=sb.rpc('acolitos_medalhas_catalogo').then(r=>{if(r.error)throw r.error;return r.data||[];}).catch(e=>{_medalhasCatalogoPromise=null;throw e;});
       const catalogo=await _medalhasCatalogoPromise;
       medalha=catalogo.find(b=>aviso.medalha_id?b.id===aviso.medalha_id:b.label===aviso.label)||aviso;
@@ -908,6 +921,7 @@ async function showMedalha(aviso, done) {
     .medalha-celeb .celeb-icon{animation:none;transform:none;filter:drop-shadow(0 8px 24px #0008);font-size:0;width:100%}
     .medalha-celeb .celeb-icon img,.medalha-celeb .celeb-icon svg{width:min(100%,420px);height:auto;max-height:55dvh;object-fit:contain;display:block;margin:auto}
     .medalha-celeb :is(.celeb-tag,.celeb-hero,.celeb-sub,.celeb-actions){grid-column:2;margin:0;align-self:center;min-width:0;overflow-wrap:anywhere}
+    .medalha-celeb :is(.celeb-tag,.celeb-hero,.celeb-sub){animation:none;opacity:1;transform:none}
     .medalha-celeb .celeb-tag{font-size:13px;letter-spacing:2px;align-self:end}
     .medalha-celeb .celeb-hero{font-size:clamp(25px,3vw,42px);line-height:1.3}
     .medalha-celeb .celeb-sub{font-size:15px;line-height:1.7}
@@ -922,6 +936,7 @@ async function showMedalha(aviso, done) {
     {label:'Continuar'}
   ]});
   pop.ov.classList.add('medalha-celeb');pop.ov.setAttribute('role','dialog');pop.ov.setAttribute('aria-modal','true');pop.ov.setAttribute('aria-label','Medalha conquistada: '+(medalha.label||aviso.label||''));pop.ov._acResolveClose=pop.close;
+  const sub=pop.ov.querySelector('.celeb-sub');sub.replaceChildren(medalhaDetalhes({...medalha,desc:medalha.desc||'Seu serviço foi reconhecido. Esta medalha já está na sua coleção.'}));
   const icon=pop.ov.querySelector('.celeb-icon');icon.innerHTML=arte||'<svg viewBox="0 0 100 120" aria-label="Medalha"><path d="M20 0h25l15 50H35zM80 0H55L40 50h25z" fill="#842b40"/><circle cx="50" cy="75" r="35" fill="#e8b94a" stroke="#fff0b0" stroke-width="4"/><path d="m50 50 7 16 18 2-14 12 4 18-15-9-15 9 4-18-14-12 18-2z" fill="#8e5d13"/></svg>';
   const img=icon.querySelector('img');if(img)img.alt=medalha.label||aviso.label||'Medalha conquistada';
   pop.ov.addEventListener('keydown',e=>{const buttons=[...pop.ov.querySelectorAll('button')];if(e.key==='Escape'){e.preventDefault();pop.close();}if(e.key==='Tab'){const index=buttons.indexOf(document.activeElement);if(e.shiftKey&&index<=0){e.preventDefault();buttons.at(-1).focus();}else if(!e.shiftKey&&index===buttons.length-1){e.preventDefault();buttons[0].focus();}}});pop.ov.querySelector('button')?.focus({preventScroll:true});

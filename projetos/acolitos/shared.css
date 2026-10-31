@@ -1106,3 +1106,9 @@ a.btn-sm { text-decoration: none; }
   .nivel-arte-reflexo { opacity: 0; }
   .rank-emblem-core { animation: none !important; }
 }
+
+/* Detalhes de medalhas: texto integral em todas as galerias. */
+.medalha-detalhes{display:grid;gap:12px;width:100%;min-width:0;text-align:left;font-family:var(--font-body);font-size:14px;line-height:1.6;font-weight:400;color:var(--text-muted);overflow-wrap:anywhere;white-space:normal}
+.medalha-descricao{display:block;color:var(--text)}
+.medalha-condicao{display:grid;gap:4px;padding-top:10px;border-top:1px solid var(--border-wine)}
+.medalha-condicao strong{font-size:12px;line-height:1.5;font-weight:700;color:var(--gold-light)}

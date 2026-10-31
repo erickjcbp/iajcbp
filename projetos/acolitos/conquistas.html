@@ -116,6 +116,10 @@
       .cq-grid.show-requisitos > .cq-medal { padding:12px 10px; }
     }
     @media(max-width:639px){.cq-medal-overlay{padding:0!important}.cq-medal-modal{height:100dvh!important;max-height:100dvh!important;border-radius:0!important;padding-top:calc(16px + env(safe-area-inset-top))}}
+    .cq-medal-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr))!important}
+    .cq-medal{display:flex;flex-direction:column;align-items:center;gap:12px;padding:18px!important;min-width:0}
+    .cq-medal .cq-nome{font-size:16px;line-height:1.5}.cq-medal-info .medalha-detalhes{font-size:15px}
+    @media(max-width:639px){.cq-medal-grid{grid-template-columns:minmax(0,1fr)!important}}
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -318,12 +322,10 @@ function montarColecaoMedalhas(main, badges) {
       const ico = document.createElement('div'); ico.className = 'cq-patch'; ico.innerHTML = medalSvg(b.icone, b.tier || tierDe(b.nivel), 96);
       const nome = document.createElement('div'); nome.className = 'cq-nome'; nome.textContent = b.label;
       cell.append(ico, nome);
-      const requisito = document.createElement('span'); requisito.className = 'cq-card-requisito'; requisito.id = 'cq-card-requisito-' + i; cell.setAttribute('aria-describedby', requisito.id);
-      const reqLabel = document.createElement('strong'); reqLabel.textContent = 'Como ganhar';
-      requisito.append(reqLabel, document.createTextNode(b.requisito || 'Abra para ver os detalhes desta medalha.')); cell.appendChild(requisito);
+      const detalhes=medalhaDetalhes(b);cell.append(detalhes);cell.setAttribute('aria-describedby',detalhes.id);
       if (!b.ganho) { const lk = document.createElement('div'); lk.className = 'cq-lock'; comIcone(lk, 'lock', '', 'Bloqueado'); cell.appendChild(lk); }
       mg.appendChild(cell);
-      return { badge:b, cell, pos:i, texto:normalizar([b.label, b.requisito, b.desc].join(' ')) };
+      return { badge:b, cell, pos:i, texto:normalizar([b.label, b.requisito, b.desc, b.manutencao].join(' ')) };
   });
   const vazio = document.createElement('div'); vazio.className = 'cq-no-results'; vazio.hidden = true;
   const aviso = document.createElement('p'); aviso.textContent = 'Nenhuma medalha corresponde a este filtro e busca.';
@@ -347,7 +349,7 @@ function montarColecaoMedalhas(main, badges) {
       if (!cell.hidden) visiveis++;
     });
     botoes.forEach(btn => {btn.setAttribute('aria-pressed', String(btn.dataset.filtro === filtro));const total=badges.filter(b=>correspondeTipo(b,tipoSel.value)&&(btn.dataset.filtro==='todas'||(btn.dataset.filtro==='conquistadas'?b.ganho:!b.ganho))).length;btn.textContent=btn.dataset.label+' ('+total+')';});
-    mg.classList.toggle('show-requisitos', filtro === 'pendentes');
+
     vazio.hidden = visiveis > 0;
     const nome = visiveis === 1 ? 'medalha' : 'medalhas';
     const semData = modo === 'recentes' ? cartoes.filter(c => !c.cell.hidden && c.badge.ganho && isNaN(tempo(c.badge))).length : 0;
@@ -370,11 +372,7 @@ function abrirMedalha(b) {
   const info = document.createElement('div'); info.className = 'cq-medal-info';
   const nm = document.createElement('h2'); nm.id = 'cq-medal-title-' + (++_cqDialogN); nm.className = 'cq-medal-title'; nm.textContent = b.label; md.setAttribute('aria-labelledby', nm.id);
   const st = document.createElement('p'); st.className = 'cq-medal-status' + (b.ganho ? ' ganha' : ''); st.textContent = b.ganho ? '✓ Conquistada' + (b.ganho_em ? ' em ' + new Date(b.ganho_em).toLocaleDateString('pt-BR', { timeZone:'America/Sao_Paulo' }) : '') : '🔒 Ainda não conquistada';
-  const desc = document.createElement('p'); desc.id = 'cq-medal-desc-' + _cqDialogN; desc.className = 'cq-medal-desc'; desc.textContent = b.desc || ''; md.setAttribute('aria-describedby', desc.id);
-  const requisito = document.createElement('div'); requisito.className = 'cq-medal-requisito';
-  const reqL = document.createElement('strong'); reqL.textContent = 'Como ganhar';
-  const req = document.createElement('p'); req.textContent = b.requisito || '';
-  requisito.append(reqL, req); info.append(nm, st, desc, requisito); corpo.append(ico, info);
+  const detalhes=medalhaDetalhes(b);md.setAttribute('aria-describedby',detalhes.id);info.append(nm, st, detalhes); corpo.append(ico, info);
   const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn gold cq-medal-fechar'; btn.textContent = 'Fechar'; btn.onclick = fechar;
   md.append(corpo, btn); ov.appendChild(md); document.body.appendChild(ov);
   md.addEventListener('keydown', (e) => {

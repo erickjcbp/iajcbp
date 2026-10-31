@@ -9,3 +9,6 @@
 .medalhas-admin-modal{display:flex!important;flex-direction:column;overflow:hidden!important}.medalhas-admin-modal>.mg-body{min-height:0;overflow:auto;flex:1;padding:2px}.medalhas-admin-modal>:not(.mg-body){flex-shrink:0}.medalhas-admin-modal>.mg-footer{position:static;flex:none;margin-top:14px;padding-bottom:0}
 
 .mg-filter-label{display:grid;gap:8px;min-width:0;font-size:13px;color:var(--text-muted);line-height:1.5}
+
+.mg-badges{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}.mg-badge{padding:18px;gap:12px}.mg-badge-name{font-size:16px}.mg-selected figcaption{display:grid;gap:12px;min-width:0}.mg-selected figure{align-items:flex-start;flex-basis:320px}
+@media(max-width:639px){.mg-badges{grid-template-columns:minmax(0,1fr)}.mg-badge{padding:16px}.mg-selected figure{flex-basis:100%}}

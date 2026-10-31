@@ -18,7 +18,7 @@
     .dest-member-medals h3{margin:0 0 14px;font:700 18px var(--font-title);color:var(--gold-light)}
     .dest-medal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr));gap:12px}
     .dest-earned-medal{min-width:0;margin:0;padding:12px;background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
-    .dest-earned-medal img{width:96px;height:110px;object-fit:contain}.dest-earned-medal figcaption{font-size:13px;line-height:1.5;overflow-wrap:anywhere;color:var(--text)}
+    .dest-earned-medal img{width:96px;height:110px;object-fit:contain}.dest-earned-medal figcaption{display:grid;gap:12px;width:100%;font-size:13px;line-height:1.5;overflow-wrap:anywhere;color:var(--text)}
     @media(max-width:639px){.dest-medal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dest-member-medals{padding:14px}}
     .dest-member-overlay { padding:clamp(14px,2.4vw,44px); }
     .dest-member-modal { width:100%!important;max-width:none!important;max-height:calc(100dvh - 40px);overflow:auto;clip-path:none!important;border-radius:16px!important;padding:clamp(20px,3vw,40px)!important; }
@@ -68,6 +68,8 @@
       .dest-desc { margin-bottom:8px; }
       .rank-row { padding:12px 10px; gap:8px; }
     }
+    .dest-medal-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}
+    @media(max-width:639px){.dest-medal-grid{grid-template-columns:minmax(0,1fr)}}
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -252,7 +254,7 @@ async function abrirCard(id) {
     const earned=resposta.data||[];medalsTitle.textContent='Medalhas conquistadas · '+earned.length;
     medalsStatus.textContent=earned.length?'':'Este membro ainda não possui medalhas.';medalsStatus.hidden=earned.length>0;
     const gallery=document.createElement('div');gallery.className='dest-medal-grid';
-    for(const badge of earned){const figure=document.createElement('figure');figure.className='dest-earned-medal';figure.innerHTML=artes.html(badge.icone,medalhaTier(badge),96);const image=figure.querySelector('img');if(image)image.alt=badge.label;const caption=document.createElement('figcaption');caption.textContent=badge.label;figure.append(caption);gallery.append(figure);}
+    for(const badge of earned){const figure=document.createElement('figure');figure.className='dest-earned-medal';figure.innerHTML=artes.html(badge.icone,medalhaTier(badge),96);const image=figure.querySelector('img');if(image)image.alt=badge.label;const caption=document.createElement('figcaption');const name=document.createElement('strong');name.textContent=badge.label;caption.append(name,medalhaDetalhes(badge));figure.append(caption);gallery.append(figure);}
     medals.append(gallery);
   }catch(e){if(!fechado)medalsStatus.textContent='Não foi possível carregar as medalhas agora.';}
 

@@ -1,0 +1,19 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {iniciarProvas,PAPEIS} from './abrir-tela.mjs';
+const catalogo=JSON.parse(fs.readFileSync(new URL('./fixtures/medalhas-catalogo.json',import.meta.url)));
+const out=new URL('../../../estudos/medalhas/detalhes-2026-10-31/',import.meta.url).pathname;
+const membros=[{id:'m1',nome:'Membro de teste',nivel:'coroinha',status:'ativo',serve:true}];
+const env=await iniciarProvas();
+try{
+for(const largura of [360,390,768,1366,2560])for(const tela of ['colecao','gestor','membro']){
+ const cards=tela==='colecao'?'.cq-medal':tela==='gestor'?'.mg-badge':'.dest-earned-medal';
+ const file=tela==='colecao'?'conquistas.html':tela==='gestor'?'jornada-admin.html':'destaques.html';
+ const r=await env.abrir(file,{papel:PAPEIS.admin,largura,tabelas:{acolitos_membros:{data:membros}},rpcs:{acolitos_badges_membro:{data:catalogo.map(b=>({...b,ganho:true}))},acolitos_medalhas_catalogo:{data:catalogo},acolitos_medalhas_cartao:{data:catalogo},acolitos_membro_card:{data:{nome:'Membro de teste',nivel:'coroinha',ultimas:[]}}},foto:{caminho:out+tela+'-'+largura+'.png',...(tela==='gestor'?{seletor:'.medalhas-admin-modal'}:tela==='membro'?{seletor:'.dest-member-modal'}:{viewport:true})},avaliar:`document.getElementById('splash')?.remove();${tela==='gestor'?"await MedalhasAdmin.abrir({sb,membros:"+JSON.stringify(membros)+"});":tela==='membro'?"await abrirCard('m1');":""}
+ const cards=[...document.querySelectorAll('${cards}')];if(cards.length!==53)throw Error('Cards incompletos '+cards.length);for(const card of cards){const d=card.querySelector('.medalha-detalhes');if(!d||getComputedStyle(d).display==='none')throw Error('Detalhes invisíveis');for(const text of ['Missão para conquistar','Para manter a posse'])if(!d.textContent.includes(text))throw Error('Falta '+text);if(d.textContent.includes('não informada'))throw Error('Detalhes ausentes');if(card.scrollWidth>card.clientWidth+1)throw Error('Card transbordou');}if(document.documentElement.scrollWidth>innerWidth+1)throw Error('Página transbordou');for(const img of document.querySelectorAll('${cards} img'))await img.decode();if('${tela}'==='colecao')document.querySelector('#cq-medalhas').scrollIntoView({block:'start'});if('${tela}'==='membro')document.querySelector('.dest-member-medals').scrollIntoView({block:'start'});return {largura:innerWidth,cards:cards.length};`});assert.equal(r.erroAvaliar,null);assert.deepEqual(r.erros,[]);console.log(tela,r.avaliado);
+}
+const b=catalogo.find(b=>b.label==='Bom Samaritano');
+const notice=await env.abrir('conquistas.html',{papel:PAPEIS.membro,largura:390,rpcs:{acolitos_medalhas_catalogo:{data:catalogo}},foto:{caminho:out+'aviso-390.png',seletor:'.medalha-celeb'},avaliar:`document.getElementById('splash')?.remove();await showMedalha({label:${JSON.stringify(b.label)},icone:'samaritano',tier:'ouro'});await new Promise(r=>setTimeout(r,1200));const d=document.querySelector('.medalha-celeb .medalha-detalhes');if(!d.textContent.includes(${JSON.stringify(b.requisito)})||!d.textContent.includes(${JSON.stringify(b.manutencao)}))throw Error('Aviso antigo com ícone não buscou detalhes');return true;`});assert.equal(notice.erroAvaliar,null);assert.equal(notice.avaliado,true);assert.deepEqual(notice.erros,[]);
+const safe=await env.abrir('conquistas.html',{papel:PAPEIS.membro,avaliar:`const d=medalhaDetalhes({desc:'<img src=x onerror=alert(1)>',requisito:'<script>1</script>',manutencao:'<b>texto</b>'});return {elementos:d.querySelectorAll('img,script,b').length,texto:d.textContent};`});assert.equal(safe.erroAvaliar,null);assert.equal(safe.avaliado.elementos,0);assert.ok(safe.avaliado.texto.includes('<script>1</script>'));console.log('Aviso com metadados e textos seguros OK');
+}finally{await env.encerrar();}
+console.log('Prova de detalhes concluída');

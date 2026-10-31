@@ -6,16 +6,20 @@
     "icone": "vela",
     "label": "A Hora Chegou",
     "nivel": "acolito_aspirante",
-    "validacao": "automatica"
+    "requisito": "Complete 10 anos",
+    "validacao": "automatica",
+    "manutencao": "Sem missão recorrente ou vencimento por tempo. A posse automática depende de os registros continuarem atendendo à missão."
   },
   {
     "id": "48c81656-d6db-5d56-a1f2-ca0301200696",
-    "label": "Amigo de Todos",
-    "icone": "amigo_todos",
-    "tier": "ouro",
-    "nivel": null,
     "desc": "Incluir ativamente quem estava isolado nas atividades.",
-    "validacao": "avaliada"
+    "tier": "ouro",
+    "icone": "amigo_todos",
+    "label": "Amigo de Todos",
+    "nivel": null,
+    "requisito": "Incluir ativamente quem estava isolado nas atividades. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "24accca7-a2f5-4758-b224-8704291c8448",
@@ -24,7 +28,9 @@
     "icone": "pomba",
     "label": "Anjo da Guarda",
     "nivel": null,
-    "validacao": "automatica"
+    "requisito": "Sirva 30 vezes sem estar escalado",
+    "validacao": "automatica",
+    "manutencao": "Sem missão recorrente ou vencimento por tempo. A posse automática depende de os registros continuarem atendendo à missão."
   },
   {
     "id": "72957d92-db80-46e4-a409-e24253203d10",
@@ -33,16 +39,20 @@
     "icone": "coroa",
     "label": "Bicampeão",
     "nivel": null,
-    "validacao": "automatica"
+    "requisito": "Vença 2 temporada(s)",
+    "validacao": "automatica",
+    "manutencao": "Sem missão recorrente ou vencimento por tempo. A posse automática depende de os registros continuarem atendendo à missão."
   },
   {
     "id": "ae02cb81-c38b-59ec-a46c-2b912e8f5436",
-    "label": "Bom Samaritano",
-    "icone": "samaritano",
-    "tier": "ouro",
-    "nivel": null,
     "desc": "Participar de uma ação solidária e servir quem precisa.",
-    "validacao": "avaliada"
+    "tier": "ouro",
+    "icone": "samaritano",
+    "label": "Bom Samaritano",
+    "nivel": null,
+    "requisito": "Participar de uma ação solidária e servir quem precisa. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "9d9b4d6c-7540-4bb5-868a-b057b52d37fa",
@@ -51,7 +61,9 @@
     "icone": "estrela",
     "label": "Campeão de Liga",
     "nivel": null,
-    "validacao": "automatica"
+    "requisito": "Vença 1 temporada(s)",
+    "validacao": "automatica",
+    "manutencao": "Sem missão recorrente ou vencimento por tempo. A posse automática depende de os registros continuarem atendendo à missão."
   },
   {
     "id": "1b3ada55-d665-498b-997d-91d76b19c558",
@@ -60,25 +72,20 @@
     "icone": "calice_sagrado",
     "label": "Cem ao Altar",
     "nivel": null,
-    "validacao": "automatica"
-  },
-  {
-    "id": "e3e89247-dbe8-5d0c-9490-9fef78462626",
-    "label": "Coragem de Recomeçar",
-    "icone": "recomecar",
-    "tier": "ouro",
-    "nivel": null,
-    "desc": "Retomar o serviço com responsabilidade após uma dificuldade.",
-    "validacao": "avaliada"
+    "requisito": "Sirva 100 missas no total",
+    "validacao": "automatica",
+    "manutencao": "Sem missão recorrente ou vencimento por tempo. A posse automática depende de os registros continuarem atendendo à missão."
   },
   {
     "id": "0e6fa658-90e8-54cd-ab96-5cc4fe0091a7",
-    "label": "Coração Acolhedor",
-    "icone": "acolhedor",
-    "tier": "ouro",
-    "nivel": null,
     "desc": "Receber e acompanhar novos membros nos primeiros encontros.",
-    "validacao": "avaliada"
+    "tier": "ouro",
+    "icone": "acolhedor",
+    "label": "Coração Acolhedor",
+    "nivel": null,
+    "requisito": "Receber e acompanhar novos membros nos primeiros encontros. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "52195a5a-166e-40dd-a514-e42c3ab5e0b5",
@@ -87,7 +94,20 @@
     "icone": "coracao",
     "label": "Coração Solícito",
     "nivel": null,
-    "validacao": "automatica"
+    "requisito": "Sirva 5 vezes sem estar escalado",
+    "validacao": "automatica",
+    "manutencao": "Sem missão recorrente ou vencimento por tempo. A posse automática depende de os registros continuarem atendendo à missão."
+  },
+  {
+    "id": "e3e89247-dbe8-5d0c-9490-9fef78462626",
+    "desc": "Retomar o serviço com responsabilidade após uma dificuldade.",
+    "tier": "ouro",
+    "icone": "recomecar",
+    "label": "Coragem de Recomeçar",
+    "nivel": null,
+    "requisito": "Retomar o serviço com responsabilidade após uma dificuldade. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "02665df3-b6d6-49a9-8d84-d6354e6afe2d",
@@ -96,7 +116,9 @@
     "icone": "rosario",
     "label": "Devoto",
     "nivel": null,
-    "validacao": "avaliada"
+    "requisito": "Reconhecido pela coordenação por uma vida de oração e devoção exemplar. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "d741223a-252e-4e2d-ae53-56e8e2b38b4b",
@@ -105,16 +127,20 @@
     "icone": "sino2",
     "label": "Eco da Solenidade",
     "nivel": "acolito_sentinela",
-    "validacao": "automatica"
+    "requisito": "Fique Apto em Sinão",
+    "validacao": "automatica",
+    "manutencao": "Manter a habilitação exigida nas funções desta missão. A posse automática acompanha a aptidão atual; concessões manuais não vencem automaticamente."
   },
   {
     "id": "64faf676-5d46-59c1-9b42-30e8d3fc7d21",
-    "label": "Escuta que Transforma",
-    "icone": "escuta",
-    "tier": "ouro",
-    "nivel": null,
     "desc": "Acolher uma orientação e demonstrar melhora concreta na prática.",
-    "validacao": "avaliada"
+    "tier": "ouro",
+    "icone": "escuta",
+    "label": "Escuta que Transforma",
+    "nivel": null,
+    "requisito": "Acolher uma orientação e demonstrar melhora concreta na prática. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "3e021564-887b-4aaf-92c2-65f63998395d",
@@ -123,7 +149,9 @@
     "icone": "coracao",
     "label": "Espírito de Equipe",
     "nivel": null,
-    "validacao": "avaliada"
+    "requisito": "Concedida a quem une a turma e serve com alegria ao lado de todos. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "e42a10d4-4ffa-4688-a936-26803434fb01",
@@ -132,7 +160,9 @@
     "icone": "coroa",
     "label": "Faz-Tudo do Altar",
     "nivel": null,
-    "validacao": "automatica"
+    "requisito": "Fique Apto em 8 funções",
+    "validacao": "automatica",
+    "manutencao": "Manter pelo menos 8 funções aptas. A posse automática acompanha a aptidão atual; concessões manuais não vencem automaticamente."
   },
   {
     "id": "bf121e63-7f14-485f-b468-9b454a4bdcf1",
@@ -141,7 +171,9 @@
     "icone": "crucifixo",
     "label": "Fiel até o Fim",
     "nivel": null,
-    "validacao": "avaliada"
+    "requisito": "Perseverança e fidelidade que atravessam qualquer dificuldade. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "f55b34da-f14a-4b8d-84c5-64bd2887e7c9",
@@ -150,16 +182,20 @@
     "icone": "pomba",
     "label": "Forjador de Servos",
     "nivel": "cerimoniario_magistral",
-    "validacao": "avaliada"
+    "requisito": "Ensine um acólito até ele ser habilitado numa função. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "2fbbe92b-3ce1-5bbc-82d9-7b03e985c5c5",
-    "label": "Guardião da Criação",
-    "icone": "criacao",
-    "tier": "ouro",
-    "nivel": null,
     "desc": "Cuidar dos recursos da pastoral, promovendo reutilização e evitando desperdícios.",
-    "validacao": "avaliada"
+    "tier": "ouro",
+    "icone": "criacao",
+    "label": "Guardião da Criação",
+    "nivel": null,
+    "requisito": "Cuidar dos recursos da pastoral, promovendo reutilização e evitando desperdícios. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "f405eff3-faed-457e-960a-5436b5298da6",
@@ -168,7 +204,9 @@
     "icone": "vela",
     "label": "Guardião da Luz",
     "nivel": null,
-    "validacao": "automatica"
+    "requisito": "Fique Apto em Vela",
+    "validacao": "automatica",
+    "manutencao": "Manter a habilitação exigida nas funções desta missão. A posse automática acompanha a aptidão atual; concessões manuais não vencem automaticamente."
   },
   {
     "id": "e34e2a4c-7f40-44e6-8b04-be9ca4308fbb",
@@ -177,7 +215,9 @@
     "icone": "livro",
     "label": "Guardião da Palavra",
     "nivel": "aspirante_cerimoniario",
-    "validacao": "automatica"
+    "requisito": "Fique Apto em Missal",
+    "validacao": "automatica",
+    "manutencao": "Manter a habilitação exigida nas funções desta missão. A posse automática acompanha a aptidão atual; concessões manuais não vencem automaticamente."
   },
   {
     "id": "b08b7d6c-f4c5-498b-8caf-ff111c261f5f",
@@ -186,7 +226,9 @@
     "icone": "espadas",
     "label": "Guardião Supremo",
     "nivel": "cerimoniario_mor",
-    "validacao": "avaliada"
+    "requisito": "O ápice da jornada: reconhecido como Guardião Supremo das Celebrações. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "4341f130-ed66-45e2-9b5d-933cbbcdaeae",
@@ -195,7 +237,9 @@
     "icone": "calice",
     "label": "Junto ao Altar",
     "nivel": "acolito_aspirante",
-    "validacao": "automatica"
+    "requisito": "Fique Apto em Altar",
+    "validacao": "automatica",
+    "manutencao": "Manter a habilitação exigida nas funções desta missão. A posse automática acompanha a aptidão atual; concessões manuais não vencem automaticamente."
   },
   {
     "id": "ed29c4c0-aceb-4130-bc9b-dc88f350863c",
@@ -204,52 +248,9 @@
     "icone": "espadas",
     "label": "Lenda do Altar",
     "nivel": null,
-    "validacao": "automatica"
-  },
-  {
-    "id": "6127d803-1e28-44fc-b127-1ed850cae96c",
-    "desc": "50 missas! Meio centenário de dedicação ao Senhor.",
-    "tier": "prata",
-    "icone": "calice",
-    "label": "Meio Centenário",
-    "nivel": null,
-    "validacao": "automatica"
-  },
-  {
-    "id": "a4bdff49-ed32-519a-b3af-55458abec35d",
-    "label": "Memória Viva",
-    "icone": "memoria",
-    "tier": "ouro",
-    "nivel": null,
-    "desc": "Organizar e preservar materiais e aprendizados para as próximas equipes.",
-    "validacao": "avaliada"
-  },
-  {
-    "id": "8bae204f-d1f6-441f-9b81-46939567eb06",
-    "desc": "Você organiza e conduz a credência com precisão — o coração logístico do altar.",
-    "tier": null,
-    "icone": "hostia",
-    "label": "Mestre da Credência",
-    "nivel": "cerimoniario_aspirante",
-    "validacao": "automatica"
-  },
-  {
-    "id": "5b5e6396-e217-43bd-b4d3-ca5ef41cc0f9",
-    "desc": "Apto em 12 funções — domina TODAS as artes do altar.",
-    "tier": "ouro",
-    "icone": "coroa",
-    "label": "Mestre de Todas as Artes",
-    "nivel": null,
-    "validacao": "automatica"
-  },
-  {
-    "id": "b9a268d8-0c07-4714-8736-c5525a83965a",
-    "desc": "Trouxe novos servos para o altar. Verdadeiro missionário.",
-    "tier": "ouro",
-    "icone": "pomba",
-    "label": "Missionário",
-    "nivel": null,
-    "validacao": "avaliada"
+    "requisito": "Sirva 200 missas no total",
+    "validacao": "automatica",
+    "manutencao": "Sem missão recorrente ou vencimento por tempo. A posse automática depende de os registros continuarem atendendo à missão."
   },
   {
     "id": "d9574327-65f6-41b9-a2b9-296a8c6708e4",
@@ -258,7 +259,64 @@
     "icone": "coroa",
     "label": "Mãos de Ouro",
     "nivel": null,
-    "validacao": "avaliada"
+    "requisito": "Capricho excepcional em tudo que faz no altar. Mãos de ouro. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+  },
+  {
+    "id": "6127d803-1e28-44fc-b127-1ed850cae96c",
+    "desc": "50 missas! Meio centenário de dedicação ao Senhor.",
+    "tier": "prata",
+    "icone": "calice",
+    "label": "Meio Centenário",
+    "nivel": null,
+    "requisito": "Sirva 50 missas no total",
+    "validacao": "automatica",
+    "manutencao": "Sem missão recorrente ou vencimento por tempo. A posse automática depende de os registros continuarem atendendo à missão."
+  },
+  {
+    "id": "a4bdff49-ed32-519a-b3af-55458abec35d",
+    "desc": "Organizar e preservar materiais e aprendizados para as próximas equipes.",
+    "tier": "ouro",
+    "icone": "memoria",
+    "label": "Memória Viva",
+    "nivel": null,
+    "requisito": "Organizar e preservar materiais e aprendizados para as próximas equipes. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
+  },
+  {
+    "id": "8bae204f-d1f6-441f-9b81-46939567eb06",
+    "desc": "Você organiza e conduz a credência com precisão — o coração logístico do altar.",
+    "tier": null,
+    "icone": "hostia",
+    "label": "Mestre da Credência",
+    "nivel": "cerimoniario_aspirante",
+    "requisito": "Fique Apto em Cerimoniário de Credência",
+    "validacao": "automatica",
+    "manutencao": "Manter a habilitação exigida nas funções desta missão. A posse automática acompanha a aptidão atual; concessões manuais não vencem automaticamente."
+  },
+  {
+    "id": "5b5e6396-e217-43bd-b4d3-ca5ef41cc0f9",
+    "desc": "Apto em 12 funções — domina TODAS as artes do altar.",
+    "tier": "ouro",
+    "icone": "coroa",
+    "label": "Mestre de Todas as Artes",
+    "nivel": null,
+    "requisito": "Fique Apto em 12 funções",
+    "validacao": "automatica",
+    "manutencao": "Manter pelo menos 12 funções aptas. A posse automática acompanha a aptidão atual; concessões manuais não vencem automaticamente."
+  },
+  {
+    "id": "b9a268d8-0c07-4714-8736-c5525a83965a",
+    "desc": "Trouxe novos servos para o altar. Verdadeiro missionário.",
+    "tier": "ouro",
+    "icone": "pomba",
+    "label": "Missionário",
+    "nivel": null,
+    "requisito": "Trouxe novos servos para o altar. Verdadeiro missionário. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "0a85674c-fb91-43c6-a2ca-0675daeff171",
@@ -267,7 +325,9 @@
     "icone": "pomba",
     "label": "O Chamado",
     "nivel": "aspirante_cerimoniario",
-    "validacao": "avaliada"
+    "requisito": "A coordenação admite você formalmente na formação de cerimoniário. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "3d5d700e-dcc0-41a3-8f88-d8a691042fb0",
@@ -276,7 +336,9 @@
     "icone": "sino",
     "label": "O Toque Sagrado",
     "nivel": "acolito_guardiao",
-    "validacao": "automatica"
+    "requisito": "Fique Apto em Sineta",
+    "validacao": "automatica",
+    "manutencao": "Manter a habilitação exigida nas funções desta missão. A posse automática acompanha a aptidão atual; concessões manuais não vencem automaticamente."
   },
   {
     "id": "72a6d0c9-1729-49f0-81f3-0ffcefe6e283",
@@ -285,7 +347,9 @@
     "icone": "estrela",
     "label": "Pilar da Pastoral",
     "nivel": "cerimoniario_magistral",
-    "validacao": "avaliada"
+    "requisito": "Você inspira e é procurado pelos demais. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "6e36739b-7ee6-4772-ba90-e3e2bcf8b256",
@@ -294,16 +358,20 @@
     "icone": "rosario",
     "label": "Pilar do Tempo",
     "nivel": null,
-    "validacao": "automatica"
+    "requisito": "Complete 2 ano(s) de pastoral",
+    "validacao": "automatica",
+    "manutencao": "Sem missão recorrente ou vencimento por tempo. A posse automática depende de os registros continuarem atendendo à missão."
   },
   {
     "id": "ffddc9fa-ceb9-57a1-a533-1cbff8aac446",
-    "label": "Ponte da Paz",
-    "icone": "ponte_paz",
-    "tier": "ouro",
-    "nivel": null,
     "desc": "Ajudar a resolver um desentendimento com respeito e diálogo.",
-    "validacao": "avaliada"
+    "tier": "ouro",
+    "icone": "ponte_paz",
+    "label": "Ponte da Paz",
+    "nivel": null,
+    "requisito": "Ajudar a resolver um desentendimento com respeito e diálogo. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "f247fb41-9758-480f-a2ba-29739987e09b",
@@ -312,7 +380,9 @@
     "icone": "estrela",
     "label": "Pontualidade Lendária",
     "nivel": null,
-    "validacao": "avaliada"
+    "requisito": "Nunca se atrasa — chega antes e pronto. Pontualidade de lenda. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "6bc85f6a-6a9b-42a4-9b67-9e900ccf961c",
@@ -321,7 +391,9 @@
     "icone": "crucifixo",
     "label": "Porta-Cruz",
     "nivel": null,
-    "validacao": "automatica"
+    "requisito": "Fique Apto em Cruz",
+    "validacao": "automatica",
+    "manutencao": "Manter a habilitação exigida nas funções desta missão. A posse automática acompanha a aptidão atual; concessões manuais não vencem automaticamente."
   },
   {
     "id": "8e489203-b14c-4371-8741-46ad00fc3b7e",
@@ -330,7 +402,9 @@
     "icone": "trigo",
     "label": "Portador do Incenso",
     "nivel": "acolito_sentinela",
-    "validacao": "automatica"
+    "requisito": "Fique Apto em Naveta",
+    "validacao": "automatica",
+    "manutencao": "Manter a habilitação exigida nas funções desta missão. A posse automática acompanha a aptidão atual; concessões manuais não vencem automaticamente."
   },
   {
     "id": "6a0574cc-fe3a-4b4e-b697-91710008aaf9",
@@ -339,7 +413,9 @@
     "icone": "livro",
     "label": "Presença Garantida",
     "nivel": null,
-    "validacao": "automatica"
+    "requisito": "Participe de 10 ensaios no total",
+    "validacao": "automatica",
+    "manutencao": "Sem missão recorrente ou vencimento por tempo. A posse automática depende de os registros continuarem atendendo à missão."
   },
   {
     "id": "05f131ce-17e4-4ffd-b6e1-2f6fb1c98487",
@@ -348,7 +424,9 @@
     "icone": "coracao",
     "label": "Primeiras Mãos",
     "nivel": "acolito_aspirante",
-    "validacao": "automatica"
+    "requisito": "Fique Apto em Apoio",
+    "validacao": "automatica",
+    "manutencao": "Manter a habilitação exigida nas funções desta missão. A posse automática acompanha a aptidão atual; concessões manuais não vencem automaticamente."
   },
   {
     "id": "641ccf2c-fbd0-47cd-871d-3f95d804ae08",
@@ -357,7 +435,9 @@
     "icone": "estrela",
     "label": "Primeiros Passos",
     "nivel": null,
-    "validacao": "automatica"
+    "requisito": "Sirva 10 missas no total",
+    "validacao": "automatica",
+    "manutencao": "Sem missão recorrente ou vencimento por tempo. A posse automática depende de os registros continuarem atendendo à missão."
   },
   {
     "id": "e38aba98-bd7a-4279-8f6e-a66a0302a0d9",
@@ -366,7 +446,9 @@
     "icone": "coroa",
     "label": "Raiz da Pastoral",
     "nivel": null,
-    "validacao": "automatica"
+    "requisito": "Complete 3 ano(s) de pastoral",
+    "validacao": "automatica",
+    "manutencao": "Sem missão recorrente ou vencimento por tempo. A posse automática depende de os registros continuarem atendendo à missão."
   },
   {
     "id": "f72e6264-11a2-4197-9710-6e258444a477",
@@ -375,7 +457,9 @@
     "icone": "calice_sagrado",
     "label": "Regente do Altar",
     "nivel": "cerimoniario_aspirante",
-    "validacao": "automatica"
+    "requisito": "Fique Apto em Cerimoniário de Altar",
+    "validacao": "automatica",
+    "manutencao": "Manter a habilitação exigida nas funções desta missão. A posse automática acompanha a aptidão atual; concessões manuais não vencem automaticamente."
   },
   {
     "id": "fb2b6ede-64b9-4601-91da-83287d325426",
@@ -384,16 +468,20 @@
     "icone": "crucifixo",
     "label": "Selo da Ordem",
     "nivel": "cerimoniario_aspirante",
-    "validacao": "avaliada"
+    "requisito": "A coordenação reconhece formalmente seu ingresso na Ordem dos Cerimoniários. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "501749da-47ba-524c-b843-3342317d9434",
-    "label": "Semeador da Palavra",
-    "icone": "palavra_semeada",
-    "tier": "ouro",
-    "nivel": null,
     "desc": "Preparar e partilhar uma reflexão do Evangelho na formação.",
-    "validacao": "avaliada"
+    "tier": "ouro",
+    "icone": "palavra_semeada",
+    "label": "Semeador da Palavra",
+    "nivel": null,
+    "requisito": "Preparar e partilhar uma reflexão do Evangelho na formação. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "d3887cb8-15d6-4397-9f60-6ddc4529e340",
@@ -402,7 +490,9 @@
     "icone": "livro",
     "label": "Sempre nos Ensaios",
     "nivel": null,
-    "validacao": "automatica"
+    "requisito": "Participe de 25 ensaios no total",
+    "validacao": "automatica",
+    "manutencao": "Sem missão recorrente ou vencimento por tempo. A posse automática depende de os registros continuarem atendendo à missão."
   },
   {
     "id": "51e7caba-e686-4e8d-bc36-43f08f36eb1e",
@@ -411,7 +501,9 @@
     "icone": "coracao",
     "label": "Sempre Pronto",
     "nivel": null,
-    "validacao": "automatica"
+    "requisito": "Sirva 15 vezes sem estar escalado",
+    "validacao": "automatica",
+    "manutencao": "Sem missão recorrente ou vencimento por tempo. A posse automática depende de os registros continuarem atendendo à missão."
   },
   {
     "id": "df885504-5374-4355-8a32-33a045d5b4b3",
@@ -420,7 +512,9 @@
     "icone": "turibulo",
     "label": "Senhor do Incenso",
     "nivel": "aspirante_cerimoniario",
-    "validacao": "automatica"
+    "requisito": "Fique Apto em Turíbulo",
+    "validacao": "automatica",
+    "manutencao": "Manter a habilitação exigida nas funções desta missão. A posse automática acompanha a aptidão atual; concessões manuais não vencem automaticamente."
   },
   {
     "id": "c374af71-e659-4dbe-9a73-a31a61a0e987",
@@ -429,7 +523,9 @@
     "icone": "trigo",
     "label": "Servo Constante",
     "nivel": null,
-    "validacao": "automatica"
+    "requisito": "Sirva 25 missas no total",
+    "validacao": "automatica",
+    "manutencao": "Sem missão recorrente ou vencimento por tempo. A posse automática depende de os registros continuarem atendendo à missão."
   },
   {
     "id": "fa16cf42-18fa-430c-a834-39842cc75d30",
@@ -438,16 +534,20 @@
     "icone": "coroa",
     "label": "Servo do Pastor",
     "nivel": "cerimoniario_guardiao",
-    "validacao": "automatica"
+    "requisito": "Fique Apto em Mitra e Báculo",
+    "validacao": "automatica",
+    "manutencao": "Manter a habilitação exigida nas funções desta missão. A posse automática acompanha a aptidão atual; concessões manuais não vencem automaticamente."
   },
   {
     "id": "a188d83c-07db-5c1f-867e-257b9be8940a",
-    "label": "Servo dos Bastidores",
-    "icone": "bastidores",
-    "tier": "ouro",
-    "nivel": null,
     "desc": "Ajudar na preparação e organização antes e depois das celebrações.",
-    "validacao": "avaliada"
+    "tier": "ouro",
+    "icone": "bastidores",
+    "label": "Servo dos Bastidores",
+    "nivel": null,
+    "requisito": "Ajudar na preparação e organização antes e depois das celebrações. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   },
   {
     "id": "38847531-7a8e-4f99-8847-0965f98f3045",
@@ -456,7 +556,9 @@
     "icone": "estrela",
     "label": "Versátil",
     "nivel": null,
-    "validacao": "automatica"
+    "requisito": "Fique Apto em 4 funções",
+    "validacao": "automatica",
+    "manutencao": "Manter pelo menos 4 funções aptas. A posse automática acompanha a aptidão atual; concessões manuais não vencem automaticamente."
   },
   {
     "id": "0fba3b84-f070-4d67-af7e-c0ddc8086b2d",
@@ -465,7 +567,9 @@
     "icone": "rosario",
     "label": "Veterano",
     "nivel": null,
-    "validacao": "automatica"
+    "requisito": "Complete 1 ano(s) de pastoral",
+    "validacao": "automatica",
+    "manutencao": "Sem missão recorrente ou vencimento por tempo. A posse automática depende de os registros continuarem atendendo à missão."
   },
   {
     "id": "54082821-ba5c-460c-8ba5-eaf7187c9d18",
@@ -474,6 +578,8 @@
     "icone": "pomba",
     "label": "Voz da Juventude",
     "nivel": null,
-    "validacao": "avaliada"
+    "requisito": "Inspira e lidera os mais novos com o exemplo. A voz da juventude da pastoral. Reconhecimento concedido pela coordenação.",
+    "validacao": "avaliada",
+    "manutencao": "Sem missão recorrente ou vencimento automático após o reconhecimento da coordenação."
   }
 ]
