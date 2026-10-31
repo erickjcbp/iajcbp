@@ -13,25 +13,33 @@
   <link rel="apple-touch-icon" href="icon-192.png">
   <script>window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__bip=e;});</script>
   <style>
-    .dest-tabs { display:flex; gap:6px; margin-bottom:14px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    .dest-tab { flex:1 0 auto; min-width:max-content !important; padding:9px 12px; background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); border-radius:18px; font-family:var(--font-body); font-size:11px; font-weight:700; white-space:nowrap; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .dest-tabs { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; margin-bottom:18px; }
+    .dest-tab { flex:1 0 auto; min-width:0 !important;min-height:48px; padding:9px 12px; background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); border-radius:18px; font-family:var(--font-body); font-size:11px; font-weight:700; white-space:normal; line-height:1.5; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .dest-tab.active { border-color:var(--gold); color:var(--gold); background:rgba(232,185,74,.1); }
-    .dest-head { font-family:var(--font-title); font-size:13px; color:var(--gold-light); margin-bottom:4px; }
-    .dest-desc { font-size:12px; color:var(--text-muted); margin-bottom:14px; }
-    .rank-row { display:flex; align-items:center; gap:12px; padding:9px 8px; border-radius:10px; margin-bottom:6px; background:var(--surface); border:1px solid var(--border); }
+    .dest-head { font-family:var(--font-title); font-size:18px; color:var(--gold-light); margin-bottom:0; }
+    .dest-desc { font-size:14px; line-height:1.6; color:var(--text-muted); margin-bottom:4px; }
+    .rank-row { display:flex; align-items:center; gap:12px; padding:16px; border-radius:12px; margin-bottom:0; background:var(--surface); border:1px solid var(--border); }
     .rank-row.eu { border-color:var(--gold); background:rgba(232,185,74,.07); }
     .rank-pos { width:30px; text-align:center; font-family:var(--font-title); font-weight:800; font-size:15px; color:var(--text-muted); flex:none; }
     .rank-info { flex:1; min-width:0; }
-    .rank-nome { font-weight:700; font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rank-nome { font-weight:700; font-size:14px; color:var(--text); white-space:normal; overflow-wrap:anywhere; line-height:1.5; }
     .rank-nivel { font-size:11px; color:var(--text-muted); }
     .rank-val { font-family:var(--font-title); font-weight:800; font-size:15px; color:var(--gold); flex:none; text-align:right; }
     .rank-val small { display:block; font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
-      /* Compacto no celular (21/10/2026) */
+      #dest-corpo { display:flex; flex-wrap:wrap; gap:12px; align-items:stretch; }
+    #dest-corpo > :is(.dest-head,.dest-desc,.dest-group-heading,.empty) { flex:0 0 100%; min-width:0; }
+    .rank-row { flex:1 1 350px; min-width:0; cursor:pointer; }
+    .rank-row:focus-visible,.dest-tab:focus-visible { outline:2px solid var(--gold); outline-offset:3px; }
+    .rank-nivel { line-height:1.5; margin-top:4px; overflow-wrap:anywhere; }
+    .rank-pos { width:26px; }
+    .rank-val { overflow-wrap:anywhere; max-width:90px; }
+    @media(max-width:1000px){.dest-tabs{grid-template-columns:repeat(3,minmax(0,1fr));}}
+    /* Compacto no celular (21/10/2026) */
     @media(max-width:639px){
-      .dest-tabs { margin-bottom:8px; }
+      .dest-tabs { margin-bottom:14px; grid-template-columns:repeat(2,minmax(0,1fr)); }
       .dest-tab { padding:6px 10px; }
       .dest-desc { margin-bottom:8px; }
-      .rank-row { padding:6px 8px; margin-bottom:4px; gap:10px; }
+      .rank-row { padding:12px 10px; gap:8px; }
     }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
@@ -77,22 +85,23 @@ async function init() {
   const tabs = document.createElement('div'); tabs.className = 'dest-tabs'; main.appendChild(tabs);
   const corpo = document.createElement('div'); corpo.id = 'dest-corpo'; main.appendChild(corpo);
   ABAS.forEach((a, i) => {
-    const b = document.createElement('button'); b.className = 'dest-tab' + (i===0?' active':''); b.textContent = a.tab;
-    b.onclick = () => { tabs.querySelectorAll('.dest-tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); renderAba(a); };
+    const b = document.createElement('button'); b.type='button';b.setAttribute('aria-pressed',String(i===0));b.className = 'dest-tab' + (i===0?' active':''); b.textContent = a.tab;
+    b.onclick = () => { tabs.querySelectorAll('.dest-tab').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-pressed','false');}); b.classList.add('active');b.setAttribute('aria-pressed','true'); renderAba(a); };
     tabs.appendChild(b);
   });
   [['🏆 Temporada', renderTemporada], ['🏅 Campeões', renderCampeoes], ['🙋 Solícitos', renderSolicitos]].forEach(([label, fn]) => {
-    const b = document.createElement('button'); b.className = 'dest-tab'; b.textContent = label;
-    b.onclick = () => { tabs.querySelectorAll('.dest-tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); fn(document.getElementById('dest-corpo')); };
+    const b = document.createElement('button'); b.type='button';b.setAttribute('aria-pressed','false');b.className = 'dest-tab'; b.textContent = label;
+    b.onclick = () => { tabs.querySelectorAll('.dest-tab').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-pressed','false');}); b.classList.add('active');b.setAttribute('aria-pressed','true'); fn(document.getElementById('dest-corpo')); };
     tabs.appendChild(b);
   });
   renderAba(ABAS[0]);
 }
 
 const LIGA_LABEL = { iniciantes:'🟢 Iniciantes', acolitos:'🔵 Acólitos', cerimoniarios:'🟣 Cerimoniários' };
+function prepararLinhaRank(row,m){row.tabIndex=0;row.setAttribute('role','button');row.setAttribute('aria-label','Ver cartão de '+m.nome);row.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();row.click();}};}
 function rankRow(m, eu, valor, unidade, pos, medalhaPos) {
   const medalhas = ['🥇','🥈','🥉'];
-  const row = document.createElement('div'); row.className = 'rank-row' + (m.id===eu?' eu':''); row.style.cursor = 'pointer'; row.onclick = () => abrirCard(m.id);
+  const row = document.createElement('div'); row.className = 'rank-row' + (m.id===eu?' eu':''); row.style.cursor = 'pointer'; row.onclick = () => abrirCard(m.id);prepararLinhaRank(row,m);
   const p = document.createElement('div'); p.className = 'rank-pos'; p.textContent = medalhaPos ? medalhaPos : (pos<=3 ? medalhas[pos-1] : pos);
   const av = buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 38, { nivelSlug: m.nivel||'aspirante', casaSlug: casaSlugDe(m) }); av.style.flex = 'none';
   const info = document.createElement('div'); info.className = 'rank-info';
@@ -115,7 +124,7 @@ async function renderTemporada(corpo) {
   if (!(data.ligas||[]).length) { const e = document.createElement('span'); e.className = 'empty'; e.textContent = 'Ninguém pontuou ainda. Bora servir! 🕯️'; corpo.appendChild(e); return; }
   acEstrelasLote((data.ligas||[]).flatMap(lg => (lg.membros||[]).map(m => m.id)));
   (data.ligas||[]).forEach(lg => {
-    const lh = document.createElement('div'); lh.style.cssText = 'font-family:var(--font-body);font-weight:700;font-size:12px;color:var(--gold);margin:16px 0 6px;'; lh.textContent = LIGA_LABEL[lg.liga] || lg.liga; corpo.appendChild(lh);
+    const lh = document.createElement('div');lh.className='dest-group-heading'; lh.style.cssText = 'font-family:var(--font-body);font-weight:700;font-size:12px;color:var(--gold);margin:16px 0 6px;'; lh.textContent = LIGA_LABEL[lg.liga] || lg.liga; corpo.appendChild(lh);
     let dist = 0, last = null;
     (lg.membros||[]).forEach(m => { const v = Number(m.xp); if (v!==last) { dist++; last = v; } corpo.appendChild(rankRow(m, eu, v, 'XP', dist)); });
   });
@@ -130,7 +139,7 @@ async function renderCampeoes(corpo) {
   acEstrelasLote(data.map(c => c.membro_id));
   const grupos = {}; data.forEach(c => { (grupos[c.temporada] = grupos[c.temporada] || []).push(c); });
   Object.keys(grupos).forEach(temp => {
-    const th = document.createElement('div'); th.style.cssText = 'font-family:var(--font-body);font-weight:700;font-size:12px;color:var(--gold);margin:16px 0 6px;'; comIcone(th, 'trophy', '' + temp); corpo.appendChild(th);
+    const th = document.createElement('div');th.className='dest-group-heading'; th.style.cssText = 'font-family:var(--font-body);font-weight:700;font-size:12px;color:var(--gold);margin:16px 0 6px;'; comIcone(th, 'trophy', '' + temp); corpo.appendChild(th);
     grupos[temp].forEach(c => corpo.appendChild(rankRow({ id:c.membro_id, nome:c.membro, foto_url:c.foto_url, nivel:c.nivel, casa_id:c.casa_id, subnivel:(LIGA_LABEL[c.liga]||c.liga) }, null, c.xp, 'XP', 1, '🏅')));
   });
 }
@@ -161,7 +170,7 @@ function renderAba(a) {
     if (tot !== ultimoTotal) { distintos++; ultimoTotal = tot; }
     const posicao = distintos;
     const row = document.createElement('div'); row.className = 'rank-row' + (m.id === euId ? ' eu' : '');
-    row.style.cursor = 'pointer'; row.onclick = () => abrirCard(m.id);
+    row.style.cursor = 'pointer'; row.onclick = () => abrirCard(m.id);prepararLinhaRank(row,m);
     const pos = document.createElement('div'); pos.className = 'rank-pos'; pos.textContent = posicao <= 3 ? medalhas[posicao-1] : posicao;
     const av = buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 38, { nivelSlug: m.nivel||'aspirante', casaSlug: casaSlugDe(m) }); av.style.flex = 'none';
     const info = document.createElement('div'); info.className = 'rank-info';
