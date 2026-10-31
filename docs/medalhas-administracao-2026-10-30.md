@@ -1,5 +1,7 @@
 # Medalhas — notificação e concessão em massa
 
+O fluxo de concessão foi simplificado em 31/10; consulte [a galeria múltipla e cartões](medalhas-galeria-e-cartoes-2026-10-31.md). Este documento registra a primeira versão.
+
 Pedido do dono: notificação deve mostrar a medalha real; conceder qualquer medalha do catálogo em massa, inclusive sem cumprir critérios automáticos, com concessão manual registrada.
 
 ## Como usar

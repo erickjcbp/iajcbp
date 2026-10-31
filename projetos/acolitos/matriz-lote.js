@@ -28,7 +28,7 @@ function checkboxMatriz(label,ids){
 function barraLoteMatriz(){
  const bar=document.createElement('div');bar.className='matriz-lote-bar';const count=document.createElement('span');count.className='matriz-lote-count';bar.appendChild(count);
  for(const [acao,label] of [['nivel','Alterar nível'],['funcoes','Aptidão por função'],['disponibilidade','Disponibilidade']]){const b=document.createElement('button');b.className='btn-sm gray matriz-lote-action';b.textContent=label;b.onclick=()=>abrirEdicaoMatrizLote(acao);bar.appendChild(b)}
- if(globalThis.MedalhasAdmin?.permitida(ctx)){const medalhas=document.createElement('button');medalhas.type='button';medalhas.className='btn-sm gold matriz-lote-action';medalhas.textContent='Dar medalhas';medalhas.onclick=()=>MedalhasAdmin.abrir({sb,membros:_devMembros.filter(m=>matrizSelecionados.has(m.id))});bar.appendChild(medalhas);}
+ if(globalThis.MedalhasAdmin?.permitida(ctx)){const medalhas=document.createElement('button');medalhas.type='button';medalhas.className='btn-sm gold matriz-lote-action';medalhas.textContent='Dar medalhas';medalhas.onclick=()=>MedalhasAdmin.abrir({sb,membros:_devMembros,selecionados:matrizSelecionados});bar.appendChild(medalhas);}
  const limpar=document.createElement('button');limpar.className='btn-sm gray';limpar.textContent='Limpar seleção';limpar.onclick=()=>{matrizSelecionados.clear();atualizarSelecaoMatriz()};bar.appendChild(limpar);return bar;
 }
 function abrirEdicaoMatrizLote(acao){

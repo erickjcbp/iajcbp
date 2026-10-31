@@ -13,6 +13,13 @@
   <link rel="apple-touch-icon" href="icon-192.png">
   <script>window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__bip=e;});</script>
   <style>
+    .dest-member-recent{grid-column:2;grid-row:1}
+    .dest-member-medals { grid-column:1/-1;min-width:0;padding:20px;border:1px solid var(--border-wine);border-radius:12px;background:var(--surface2); }
+    .dest-member-medals h3{margin:0 0 14px;font:700 18px var(--font-title);color:var(--gold-light)}
+    .dest-medal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr));gap:12px}
+    .dest-earned-medal{min-width:0;margin:0;padding:12px;background:var(--surface);border:1px solid var(--border-wine);border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+    .dest-earned-medal img{width:96px;height:110px;object-fit:contain}.dest-earned-medal figcaption{font-size:13px;line-height:1.5;overflow-wrap:anywhere;color:var(--text)}
+    @media(max-width:639px){.dest-medal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dest-member-medals{padding:14px}}
     .dest-member-overlay { padding:clamp(14px,2.4vw,44px); }
     .dest-member-modal { width:100%!important;max-width:none!important;max-height:calc(100dvh - 40px);overflow:auto;clip-path:none!important;border-radius:16px!important;padding:clamp(20px,3vw,40px)!important; }
     .dest-member-layout { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px; }
@@ -31,7 +38,7 @@
     .dest-member-actions { margin-top:20px;display:flex;justify-content:flex-end; }.dest-member-actions button,.dest-member-modal>.modal-close { min-height:44px;min-width:44px; }
     .dest-member-modal>.dest-member-title { padding-right:48px;margin:0 0 20px;font:700 18px var(--font-title);color:var(--text-muted); }
     .dest-member-modal :focus-visible { outline:2px solid var(--gold);outline-offset:3px; }
-    @media(max-width:1000px){.dest-member-layout{grid-template-columns:minmax(0,1fr)}}
+    @media(max-width:1000px){.dest-member-layout{grid-template-columns:minmax(0,1fr)}.dest-member-recent{grid-column:auto;grid-row:auto}}
     @media(max-width:639px){.dest-member-overlay{padding:0!important;align-items:stretch}.dest-member-modal{height:100dvh!important;max-height:100dvh!important;border-radius:0!important;padding:calc(20px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))!important}.dest-member-layout{grid-template-columns:minmax(0,1fr);gap:14px}.dest-member-head{flex-direction:column;text-align:center;gap:14px}.dest-member-profile,.dest-member-recent{padding:14px}.dest-member-stats{gap:6px}.dest-member-stat{padding:12px 6px}.dest-member-stat dd{font-size:18px}.dest-member-stat dt{font-size:12px}.dest-member-actions button{width:100%}}
     .dest-tabs { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; margin-bottom:18px; }
     .dest-tab { flex:1 0 auto; min-width:0 !important;min-height:48px; padding:9px 12px; background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); border-radius:18px; font-family:var(--font-body); font-size:11px; font-weight:700; white-space:normal; line-height:1.5; cursor:pointer; -webkit-tap-highlight-color:transparent; }
@@ -239,6 +246,16 @@ async function abrirCard(id) {
   if(!ult.length){const empty=document.createElement('p');empty.className='dest-member-level';empty.textContent='Ainda não foi escalado em nenhuma missa.';recent.append(empty);}
   for(const u of ult){const row=document.createElement('div');row.className='dest-member-mass';const dt=document.createElement('time');dt.dateTime=u.data;dt.textContent=dataCurta(u.data)+' · '+u.horario;const fn=document.createElement('span');fn.textContent=FUNCAO_LABEL[u.funcao]||u.funcao;row.append(dt,fn);recent.append(row);}
   body.append(profile,recent);
+  const medals=document.createElement('section');medals.className='dest-member-medals';const medalsTitle=document.createElement('h3');medalsTitle.textContent='Medalhas conquistadas';const medalsStatus=document.createElement('p');medalsStatus.className='dest-member-level';medalsStatus.setAttribute('role','status');medalsStatus.textContent='Carregando medalhas…';medals.append(medalsTitle,medalsStatus);body.insertBefore(medals,recent);
+  try{
+    const [artes,resposta]=await Promise.all([carregarMedalhasArte(),sb.rpc('acolitos_medalhas_cartao',{p_membro:id})]);if(fechado)return;if(resposta.error)throw resposta.error;
+    const earned=resposta.data||[];medalsTitle.textContent='Medalhas conquistadas · '+earned.length;
+    medalsStatus.textContent=earned.length?'':'Este membro ainda não possui medalhas.';medalsStatus.hidden=earned.length>0;
+    const gallery=document.createElement('div');gallery.className='dest-medal-grid';
+    for(const badge of earned){const figure=document.createElement('figure');figure.className='dest-earned-medal';figure.innerHTML=artes.html(badge.icone,medalhaTier(badge),96);const image=figure.querySelector('img');if(image)image.alt=badge.label;const caption=document.createElement('figcaption');caption.textContent=badge.label;figure.append(caption);gallery.append(figure);}
+    medals.append(gallery);
+  }catch(e){if(!fechado)medalsStatus.textContent='Não foi possível carregar as medalhas agora.';}
+
 }
 
 init();
