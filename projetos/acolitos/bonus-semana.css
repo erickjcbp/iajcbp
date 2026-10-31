@@ -6,3 +6,19 @@
 .bw-routine input[type=time],.bw-routine input[type=date]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box}
 .bw-times>*{min-width:0}.bw-times label,.bw-routine label{overflow-wrap:anywhere}
 @media(max-width:340px){#main .view-tabs button{padding-left:4px;padding-right:4px;font-size:11px;letter-spacing:0}}
+
+/* Programação da Jornada: opções, horários e histórico separados. */
+.bw-routine .bw-settings{min-width:0;margin:22px 0;padding:16px;border:1px solid var(--border-wine);border-radius:12px}
+.bw-settings legend{padding:0 8px;color:var(--gold-light);font:700 16px var(--font-title)}
+.bw-settings>p{line-height:1.6;margin:0 0 12px}
+.bw-settings>label{padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;line-height:1.5;cursor:pointer}
+.bw-settings>label:last-child{border-bottom:0}
+.bw-settings .bw-times{margin:0 0 16px}
+.bw-settings .bw-times label{font-size:14px;line-height:1.5}
+.bw-settings .bw-times input,.bw-settings .bw-times .app-select-trigger{margin-top:8px}
+.bw-history{margin-top:24px;border:1px solid var(--border-wine);border-radius:12px;min-width:0}
+.bw-history>summary{cursor:pointer;min-height:48px;padding:14px 16px;color:var(--gold-light);font-weight:700;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.bw-history>summary:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:12px}
+.bw-history-body{padding:0 16px 16px;min-width:0}
+.bw-history-body h3{font:700 15px var(--font-title);margin:18px 0 6px}
+@media(max-width:639px){.bw-routine .bw-settings{padding:12px;margin:18px 0}.bw-settings legend{font-size:14px}.bw-history>summary{padding:14px 12px}.bw-history-body{padding:0 12px 12px}}
