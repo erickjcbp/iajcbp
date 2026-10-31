@@ -36,7 +36,7 @@ select 'finados_segunda','matriz',funcao,quantidade,ordem
 from (values
   ('cred_altar',1,1), ('cred_credencia',1,2), ('missal',1,3), ('cruz',1,4), ('vela',2,5),
   ('turibulo',1,6), ('naveta',1,7),
-  ('altar',3,8), ('sineta',0,9), ('sinao',0,10), ('apoio',10,11), ('mitra',0,12), ('baculo',0,13)
+  ('altar',3,8), ('sineta',1,9), ('sinao',1,10), ('apoio',10,11), ('mitra',0,12), ('baculo',0,13)
 ) as v(funcao,quantidade,ordem)
 on conflict (tipo,comunidade,funcao) do update set quantidade = excluded.quantidade, ordem = excluded.ordem;
 
