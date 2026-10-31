@@ -7,3 +7,5 @@
 @media(max-width:639px){.mg-badges{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.mg-badge{padding:12px 8px}.mg-badge img{width:90px;height:102px}.mg-people-filters{grid-template-columns:minmax(0,1fr)}.mg-footer{padding-bottom:env(safe-area-inset-bottom);gap:8px}.mg-footer button{flex:1;min-width:0;white-space:normal}.mg-selected figure{flex-basis:100%}}
 /* O conteúdo rola por dentro; as ações permanecem fora da galeria. */
 .medalhas-admin-modal{display:flex!important;flex-direction:column;overflow:hidden!important}.medalhas-admin-modal>.mg-body{min-height:0;overflow:auto;flex:1;padding:2px}.medalhas-admin-modal>:not(.mg-body){flex-shrink:0}.medalhas-admin-modal>.mg-footer{position:static;flex:none;margin-top:14px;padding-bottom:0}
+
+.mg-filter-label{display:grid;gap:8px;min-width:0;font-size:13px;color:var(--text-muted);line-height:1.5}

@@ -294,7 +294,7 @@ function montarColecaoMedalhas(main, badges) {
   let filtro = 'todas';
   const botoes = [];
   [['todas', 'Todas'], ['conquistadas', 'Conquistadas'], ['pendentes', 'Para conquistar']].forEach(([valor, texto]) => {
-    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'cq-filter'; btn.dataset.filtro = valor; btn.textContent = texto + ' (' + contagens[valor] + ')'; btn.setAttribute('aria-pressed', String(valor === filtro)); btn.setAttribute('aria-controls', 'cq-medalhas');
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'cq-filter'; btn.dataset.filtro = valor; btn.dataset.label=texto; btn.textContent = texto + ' (' + contagens[valor] + ')'; btn.setAttribute('aria-pressed', String(valor === filtro)); btn.setAttribute('aria-controls', 'cq-medalhas');
     btn.onclick = () => { filtro = valor; atualizar(); }; botoes.push(btn); filtros.appendChild(btn);
   });
   const ordem = document.createElement('div'); ordem.className = 'cq-sort';
@@ -302,7 +302,12 @@ function montarColecaoMedalhas(main, badges) {
   const ordemSel = document.createElement('select'); ordemSel.id = 'cq-medal-ordem'; ordemSel.className = 'form-input'; ordemSel.setAttribute('aria-controls', 'cq-medalhas');
   [['padrao', 'Padrão (por nível)'], ['recentes', 'Mais recentes'], ['az', 'A a Z']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; ordemSel.appendChild(o); });
   ordem.append(ordemLabel, ordemSel);
-  toolbar.append(busca, filtros, ordem);
+  const tipo = document.createElement('div'); tipo.className='cq-sort';
+  const tipoLabel=document.createElement('label');tipoLabel.htmlFor='cq-medal-tipo';tipoLabel.textContent='Tipo de medalha';
+  const tipoSel=document.createElement('select');tipoSel.id='cq-medal-tipo';tipoSel.className='form-input';tipoSel.setAttribute('aria-controls','cq-medalhas');
+  const correspondeTipo=(b,t)=>t==='todas'||(t==='automaticas'?b.validacao==='automatica':b.validacao!=='automatica');
+  [['todas','Todas as medalhas'],['automaticas','Automáticas'],['coordenacao','Concedidas pela coordenação']].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t+' ('+badges.filter(b=>correspondeTipo(b,v)).length+')';tipoSel.append(o);});
+  tipo.append(tipoLabel,tipoSel);toolbar.append(busca, filtros, tipo, ordem);
   const resultado = document.createElement('p'); resultado.className = 'cq-results'; resultado.setAttribute('role', 'status'); resultado.setAttribute('aria-live', 'polite');
   const mg = document.createElement('div'); mg.className = 'cq-grid cq-medal-grid'; mg.id = 'cq-medalhas';
   const normalizar = texto => String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
@@ -322,7 +327,7 @@ function montarColecaoMedalhas(main, badges) {
   });
   const vazio = document.createElement('div'); vazio.className = 'cq-no-results'; vazio.hidden = true;
   const aviso = document.createElement('p'); aviso.textContent = 'Nenhuma medalha corresponde a este filtro e busca.';
-  const todas = document.createElement('button'); todas.type = 'button'; todas.className = 'cq-clear'; todas.textContent = 'Ver todas as medalhas'; todas.onclick = () => { input.value = ''; filtro = 'todas'; atualizar(); input.focus(); };
+  const todas = document.createElement('button'); todas.type = 'button'; todas.className = 'cq-clear'; todas.textContent = 'Ver todas as medalhas'; todas.onclick = () => { input.value = ''; filtro = 'todas';tipoSel.value='todas';tipoSel.dispatchEvent(new Event('change',{bubbles:true})); input.focus(); };
   vazio.append(aviso, todas); main.append(toolbar, resultado, mg, vazio);
   function atualizar() {
     const termos = normalizar(input.value).trim().split(/\s+/).filter(Boolean);
@@ -338,10 +343,10 @@ function montarColecaoMedalhas(main, badges) {
     ordenados.forEach(c => mg.appendChild(c.cell));
     cartoes.forEach(({badge, cell, texto}) => {
       const status = filtro === 'todas' || (filtro === 'conquistadas' ? badge.ganho : !badge.ganho);
-      cell.hidden = !(status && termos.every(termo => texto.includes(termo)));
+      cell.hidden = !(status && correspondeTipo(badge,tipoSel.value) && termos.every(termo => texto.includes(termo)));
       if (!cell.hidden) visiveis++;
     });
-    botoes.forEach(btn => btn.setAttribute('aria-pressed', String(btn.dataset.filtro === filtro)));
+    botoes.forEach(btn => {btn.setAttribute('aria-pressed', String(btn.dataset.filtro === filtro));const total=badges.filter(b=>correspondeTipo(b,tipoSel.value)&&(btn.dataset.filtro==='todas'||(btn.dataset.filtro==='conquistadas'?b.ganho:!b.ganho))).length;btn.textContent=btn.dataset.label+' ('+total+')';});
     mg.classList.toggle('show-requisitos', filtro === 'pendentes');
     vazio.hidden = visiveis > 0;
     const nome = visiveis === 1 ? 'medalha' : 'medalhas';
@@ -350,6 +355,7 @@ function montarColecaoMedalhas(main, badges) {
   }
   input.addEventListener('input', atualizar);
   ordemSel.addEventListener('change', atualizar);
+  tipoSel.addEventListener('change', atualizar);
   limpar.onclick = () => { input.value = ''; atualizar(); input.focus(); };
   atualizar();
 }
