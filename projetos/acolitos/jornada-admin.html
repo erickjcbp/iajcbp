@@ -15,6 +15,21 @@
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
   <style>
+    .ja-tools { display:grid; gap:12px; width:100%; min-width:0; }
+    .ja-tool { min-width:0; border:1px solid var(--border-wine); border-radius:12px; background:var(--surface); }
+    .ja-tool > summary { display:flex; align-items:center; gap:12px; min-height:76px; padding:16px; cursor:pointer; list-style:none; }
+    .ja-tool > summary::-webkit-details-marker { display:none; }
+    .ja-tool > summary::after { content:'+'; margin-left:auto; color:var(--gold); font-size:24px; flex-shrink:0; }
+    .ja-tool[open] > summary::after { content:'−'; }
+    .ja-tool > summary:focus-visible { outline:2px solid var(--gold); outline-offset:3px; border-radius:12px; }
+    .ja-tool-label { display:grid; gap:5px; min-width:0; }
+    .ja-tool-label strong { color:var(--gold-light); font-family:var(--font-title); font-size:16px; overflow-wrap:anywhere; }
+    .ja-tool-label span { color:var(--text-muted); font-size:13px; line-height:1.5; }
+    .ja-tool-body { min-width:0; padding:0 16px 16px; border-top:1px solid var(--border-wine); }
+    .ja-tool-body > :first-child { margin-top:16px; }
+    .ja-tool-body :is(input,select,textarea) { font-size:16px; }
+    .ja-tool-body :is(button,.app-select-trigger) { min-height:44px; }
+    @media(max-width:639px) { .ja-tool > summary { padding:14px 12px; } .ja-tool-body { padding:0 12px 12px; } }
     /* Abas de visão — mesmo desenho da Agenda e da Tarefas. */
     .view-tabs { display:flex; gap:4px; background:var(--surface2); border:1px solid var(--border-wine); border-radius:11px; padding:3px; margin:-2px 0 14px; }
     .view-tabs button { flex:1; padding:8px; border:none; background:transparent; color:var(--text-muted); font-family:var(--font-body); font-weight:700; font-size:12px; letter-spacing:.5px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
@@ -90,6 +105,7 @@
 <script>
 const NIVEIS_SLUGS = () => NIVEIS.map(n => n.slug);
 let ctx = null;
+const ferramentasJornadaAbertas = new Set();
 
 async function init() {
   const destino=new URLSearchParams(location.search).get('aba');if(['quests','conteudo','programacao','evolucao'].includes(destino))abaJornada=destino;
@@ -108,6 +124,8 @@ async function renderAll() {
   const sub = document.createElement('p'); sub.style.cssText = 'color:var(--text-muted);font-size:13px;margin:-6px 0 16px;font-style:italic;';
   sub.textContent = abaJornada === 'evolucao'
     ? 'Onde a pastoral está coberta, onde está no fio, e quem precisa crescer.'
+    : abaJornada === 'conteudo' ? 'Prepare as aventuras, os desafios e as temporadas da pastoral.'
+    : abaJornada === 'programacao' ? 'Organize a programação e os lembretes da Jornada.'
     : 'Aprove reivindicações e confirme promoções de nível.';
   box.appendChild(sub);
 
@@ -128,11 +146,32 @@ async function renderAll() {
     // A matriz abre a aba; o acompanhamento da Formação vem logo depois dela.
     await renderDesenvolvimento(box, renderSinalDaFormacao);
   } else if(abaJornada==='conteudo') {
-    { const intro = document.createElement('p'); intro.style.cssText = 'color:var(--text-muted);font-size:14px;line-height:1.5;margin:0 0 16px'; intro.textContent = 'Aqui você cria o que os jovens vão fazer na Jornada: episódios, a missão da semana, quests exclusivas e a temporada com ranking.'; box.appendChild(intro); }
-    await JornadaAutoria.render(box, { sb, niveis: NIVEIS });
-    await renderSemanaAdmin(box);
-    await renderCriarQuest(box);
-    await renderTemporadaAdmin(box);
+    const intro = document.createElement('p');
+    intro.style.cssText = 'color:var(--text-muted);font-size:14px;line-height:1.5;margin:0 0 16px';
+    intro.textContent = 'Escolha o que deseja preparar. Abra as ferramentas de que precisa; recolher uma seção mantém os campos preenchidos.';
+    box.appendChild(intro);
+    const tools = document.createElement('div'); tools.className = 'ja-tools'; box.appendChild(tools);
+    const sections = [
+      ['episodios', 'Episódios da Jornada', 'Prepare aventuras por nível, revise rascunhos e veja a reserva de episódios.', body => JornadaAutoria.render(body, { sb, niveis: NIVEIS })],
+      ['semana', 'Missão da semana', 'Escolha uma missão para todos e organize as próximas semanas.', renderSemanaAdmin],
+      ['exclusivas', 'Missões exclusivas', 'Crie um desafio para membros específicos.', renderCriarQuest],
+      ['temporada', 'Temporada e ranking', 'Abra uma temporada ou confira a atual antes de premiar os campeões.', renderTemporadaAdmin]
+    ];
+    for (const [id, title, description, render] of sections) {
+      const section = document.createElement('details'); section.className = 'ja-tool'; section.dataset.ferramenta = id;
+      section.open = ferramentasJornadaAbertas.has(id);
+      const summary = document.createElement('summary');
+      const label = document.createElement('span'); label.className = 'ja-tool-label';
+      const name = document.createElement('strong'); name.textContent = title;
+      const help = document.createElement('span'); help.textContent = description;
+      label.append(name, help); summary.appendChild(label);
+      const body = document.createElement('div'); body.className = 'ja-tool-body';
+      section.append(summary, body); tools.appendChild(section);
+      section.addEventListener('toggle', () => {
+        if (section.open) ferramentasJornadaAbertas.add(id); else ferramentasJornadaAbertas.delete(id);
+      });
+      await render(body);
+    }
   } else if(abaJornada==='programacao') {
     await JornadaProgramacao.render(box,{sb});
   } else {
