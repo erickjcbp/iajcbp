@@ -72,6 +72,16 @@
         }
       ],
       "destination": "/projetos/acolitos/novena-publica.html"
+    },
+    {
+      "source": "/finados",
+      "has": [
+        {
+          "type": "host",
+          "value": "coroinhas.jcbplimeira.com.br"
+        }
+      ],
+      "destination": "/projetos/acolitos/finados-publica.html"
     }
   ],
   "headers": [
@@ -85,7 +95,7 @@
       ]
     },
     {
-      "source": "/(ausencias|pastoral|novena)",
+      "source": "/(ausencias|pastoral|novena|finados)",
       "headers": [
         {
           "key": "Cache-Control",

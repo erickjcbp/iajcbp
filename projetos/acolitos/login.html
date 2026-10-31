@@ -291,7 +291,7 @@
   function synthEmail(u){ const c=String(u||'').trim().toLowerCase(); return c.includes('@')?c:c.replace(/[^a-z0-9._-]/g,'')+DOMINIO; }
 
   // Para onde voltar depois de entrar. Lista fechada: só destinos conhecidos (nada de URL livre).
-  const DESTINO = ({ novena:'/novena' })[new URLSearchParams(location.search).get('volta')] || 'index.html';
+  const DESTINO = ({ novena:'/novena', finados:'/finados' })[new URLSearchParams(location.search).get('volta')] || 'index.html';
 
   async function entrar(){
     const id=document.getElementById('li-email').value.trim();
