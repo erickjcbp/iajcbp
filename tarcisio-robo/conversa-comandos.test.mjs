@@ -49,6 +49,8 @@ function bancoFalso({ envios = [], mensagens = [] } = {}) {
     const q = {
       select: () => q, order: () => q, limit: () => q,
       eq: (c, v) => { linhas = linhas.filter((l) => l[c] === v); if (upd) { log.update.push({ nome, upd, onde: { [c]: v } }) } return q },
+      in: (c, v) => { linhas = linhas.filter((l) => v.includes(l[c])); return q },
+      gte: (c, v) => { linhas = linhas.filter((l) => l[c] >= v); return q },
       not: (c) => { linhas = linhas.filter((l) => l[c] != null); return q },
       is: (c) => { linhas = linhas.filter((l) => l[c] == null); return q },
       insert: (l) => { log.insert.push({ nome, l }); return Promise.resolve({ data: null, error: null }) },
@@ -114,7 +116,7 @@ test('pedido de apagar vindo do painel é executado pelo robô', async () => {
 
 test('apagar logo depois de enviar cancela o envio da fila, sem tocar em mensagem antiga', async () => {
   const db = bancoFalso({ envios: [
-    { id: 'novo', tipo: 'manual', estado: 'pendente', destino_nome: 'Cerimoniários', texto: 'Oops' },
+    { id: 'novo', tipo: 'manual', estado: 'pendente', destino_nome: 'Cerimoniários', destino_jid: 'cer@g.us', texto: 'Oops', created_at: new Date().toISOString() },
     { id: 'velho', estado: 'enviado', external_id: 'WA-VELHO', enviado_em: '2026-11-01T10:00:00Z', destino_jid: 'cer@g.us', apagada_em: null },
   ] })
   let chamou = false
@@ -123,4 +125,25 @@ test('apagar logo depois de enviar cancela o envio da fila, sem tocar em mensage
   assert.match(r, /Cancelei o envio que ainda estava na fila/)
   assert.equal(chamou, false)
   assert.equal(db.log.update.at(-1).upd.estado, 'cancelado')
+})
+
+test('apagar com destino não cancela envio da fila de outro destino', async () => {
+  const db = bancoFalso({ envios: [
+    { id: 'outro', tipo: 'manual', estado: 'pendente', destino_nome: 'Pais', destino_jid: 'pais@g.us', texto: 'Aviso', created_at: new Date().toISOString() },
+  ] })
+  const c = criarComandosDono({ db, evo: { grupos: async () => GRUPOS }, log: { error() {} } })
+  const r = await c.executar('apagar para cerimoniários')
+  assert.match(r, /Não achei mensagem minha/)
+  assert.equal(db.log.update.length, 0)
+})
+
+test('apagar com envio já saindo não apaga outra mensagem: pede para repetir', async () => {
+  const db = bancoFalso({ envios: [
+    { id: 'saindo', tipo: 'manual', estado: 'enviando', destino_nome: 'Cerimoniários', destino_jid: 'cer@g.us', texto: 'X', created_at: new Date().toISOString() },
+    { id: 'velho', estado: 'enviado', external_id: 'WA-VELHO', enviado_em: '2026-11-01T10:00:00Z', destino_jid: 'cer@g.us', apagada_em: null },
+  ] })
+  let chamou = false
+  const c = criarComandosDono({ db, evo: { grupos: async () => GRUPOS, apagarParaTodos: async () => { chamou = true } }, log: { error() {} } })
+  assert.match(await c.executar('apagar'), /está saindo agora/)
+  assert.equal(chamou, false)
 })

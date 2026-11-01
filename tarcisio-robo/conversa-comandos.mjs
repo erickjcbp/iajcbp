@@ -109,20 +109,26 @@ export function criarComandosDono({ db, evo, log = console, agora = () => new Da
   }
 
   async function apagar(c) {
-    // "apagar" logo depois de "enviar": se o envio ainda está na fila, cancela ELE (não apaga outra mensagem mais antiga).
-    const fila = exigir(await db.from('tarcisio_envios').select('*').eq('tipo', 'manual').eq('estado', 'pendente')
-      .order('created_at', { ascending: false }).limit(1), 'achar envio na fila')[0]
-    if (fila) {
-      const feito = exigir(await db.from('tarcisio_envios').update({ estado: 'cancelado', erro: 'Cancelado a pedido do dono antes de sair' })
-        .eq('id', fila.id).eq('estado', 'pendente').select('id'), 'cancelar envio na fila')
-      if (feito.length) return `Cancelei o envio que ainda estava na fila para ${fila.destino_nome || fila.destino_numero}: «${resumo(fila.texto)}». Nada foi enviado.`
-    }
     let d = null
     if (limparDestino(c.destino) || numeroDoDestino(c.destino)) {
       d = await resolverDestino(c.destino)
       if (d.resposta) return d.resposta
     }
     const filtraEnv = (q) => d ? (d.jid ? q.eq('destino_jid', d.jid) : q.eq('destino_numero', d.numero)) : q
+    // "apagar" logo depois de "enviar": envio manual recente, no mesmo destino, ainda na fila ou saindo.
+    // Cancela ELE; se já está saindo, não apaga nada (outra mensagem mais antiga seria a errada): pede para repetir.
+    const recente = new Date(agora().getTime() - 10 * 60_000).toISOString()
+    const fila = exigir(await filtraEnv(db.from('tarcisio_envios').select('*').eq('tipo', 'manual').in('estado', ['pendente', 'enviando'])
+      .gte('created_at', recente).order('created_at', { ascending: false }).limit(1)), 'achar envio na fila')[0]
+    if (fila) {
+      const nomeFila = fila.destino_nome || fila.destino_numero
+      const feito = fila.estado === 'pendente'
+        ? exigir(await db.from('tarcisio_envios').update({ estado: 'cancelado', erro: 'Cancelado a pedido do dono antes de sair' })
+            .eq('id', fila.id).eq('estado', 'pendente').select('id'), 'cancelar envio na fila')
+        : []
+      if (feito.length) return `Cancelei o envio que ainda estava na fila para ${nomeFila}: «${resumo(fila.texto)}». Nada foi enviado.`
+      return `O envio para ${nomeFila} está saindo agora. Responda "apagar" de novo em alguns segundos para apagá-lo.`
+    }
     const env = exigir(await filtraEnv(db.from('tarcisio_envios').select('*').eq('estado', 'enviado').not('external_id', 'is', null).is('apagada_em', null)
       .order('enviado_em', { ascending: false }).limit(1)), 'achar envio')[0]
     let msg = null
