@@ -33,7 +33,7 @@ function anoCiclo(adventYear) {
 
 const ORD = n => n + 'º'
 
-export function liturgicoDoDomingo(domingoISO) {
+function liturgicoBase(domingoISO) {
   const dom = parse(domingoISO)
   const y = dom.getUTCFullYear()
   const P = pascoa(y)
@@ -97,6 +97,31 @@ export function liturgicoDoDomingo(domingoISO) {
 
   // Fallback (Tempo do Natal e casos não cobertos) → verde/Tempo Comum; espera-se override.
   return { tempo:'TEMPO COMUM', descricao:`Domingo, ${anoLbl}`, cor:'verde', auto:true }
+}
+
+// Solenidades e festas de data fixa que, caindo num domingo do Tempo Comum, tomam o lugar dele
+// (Tabela dos dias litúrgicos). Advento, Quaresma e Páscoa vencem estas datas e não passam por aqui.
+// Datas movidas por decisão da CNBB ficam de fora de propósito: a conferência com IA cobre esses casos.
+const FIXAS = {
+  '02-02': { tempo:'FESTA DO SENHOR', nome:'Festa da Apresentação do Senhor', cor:'branco' },
+  '06-24': { tempo:'SOLENIDADE', nome:'Solenidade da Natividade de São João Batista', cor:'branco' },
+  '06-29': { tempo:'SOLENIDADE', nome:'Solenidade de São Pedro e São Paulo, Apóstolos', cor:'vermelho' },
+  '08-06': { tempo:'FESTA DO SENHOR', nome:'Festa da Transfiguração do Senhor', cor:'branco' },
+  '09-14': { tempo:'FESTA DO SENHOR', nome:'Festa da Exaltação da Santa Cruz', cor:'vermelho' },
+  '10-12': { tempo:'SOLENIDADE', nome:'Solenidade de Nossa Senhora Aparecida, Padroeira do Brasil', cor:'branco' },
+  '11-01': { tempo:'SOLENIDADE', nome:'Solenidade de Todos os Santos', cor:'branco' },
+  '11-02': { tempo:'FINADOS', nome:'Comemoração de Todos os Fiéis Defuntos', cor:'roxo' },
+  '11-09': { tempo:'FESTA DO SENHOR', nome:'Festa da Dedicação da Basílica do Latrão', cor:'branco' },
+}
+
+export function liturgicoDoDomingo(domingoISO) {
+  const base = liturgicoBase(domingoISO)
+  const fixa = FIXAS[domingoISO.slice(5)]
+  if (fixa && base.tempo === 'TEMPO COMUM') {
+    const ano = base.descricao.match(/Ano [ABC]$/)?.[0]
+    return { tempo:fixa.tempo, descricao: ano ? `${fixa.nome}, ${ano}` : fixa.nome, cor:fixa.cor, auto:true }
+  }
+  return base
 }
 
 export function resolverLiturgico(domingoISO, override) {

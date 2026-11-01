@@ -17,7 +17,11 @@ if (!URL || !KEY) {
 const sb = createClient(URL, KEY, { auth: { persistSession: false } })
 
 async function main() {
-  const { sabado, domingo } = alvoFimDeSemana(new Date())
+  // ARTE_DOMINGO=AAAA-MM-DD (só execução manual): refaz a arte de um fim de semana específico, ex.: corrigir a liturgia.
+  const alvoManual = process.env.ARTE_DOMINGO
+  const { sabado, domingo } = alvoManual && /^\d{4}-\d{2}-\d{2}$/.test(alvoManual)
+    ? { sabado: new Date(Date.parse(alvoManual + 'T00:00:00Z') - 864e5).toISOString().slice(0, 10), domingo: alvoManual }
+    : alvoFimDeSemana(new Date())
   console.log('Fim de semana alvo:', sabado, domingo)
 
   const { data: ov } = await sb.from('acolitos_liturgia_override')

@@ -63,3 +63,19 @@ describe('resolverLiturgico (override vence)', () => {
     expect(resolverLiturgico('2026-07-12', null).auto).toBe(true)
   })
 })
+
+describe('solenidades de data fixa em domingo', () => {
+  it('Todos os Santos (01/11/2026) toma o lugar do 31º domingo do Tempo Comum', () => {
+    const l = liturgicoDoDomingo('2026-11-01')
+    expect(l.descricao).toBe('Solenidade de Todos os Santos, Ano A')
+    expect(l.cor).toBe('branco'); expect(l.tempo).toBe('SOLENIDADE')
+  })
+  it('domingo sem data fixa segue o Tempo Comum', () => {
+    expect(liturgicoDoDomingo('2026-11-08').descricao).toMatch(/32º Domingo do Tempo Comum/)
+    expect(liturgicoDoDomingo('2027-11-14').cor).toBe('verde')
+  })
+  it('data fixa não vence Advento nem Quaresma', () => {
+    expect(liturgicoDoDomingo('2026-12-06').tempo).toBe('ADVENTO')
+    expect(liturgicoDoDomingo('2026-03-22').tempo).toBe('QUARESMA')
+  })
+})

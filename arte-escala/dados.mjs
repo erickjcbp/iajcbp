@@ -23,7 +23,7 @@ export function montarMissas(celebracoes, escalasMap, funcExtra) {
       const { HH, MM } = horaPartes(c.horario)
       const d = parseISO(c.data)
       const itens = (escalasMap[c.id] || [])
-        .filter(e => e.status === 'escalado' && e.acolitos_membros)
+        .filter(e => STATUS_NA_ARTE.has(e.status) && e.acolitos_membros)
         .map(e => ({ nome: e.acolitos_membros.nome, funcao: rotuloFuncao(e.funcao, funcExtra) }))
         .sort((a,b) => a.nome.localeCompare(b.nome, 'pt'))
       return {
@@ -36,6 +36,10 @@ export function montarMissas(celebracoes, escalasMap, funcExtra) {
       }
     })
 }
+
+// Quem estava escalado continua na arte depois da chamada (presente, atrasado, ausente); só sai quem foi substituído ou justificou.
+// Arte de fim de semana futuro só tem 'escalado', então nada muda no fluxo normal; refazer uma arte de missa passada não apaga ninguém.
+const STATUS_NA_ARTE = new Set(['escalado', 'presente', 'atrasado', 'ausente'])
 
 export async function carregarDados(sb, { sabado, domingo }, override) {
   // `incluir_na_arte=false`: a coordenação tirou essa missa do PNG no modal "Arte da

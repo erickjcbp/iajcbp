@@ -6,6 +6,7 @@
 
 import crypto from 'node:crypto';
 import { dispararArte } from './_github.js';
+import { garantirLiturgia } from './_liturgia-conferida.js';
 
 // Compara segredos sem vazar tempo. Falso se qualquer um estiver vazio.
 function segredoConfere(recebido, esperado) {
@@ -31,6 +32,7 @@ export default async function handler(req, res) {
   const segredo = req.headers['x-cron-secret'];
   if (segredo) {
     if (!segredoConfere(segredo, process.env.ROBO_PUSH_SECRET)) return res.status(403).json({ error: 'Acesso negado' });
+    await garantirLiturgia({ URL, SRK, chave: process.env.ANTHROPIC_API_KEY, modelo: process.env.ANTHROPIC_MODEL });
     const gh = await dispararArte({ GH_PAT, GH_REPO, origem: 'manual', formato: 'automatico' });
     if (!gh.ok) return res.status(502).json({ error: gh.motivo, detalhe: gh.detalhe });
     return res.status(202).json({ ok: true });
@@ -55,6 +57,7 @@ export default async function handler(req, res) {
 
   // 3. Manda o robô trabalhar. A tela mostra o MOTIVO da recusa, não só "falhou":
   // em 17/08/2026 o crachá venceu e a mensagem inútil custou horas de investigação.
+  await garantirLiturgia({ URL, SRK, chave: process.env.ANTHROPIC_API_KEY, modelo: process.env.ANTHROPIC_MODEL });
   const gh = await dispararArte({ GH_PAT, GH_REPO, origem: 'manual', formato });
   if (!gh.ok) return res.status(502).json({ error: gh.motivo, detalhe: gh.detalhe });
   return res.status(202).json({ ok: true });

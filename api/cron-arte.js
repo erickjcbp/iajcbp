@@ -11,6 +11,7 @@
 // que dispara na hora, ao contrário do schedule.
 import crypto from 'node:crypto';
 import { dispararArte } from './_github.js';
+import { garantirLiturgia } from './_liturgia-conferida.js';
 
 // Compara segredos sem vazar tempo. Falso se qualquer um estiver vazio.
 function segredoConfere(recebido, esperado) {
@@ -35,6 +36,7 @@ export default async function handler(req, res) {
   const enviado = (req.headers.authorization || '').replace('Bearer ', '');
   if (!segredoConfere(enviado, CRON_SECRET)) return res.status(403).json({ error: 'Acesso negado' });
 
+  await garantirLiturgia({ URL: process.env.SUPABASE_URL, SRK: process.env.SUPABASE_SERVICE_ROLE_KEY, chave: process.env.ANTHROPIC_API_KEY, modelo: process.env.ANTHROPIC_MODEL });
   const gh = await dispararArte({ GH_PAT, GH_REPO, origem: 'cron' });
   if (!gh.ok) {
     // Ninguém está olhando o retorno de um cron às 22h de domingo. Deixar o motivo no
