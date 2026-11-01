@@ -19,4 +19,10 @@ const p=await iniciarProvas();try{for(const largura of [360,390,768,1366,2560]){
  assert.equal(r.erroAvaliar,null);assert.deepEqual(r.erros,[]);const a=r.avaliado;assert.equal(a.conteudoSeguro,true,'Conteúdo deve respeitar a margem segura');assert.equal(a.semSobreposicao,true,'Arte e explicação não podem se sobrepor');assert.equal(a.overflow,false);assert.equal(a.dialogOverflow,false);assert.equal(a.ratio,true);assert.equal(a.fixo,true);assert.equal(a.small,0);assert.equal(a.touch,'pan-y');assert.match(a.viewport,/maximum-scale=1/);
  for(const k of ['pinch','gesto','duplo','wheelZoom','atalho'])assert.equal(a.bloqueios[k],true,k);assert.equal(a.bloqueios.scroll,false);assert.equal(a.bloqueios.toqueSimples,false);
  assert.ok(a.check.top>=44);assert.ok(a.check.left>=28);assert.ok(a.check.right>=28);assert.ok(a.check.bottom>=34);console.log('Área segura, zoom bloqueado, rolagem e controles fixos',largura,'OK');
-}}finally{await p.encerrar()}
+}
+ const rapid=await p.abrir('index.html',{papel:PAPEIS.membro,largura:390,avaliar:`
+ document.getElementById('splash')?.remove();const antes=location.href;
+ for(let i=0;i<8;i++){await abrirDetalheInsignia('nivel','aspirante');document.querySelector('.insignia-detalhe .modal-close').click();}
+ await new Promise(r=>setTimeout(r,350));await abrirDetalheInsignia('nivel','coroinha');return {mesmaPagina:location.href===antes,aberto:!!document.querySelector('.insignia-detalhe')};`});
+ assert.equal(rapid.erroAvaliar,null,JSON.stringify(rapid));assert.deepEqual(rapid.avaliado,{mesmaPagina:true,aberto:true});console.log('Trocas rápidas de detalhes preservam a página OK');
+}finally{await p.encerrar()}

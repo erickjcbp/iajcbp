@@ -4056,6 +4056,7 @@ function baixarCSV(nomeBase, linhas){
   if (window.__acModalHistory) return; window.__acModalHistory = true;
 
   var stack = [];          // overlays abertos, na ordem (LIFO)
+  var waitingOpens = [];   // novas janelas aguardam o Back de um fechamento anterior
   var pendingBacks = 0;    // nº de history.back() nossos ainda não consumidos por um popstate
   // (contador, não boolean: quando 2+ overlays fecham no mesmo tick — ex. uiConfirm
   // sobre um modal-avancar, confirmar fecha os dois de uma vez — cada onClose dispara
@@ -4066,7 +4067,10 @@ function baixarCSV(nomeBase, linhas){
   function optedOut(ov){ return ov.hasAttribute && ov.hasAttribute('data-no-history'); }
 
   function onOpen(ov){
-    if (optedOut(ov) || stack.indexOf(ov) !== -1) return;
+    if (optedOut(ov) || stack.indexOf(ov) !== -1 || waitingOpens.indexOf(ov) !== -1) return;
+    // pushState durante um back() pendente pode substituir o destino daquele Back.
+    // Mantém a abertura visual imediata; só empilha quando o fechamento terminou.
+    if (pendingBacks > 0 && ov.classList.contains('insignia-detalhe-overlay')) { waitingOpens.push(ov); return; }
     try {
       history.pushState({ acmodal: true, depth: stack.length + 1 }, '');
       stack.push(ov); // só entra na pilha se o pushState realmente aconteceu
@@ -4075,6 +4079,8 @@ function baixarCSV(nomeBase, linhas){
 
   // Chamado quando um modal deixou de estar aberto por QUALQUER via (X, fundo, Esc, programático, .open removido).
   function onClose(ov){
+    var waiting = waitingOpens.indexOf(ov);
+    if (waiting !== -1) { waitingOpens.splice(waiting, 1); return; }
     var i = stack.indexOf(ov);
     if (i === -1) return;
     stack.splice(i, 1);
@@ -4098,6 +4104,10 @@ function baixarCSV(nomeBase, linhas){
   window.addEventListener('popstate', function(){
     if (pendingBacks > 0) {              // consome um dos nossos history.back() (X/fundo/Esc/programático)
       pendingBacks--;
+      if (pendingBacks === 0) {
+        var openings = waitingOpens.splice(0);
+        openings.forEach(function(ov){ if (ov.isConnected && isOpen(ov)) onOpen(ov); });
+      }
       return;
     }
     // Voltar do usuário: se há modal aberto, fecha o topo e NÃO deixa a navegação prosseguir "vazia".
