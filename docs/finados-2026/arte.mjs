@@ -7,7 +7,7 @@ const brasao='file://'+A+'midia/logos/brasao-pastoral.png'
 const sora='file://'+A+'arte-escala/assets/sora.woff2'
 const inter='file://'+A+'arte-escala/assets/inter.woff2'
 const cor='#4B2E6F', esc='#2E1B47'
-const html=`<!doctype html><meta charset="utf-8"><style>
+const html=v=>`<!doctype html><meta charset="utf-8"><style>
 @font-face{font-family:Sora;src:url(${sora});font-weight:100 900}
 @font-face{font-family:Inter;src:url(${inter});font-weight:100 900}
 *{box-sizing:border-box;margin:0}
@@ -19,7 +19,7 @@ body{width:1080px;height:1350px;background:#F4E9D8;font-family:Inter,sans-serif;
 .t1{position:absolute;top:350px;width:100%;text-align:center;font:600 44px Sora;letter-spacing:.3em;color:${esc}}
 .t2{position:absolute;top:416px;width:100%;text-align:center;font:800 124px/1 Sora;color:${cor};letter-spacing:-.02em}
 .card{position:absolute;left:100px;right:100px;border-radius:28px;background:${cor};border:5px solid ${esc};box-shadow:0 10px 0 ${esc};color:#FBF7EC;padding:20px 40px}
-.c1{top:580px;background:#FBF7EC;border-color:#B08A2E;box-shadow:0 10px 0 #B08A2E;color:#2B1C0E}.c2{top:870px}
+.c1{top:var(--t1,580px);background:#FBF7EC;border-color:#B08A2E;box-shadow:0 10px 0 #B08A2E;color:#2B1C0E}.c2{top:var(--t2,870px)}
 .dia{font:700 30px Sora;letter-spacing:.2em}
 .data{font:800 54px/1.05 Sora;margin-top:2px}
 .hs{font:800 40px/1.1 Sora;margin-top:4px}
@@ -32,16 +32,29 @@ body{width:1080px;height:1350px;background:#F4E9D8;font-family:Inter,sans-serif;
 </style><body>
 <div class="frame"></div><div class="frame2"></div>
 <img class="brasao" src="${brasao}">
-<div class="kicker">CERIMONIÁRIOS</div>
-<div class="t1">TODOS OS SANTOS</div><div class="t2">&amp; FINADOS</div>
-<div class="card c1"><div class="dia">DOMINGO</div><div class="data">01/11</div><div class="fest">Solenidade de Todos os Santos</div><div class="hs">7h · 9h · 19h</div><div class="fn">Turíbulo e Naveta</div></div>
-<div class="card c2"><div class="dia">SEGUNDA</div><div class="data">02/11</div><div class="fest">Finados</div><div class="hs">8h</div><div class="fn">Cerimoniários, Cruz, Velas, Turíbulo e Naveta</div></div>
+<div class="kicker">${v.kicker}</div>
+<div class="t1">${v.t1}</div><div class="t2">${v.t2}</div>
+${v.cards}
 <div class="msg">Marque sua função no link!</div>
 <div class="rod">PASTORAL DOS ACÓLITOS · JCBP LIMEIRA</div>
 <div class="faixa"><i style="background:#FBF7EC"></i><i style="background:#D0101A"></i><i style="background:#0F1214"></i></div>
 </body>`
-mkdirSync('html',{recursive:true}); writeFileSync('html/arte-finados.html',html)
+
+const card=(n,dia,data,fest,hs,fn)=>`<div class="card c${n}"><div class="dia">${dia}</div><div class="data">${data}</div><div class="fest">${fest}</div><div class="hs">${hs}</div><div class="fn">${fn}</div></div>`
+const dom=h=>card(1,'DOMINGO','01/11','Solenidade de Todos os Santos',h,'Turíbulo e Naveta')
+const seg=fn=>card(2,'SEGUNDA','02/11','Finados','8h',fn)
+const CER='Cerimoniários, Cruz, Velas, Turíbulo e Naveta'
+const V=[
+ {f:'arte-finados-cerimoniarios-v3.png',kicker:'CERIMONIÁRIOS',t1:'TODOS OS SANTOS',t2:'&amp; FINADOS',cards:dom('7h · 9h · 19h')+seg(CER)},
+ {f:'arte-finados-cerimoniarios-9h-v1.png',kicker:'CERIMONIÁRIOS',t1:'TODOS OS SANTOS',t2:'&amp; FINADOS',cards:dom('9h · 19h')+seg(CER)},
+ {f:'arte-finados-cerimoniarios-19h-v1.png',kicker:'CERIMONIÁRIOS',t1:'TODOS OS SANTOS',t2:'&amp; FINADOS',cards:dom('19h')+seg(CER)},
+ {f:'arte-finados-acolitos-segunda-v1.png',kicker:'ACÓLITOS E COROINHAS',t1:'MISSA DE',t2:'FINADOS',cards:seg('Altar, Sineta, Sinão, Apoio, Cruz e Velas').replace('c2','c2" style="top:640px')},
+]
+mkdirSync('html',{recursive:true})
 const b=await puppeteer.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',args:['--no-sandbox','--allow-file-access-from-files']})
+for(const v of V){
 const p=await b.newPage(); await p.setViewport({width:1080,height:1350,deviceScaleFactor:1})
+writeFileSync('html/arte-finados.html',html(v))
 await p.goto('file://'+process.cwd()+'/html/arte-finados.html',{waitUntil:'networkidle0'}); await p.evaluate(()=>document.fonts.ready)
-await p.screenshot({path:'arte-finados-cerimoniarios-v3.png'}); await b.close(); console.log('ok')
+await p.screenshot({path:v.f}); await p.close() }
+await b.close(); console.log('ok')
