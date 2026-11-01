@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>Liturgia de Finados — Acólitos JCBP</title>
+  <title>Todos os Santos e Finados — Acólitos JCBP</title>
   <link rel="icon" href="../../midia/logos/brasao-pastoral.png">
   <link rel="apple-touch-icon" href="../../midia/logos/brasao-pastoral.png">
   <link rel="preconnect" href="https://fttjgsotuosjfrasttds.supabase.co">
@@ -205,15 +205,14 @@
     <div id="form-screen">
       <div class="top">
         <img class="crest" src="../../midia/logos/brasao-pastoral.png" alt="Brasão da Pastoral" onerror="this.style.display='none'">
-        <h1>Liturgia de Finados</h1>
+        <h1>Todos os Santos e Finados</h1>
         <p class="sub">Confira o dia, horário e local de cada missa. Marque em quais você pode servir — escolha a função e ela entra na escala na hora.</p>
       </div>
 
       <div class="card">
         <div id="passo1">
-          <label id="passo1-tit">Quem é você?</label>
-          <div id="passo1-txt" class="help">Carregando…</div>
-          <a id="entrar" class="btn" href="/projetos/acolitos/login.html?volta=finados" style="display:none;text-align:center;text-decoration:none;">Entrar com meu login</a>
+          <label>Quem é você? <span class="req">*</span></label>
+          <input id="busca" type="text" placeholder="digite seu nome (mín. 2 letras)…" autocomplete="off">
           <div id="results" class="results"></div>
         </div>
         <div id="passo2" style="display:none;">
@@ -243,7 +242,7 @@
     <h2>Confirma sua escala?</h2>
     <p class="sub" id="dlgNome" style="margin:0;"></p>
     <div id="dlgLista" class="lista"></div>
-    <p class="sub" style="margin:12px 0 0;">Ao confirmar, você entra na escala dessas missas. Depois você pode trocar a função ou sair por este mesmo link, entrando com seu login.</p>
+    <p class="sub" style="margin:12px 0 0;">Ao confirmar, você entra na escala dessas missas. Depois você pode trocar a função ou sair por este mesmo link.</p>
     <div class="row"><button class="voltar" id="dlgVoltar" type="button">Voltar</button><button class="ir" id="dlgIr" type="button">Sim, confirmar</button></div>
   </div></div>
 
@@ -271,36 +270,28 @@ const ICO_CHECK='<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d
 
     function showErr(t){ const m=$('msg'); m.textContent=t; m.className='msg err'; m.scrollIntoView({block:'nearest'}); }
     function clearErr(){ const m=$('msg'); m.className='msg'; m.textContent=''; }
+    const FESTA={'2026-11-01':'Solenidade de Todos os Santos','2026-11-02':'Finados'};
     function diaCerto(c){ const d=new Date(c.data+'T00:00:00'), n=DIAS[d.getDay()];
       return (d.getDay()>0&&d.getDay()<6 ? n+'-feira' : n)+', '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long'}); }
 
-    // ── QUEM É VOCÊ: só pelo login (migration 097) ──
-    // Marcar, trocar e sair mexem na escala de verdade, então o banco só aceita o próprio servo,
-    // a família dele (grupo_irmaos) ou a equipe. Antes era uma busca pública por nome, e
-    // qualquer um podia agir no nome de outro.
-    let perfis = [];
-    async function identificar(){
-      const { data:{ session } } = await sb.auth.getSession();
-      if(!session){
-        $('passo1-txt').textContent='Entre com o mesmo usuário e senha do app dos coroinhas para marcar suas missas.';
-        $('entrar').style.display='block'; return;
-      }
-      const { data: eu, error } = await sb.from('acolitos_membros')
-        .select('id,nome,apelido,grupo_irmaos').eq('user_id', session.user.id).maybeSingle();
-      if(error || !eu){ $('passo1-txt').textContent='Seu login não está ligado a um cadastro de servo. Fale com a coordenação.'; return; }
-      perfis = [eu];
-      if(eu.grupo_irmaos){
-        const { data: fam } = await sb.from('acolitos_membros').select('id,nome,apelido')
-          .eq('grupo_irmaos', eu.grupo_irmaos).eq('status','ativo').eq('serve', true).neq('id', eu.id).order('nome');
-        perfis = perfis.concat(fam || []);
-      }
-      if(perfis.length===1){ escolher(eu); return; }
-      $('passo1-txt').textContent='Para quem você vai marcar as missas?';
-      listar(perfis);
+    // ── BUSCA PELO NOME (link universal, sem login) ──
+    // Migration 127: nas missas de Finados o banco aceita a chamada anônima; as demais exigem login.
+    let buscaT=null, perfis=[];
+    $('busca').addEventListener('input', e=>{
+      clearTimeout(buscaT);
+      const q=e.target.value.trim();
+      if(q.length<2){ $('results').classList.remove('show'); $('results').innerHTML=''; return; }
+      buscaT=setTimeout(()=>buscar(q), 250);
+    });
+    async function buscar(q){
+      const { data, error } = await sb.rpc('acolitos_ausencia_publica_buscar', { p_q:q });
+      const box=$('results'); box.innerHTML='';
+      if(error || !Array.isArray(data) || !data.length){ box.classList.remove('show'); return; }
+      listar(data);
     }
     function listar(data){
       const box=$('results'); box.innerHTML='';
-      const hint=document.createElement('div'); hint.className='rhint'; hint.textContent='toque no nome';
+      const hint=document.createElement('div'); hint.className='rhint'; hint.textContent='toque no seu nome';
       box.appendChild(hint);
       data.forEach(m=>{
         const b=document.createElement('button');
@@ -316,12 +307,10 @@ const ICO_CHECK='<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d
       membro=m; selCels.clear(); clearErr();
       $('meNome').textContent=m.nome;
       $('passo1').style.display='none'; $('passo2').style.display='block';
-      $('results').classList.remove('show');
-      $('trocar').style.display = perfis.length>1 ? '' : 'none';
+      $('results').classList.remove('show'); $('busca').value='';
       carregar();
     }
-    $('trocar').onclick=()=>{ membro=null; $('passo2').style.display='none'; $('passo1').style.display='block'; listar(perfis); };
-    identificar();
+    $('trocar').onclick=()=>{ membro=null; $('passo2').style.display='none'; $('passo1').style.display='block'; };
 
     // ── MISSAS ──
     async function carregar(){
@@ -343,12 +332,12 @@ const ICO_CHECK='<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d
         w.appendChild(a); box.appendChild(w); return;
       }
       missas = Array.isArray(data)?data:[];
-      if(!missas.length){ box.innerHTML='<div class="cels-empty">Nenhuma missa da liturgia de Finados aberta no momento.</div>'; return; }
+      if(!missas.length){ box.innerHTML='<div class="cels-empty">Nenhuma missa de Todos os Santos e Finados aberta no momento.</div>'; return; }
       missas.forEach(c=>{
         const wrap=document.createElement('div'); wrap.className='cel-wrap';
         const row=document.createElement('div'); row.className='cel'; row.dataset.id=c.id;
         row.innerHTML='<div class="box"></div><div class="lab"><div class="d1"></div><div class="d2"></div></div>';
-        row.querySelector('.d1').textContent=diaCerto(c);
+        row.querySelector('.d1').textContent=diaCerto(c)+(FESTA[c.data]?' · '+FESTA[c.data]:'');
         const local=c.local_nome || ({matriz:'Matriz',santo_antonio:'Santo Antônio',outra:'Outras comunidades',outras_comunidades:'Outras comunidades'}[c.comunidade]) || c.comunidade || 'Local não informado';
         row.querySelector('.d2').textContent=c.horario+' · '+local;
         wrap.appendChild(row);
