@@ -1112,3 +1112,6 @@ a.btn-sm { text-decoration: none; }
 .medalha-descricao{display:block;color:var(--text)}
 .medalha-condicao{display:grid;gap:4px;padding-top:10px;border-top:1px solid var(--border-wine)}
 .medalha-condicao strong{font-size:12px;line-height:1.5;font-weight:700;color:var(--gold-light)}
+
+/* Duração real do serviço, comum aos cards da Jornada e ao gestor. */
+.tempo-pastoral{display:block;font-size:12px;line-height:1.6;color:var(--text-muted);white-space:normal;overflow-wrap:anywhere;margin-top:4px}

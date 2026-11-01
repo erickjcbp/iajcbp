@@ -135,6 +135,7 @@
 <script src="paginar-core.js"></script>
 <script src="identidade-core.js"></script>
 <script src="rodizio-core.js"></script>
+<script src="tempo-pastoral-core.js"></script>
 <script src="shared.js"></script>
 <script src="jornada-core.js"></script>
 <script src="jornada-quests.js"></script>
@@ -147,6 +148,8 @@
 <script>
 const NIVEIS_SLUGS = () => NIVEIS.map(n => n.slug);
 let ctx = null;
+let jornadaTempos = new Map();
+function tempoMembroJornada(id){return TempoPastoral.elemento(jornadaTempos.get(id)||_devMembros.find(m=>m.id===id)||{});}
 const ferramentasJornadaAbertas = new Set();
 
 async function init() {
@@ -225,6 +228,8 @@ async function renderAll() {
 
 // As filas do dia: o que está esperando uma decisão da coordenação.
 async function renderFilas(main) {
+  const {data: tempos}=await sb.from('acolitos_membros').select('id,servindo_desde,servindo_desde_ou_antes,servindo_desde_fonte');
+  jornadaTempos=new Map((tempos||[]).map(m=>[m.id,m]));
   const box=document.createElement('div');box.className='ja-approvals';main.appendChild(box);
 
   // Fila de aprovação
@@ -236,7 +241,7 @@ async function renderFilas(main) {
     const top = document.createElement('div'); top.className = 'mx-fila-top';
     const lbl = document.createElement('div'); lbl.style.fontSize = '13px'; lbl.innerHTML = '<span class="ja-request-name">' + escHtml(item.membro) + '</span><span class="ja-request-title">' + escHtml(item.titulo) + '</span>';
     const xp = document.createElement('span'); xp.className = 'mx-q-xp'; xp.textContent = '+' + item.xp + ' XP';
-    top.append(lbl, xp); it.appendChild(top);
+    lbl.append(tempoMembroJornada(item.membro_id));top.append(lbl, xp); it.appendChild(top);
     if (item.evidencia) {
       let evidencia=null;try{const parsed=JSON.parse(item.evidencia);if(parsed.tipo==='bonus_evidencia')evidencia=parsed;}catch{}
       const ev=document.createElement('div');ev.className='mx-q-sub';ev.textContent=evidencia?evidencia.relato:'“'+item.evidencia+'”';it.appendChild(ev);
@@ -260,7 +265,7 @@ async function renderFilas(main) {
     const it = document.createElement('div'); it.className = 'mx-fila-item';
     const top = document.createElement('div'); top.className = 'mx-fila-top';
     const lbl = document.createElement('div'); lbl.style.fontSize = '13px'; lbl.innerHTML = '<span class="ja-request-name">' + escHtml(item.membro) + '</span><span class="ja-request-title">Diz que já faz: ' + escHtml(item.label) + '</span>';
-    top.appendChild(lbl); it.appendChild(top);
+    lbl.append(tempoMembroJornada(item.membro_id));top.appendChild(lbl); it.appendChild(top);
     if (item.evidencia) {
       let evidencia=null;try{const parsed=JSON.parse(item.evidencia);if(parsed.tipo==='bonus_evidencia')evidencia=parsed;}catch{}
       const ev=document.createElement('div');ev.className='mx-q-sub';ev.textContent=evidencia?evidencia.relato:'“'+item.evidencia+'”';it.appendChild(ev);
@@ -284,7 +289,7 @@ async function renderFilas(main) {
     const top = document.createElement('div'); top.className = 'mx-fila-top';
     const lbl = document.createElement('div'); lbl.style.fontSize = '13px'; lbl.innerHTML = '<b>' + escHtml(p.membro) + '</b> → ' + escHtml(nivelInfo(p.proximo).label);
     const go = document.createElement('button'); go.className = 'mx-mini go'; comIcone(go, 'seta-cima', 'Promover'); go.onclick = () => promover(p.membro_id, p.proximo, p.membro);
-    top.append(lbl, go); it.appendChild(top); pc.appendChild(it);
+    lbl.append(tempoMembroJornada(p.membro_id));top.append(lbl, go); it.appendChild(top); pc.appendChild(it);
   });
   else { const e = document.createElement('div'); e.className = 'mx-empty'; e.textContent = 'Ninguém elegível no momento.'; pc.appendChild(e); }
   box.appendChild(pc);
@@ -299,7 +304,7 @@ async function renderFilas(main) {
       const it = document.createElement('div'); it.className = 'mx-fila-item';
       const top = document.createElement('div'); top.className = 'mx-fila-top';
       const lbl = document.createElement('div'); lbl.style.fontSize = '13px'; lbl.innerHTML = '<b>' + escHtml(item.membro) + '</b> → ' + escHtml(nivelInfo(item.proximo).label);
-      top.appendChild(lbl); it.appendChild(top);
+      lbl.append(tempoMembroJornada(item.membro_id));top.appendChild(lbl); it.appendChild(top);
       (item.avaliadas || []).forEach(av => {
         const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:5px;';
         const t = document.createElement('div'); t.style.cssText = 'flex:1;min-width:0;font-size:12px;color:var(--text);'; t.textContent = '• ' + av.titulo;
@@ -534,7 +539,7 @@ function gerarRelatorioPDF(){
   const matriz = gruposPorNivel().map(([lglabel,slugs])=>{
     const mem=_membrosDaLiga(slugs); if(!mem.length) return '';
     const head='<th>Membro</th><th>Idade</th><th>Tempo na pastoral*</th>'+_devFuncoes.map(([,l])=>'<th title="'+_escHtml(l)+'">'+_escHtml(l.length>4?l.slice(0,4):l)+'</th>').join('');
-    const rows=mem.map(m=>'<tr><td class="nm">'+_escHtml(_nome(m))+'</td><td>'+(_idadeDe(m.data_nascimento)||'—')+'</td><td>'+_escHtml(tempoRegistradoPastoral(m.created_at))+'</td>'+_devFuncoes.map(([v])=>{const p=_profDe(m.id,v);return '<td style="background:'+PROF_COR_PRINT[p]+'">'+PROF_ABREV[p]+'</td>';}).join('')+'</tr>').join('');
+    const rows=mem.map(m=>'<tr><td class="nm">'+_escHtml(_nome(m))+'</td><td>'+(_idadeDe(m.data_nascimento)||'—')+'</td><td>'+_escHtml(TempoPastoral.dados(m).texto)+'</td>'+_devFuncoes.map(([v])=>{const p=_profDe(m.id,v);return '<td style="background:'+PROF_COR_PRINT[p]+'">'+PROF_ABREV[p]+'</td>';}).join('')+'</tr>').join('');
     return '<h3>'+_escHtml(lglabel)+' · '+mem.length+'</h3><table class="mtz"><thead><tr>'+head+'</tr></thead><tbody>'+rows+'</tbody></table>';
   }).join('');
   const legenda='<p class="leg">'+PROF_NIVEIS.map(p=>'<span style="background:'+PROF_COR_PRINT[p]+'">'+PROF_ABREV[p]+'</span> '+_escHtml(PROF_LABEL[p])).join(' &nbsp; ')+'</p>';
@@ -549,16 +554,16 @@ function gerarRelatorioPDF(){
     + ' table.virt td{text-align:left}';
   const corpo = '<h2>1. Cobertura por função</h2><table class="cob"><thead><tr><th>Função</th><th>Prontos</th><th>Em formação</th><th>Zero</th></tr></thead><tbody>'+linhasCob+'</tbody></table>'
     + '<h2>2. A desenvolver (funções escassas)</h2>'+blocosDev
-    + '<h2>3. Matriz de proficiência</h2>'+legenda+matriz+'<p class="muted">* Tempo contado desde o cadastro no app.</p>'
+    + '<h2>3. Matriz de proficiência</h2>'+legenda+matriz+'<p class="muted">* Tempo desde o início do serviço; “ou mais” indica uma data conhecida como “ou antes”.</p>'
     + '<h2>4. Virtudes formadas</h2>'+virtudes;
   abrirRelatorio({ titulo:'Relatório de Desenvolvimento', subtitulo:'Acólitos · '+membrosDevVisiveis().length+' membros no relatório', corpo, css: extraCss });
 }
 function baixarRelatorioCSV(){
-  const head=['Nível','Membro','Idade','Tempo na pastoral (desde cadastro)'].concat(_devFuncoes.map(([,l])=>l));
+  const head=['Nível','Membro','Idade','Tempo de pastoral'].concat(_devFuncoes.map(([,l])=>l));
   const linhas=[head];
   gruposPorNivel().forEach(([lglabel,slugs])=>{
     _membrosDaLiga(slugs).forEach(m=>{
-      linhas.push([lglabel.replace(/^[^\w]+\s*/,''), _nome(m), _idadeDe(m.data_nascimento), tempoRegistradoPastoral(m.created_at)].concat(_devFuncoes.map(([v])=>PROF_LABEL[_profDe(m.id,v)])));
+      linhas.push([lglabel.replace(/^[^\w]+\s*/,''), _nome(m), _idadeDe(m.data_nascimento), TempoPastoral.dados(m).texto].concat(_devFuncoes.map(([v])=>PROF_LABEL[_profDe(m.id,v)])));
     });
   });
   baixarCSV('desenvolvimento', linhas);
@@ -578,7 +583,7 @@ function _cabecalhoBoletim(m, comNome){
   const com=m.comunidade==='matriz'?'Matriz':m.comunidade==='santo_antonio'?'Sto. Antônio':(m.comunidade?'Outra':'');
   const id=_idadeDe(m.data_nascimento);
   const sub='<p class="muted">'+_escHtml(ni.label)+(ni.titulo?' · '+_escHtml(ni.titulo):'')+(com?' · '+com:'')+(id?' · '+id+' anos':'')+'</p>';
-  return (comNome?'<h2>'+_escHtml(m.apelido||m.nome)+'</h2>':'')+sub;
+  return (comNome?'<h2>'+_escHtml(m.apelido||m.nome)+'</h2>':'')+sub+'<p class="muted">Tempo de pastoral: '+_escHtml(TempoPastoral.dados(m).texto)+'</p>';
 }
 function _freqHtml(freq){
   if(!freq) return '<p class="muted">Sem dados de frequência.</p>';
@@ -681,12 +686,13 @@ function abrirCoberturaFuncao(funcao, label){
     const r=document.createElement('div'); r.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--border);';
     const dot=document.createElement('span'); dot.style.cssText='width:10px;height:10px;border-radius:50%;flex:none;background:'+(PROF_COR[cur]==='transparent'?'var(--border)':PROF_COR[cur])+';';
     const nm=document.createElement('span'); nm.style.cssText='flex:1;min-width:0;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'; nm.textContent=m.apelido||m.nome;
+    const pessoa=document.createElement('span');pessoa.style.cssText='flex:1;min-width:0';pessoa.append(nm,TempoPastoral.elemento(m));
     const sel=document.createElement('select'); sel.className='hab-sel'; sel.style.width='auto';
     PROF_NIVEIS.forEach(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=PROF_LABEL[n]; if(n===cur)o.selected=true; sel.appendChild(o); });
     const avisoEl=document.createElement('div'); avisoEl.className='hab-aviso'; avisoEl.style.cssText='margin:0 0 8px;';
     const pintarAviso=(prof)=>{ const t=textoDaTrava(avisosDaTrava(m,funcao,prof)); avisoEl.style.display=t?'':'none'; avisoEl.textContent=t; };
     sel.onchange=async()=>{ const ok=await salvarProficiencia(m.id,funcao,sel.value); if(ok){ dot.style.background=(PROF_COR[sel.value]==='transparent'?'var(--border)':PROF_COR[sel.value]); pintarAviso(sel.value); } };
-    r.append(dot,nm,sel); box.appendChild(r); box.appendChild(avisoEl); pintarAviso(cur);
+    r.append(dot,pessoa,sel); box.appendChild(r); box.appendChild(avisoEl); pintarAviso(cur);
   });
   const close=document.createElement('button'); close.className='btn-sm gray'; close.style.cssText='width:100%;margin-top:14px;'; close.textContent='Fechar'; close.onclick=()=>{ ov.remove(); if(_redrawMatriz) _redrawMatriz(); };
   md.appendChild(close); ov.appendChild(md); document.body.appendChild(ov);
@@ -731,7 +737,7 @@ function renderMatriz(container){
   corner.style.cssText='position:sticky;left:0;top:0;z-index:3;background:var(--surface2);color:var(--gold);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);min-width:120px;';
   htr.appendChild(corner);
   const ageHead=document.createElement('th'); ageHead.textContent='Idade'; ageHead.style.cssText='position:sticky;top:0;background:var(--surface2);padding:8px;z-index:2;'; htr.appendChild(ageHead);
-  const tempoHead=document.createElement('th');tempoHead.textContent='Tempo na pastoral';tempoHead.title='Tempo contado desde o cadastro no app';tempoHead.style.cssText='position:sticky;top:0;z-index:2;background:var(--surface2);padding:6px 8px;white-space:nowrap;';htr.appendChild(tempoHead);
+  const tempoHead=document.createElement('th');tempoHead.textContent='Tempo na pastoral';tempoHead.title='Tempo desde o início do serviço na pastoral';tempoHead.style.cssText='position:sticky;top:0;z-index:2;background:var(--surface2);padding:6px 8px;white-space:nowrap;';htr.appendChild(tempoHead);
   _devFuncoes.forEach(([val,label])=>{ const th=document.createElement('th'); th.textContent=label.length>4?label.slice(0,4):label; th.title=label; th.style.cssText='position:sticky;top:0;z-index:2;background:var(--surface2);padding:6px 4px;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap;'; htr.appendChild(th); });
   thead.appendChild(htr); tbl.appendChild(thead);
   const tbody=document.createElement('tbody');
@@ -752,7 +758,7 @@ function renderMatriz(container){
       nmtd.style.cssText='position:sticky;left:0;z-index:1;background:var(--surface2);color:var(--text);padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;';
       tr.appendChild(nmtd);
       const age=document.createElement('td'); const anos=_idadeDe(m.data_nascimento); age.textContent=anos?anos+' anos':'—'; age.style.cssText='padding:8px;white-space:nowrap;text-align:center;border-bottom:1px solid var(--border);'; tr.appendChild(age);
-      const tempo=document.createElement('td');tempo.className='matriz-tempo';tempo.textContent=tempoRegistradoPastoral(m.created_at);tempo.title=m.created_at?'Cadastro no app: '+formatDate(m.created_at):'Data de cadastro não registrada';tempo.style.cssText='padding:6px 8px;white-space:nowrap;text-align:center;border-bottom:1px solid var(--border);';tr.appendChild(tempo);
+      const tempo=document.createElement('td');tempo.className='matriz-tempo';tempo.textContent=TempoPastoral.dados(m).texto;tempo.title=TempoPastoral.dados(m).titulo;tempo.style.cssText='padding:6px 8px;white-space:nowrap;text-align:center;border-bottom:1px solid var(--border);';tr.appendChild(tempo);
       _devFuncoes.forEach(([val])=>{
         const cur=(habAll[m.id]||{})[val]||'nao_treinado';
         const td=document.createElement('td'); td.style.cssText='text-align:center;border-bottom:1px solid var(--border);padding:0;';
@@ -770,7 +776,7 @@ function renderMatriz(container){
   // ficam adivinhação — e quem lê a matriz é justamente quem vai decidir quem formar.
   const legenda=document.createElement('div');
   legenda.style.cssText='font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.5;';
-  legenda.textContent='Tempo na pastoral: contado desde o cadastro no app. Colunas: '+_devFuncoes.map(f=>f[1]).join(' · ');
+  legenda.textContent='Tempo de pastoral: início real do serviço; “ou mais” indica o tempo mínimo conhecido. Colunas: '+_devFuncoes.map(f=>f[1]).join(' · ');
   container.appendChild(legenda);
 }
 function editarCelula(td, cell, m, funcao){
@@ -789,12 +795,13 @@ function editarCelula(td, cell, m, funcao){
 let _devMembros = [], _devFuncoes = [], _devComps = [];
 async function carregarDev() {
   const [membrosRes, listasRes] = await Promise.all([
-    sb.from('acolitos_membros').select('id,nome,apelido,nivel,status,serve,telefone,created_at,foto_url,comunidade,casa_id,data_nascimento,pode_outras_comunidades,suspenso_em,suspenso_ate,escalar_frequente,servir_toda_semana,competencias_desenvolvidas,desenvolvimento_competencias').eq('status', 'ativo').eq('serve',true).order('nome'),
+    sb.from('acolitos_membros').select('id,nome,apelido,nivel,status,serve,telefone,created_at,servindo_desde,servindo_desde_ou_antes,servindo_desde_fonte,foto_url,comunidade,casa_id,data_nascimento,pode_outras_comunidades,suspenso_em,suspenso_ate,escalar_frequente,servir_toda_semana,competencias_desenvolvidas,desenvolvimento_competencias').eq('status', 'ativo').eq('serve',true).order('nome'),
     sb.from('acolitos_listas').select('valor,label,tipo').in('tipo', ['funcao', 'competencia']),
   ]);
   if (membrosRes.error || listasRes.error) throw membrosRes.error || listasRes.error;
   const mems=membrosRes.data, listas=listasRes.data;
   _devMembros = (mems || []).filter(m=>m.serve!==false);
+  jornadaTempos=new Map(_devMembros.map(m=>[m.id,m]));
   const fc = (listas || []).filter(l => l.tipo === 'funcao').map(l => [l.valor, l.label || l.valor]);
   _devFuncoes = FUNCOES_DEFAULT_DEV.concat(fc);
   _devComps = (listas || []).filter(l => l.tipo === 'competencia').map(l => [l.valor, l.label || l.valor]);
@@ -861,7 +868,7 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
     const meta = document.createElement('div'); meta.style.cssText = 'font-size:11px;color:var(--text-muted);';
     meta.textContent = nivelInfo(m.nivel || 'aspirante').label + ' · ' + aptas + (aptas === 1 ? ' função' : ' funções')
       + ' · ' + ((m.competencias_desenvolvidas || []).length) + ' comp.';
-    info.append(nm, meta); top.append(av, info);
+    row.className="ja-member-card";row.dataset.membro=m.id;info.append(nm, meta, TempoPastoral.elemento(m)); top.append(av, info);
     // As quatro ações nascem escondidas: doze membros × quatro botões ocupavam metade da
     // página e empurravam o mapa de cobertura para fora da vista.
     const mais = document.createElement('button'); mais.type = 'button'; mais.className = 'mx-mini';
@@ -906,6 +913,7 @@ async function abrirPanorama(m) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   const md = document.createElement('div'); md.className = 'modal'; md.style.setProperty('--modal-max', '520px');
   const tt = document.createElement('div'); tt.className = 'modal-title'; comIcone(tt, 'grafico', 'Panorama — ' + (m.apelido || m.nome)); md.appendChild(tt);
+  md.append(TempoPastoral.elemento(m));
   const body = document.createElement('div'); body.innerHTML = '<span class="loading">Carregando...</span>'; md.appendChild(body);
   const close = document.createElement('button'); close.className = 'btn-sm gray'; close.style.cssText = 'width:100%;margin-top:14px;'; close.textContent = 'Fechar'; close.onclick = () => ov.remove(); md.appendChild(close);
   ov.appendChild(md); document.body.appendChild(ov);
@@ -1065,6 +1073,7 @@ async function abrirFuncoesEditor(m) {
   const md = document.createElement('div'); md.className = 'modal'; md.style.setProperty('--modal-max', '480px');
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Funções de ' + m.nome; md.appendChild(tt);
   const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 10px;'; sub.textContent = 'Proficiência por função. Apto ou mais = função desenvolvida.'; md.appendChild(sub);
+  md.append(TempoPastoral.elemento(m));
   const body = document.createElement('div'); body.innerHTML = '<span class="loading">Carregando...</span>'; md.appendChild(body);
   ov.appendChild(md); document.body.appendChild(ov);
   const { data: habs } = await sb.from('acolitos_habilitacoes').select('funcao,proficiencia').eq('membro_id', m.id);
@@ -1108,7 +1117,7 @@ async function abrirCompetenciasEditor(m, onSaved) {
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
   const md = document.createElement('div'); md.className = 'modal'; md.style.setProperty('--modal-max', '460px');
   const tt = document.createElement('div'); tt.className = 'modal-title'; tt.textContent = 'Virtudes de ' + m.nome; md.appendChild(tt);
-  const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 10px;'; sub.textContent = 'O progresso vem das quests. Você também pode conceder manualmente uma virtude que já reconhece no membro.'; md.appendChild(sub);
+  const sub = document.createElement('p'); sub.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 10px;'; sub.textContent = 'O progresso vem das quests. Você também pode conceder manualmente uma virtude que já reconhece no membro.'; md.append(sub,TempoPastoral.elemento(m));
   const box = document.createElement('div'); box.style.cssText = 'max-height:55vh;overflow-y:auto;'; box.innerHTML = '<span class="loading">Carregando...</span>'; md.appendChild(box);
   const { data } = await sb.rpc('acolitos_competencias_progresso', { p_membro: m.id });
   const comps = (data || []).slice();
@@ -1460,7 +1469,7 @@ function linhaDoAcompanhamento(p) {
   it.appendChild(top);
   const sub = document.createElement('div'); sub.className = 'mx-q-sub';
   sub.textContent = detalheDoAcompanhamento(p);
-  it.appendChild(sub);
+  it.append(sub,tempoMembroJornada(p.membro_id||p.id));
   return it;
 }
 
@@ -1475,7 +1484,7 @@ function abrirFichaDoAcompanhamento(p) {
   const sit = document.createElement('p');
   sit.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 12px;';
   sit.textContent = rotuloDaFaixa(p.faixa) + ' — ' + explicacaoDaFaixa(p.faixa);
-  md.appendChild(sit);
+  md.append(sit,tempoMembroJornada(p.membro_id||p.id));
 
   const linhas = [
     ['Degrau', p.nivel ? (typeof nivelInfo === 'function' ? nivelInfo(p.nivel).label : p.nivel) : 'ainda no CRM'],

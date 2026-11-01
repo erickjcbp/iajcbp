@@ -17,11 +17,15 @@ import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 const aqui = fileURLToPath(new URL('.', import.meta.url))
 const copia = aqui + '_regenerar-arte.copia.mjs'
-fs.writeFileSync(copia, fs.readFileSync(aqui + '../api/regenerar-arte.js', 'utf8').replace("'./_github.js'", "'./_github.copia.mjs'"))
+fs.writeFileSync(copia, fs.readFileSync(aqui + '../api/regenerar-arte.js', 'utf8')
+  .replace("'./_github.js'", "'./_github.copia.mjs'")
+  .replace("'./_liturgia-conferida.js'", "'./_liturgia-conferida.copia.mjs'"))
 fs.copyFileSync(aqui + '../api/_github.js', aqui + '_github.copia.mjs')
+fs.copyFileSync(aqui + '../api/_liturgia-conferida.js', aqui + '_liturgia-conferida.copia.mjs')
 let handler
 try { ({ default: handler } = await import('./_regenerar-arte.copia.mjs')) } finally {
   fs.rmSync(copia, { force: true }); fs.rmSync(aqui + '_github.copia.mjs', { force: true })
+  fs.rmSync(aqui + '_liturgia-conferida.copia.mjs', { force: true })
 }
 
 function res() {

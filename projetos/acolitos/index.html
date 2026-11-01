@@ -146,6 +146,7 @@
 <script src="paginar-core.js"></script>
 <script src="alertas-core.js"></script>
 <script src="identidade-core.js"></script>
+<script src="tempo-pastoral-core.js"></script>
 <script src="shared.js"></script>
 <script>
 // EQUIPE_ROLES já vem do shared.js (redeclarar com const aqui quebrava o script)
@@ -633,7 +634,7 @@ async function renderDashboardMembro(ctx) {
   if (m?.comunidade) subTxt += ' · ' + (m.comunidade === 'matriz' ? 'Matriz' : m.comunidade === 'santo_antonio' ? 'Sto. Antônio' : 'Outra');
   if (m?.eh_equipe && (m.setores || []).length) subTxt += ' · ' + m.setores.map(s => SETOR_LABEL[s] || s).join(', ');
   subEl.textContent = subTxt;
-  info.appendChild(subEl);
+  info.append(subEl,TempoPastoral.elemento(m));
   greet.appendChild(info);
   main.appendChild(greet);
 
@@ -734,7 +735,7 @@ async function renderDashboardEquipe(ctx) {
     // PAGINADO: são ~1300 escalas em 6 meses e o banco corta em mil, comendo justamente
     // os meses mais recentes — o gráfico mostrava o mês corrente despencando sem ter caído.
     lerTudo(() => sb.from('acolitos_escalas').select('status, acolitos_celebracoes!inner(data)').gte('acolitos_celebracoes.data', seisStr)),
-    sb.from('acolitos_membros').select('id,user_id,nivel,nome,apelido,foto_url,comunidade,casa_id').eq('status','ativo').eq('serve',true),
+    sb.from('acolitos_membros').select('id,user_id,nivel,nome,apelido,foto_url,comunidade,casa_id,servindo_desde,servindo_desde_ou_antes,servindo_desde_fonte').eq('status','ativo').eq('serve',true),
     moduloId ? sb.from('pastoral_members').select('user_id,role').eq('module_id',moduloId) : Promise.resolve({data:[]}),
     sb.from('acolitos_celebracoes').select('id,data,horario,minutos,comunidade,tipo, acolitos_escalas(id)').gte('data',hoje).lte('data', new Date(Date.now()+28*86400000).toISOString().slice(0,10)).order('data').order('minutos'),
   ]);
@@ -870,7 +871,7 @@ function abrirNivelMembros(n, lista) {
     const info = document.createElement('div'); info.style.cssText='flex:1;min-width:0;';
     const nm = document.createElement('div'); nm.style.cssText='font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; nm.textContent = m.apelido || m.nome;
     const cm = document.createElement('div'); cm.style.cssText='font-size:11px;color:var(--text-muted);'; cm.textContent = m.comunidade==='matriz'?'Matriz':(m.comunidade==='santo_antonio'?'Sto. Antônio':'Outra');
-    info.append(nm, cm); row.appendChild(info);
+    info.append(nm, cm,TempoPastoral.elemento(m)); row.appendChild(info);
     box.appendChild(row);
   });
   modal.appendChild(box);

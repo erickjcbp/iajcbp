@@ -35,3 +35,5 @@
 .matriz-table th{padding:4px 2px !important;font-size:10px;}
 .matriz-scroll{max-height:70vh !important;}
 }
+/* O tempo de pastoral também permanece consultável na matriz do celular. */
+@media(max-width:639px){.matriz-table th:nth-child(3),.matriz-table td:nth-child(3):not([colspan]){display:table-cell}.matriz-table .matriz-prof{width:44px;height:44px}}

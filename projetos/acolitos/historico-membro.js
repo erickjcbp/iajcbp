@@ -35,10 +35,10 @@ async function abrirHistoricoMembro(m, opts = {}){
       if(error) throw error;
       escalas=(data||[]).map(e=>({...e,data:e.acolitos_celebracoes?.data,horario:e.acolitos_celebracoes?.horario}));
     }
-    if (!m.created_at) {
-      const {data,error}=await sb.from('acolitos_membros').select('created_at').eq('id',m.id).maybeSingle();
+    if (!Object.hasOwn(m,'servindo_desde')) {
+      const {data,error}=await sb.from('acolitos_membros').select('created_at,servindo_desde,servindo_desde_ou_antes,servindo_desde_fonte').eq('id',m.id).maybeSingle();
       if(error) throw error;
-      m={...m,created_at:data?.created_at};
+      m={...m,...data};
     }
   } catch(e) { toast('Não consegui carregar o histórico. Tente de novo.','error'); return; }
   const semanas = RodizioCore.historicoSemanal({
@@ -50,9 +50,9 @@ async function abrirHistoricoMembro(m, opts = {}){
   comIcone(titulo, 'calendar', 'Últimas '+RODIZIO_SEMANAS_HISTORICO+' semanas — '+(m.apelido||m.nome));
   md.appendChild(titulo);
   const tempo=document.createElement('p'); tempo.className='historico-tempo'; tempo.style.cssText='font-size:13px;line-height:1.5;margin:8px 0;color:var(--text);';
-  const duracao=tempoRegistradoPastoral(m.created_at);
-  tempo.textContent=duracao==='—'?'Tempo na pastoral: data não registrada.':'Tempo registrado na pastoral: '+duracao+' (cadastro em '+formatDate(m.created_at)+').';
-  const nota=document.createElement('p'); nota.style.cssText='font-size:11px;line-height:1.5;color:var(--text-muted);';nota.textContent='Contado desde o cadastro no app. A data de ingresso na pastoral ainda não está registrada.';
+  const duracao=TempoPastoral.dados(m);
+  tempo.textContent='Tempo de pastoral: '+duracao.texto;tempo.title=duracao.titulo;
+  const nota=document.createElement('p');nota.className='mx-q-sub';nota.textContent=duracao.titulo;
   md.append(tempo,nota);
   const grid=document.createElement('div'); grid.className='historico-semanas'; grid.style.cssText='display:flex;flex-wrap:wrap;margin:6px -2px 4px;';
   const detalhe=document.createElement('p'); detalhe.style.cssText='font-size:12px;color:var(--text-muted);min-height:16px;margin:4px 0 2px;';

@@ -298,6 +298,24 @@
       #view-rodizio .planilha-table thead tr, #view-rodizio .planilha-table tbody tr { grid-template-columns:minmax(0,1fr) 56px 42px 54px 44px !important; }
       #view-rodizio .planilha-table thead th { font-size:9.5px; letter-spacing:0; text-transform:none; overflow:hidden; }
     }
+
+    /* Controles por coluna: o quadro rola, a página mantém sua largura. */
+    #view-planilha{min-width:0;width:100%}
+    .planilha-gestao{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:12px 0;font-size:13px;color:var(--text-muted)}
+    .planilha-dica{flex-basis:100%;line-height:1.6}
+    #view-planilha .planilha-wrap{max-height:70dvh;overflow:auto;max-width:100%;overscroll-behavior:contain}
+    #view-planilha .planilha-table .coluna-ordenar{display:block;width:100%;min-height:44px!important;min-width:44px!important;padding:8px!important;text-align:left;white-space:nowrap;border:0;background:none;color:var(--gold-light);font:600 12px var(--font-body);cursor:pointer}
+    #view-planilha .colunas-filtros th{top:60px;z-index:2}
+    #view-planilha thead th{height:60px;box-sizing:border-box}
+    #view-planilha thead th.sticky-left{z-index:4;max-width:none!important;min-width:170px!important}
+    #view-planilha .coluna-filtro{display:flex;gap:4px;min-width:140px}
+    #view-planilha .coluna-filtro input{font-size:16px!important;min-height:44px!important;width:140px;min-width:0;padding:8px;box-sizing:border-box}
+    #view-planilha .coluna-filtro input[type=number]{width:76px}
+    #view-planilha tbody .sticky-left{min-width:170px!important;max-width:230px!important}
+    #view-planilha tbody .cell-ico,#view-planilha tbody .pl-nome button{min-width:44px!important;min-height:44px!important}
+    #view-planilha tbody tr[data-membro] td{height:44px;font-size:12px!important;box-sizing:border-box}
+    #view-planilha .pl-nome{min-height:44px}
+    .planilha-gestao button{min-height:44px}
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -441,6 +459,8 @@
 <script src="confirmar-semana-core.js"></script>
 <script src="rodizio-core.js"></script>
 <script src="identidade-core.js"></script>
+<script src="tempo-pastoral-core.js"></script>
+<script src="colunas-tabela.js"></script>
 <script src="shared.js"></script>
 <script src="ficha-rapida.js"></script>
 <script src="historico-membro.js"></script>
@@ -689,7 +709,7 @@ async function loadDados() {
       escalasMap[e.celebracao_id].push(e);
     });
     const [{ data: mems }, { data: habs }, { data: disps }, freqData, { data: auss }, { data: chs }] = await Promise.all([
-      sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,casa_id,escalar_frequente,servir_toda_semana,suspenso_ate,suspenso_em,pode_outras_comunidades,data_nascimento,foto_url,observacoes,necessidades_especiais,nome_pai,nome_mae,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro,grupo_irmaos,escalar_com_irmao').eq('status','ativo').eq('serve',true).order('nome'),
+      sb.from('acolitos_membros').select('id,nome,apelido,nivel,comunidade,casa_id,servindo_desde,servindo_desde_ou_antes,servindo_desde_fonte,escalar_frequente,servir_toda_semana,suspenso_ate,suspenso_em,pode_outras_comunidades,data_nascimento,foto_url,observacoes,necessidades_especiais,nome_pai,nome_mae,tem_pai_ministro,nome_pai_ministro,tem_mae_ministro,nome_mae_ministro,comunidade_ministro,grupo_irmaos,escalar_com_irmao').eq('status','ativo').eq('serve',true).order('nome'),
       // PAGINADAS: 839 e 686 linhas hoje, e o teto é mil. Ao passar dele, gente marcada
       // como apta SOME do campo de seleção — o mesmo sintoma da trava, sem trava nenhuma.
       lerTudo(() => sb.from('acolitos_habilitacoes').select('membro_id,funcao,proficiencia')),
@@ -1590,36 +1610,58 @@ function fecharMontagem(){
   }
 }
 
-function renderPlanilha() {
-  const el=document.getElementById('view-planilha');el.textContent='';
+const planilhaEstado={ordem:'nivel',desc:true,filtros:{}};
+function planilhaFuncaoMax(m){
+ const habs=habMap[m.id]||{};
+ const fn=['cred_credencia','cred_altar','missal','altar','turibulo','naveta','cruz','vela','sineta','sinao','apoio'].find(fn=>['apto','experiente','referencia'].includes(habs[fn]));
+ return fn?(FUNCAO_LABEL[fn]||fn):'Não habilitado';
+}
+function renderPlanilha(opts={}) {
+  const el=document.getElementById('view-planilha');
+  const anterior=el.querySelector('.planilha-wrap'),scroll=anterior?{left:anterior.scrollLeft,top:anterior.scrollTop}:null;
+  const foco=opts.somenteCorpo?document.activeElement:null,aria=foco?.getAttribute('aria-label'),cursor=foco?.type==='search'?foco.selectionStart:null;
+  el.textContent='';
   if(!membros.length){const em=document.createElement('span');em.className='empty';em.textContent='Sem membros para exibir.';el.appendChild(em);return;}
-  const wrap=document.createElement('div');wrap.className='planilha-wrap';
+  const colunas=[
+   {id:'nome',label:'Membro',fixa:true,valor:m=>[m.nome,m.apelido].filter(Boolean).join(' ')},
+   {id:'nivel',label:'Nível',tipo:'numero',valor:m=>nivelInfo(m.nivel||'aspirante').int},
+   {id:'tempo',label:'Tempo de pastoral (meses)',tipo:'numero',step:'1',valor:m=>TempoPastoral.dados(m).meses},
+   {id:'idade',label:'Idade',tipo:'numero',step:'1',valor:m=>m.data_nascimento?calcIdade(m.data_nascimento):null},
+   {id:'freq',label:'Freq (%)',tipo:'numero',valor:m=>freqMap[m.id]?.taxa??null},
+   {id:'obs',label:'Obs',valor:m=>[m.necessidades_especiais,m.observacoes,...(restricaoMap[m.id]||[])].filter(Boolean).join(' · ')||'Sem observações'},
+   {id:'mece',label:'MECE',valor:m=>[m.tem_pai_ministro?'Pai '+(m.nome_pai||m.nome_pai_ministro||''):'',m.tem_mae_ministro?'Mãe '+(m.nome_mae||m.nome_mae_ministro||''):'',m.comunidade_ministro].filter(Boolean).join(' · ')||'Sem pais ministros'},
+   {id:'funcoes',label:'Funções',valor:m=>FUNCOES_ORDER.map(fn=>(FUNCAO_LABEL[fn]||fn)+' '+NIVEL_LABEL[(habMap[m.id]||{})[fn]||'nao_treinado']).join(' · ')},
+   {id:'maxima',label:'Fn.Máx',valor:planilhaFuncaoMax},
+   ...celebracoes.map(c=>({id:'celebracao:'+c.id,label:formatDate(c.data).slice(0,5)+' · '+c.horario+' '+(c.comunidade==='matriz'?'M':'SA'),valor:m=>{
+    const es=(escalasMap[c.id]||[]).find(e=>e.membro_id===m.id);
+    return es?(FUNCAO_LABEL[es.funcao]||es.funcao)+' · '+({escalado:'Escalado',presente:'Presente',atrasado:'Atrasado',ausente:'Ausente',ausente_justificado:'Ausência justificada',substituido:'Substituído'}[es.status]||es.status):(ausMap[c.id]||new Set()).has(m.id)?'Declarou ausência':'Sem escala';
+   }}))
+  ];
+  // Nível ordena pela hierarquia, mas o filtro é pelo nome mostrado ao usuário.
+  const idsColunas=new Set(colunas.map(c=>c.id));
+  for(const id of Object.keys(planilhaEstado.filtros))if(!idsColunas.has(id))delete planilhaEstado.filtros[id];
+  if(!idsColunas.has(planilhaEstado.ordem)){planilhaEstado.ordem='nivel';planilhaEstado.desc=true;}
+  const nivelCol=colunas.find(c=>c.id==='nivel');
+  nivelCol.tipo='texto';nivelCol.valor=m=>nivelInfo(m.nivel||'aspirante').label;
+  const ordem=ColunasTabela.aplicar(membros,colunas,planilhaEstado);
+  if(planilhaEstado.ordem==='nivel')ordem.sort((a,b)=>(planilhaEstado.desc?-1:1)*(nivelInfo(a.nivel||'aspirante').int-nivelInfo(b.nivel||'aspirante').int)||(a.apelido||a.nome||'').localeCompare(b.apelido||b.nome||'','pt-BR'));
+  const toolbar=document.createElement('div');toolbar.className='planilha-gestao';
+  const count=document.createElement('span');count.setAttribute('role','status');
+  const ativos=Object.values(planilhaEstado.filtros).filter(f=>typeof f==='object'?(f.min!==''&&f.min!=null)||(f.max!==''&&f.max!=null):Boolean(f)).length;
+  count.textContent=ordem.length+' de '+membros.length+' membros · '+ativos+' filtro(s) ativo(s)';
+  const limpar=document.createElement('button');limpar.type='button';limpar.className='btn-sm gray';limpar.textContent='Limpar filtros';limpar.onclick=()=>{planilhaEstado.filtros={};renderPlanilha();};
+  const dica=document.createElement('span');dica.className='planilha-dica';dica.textContent='Clique no título para ordenar. Combine os filtros abaixo de cada coluna. Tempo em meses completos; “ou mais” indica um mínimo conhecido.';
+  toolbar.append(count,limpar,dica);el.append(toolbar);
+  const wrap=document.createElement('div');wrap.className='planilha-wrap';wrap.tabIndex=0;wrap.setAttribute('aria-label','Planilha de escala, role para ver todas as colunas');
   const table=document.createElement('table');table.className='planilha-table';
-
-  // Cabeçalho
-  const thead=document.createElement('thead');const hr=document.createElement('tr');
-  ['Membro','Idade','Freq','Obs','MECE','Funções','Fn.Máx'].forEach((h,i)=>{const th=document.createElement('th');if(i===0)th.className='sticky-left';th.textContent=h;hr.appendChild(th);});
-  celebracoes.forEach(c=>{
-    const d=new Date(c.data+'T00:00:00');
-    const th=document.createElement('th');th.style.minWidth='66px';th.style.textAlign='center';
-    const l1=document.createElement('div');l1.textContent=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
-    const l2=document.createElement('div');l2.style.cssText='color:var(--text-muted);font-size:11px;';l2.textContent=c.horario+' '+(c.comunidade==='matriz'?'M':'SA');
-    th.append(l1,l2);hr.appendChild(th);
-  });
-  thead.appendChild(hr);table.appendChild(thead);
-
-  // Corpo — agrupado por nível (mais graduado primeiro), nome dentro do grupo
+  const caption=document.createElement('caption');caption.style.cssText='text-align:left;padding:10px;font-size:12px;color:var(--text-muted);';caption.textContent='Escala por membro com filtros e ordenação por coluna';table.append(caption);
+  table.append(ColunasTabela.cabecalho(colunas,planilhaEstado,renderPlanilha));
   const tbody=document.createElement('tbody');
-  const colspan=7+celebracoes.length;
-  const ordem=membros.slice().sort((a,b)=>{
-    const na=nivelInfo(a.nivel||'aspirante').int, nb=nivelInfo(b.nivel||'aspirante').int;
-    if(na!==nb) return nb-na;
-    return (a.apelido||a.nome||'').localeCompare(b.apelido||b.nome||'');
-  });
+  const colspan=colunas.length;
   let nivelAtual=null;
   ordem.forEach(m=>{
     const nslug=m.nivel||'aspirante';
-    if(nslug!==nivelAtual){
+    if(planilhaEstado.ordem==='nivel'&&nslug!==nivelAtual){
       nivelAtual=nslug;
       const info=nivelInfo(nslug);
       const qtd=ordem.filter(x=>(x.nivel||'aspirante')===nslug).length;
@@ -1631,7 +1673,7 @@ function renderPlanilha() {
       const ct=document.createElement('span');ct.style.cssText='color:var(--text-muted);font-weight:600;';ct.textContent='· '+qtd;
       box.append(lab,ct);tdH.appendChild(box);trH.appendChild(tdH);tbody.appendChild(trH);
     }
-    const tr=document.createElement('tr');
+    const tr=document.createElement('tr');tr.dataset.membro=m.id;
     const habs=habMap[m.id]||{};
 
     // Membro (sticky): avatar + patch + nome
@@ -1646,6 +1688,9 @@ function renderPlanilha() {
     if((m.apelido||'').trim() && !nomeEmTelaPequena()){ const a=document.createElement('div'); a.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; a.textContent=m.apelido; const n=document.createElement('div'); n.style.cssText='font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; n.textContent=m.nome; nm.append(a,n); }
     else { nm.style.cssText='font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; nm.textContent=nomeExibir(m); }
     nm.onclick=()=>abrirFichaRapida(m,{aoMudar:aoFichaRapidaMudou});wrapN.appendChild(nm);tdN.appendChild(wrapN);tr.appendChild(tdN);
+
+    const tdNivel=document.createElement('td');tdNivel.textContent=nivelInfo(nslug).label;tr.append(tdNivel);
+    const tdTempo=document.createElement('td');const tempo=TempoPastoral.dados(m);tdTempo.textContent=tempo.texto;tdTempo.title=tempo.titulo;tr.append(tdTempo);
 
     // Idade
     const tdI=document.createElement('td');tdI.style.cssText='text-align:center;font-size:11px;';tdI.textContent=m.data_nascimento?calcIdade(m.data_nascimento):'—';tr.appendChild(tdI);
@@ -1713,7 +1758,12 @@ function renderPlanilha() {
     });
     tbody.appendChild(tr);
   });
+  if(!ordem.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=colspan;td.textContent='Nenhum membro corresponde aos filtros.';tr.append(td);tbody.append(tr);}
   table.appendChild(tbody);wrap.appendChild(table);el.appendChild(wrap);
+  if(scroll){wrap.scrollLeft=scroll.left;wrap.scrollTop=scroll.top;}
+  if(opts.focoColuna){[...el.querySelectorAll('.coluna-ordenar')].find(b=>b.dataset.coluna===opts.focoColuna)?.focus({preventScroll:true});}
+  if(aria){const novo=[...el.querySelectorAll('input')].find(n=>n.getAttribute('aria-label')===aria);if(novo){novo.focus({preventScroll:true});if(cursor!=null)novo.setSelectionRange(cursor,cursor);}}
+
 }
 
 function abrirNovaCeleb(){
