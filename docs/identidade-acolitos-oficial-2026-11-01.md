@@ -25,7 +25,7 @@ A migração130 separa instalação e ativação. A ativação exige cliente pub
 
 Novos cadastros recebem início na data local de cadastro quando a data não é informada. Membros/familiares não podem fabricar data antiga, nível, fonte ou indicador “ou antes” por INSERT/UPDATE. Perfil e cadastro continuam disponíveis; coordenação e RPCs administrativas conservam as alterações autorizadas.
 
-Marcos:1/2/3/5anos valem30/40/50/70XP. Veterano exige5anos e Acólito Sentinela ou superior, com100XP. Não há promoção automática. O crédito e o aviso são únicos; datas históricas são preservadas e só aniversários dentro de uma temporada ativa contam nela. Concessão manual de tempo recebe XP uma vez. O cron existente verifica os marcos diariamente e a entrada no app também sincroniza.
+Marcos:1/2/3/5anos valem30/40/50/70XP. Desde a migração131, Veterano exige5anos e nível Cerimoniário Aspirante, Guardião, Magistral ou Mor (Aspirante a Cerimoniário não entra), com100XP. Não há promoção automática. O crédito e o aviso são únicos; datas históricas são preservadas e só aniversários dentro de uma temporada ativa contam nela. Concessão manual de tempo recebe XP uma vez. O cron existente verifica os marcos diariamente e a entrada no app também sincroniza.
 
 ## Evidências anteriores à publicação
 
