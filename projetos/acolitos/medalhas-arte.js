@@ -13,7 +13,7 @@
   function medalhao(simbolo,size){
     const m=tempo[simbolo],n=Number(size),width=Number.isFinite(n)&&n>0?Math.min(n,1024):64;
     const [x,y,d]=m.crop,id='tempo-clip-'+(++tempoN),atlas=['onix','rubi'].includes(m.tier)?'tempo-onix-rubi.webp':'tempo-bronze-prata-ouro.webp';
-    let html='<span class="medalhao-tempo" data-marco="'+m.marco+'" data-tier="'+m.tier+'" role="img" aria-label="Medalhão '+m.label+'" style="--medalhao-size:'+width+'px;--mt-color:'+m.cor+';--mt-glow:'+m.glow+';--mt-orbit:'+m.orbit+';--mt-rays:'+m.rays+';--mt-pulse:'+m.pulse+'s;--mt-speed:'+m.speed+'s;--mt-shine:'+m.shine+'s">';
+    let html='<span class="medalhao-tempo" data-insignia-icone="'+simbolo+'" data-marco="'+m.marco+'" data-tier="'+m.tier+'" role="img" aria-label="Medalhão '+m.label+'" style="--medalhao-size:'+width+'px;--mt-color:'+m.cor+';--mt-glow:'+m.glow+';--mt-orbit:'+m.orbit+';--mt-rays:'+m.rays+';--mt-pulse:'+m.pulse+'s;--mt-speed:'+m.speed+'s;--mt-shine:'+m.shine+'s">';
     html+='<span class="mt-aura"></span><span class="mt-rays"></span><span class="mt-orbit"></span>';
     if(['3','5','V'].includes(m.marco))html+='<span class="mt-orbit mt-orbit-2"></span>';
     if(m.marco==='V')html+='<span class="mt-orbit mt-orbit-3"></span>';
@@ -29,7 +29,7 @@
       const n = Number(size);
       const width = Number.isFinite(n) && n > 0 ? Math.min(n, 1024) : 64;
       const height = Math.round(width * 88 / 72);
-      return '<img src="/projetos/acolitos/medalhas-arte/' + key + '.webp" width="' + width + '" height="' + height + '" alt="" decoding="async" style="object-fit:contain;flex:none">';
+      return '<img data-insignia-icone="' + simbolo + '" src="/projetos/acolitos/medalhas-arte/' + key + '.webp" width="' + width + '" height="' + height + '" alt="" decoding="async" style="object-fit:contain;flex:none">';
     }
   });
 })();

@@ -132,7 +132,7 @@ function rankRow(m, eu, valor, unidade, pos, medalhaPos) {
   const medalhas = ['🥇','🥈','🥉'];
   const row = document.createElement('div'); row.className = 'rank-row' + (m.id===eu?' eu':''); row.style.cursor = 'pointer'; row.onclick = () => abrirCard(m.id);prepararLinhaRank(row,m);
   const p = document.createElement('div'); p.className = 'rank-pos'; p.textContent = medalhaPos ? medalhaPos : (pos<=3 ? medalhas[pos-1] : pos);
-  const av = buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 38, { nivelSlug: m.nivel||'aspirante', casaSlug: casaSlugDe(m) }); av.style.flex = 'none';
+  const av = buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 38, { membro:m, tempoMembroId:m.id, nivelSlug: m.nivel||'aspirante', casaSlug: casaSlugDe(m) }); av.style.flex = 'none';
   const info = document.createElement('div'); info.className = 'rank-info';
   const nmRow = document.createElement('div'); nmRow.style.cssText = 'display:flex;align-items:center;gap:5px;min-width:0;';
   const nm = document.createElement('div'); nm.className = 'rank-nome'; nm.textContent = (m.id===eu?'★ ':'') + m.nome;
@@ -201,7 +201,7 @@ function renderAba(a) {
     const row = document.createElement('div'); row.className = 'rank-row' + (m.id === euId ? ' eu' : '');
     row.style.cursor = 'pointer'; row.onclick = () => abrirCard(m.id);prepararLinhaRank(row,m);
     const pos = document.createElement('div'); pos.className = 'rank-pos'; pos.textContent = posicao <= 3 ? medalhas[posicao-1] : posicao;
-    const av = buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 38, { nivelSlug: m.nivel||'aspirante', casaSlug: casaSlugDe(m) }); av.style.flex = 'none';
+    const av = buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 38, { membro:m, tempoMembroId:m.id, nivelSlug: m.nivel||'aspirante', casaSlug: casaSlugDe(m) }); av.style.flex = 'none';
     const info = document.createElement('div'); info.className = 'rank-info';
     const nmRow = document.createElement('div'); nmRow.style.cssText = 'display:flex;align-items:center;gap:5px;min-width:0;';
     const nm = document.createElement('div'); nm.className = 'rank-nome'; nm.textContent = (m.id===euId?'★ ':'') + m.nome;
@@ -237,7 +237,7 @@ async function abrirCard(id) {
   body.removeAttribute('role');body.className='dest-member-layout';body.replaceChildren();
   const profile=document.createElement('section');profile.className='dest-member-profile';
   const head=document.createElement('div');head.className='dest-member-head';
-  const avatar=buildAvatarEl(m.foto_url,nivelInfo(m.nivel||'aspirante').base,84,{nivelSlug:m.nivel||'aspirante',casaSlug:casaSlugDe(m)});avatar.style.flex='none';
+  const avatar=buildAvatarEl(m.foto_url,nivelInfo(m.nivel||'aspirante').base,84,{ membro:m, tempoMembroId:id, nivelSlug: m.nivel||'aspirante',casaSlug:casaSlugDe(m)});avatar.style.flex='none';
   const info=document.createElement('div');info.style.minWidth='0';
   const name=document.createElement('h3');name.className='dest-member-name';name.textContent=m.nome_completo||m.nome;info.append(name,estrelaTagAsync(id));
   const level=document.createElement('p');level.className='dest-member-level';const ni=nivelInfo(m.nivel||'aspirante');level.textContent=ni.label+(ni.titulo?' · '+ni.titulo:'');info.append(level);head.append(avatar,info);profile.append(head);

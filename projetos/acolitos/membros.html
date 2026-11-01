@@ -538,7 +538,7 @@ function renderGrid() {
     if (vista === 'lista') {
       const row = document.createElement('div'); row.className = 'list-row';
       row.onclick = () => abrirFicha(m);
-      const av = buildAvatarEl(m.foto_url, m.role, 42, { nivelSlug: slug, casaSlug: casaSlugDe(m) }); av.style.flexShrink = '0';
+      const av = buildAvatarEl(m.foto_url, m.role, 42, { membro:m, tempoMembroId:m.id, nivelSlug: slug, casaSlug: casaSlugDe(m) }); av.style.flexShrink = '0';
       const info = document.createElement('div'); info.className = 'list-info';
       info.appendChild(nameBlock(m.nome, m.apelido, 'list-name', 'list-subname', estrelaTagAsync(m.id)));
       const legL = legendaDe(m);
@@ -556,7 +556,7 @@ function renderGrid() {
     const card = document.createElement('div'); card.className = 'member-card';
     card.onclick = () => abrirFicha(m);
     const avatarWrap = document.createElement('div'); avatarWrap.className = 'member-card-avatar';
-    avatarWrap.appendChild(buildAvatarEl(m.foto_url, m.role, 60, { nivelSlug: slug, casaSlug: casaSlugDe(m) }));
+    avatarWrap.appendChild(buildAvatarEl(m.foto_url, m.role, 60, { membro:m, tempoMembroId:m.id, nivelSlug: slug, casaSlug: casaSlugDe(m) }));
     const nome = nameBlock(m.nome, m.apelido, 'member-card-name', 'member-card-subname', estrelaTagAsync(m.id), true);
     const meta = document.createElement('div'); meta.className = 'member-card-meta';
     const badge = document.createElement('span'); badge.className = 'badge ' + ninfo.base;
@@ -1170,7 +1170,7 @@ function abrirSeletorIrmaos(membro, onDone) {
       const row = document.createElement('label'); row.className = 'irmao-row';
       const chk = document.createElement('input'); chk.type = 'checkbox'; chk.checked = sel.has(t.id);
       chk.onchange = () => { if (chk.checked) sel.add(t.id); else sel.delete(t.id); };
-      const av = buildAvatarEl(t.foto_url, t.role, 30, { nivelSlug: t.nivel || nivelFromRole(t.role), casaSlug: casaSlugDe(t) }); av.style.flexShrink = '0';
+      const av = buildAvatarEl(t.foto_url, t.role, 30, { membro:t, tempoMembroId:t.id, nivelSlug: t.nivel || nivelFromRole(t.role), casaSlug: casaSlugDe(t) }); av.style.flexShrink = '0';
       const nm = document.createElement('span'); nm.style.cssText = 'flex:1;font-size:13px;min-width:0;'; nm.textContent = (t.apelido ? t.apelido + ' · ' : '') + t.nome;
       row.append(chk, av, nm); listEl.appendChild(row);
     });

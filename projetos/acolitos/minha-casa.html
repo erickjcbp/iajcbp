@@ -141,7 +141,7 @@ async function renderComCasa(main, minha, lista, ctx) {
   if (!cl.length) { const e = document.createElement('div'); e.style.cssText = 'color:var(--text-muted);font-size:13px;font-style:italic;'; e.textContent = 'Você é o primeiro desta casa. Em breve chegam mais irmãos!'; grid.appendChild(e); }
   else cl.forEach(m => {
     const row = document.createElement('div'); row.className = 'colega' + (m.id===euId?' eu':''); row.style.setProperty('--c', cor);
-    row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 32, { nivelSlug: m.nivel||'aspirante' }));
+    row.appendChild(buildAvatarEl(m.foto_url, nivelInfo(m.nivel||'aspirante').base, 32, { membro:m, tempoMembroId:m.id, nivelSlug: m.nivel||'aspirante', casaSlug:minha.slug }));
     const ci = document.createElement('div'); ci.className = 'ci';
     const cn = document.createElement('div'); cn.className = 'cn'; cn.textContent = (m.id===euId?'★ ':'') + m.nome;
     const cll = document.createElement('div'); cll.className = 'cl'; cll.textContent = nivelInfo(m.nivel||'aspirante').label;

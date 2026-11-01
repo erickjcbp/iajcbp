@@ -139,6 +139,7 @@
     .tf-board-status.feita { background:#237848; }
     .tf-board-status option { color:var(--text);background:var(--surface); }
     .tf-board-person { display:flex;align-items:center;gap:8px;min-height:44px;overflow-wrap:anywhere; }
+    .tf-board-avatar.avatar-oficial{width:30px;height:30px;display:inline-block;margin:4px}
     .tf-board-avatar { width:30px;height:30px;display:grid;place-items:center;border-radius:50%;background:var(--surface2);color:var(--text-muted);flex:none;font-weight:700; }
     .tf-board-date { display:block;min-height:44px;padding-top:12px; }
     .tf-board-late { color:var(--danger-text);font-weight:600; }
@@ -312,6 +313,10 @@ function etiquetaDoTime(t) {
   return el;
 }
 
+function avatarResponsavel(t){
+ if(!t.responsavel_id){const vazio=document.createElement('span');vazio.className='tf-board-avatar';vazio.textContent='—';vazio.setAttribute('aria-hidden','true');return vazio;}
+ const m=t.responsavel||{};const avatar=buildAvatarEl(m.foto_url,'membro',30,{tempoMembroId:t.responsavel_id,nivelSlug:m.nivel,casaSlug:casaSlugDe(m)});avatar.classList.add('tf-board-avatar');return avatar;
+}
 function nomeResponsavel(t) {
   // Nunca em branco: sem responsável, a linha diz "do time" — em branco a pessoa não
   // sabe se a tarefa é dela ou se ninguém pegou ainda.
@@ -338,7 +343,7 @@ function renderNadaAqui(main, texto) {
 // mutação (mover/concluir/reabrir) chama recarregarTarefas(), que atualiza só o que mudou.
 async function carregarTarefas() {
   const { data, error } = await sb.from('acolitos_tarefas')
-    .select('*, responsavel:acolitos_membros!responsavel_id(nome,apelido)')
+    .select('*, responsavel:acolitos_membros!responsavel_id(id,nome,apelido,foto_url,nivel,casa_id)')
     .order('prazo', { nullsFirst: false });
   // Falha de consulta NÃO pode virar "nenhuma tarefa": seria dizer que está tudo em dia
   // quando na verdade não se conseguiu perguntar. Já aconteceu duas vezes neste projeto
@@ -679,7 +684,7 @@ function seletorStatus(t){
   return sel;
 }
 function pessoaDaTarefa(t){
-  const el=document.createElement('div');el.className='tf-board-person';const av=document.createElement('span');av.className='tf-board-avatar';av.setAttribute('aria-hidden','true');av.textContent=t.responsavel_id?nomeResponsavel(t).trim().slice(0,1):'—';const nome=document.createElement('span');nome.textContent=nomeResponsavel(t);el.append(av,nome);return el;
+  const el=document.createElement('div');el.className='tf-board-person';const av=avatarResponsavel(t);const nome=document.createElement('span');nome.textContent=nomeResponsavel(t);el.append(av,nome);return el;
 }
 function menuDaTarefa(t){
   const box=document.createElement('div');box.className='tf-menu';
@@ -797,7 +802,7 @@ function renderTabela(main) {
       if(t.observacao){const obs=document.createElement('div');obs.className='tf-obs tf-obs-curta';obs.textContent=t.observacao;obs.title=t.observacao;cells[0].appendChild(obs)}
       if(ehProjeto(t)) cells[0].appendChild(blocoDoProjeto(t));
       const person=document.createElement('div');person.className='tf-board-person';
-      const avatar=document.createElement('span');avatar.className='tf-board-avatar';avatar.textContent=t.responsavel_id?nomeResponsavel(t).trim().slice(0,1):'—';avatar.setAttribute('aria-hidden','true');
+      const avatar=avatarResponsavel(t);
       const pname=document.createElement('span');pname.textContent=nomeResponsavel(t);person.append(avatar,pname);cells[1].appendChild(person);
       cells[2].appendChild(seletorStatus(t));
       const date=document.createElement('span');date.className='tf-board-date'+(ehAtrasada(t)?' tf-board-late':'');date.textContent=quandoLabel(t);cells[3].appendChild(date);

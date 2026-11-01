@@ -25,7 +25,7 @@ A migração130 separa instalação e ativação. A ativação exige cliente pub
 
 Novos cadastros recebem início na data local de cadastro quando a data não é informada. Membros/familiares não podem fabricar data antiga, nível, fonte ou indicador “ou antes” por INSERT/UPDATE. Perfil e cadastro continuam disponíveis; coordenação e RPCs administrativas conservam as alterações autorizadas.
 
-Marcos:1/2/3/5anos valem30/40/50/70XP. Desde a migração131, Veterano exige5anos e nível Cerimoniário Aspirante, Guardião, Magistral ou Mor (Aspirante a Cerimoniário não entra), com100XP. Não há promoção automática. O crédito e o aviso são únicos; datas históricas são preservadas e só aniversários dentro de uma temporada ativa contam nela. Concessão manual de tempo recebe XP uma vez. O cron existente verifica os marcos diariamente e a entrada no app também sincroniza.
+Marcos:1/2/3/5anos valem30/40/50/70XP. Desde a migração132, Veterano exige mais de5anos (dia seguinte ao aniversário de5anos, migração132) e nível Cerimoniário Aspirante, Guardião, Magistral ou Mor (Aspirante a Cerimoniário não entra), com100XP. Não há promoção automática. O crédito e o aviso são únicos; datas históricas são preservadas e só aniversários dentro de uma temporada ativa contam nela. Concessão manual de tempo recebe XP uma vez. O cron existente verifica os marcos diariamente e a entrada no app também sincroniza.
 
 ## Evidências anteriores à publicação
 
@@ -35,3 +35,9 @@ Marcos:1/2/3/5anos valem30/40/50/70XP. Desde a migração131, Veterano exige5ano
 - SQL130 aplicado duas vezes em rollback: catálogo sem duplicação e ativação preservada; créditos, datas, avisos, manual, níveis e autorização testados com papéis reais.
 - Revisão independente identificou manipulação de elegibilidade por UPDATE/INSERT. A prova reproduziu a falha antes da proteção e passou depois, incluindo preservação de perfil/cadastro/coordenação.
 - Ensaio retroativo com rollback:277concessões para128membros,10.400XP geral,940XP sazonal,277avisos. Segunda execução:0. Nenhum nível ou XP avulso alterado. Resultados de produção devem ser confirmados após ativação; este documento sozinho não comprova deploy.
+
+## Consulta dos símbolos e avatares completos
+
+Avatares de membros usam o mesmo componente na Agenda, Escala/Chamada, Jornada, Membros/fichas, Casas/Minha Casa, Destaques, Configuração e Tarefas. Listas parciais completam foto, nível e casa em lote com uma RPC limitada a esses dados visuais e a contas vinculadas ao app. Dados já informados pela tela prevalecem sobre cache antigo. Casa sem vínculo e medalhão ainda não conquistado não são inventados.
+
+Toque no brasão de nível, no da casa ou no medalhão abre consulta com arte ampliada e explicação. O medalhão mostra os requisitos e as condições de posse do catálogo. O diálogo permite alternar os símbolos do avatar, respeita movimento reduzido, ocupa a tela do celular e restaura foco/rolagem ao fechar. Consultar não concede medalhas, XP nem dispara celebração.

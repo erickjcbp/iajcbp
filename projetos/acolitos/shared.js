@@ -3307,6 +3307,93 @@ const NIVEL_ARTES = {
   }
 };
 let _nivelArteId = 0;
+// Consulta de símbolos: leitura, sem celebração, avaliação de missão ou concessão.
+const SENTIDOS_BRASOES=[
+ ['Cruz · começar','A cruz ocupa o centro de uma moldura simples: o início do caminho de serviço.'],
+ ['Coroa · servir','A coroa marca o pertencimento e a alegria de servir. A moldura ganha um segundo contorno.'],
+ ['Casinha e galhetas · preparar','A casinha da vela e as galhetas representam aprender a preparar o altar e seus objetos.'],
+ ['Chama e linho · cuidar','A casinha acesa, o linho e a galheta mostram o cuidado com aquilo que foi confiado ao acólito.'],
+ ['Chama protegida · vigiar','A casinha mais trabalhada protege a chama. Vidros e arcos representam atenção e constância no serviço.'],
+ ['Livro e turíbulo apagado · estudar','O livro aberto vem antes do incenso: compreender os ritos e preparar-se para conduzi-los.'],
+ ['Primeiro incenso · praticar','O turíbulo começa a soltar fumaça: o estudo passa a ser experiência na celebração.'],
+ ['Turíbulo trabalhado · experiência','Bojo canelado, correntes reforçadas e mais incenso expressam uma prática mais firme.'],
+ ['Estandarte e incenso · conduzir','O estandarte representa reunir e orientar os servidores. O turíbulo ganha acabamento e presença.'],
+ ['Coroa, livro e pena · formar','A coroa completa a construção. Livro e pena representam transmitir o que se aprendeu e formar novos servidores.']
+];
+async function abrirDetalheInsignia(tipo,chave,contexto={}){
+ const origem=document.activeElement,antes=document.body.style.overflow;
+ const ov=document.createElement('div');ov.className='modal-overlay open insignia-detalhe-overlay';
+ const md=document.createElement('section');md.className='modal insignia-detalhe';md.setAttribute('role','dialog');md.setAttribute('aria-modal','true');md.setAttribute('aria-label','Detalhes da insígnia');
+ let fechado=false,versao=0;
+ function fechar(){if(fechado)return;fechado=true;versao++;ov.remove();document.body.style.overflow=antes;if(origem?.isConnected)origem.focus({preventScroll:true});}
+ ov._acResolveClose=fechar;ov.onclick=e=>{if(e.target===ov)fechar();};
+ const head=document.createElement('header'),titulo=document.createElement('h2'),close=document.createElement('button');titulo.textContent='Detalhes da insígnia';close.type='button';close.className='modal-close';close.setAttribute('aria-label','Fechar detalhes');close.textContent='Fechar';close.onclick=fechar;head.append(titulo);
+ const nav=document.createElement('nav');nav.className='insignia-abas';nav.setAttribute('aria-label','Símbolos do membro');
+ const corpo=document.createElement('div');corpo.className='insignia-corpo';md.append(close,head,nav,corpo);ov.append(md);document.body.style.overflow='hidden';document.body.append(ov);
+ function texto(tag,conteudo){const el=document.createElement(tag);el.textContent=conteudo;return el;}
+ const opcoes=[['nivel',contexto.nivel,'Nível'],['casa',contexto.casa,'Casa'],['medalha',contexto.icone,'Tempo de pastoral']].filter(o=>o[1]);
+ for(const [t,c,label] of opcoes){const b=document.createElement('button');b.type='button';b.textContent=label;b.dataset.tipo=t;b.onclick=()=>desenhar(t,c);nav.append(b);}
+ nav.hidden=opcoes.length<2;
+ async function desenhar(t,c){
+  const atual=++versao;corpo.replaceChildren(texto('p','Carregando detalhes…'));nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tipo===t)));
+  const arte=document.createElement('div');arte.className='insignia-arte';const info=document.createElement('div');info.className='insignia-info';
+  try{
+   if(t==='nivel'){
+    const i=RANKS_OFICIAIS.indexOf(c);if(i<0)throw Error();const n=nivelInfo(c);titulo.textContent=n.label;
+    const simbolo=buildRankEmblem(c,280);simbolo.removeAttribute('role');simbolo.removeAttribute('tabindex');arte.append(simbolo);info.append(texto('h3',SENTIDOS_BRASOES[i][0]),texto('p',SENTIDOS_BRASOES[i][1]));
+    if(n.titulo)info.append(texto('p',n.titulo));
+    info.append(texto('h3','Formação para este nível'));
+    if(i===0)info.append(texto('p','Este é o nível inicial da Jornada. A coordenação acompanha o ingresso na pastoral.'));
+    else{
+     const anterior=RANKS_OFICIAIS[i-1];const {data:missoes,error}=await sb.from('acolitos_missoes').select('titulo,descricao').eq('nivel_alvo',anterior).eq('ativo',true).eq('obrigatoria',true).order('ordem');
+     if(fechado||atual!==versao)return;
+     info.append(texto('p','Missões obrigatórias da etapa '+nivelInfo(anterior).label+', que antecede este nível:'));
+     if(!error&&missoes?.length){const lista=document.createElement('ul');for(const q of missoes)lista.append(texto('li',q.titulo));info.append(lista);}
+     else info.append(texto('p',error?'Não foi possível carregar a lista de missões agora. Consulte a aba Missões.':'Não há missões obrigatórias publicadas para esta etapa.'));
+     info.append(texto('p','A coordenação acompanha a formação e confirma as mudanças de nível.'));
+    }
+    const link=document.createElement('a');link.className='btn gold';link.href='/projetos/acolitos/missoes.html';link.textContent='Ver minhas missões';info.append(link);
+   }else if(t==='casa'){
+    titulo.textContent='Casa '+c.charAt(0).toUpperCase()+c.slice(1);arte.innerHTML=getCasaBrasao(c,260);
+    const {data,error}=await sb.from('acolitos_casas').select('nome,tagline,lema,lema_pt,caracteristicas').eq('slug',c).maybeSingle();if(error)throw error;
+    if(fechado||atual!==versao)return;
+    if(data?.nome)titulo.textContent='Casa '+data.nome;
+    info.append(texto('h3','Pertencimento à casa'),texto('p',data?.tagline||'Este brasão identifica a casa do membro na pastoral.'));
+    if(data?.lema)info.append(texto('blockquote',data.lema));if(data?.lema_pt)info.append(texto('p',data.lema_pt));
+    if(data?.caracteristicas?.length)info.append(texto('p','Virtudes da casa: '+data.caracteristicas.join(', ')));
+   }else{
+    const artes=await carregarMedalhasArte();
+    if(!_medalhasCatalogoPromise)_medalhasCatalogoPromise=sb.rpc('acolitos_medalhas_catalogo').then(r=>{if(r.error)throw r.error;return r.data||[];}).catch(e=>{_medalhasCatalogoPromise=null;throw e;});
+    const catalogo=await _medalhasCatalogoPromise;if(fechado||atual!==versao)return;
+    const b=catalogo.find(m=>m.icone===c);if(!b)throw Error();titulo.textContent=b.label;arte.innerHTML=artes.html(b.icone,medalhaTier(b),280);
+    info.append(medalhaDetalhes(b));if(Number(b.xp)>0)info.append(texto('p','Reconhecimento: '+Number(b.xp)+' XP.'));
+    if(contexto.icone===c)info.append(texto('p','Este medalhão já consta entre as conquistas do membro.'));
+   }
+   if(!fechado&&atual===versao)corpo.replaceChildren(arte,info);
+  }catch(e){if(!fechado&&atual===versao){corpo.replaceChildren(texto('p','Não foi possível carregar estes detalhes.'));const retry=document.createElement('button');retry.type='button';retry.textContent='Tentar novamente';retry.onclick=()=>desenhar(t,c);corpo.append(retry);}}
+ }
+ md.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();fechar();return;}if(e.key==='Tab'){const controls=[...md.querySelectorAll('button,a[href]')].filter(el=>!el.disabled&&el.offsetParent!==null);if(!controls.length)return;const i=controls.indexOf(document.activeElement);if(e.shiftKey&&i<=0){e.preventDefault();controls.at(-1).focus();}else if(!e.shiftKey&&i===controls.length-1){e.preventDefault();controls[0].focus();}}});
+ close.focus();await desenhar(tipo,chave);
+}
+function detalheInsigniaEvento(e){
+ const target=e.target instanceof Element?e.target:null;if(!target||target.closest('.insignia-detalhe-overlay,.mg-badge,.mg-selected,.medalha-celeb,.cq-medal,.cq-medal-modal'))return;
+ const avatar=target.closest('.avatar-oficial');
+ const contexto=avatar?{nivel:avatar.dataset.nivel,casa:avatar.dataset.casaSlug,icone:avatar._tempoMarco?.icone}:{};
+ let tipo,chave;
+ if(e.type==='keydown'){
+  if(!['Enter',' '].includes(e.key)||!target.matches('.avatar-oficial,.rank-oficial'))return;
+  tipo='nivel';chave=avatar?contexto.nivel:target.querySelector('[data-insignia-nivel]')?.dataset.insigniaNivel;
+ }else{
+  if(target.closest('button,a,input,label'))return;
+  if(avatar&&target.closest('.avatar-casa')){tipo='casa';chave=contexto.casa;}
+  else if(avatar&&target.closest('.avatar-tempo')){tipo='medalha';chave=contexto.icone;}
+  else {const rank=target.closest('[data-insignia-nivel]')||target.closest('.rank-oficial')?.querySelector('[data-insignia-nivel]');const medal=target.closest('[data-insignia-icone]');if(rank){tipo='nivel';chave=rank.dataset.insigniaNivel;}else if(medal){tipo='medalha';chave=medal.dataset.insigniaIcone;}}
+ }
+ if(!chave)return;e.preventDefault();e.stopPropagation();abrirDetalheInsignia(tipo,chave,contexto);
+}
+document.addEventListener('click',detalheInsigniaEvento,true);
+document.addEventListener('keydown',detalheInsigniaEvento,true);
+
 function nivelArteUrl(slug, spec) {
   const approved = Object.prototype.hasOwnProperty.call(NIVEL_ARTES, slug) ? NIVEL_ARTES[slug] : null;
   if (!approved || !spec || approved.esquema !== spec.esquema ||
@@ -3319,7 +3406,7 @@ const CORES_OFICIAIS = ['#c8cdd6','#4a90c4','#e8b94a','#c0793a','#3fae6b','#1fb8
 function nivelOficialSvg(slug,size) {
  const i=RANKS_OFICIAIS.indexOf(slug);if(i<0)return null;
  const familia=i===0?'aspirante':i===1?'coroinha':i<5?'acolitos':'cerimoniarios';
- return `<svg class="rank-art family-${i<2?i:i<5?'lamp':'incense'}" data-shield-family="${familia}" style="--rank-color:${CORES_OFICIAIS[i]};--rank-low:${.3+i*.3}px;--rank-high:${1.5+i*.85}px;--rank-time:${7-i*.32}s;--rank-bright:${1.025+i*.009};--rank-rise:${i<2?1:1.012}" width="${size}" height="${size}" viewBox="0 0 1024 1536" xmlns="http://www.w3.org/2000/svg" aria-label="${escHtml(nivelInfo(slug).label)}" role="img"><image href="/projetos/acolitos/identidade-oficial/brasoes/${slug}.webp" width="1024" height="1536" preserveAspectRatio="xMidYMid meet"/></svg>`;
+ return `<svg data-insignia-nivel="${slug}" class="rank-art family-${i<2?i:i<5?'lamp':'incense'}" data-shield-family="${familia}" style="--rank-color:${CORES_OFICIAIS[i]};--rank-low:${.3+i*.3}px;--rank-high:${1.5+i*.85}px;--rank-time:${7-i*.32}s;--rank-bright:${1.025+i*.009};--rank-rise:${i<2?1:1.012}" width="${size}" height="${size}" viewBox="0 0 1024 1536" xmlns="http://www.w3.org/2000/svg" aria-label="${escHtml(nivelInfo(slug).label)}" role="img"><image href="/projetos/acolitos/identidade-oficial/brasoes/${slug}.webp" width="1024" height="1536" preserveAspectRatio="xMidYMid meet"/></svg>`;
 }
 function getNivelSvg(slug, size, spec) {
   size = Math.max(1, Math.min(2048, Number(size) || 80));
@@ -3335,7 +3422,7 @@ function getNivelSvg(slug, size, spec) {
 // spec opcional (gerador de patch); senão usa o _patch salvo no nível, senão o padrão por slug.
 function buildRankEmblem(slug, size, spec) {
   const info = nivelInfo(slug); size = size || 80;
-  if(!spec && RANKS_OFICIAIS.includes(slug)){const el=document.createElement('div');el.className='rank-oficial';const i=RANKS_OFICIAIS.indexOf(slug);el.style.cssText=`--emblem-color:${CORES_OFICIAIS[i]};--feixe-forca:${.1+i*.015};--feixe-tempo:${42-i}s`;el.innerHTML=getNivelSvg(slug,size);return el;}
+  if(!spec && RANKS_OFICIAIS.includes(slug)){const el=document.createElement('div');el.className='rank-oficial';el.tabIndex=0;el.setAttribute('role','button');el.setAttribute('aria-label','Ver detalhes de '+info.label);const i=RANKS_OFICIAIS.indexOf(slug);el.style.cssText=`--emblem-color:${CORES_OFICIAIS[i]};--feixe-forca:${.1+i*.015};--feixe-tempo:${42-i}s`;el.innerHTML=getNivelSvg(slug,size);return el;}
   spec = spec || info._patch || null;
   const activeSpec = spec || info._patch || specPadraoNivel(slug);
   const color = (PATCH_ESQUEMAS[activeSpec.esquema] || PATCH_ESQUEMAS.ouro).edge;
@@ -3496,7 +3583,7 @@ async function sincronizarTempoPastoral(membro){
  try{const {data,error}=await sb.rpc('acolitos_tempo_sincronizar',{p_membro:membro.id});if(!error&&!data?.erro&&Array.isArray(data?.avisos))membro.avisos=data.avisos;}catch(e){}
 }
 const tempoMarcosCache=new Map(),tempoMarcosFila=new Map(),tempoMarcosEmCarga=new Set();
-const tempoMarcosVersao=new Map();
+const tempoMarcosVersao=new Map(),avatarIdentidadesCache=new Map();
 let tempoMarcosAgendado=false;
 function desenharTempoNoAvatar(el,marco,size){
  el._tempoMarco=marco;el.querySelector('.avatar-tempo')?.remove();if(!marco)return;
@@ -3504,7 +3591,8 @@ function desenharTempoNoAvatar(el,marco,size){
 }
 function pedirTempoNoAvatar(id,el,size){
  if(!id)return;el.dataset.tempoMembro=id;el.dataset.tempoTamanho=size;
- if(tempoMarcosCache.has(id)){desenharTempoNoAvatar(el,tempoMarcosCache.get(id),size);return;}
+ if(avatarIdentidadesCache.has(id))el._aplicarIdentidade?.(avatarIdentidadesCache.get(id));
+ if(tempoMarcosCache.has(id)){desenharTempoNoAvatar(el,tempoMarcosCache.get(id),size);if(!el._precisaIdentidade)return;}
  if(!tempoMarcosFila.has(id))tempoMarcosFila.set(id,new Set());tempoMarcosFila.get(id).add(el);
  if(tempoMarcosEmCarga.has(id)||tempoMarcosAgendado)return;
  tempoMarcosAgendado=true;queueMicrotask(carregarTempoDosAvatares);
@@ -3513,7 +3601,12 @@ async function carregarTempoDosAvatares(){
  tempoMarcosAgendado=false;const ids=[...tempoMarcosFila.keys()].filter(id=>!tempoMarcosEmCarga.has(id)).slice(0,500);if(!ids.length)return;
  const versoes=new Map(ids.map(id=>[id,tempoMarcosVersao.get(id)||0]));
  ids.forEach(id=>tempoMarcosEmCarga.add(id));
- try{const {data,error}=await sb.rpc('acolitos_tempo_marcos_lote',{p_membros:ids});if(error)throw error;
+ try{const [marcos,identidades]=await Promise.allSettled([
+  sb.rpc('acolitos_tempo_marcos_lote',{p_membros:ids}),
+  ids.some(id=>[...tempoMarcosFila.get(id)||[]].some(el=>el._precisaIdentidade))?sb.rpc('acolitos_avatares_identidade_lote',{p_membros:ids}):Promise.resolve({data:[]})
+ ]);
+ if(identidades.status==='fulfilled'&&!identidades.value.error){for(const m of Object.values(identidades.value.data||{})){avatarIdentidadesCache.set(m.id,m);for(const el of tempoMarcosFila.get(m.id)||[])el._aplicarIdentidade?.(m);}}
+ if(marcos.status!=='fulfilled')throw marcos.reason;const {data,error}=marcos.value;if(error)throw error;
  for(const id of ids){if((tempoMarcosVersao.get(id)||0)!==versoes.get(id))continue;const marco=data?.[id]||null;tempoMarcosCache.set(id,marco);for(const el of tempoMarcosFila.get(id)||[])desenharTempoNoAvatar(el,marco,Number(el.dataset.tempoTamanho));}}
  catch(e){}finally{for(const id of ids){if((tempoMarcosVersao.get(id)||0)===versoes.get(id))tempoMarcosFila.delete(id);tempoMarcosEmCarga.delete(id);}
  if(tempoMarcosFila.size&&!tempoMarcosAgendado){tempoMarcosAgendado=true;queueMicrotask(carregarTempoDosAvatares);}}
@@ -3530,8 +3623,10 @@ function atualizarMarcosTempo(ids){
 function buildAvatarEl(fotoUrl, role, size, opts) {
   size = size || 56;
   opts = opts || {};
+  const nivelSlug=opts.nivelSlug||opts.membro?.nivel||nivelFromRole(role);
   const container = document.createElement('div');
-  const rank=Math.max(0,RANKS_OFICIAIS.indexOf(opts.nivelSlug||nivelFromRole(role)));
+  const rank=Math.max(0,RANKS_OFICIAIS.indexOf(nivelSlug));
+  container.tabIndex=0;container.setAttribute('role','button');container.setAttribute('aria-label','Ver detalhes dos símbolos da Jornada');container.dataset.nivel=nivelSlug;
   container.className='avatar-oficial rank-'+rank+(size<120?' avatar-compacto':'')+(opts.hero?' avatar-hero':'');
   container.style.cssText = `--avatar-size:${size}px;--av-color:${CORES_OFICIAIS[rank]};--av-strength:${.15+rank*.085};--av-speed:${32-rank*2.3}s;--av-pulse:${6-rank*.25}s;--av-rays:${rank>=6?.3+(rank-6)*.15:0};`;
   for(const cls of ['av-halo','av-rays','av-orbit','av-base','av-energy']){const layer=document.createElement('span');layer.className=cls;container.append(layer);}
@@ -3555,29 +3650,39 @@ function buildAvatarEl(fotoUrl, role, size, opts) {
 
   let fotoEl = renderFoto(fotoUrl);
   container.appendChild(fotoEl);
-  pedirTempoNoAvatar(opts.tempoMembroId||opts.membro?.id,container,size);
 
   const patchSize = Math.round(size * 0.36);
   const patchEl = document.createElement('div');
   patchEl.className='avatar-nivel';
   // Usa o emblema do NÍVEL na jornada quando informado (opts.nivelSlug); senão, patch por papel
-  patchEl.innerHTML = opts.nivelSlug ? getNivelSvg(opts.nivelSlug, patchSize) : getPatchSvg(getRoleForPatch(role), patchSize); // hardcoded SVG — seguro
+  patchEl.innerHTML = getNivelSvg(nivelSlug, patchSize); // hardcoded SVG — seguro
   container.appendChild(patchEl);
 
-  // ── Brasão da CASA, no canto oposto ao do nível ──────────────────────────
-  // Os dois convivem: nível à direita (jornada), casa à esquerda (pertencimento). Antes o
-  // avatar não mostrava casa em lugar nenhum — ela só aparecia nas telas Casas e Minha Casa.
-  if (opts.casaSlug) {
-    const casaEl = document.createElement('div');
-    casaEl.className='avatar-casa';
-    casaEl.innerHTML = getCasaBrasao(opts.casaSlug, patchSize); // SVG/arte controlada — seguro
-    // A arte oficial é 256x305 — mais ALTA que larga. Numa caixa quadrada com `contain` ela
-    // encolhe pela altura e sobra vazio dos lados: no tamanho de patch isso custa quase um
-    // quinto do desenho. Deixando a altura mandar, o brasão ocupa o canto inteiro.
-    const im = casaEl.querySelector('img');
-    if (im) { im.style.height = '100%'; im.style.width = '100%'; im.style.objectFit='contain'; }
-    container.appendChild(casaEl);
+  function aplicarCasa(slug){
+    container.querySelector('.avatar-casa')?.remove();delete container.dataset.casaSlug;if(!slug)return;container.dataset.casaSlug=slug;
+    const casa=document.createElement('div');casa.className='avatar-casa';casa.innerHTML=getCasaBrasao(slug,patchSize);
+    const im=casa.querySelector('img');if(im){im.style.height='100%';im.style.width='100%';im.style.objectFit='contain';}
+    container.append(casa);
   }
+  aplicarCasa(opts.casaSlug||casaSlugDe(opts.membro));
+  let faltaFoto=!fotoUrl&&!Object.hasOwn(opts.membro||{},'foto_url');
+  let faltaNivel=!opts.nivelSlug&&!Object.hasOwn(opts.membro||{},'nivel');
+  let faltaCasa=!opts.casaSlug&&!Object.hasOwn(opts.membro||{},'casa_id');
+  container._precisaIdentidade=faltaFoto||faltaNivel||faltaCasa;
+  container._aplicarIdentidade=m=>{
+    if(!m)return;
+    if(faltaFoto&&Object.hasOwn(m,'foto_url')){if(sanitizeUrl(m.foto_url)){const nova=renderFoto(m.foto_url);container.replaceChild(nova,fotoEl);fotoEl=nova;}faltaFoto=false;}
+    if(faltaNivel&&RANKS_OFICIAIS.includes(m.nivel)){
+      faltaNivel=false;container.dataset.nivel=m.nivel;
+      const i=RANKS_OFICIAIS.indexOf(m.nivel);RANKS_OFICIAIS.forEach((_,j)=>container.classList.remove('rank-'+j));container.classList.add('rank-'+i);
+      for(const [key,value] of Object.entries({'--av-color':CORES_OFICIAIS[i],'--av-strength':.15+i*.085,'--av-speed':(32-i*2.3)+'s','--av-pulse':(6-i*.25)+'s','--av-rays':i>=6?.3+(i-6)*.15:0}))container.style.setProperty(key,String(value));
+      patchEl.innerHTML=getNivelSvg(m.nivel,patchSize);
+    }
+    // Campos ausentes na lista são preenchidos da leitura em lote; ausência real não inventa uma casa.
+    if(faltaCasa&&Object.hasOwn(m,'casa_id')){aplicarCasa(m.casa_slug||casaSlugDe(m));faltaCasa=false;}
+    container._precisaIdentidade=faltaFoto||faltaNivel||faltaCasa;
+  };
+  pedirTempoNoAvatar(opts.tempoMembroId||opts.membro?.id,container,size);
 
   if (opts.editable && opts.membro) {
     const camSize = Math.max(16, Math.round(size * 0.24));
@@ -3616,7 +3721,7 @@ function buildAvatarEl(fotoUrl, role, size, opts) {
           const url = await uploadAvatar(croppedFile, opts.membro);
           const novo = renderFoto(url);
           container.replaceChild(novo, fotoEl);
-          fotoEl = novo;
+          fotoEl = novo;faltaFoto=false;
           if (typeof opts.onUpload === 'function') opts.onUpload(url);
         } catch (err) {
           await uiAlert('Não foi possível enviar a foto. ' + (err?.message || ''));

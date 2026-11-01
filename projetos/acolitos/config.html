@@ -580,7 +580,7 @@ async function renderAtividade(b){
       const row=document.createElement('div');
       row.style.cssText='display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border);';
       const av=buildAvatarEl(c.foto_url, nivelInfo(c.nivel||'aspirante').base, 34,
-        { nivelSlug:c.nivel||'aspirante', casaSlug:casaSlugDe(c) });
+        { membro:c, tempoMembroId:c.id, nivelSlug: c.nivel||'aspirante', casaSlug:casaSlugDe(c) });
       av.style.flexShrink='0'; row.appendChild(av);
 
       const info=document.createElement('div'); info.style.cssText='flex:1;min-width:0;';

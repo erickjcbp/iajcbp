@@ -26,7 +26,7 @@ try{for(const largura of [360,390,768,1366,2560]){
  assert.equal(pop.erroAvaliar,null);assert.deepEqual(pop.erros,[]);assert.match(pop.avaliado.texto,/70 XP/);assert.match(pop.avaliado.clip,/identidade-oficial/);assert.equal(pop.avaliado.circle,true);assert.equal(pop.avaliado.overflow,false);console.log('Celebração de tempo / XP / atlas / círculo',largura,'OK');
  }
  const r=await p.abrir('index.html',{papel:PAPEIS.membro,avaliar:`
- tempoMarcosCache.clear();let resolver,calls=0;
+ await carregarMedalhasArte();tempoMarcosCache.clear();let resolver,calls=0;
  sb.rpc=async(nome,args)=>{if(nome!=='acolitos_tempo_marcos_lote')return {data:null};calls++;if(calls===1)return new Promise(r=>resolver=r);return {data:{race:{label:'Veterano',icone:'tempo_veterano',tier:'rubi'}}};};
  const lista=document.createElement('div');document.body.append(lista);
  for(let i=0;i<12;i++)lista.append(buildAvatarEl(null,'membro',44,{nivelSlug:'coroinha',tempoMembroId:'race'}));
@@ -34,7 +34,7 @@ try{for(const largura of [360,390,768,1366,2560]){
  atualizarMarcosTempo(['race']);resolver({data:{race:{label:'Primeira Chama',icone:'tempo_chama',tier:'bronze'}}});
  await new Promise(r=>setTimeout(r,300));
  const marcos=[...lista.querySelectorAll('.medalhao-tempo')].map(e=>e.dataset.marco);
- const total=calls;let erros=0;sb.rpc=async()=>{erros++;return {error:{message:'offline'}}};
+ const total=calls;let erros=0;sb.rpc=async(n)=>{if(n==='acolitos_tempo_marcos_lote')erros++;return {error:{message:'offline'}}};
  const a=buildAvatarEl(null,'membro',44,{tempoMembroId:'falha'});lista.append(a);await new Promise(r=>setTimeout(r,0));
  const b=buildAvatarEl(null,'membro',44,{tempoMembroId:'falha'});lista.append(b);await new Promise(r=>setTimeout(r,0));
  lista.remove();return {primeiro,total,marcos,erros};`});
