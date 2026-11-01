@@ -59,16 +59,54 @@
 .avatar-nivel,.avatar-casa,.avatar-tempo{pointer-events:auto;cursor:pointer}
 .rank-oficial[role=button],[data-insignia-nivel],[data-insignia-icone]{cursor:pointer}
 .avatar-oficial:focus-visible,.rank-oficial:focus-visible{outline:2px solid var(--gold-light);outline-offset:8px}
-.modal-overlay.insignia-detalhe-overlay{padding:clamp(16px,2.4vw,44px);z-index:9995}
-.modal.insignia-detalhe{width:100%;max-width:none!important;max-height:calc(100dvh - 40px);overflow:auto;padding:clamp(20px,3vw,44px)}
-.insignia-detalhe>header{display:flex;align-items:center;justify-content:space-between;gap:18px}.insignia-detalhe h2{margin:0;font-size:clamp(22px,2.5vw,36px);overflow-wrap:anywhere}
-.insignia-detalhe button,.insignia-detalhe .btn{min-height:44px;padding:10px 16px;font:inherit;font-size:16px;cursor:pointer;border:1px solid var(--border-wine);background:var(--surface2);color:var(--text);border-radius:8px}
-.insignia-abas{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0}.insignia-abas[hidden]{display:none}.insignia-abas button[aria-pressed=true]{border-color:var(--gold);color:var(--gold-light)}
-.insignia-corpo{display:grid;grid-template-columns:minmax(240px,.8fr) minmax(0,1.2fr);align-items:center;gap:clamp(24px,4vw,70px);padding:24px 0}
-.insignia-arte{display:grid;place-items:center;padding:24px;min-width:0}.insignia-arte>picture,.insignia-arte>svg{display:block;width:100%;height:300px;object-fit:contain}.insignia-arte>picture img{display:block;width:100%;height:100%;object-fit:contain}.insignia-info{min-width:0;line-height:1.8;overflow-wrap:anywhere}.insignia-info h3{font-size:20px;margin:0 0 12px}.insignia-info .medalha-detalhes{display:grid;gap:18px;font-size:16px}.insignia-info .btn{display:inline-flex;align-items:center;text-decoration:none;margin-top:16px}
-@media(max-width:639px){.modal-overlay.insignia-detalhe-overlay{padding:0}.modal.insignia-detalhe{height:100dvh;max-height:100dvh;border-radius:0;padding:20px;max-width:none}.insignia-detalhe>header{align-items:start}.insignia-corpo{grid-template-columns:minmax(0,1fr);gap:18px;padding:8px 0}.insignia-arte{padding:18px}.insignia-arte>picture{height:240px}.insignia-arte .rank-oficial>svg{width:220px;height:220px}.insignia-arte .medalhao-tempo{width:240px;height:240px}.insignia-abas button{flex:1 1 auto}}
-
 /* Amplia o alvo transparente sem aumentar a arte em listas compactas. */
 .rank-oficial[role=button]:after{content:'';position:absolute;inset:50% auto auto 50%;width:max(44px,100%);height:max(44px,100%);transform:translate(-50%,-50%);z-index:2}
 
 .modal.insignia-detalhe>.modal-close{width:auto;min-width:80px;height:44px;padding:10px 14px;top:20px;right:20px}.insignia-detalhe>header{padding-right:100px;min-height:44px}
+
+/* Visor de conquistas: estrutura fixa, leitura interna e área segura real. */
+.modal-overlay.insignia-detalhe-overlay{touch-action:pan-y;--insignia-safe-top:env(safe-area-inset-top,0px);--insignia-safe-bottom:env(safe-area-inset-bottom,0px);--insignia-safe-left:env(safe-area-inset-left,0px);--insignia-safe-right:env(safe-area-inset-right,0px);padding:clamp(16px,2.4vw,44px);z-index:9995;overflow:hidden;background:#080407dc;backdrop-filter:blur(10px)}
+.modal.insignia-detalhe{--insignia-cor:#d6b56c;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;width:100%;max-width:none!important;height:min(820px,calc(100dvh - 88px));max-height:calc(100dvh - 32px);margin:0;padding:0;overflow:hidden;clip-path:none;border:1px solid #68444a;border-top:2px solid var(--insignia-cor);border-radius:18px;background:#190c12;box-shadow:0 28px 100px #0009;will-change:auto}
+.insignia-detalhe,.insignia-detalhe *{touch-action:pan-y}
+.insignia-detalhe>header{grid-row:1;padding:calc(22px + var(--insignia-safe-top)) calc(128px + var(--insignia-safe-right)) 20px calc(28px + var(--insignia-safe-left));min-width:0;border-bottom:1px solid #ffffff12;background:#211118}
+.insignia-categoria{margin:0 0 6px;color:#ceb09c;font-size:13px;line-height:1.4}
+.insignia-detalhe h2{font:700 clamp(24px,2.4vw,38px)/1.2 var(--font-title);margin:0;color:#fff2df;letter-spacing:-.7px;overflow-wrap:anywhere}
+.modal.insignia-detalhe>.modal-close{position:absolute;right:calc(24px + var(--insignia-safe-right));top:calc(24px + var(--insignia-safe-top));width:auto;min-width:80px;height:44px;padding:10px 14px;border:1px solid #86634f;border-radius:10px;background:#33212a;color:#f7e9d9;z-index:4}
+.insignia-detalhe button,.insignia-detalhe .btn{min-height:44px;font:600 16px/1.4 var(--font-body);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.insignia-detalhe :is(button,a):focus-visible{outline:2px solid #ffe2a1;outline-offset:3px}
+.insignia-abas{grid-row:2;display:flex;gap:8px;flex-wrap:wrap;padding:14px calc(28px + var(--insignia-safe-right)) 14px calc(28px + var(--insignia-safe-left));margin:0;background:#211118}
+.insignia-abas[hidden]{display:none}
+.insignia-abas button{padding:10px 18px;border:1px solid transparent;border-radius:9px;background:transparent;color:#c4a9ac}
+.insignia-abas button[aria-pressed=true]{background:#493329;border-color:#9a7951;color:#ffe4b1;box-shadow:inset 0 -2px var(--insignia-cor)}
+.insignia-corpo{grid-row:3;display:grid;grid-auto-rows:max-content;align-content:start;grid-template-columns:minmax(240px,.9fr) minmax(0,1.1fr);gap:clamp(26px,4vw,76px);align-items:start;min-height:0;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:28px calc(32px + var(--insignia-safe-right)) 32px calc(32px + var(--insignia-safe-left));scrollbar-gutter:stable}
+.insignia-arte{position:sticky;top:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:380px;margin:0;padding:30px 18px;background:radial-gradient(ellipse at 50% 42%,color-mix(in srgb,var(--insignia-cor),transparent 88%),transparent 68%),linear-gradient(180deg,#281821,#1c1017);border:1px solid color-mix(in srgb,var(--insignia-cor),transparent 78%);border-radius:14px;isolation:isolate;-webkit-touch-callout:none;user-select:none}
+.insignia-objeto{display:grid;place-items:center;min-width:0;width:100%;min-height:280px;pointer-events:none}
+.insignia-objeto .rank-oficial{width:min(100%,280px)}.insignia-objeto .rank-oficial>svg{width:100%;height:auto;aspect-ratio:1}.insignia-objeto .medalhao-tempo{width:min(100%,280px);height:auto;aspect-ratio:1}
+.insignia-objeto>picture{display:block;width:100%;height:280px}.insignia-objeto>picture img{display:block;width:100%;height:100%;object-fit:contain}
+.insignia-arte figcaption{display:grid;gap:5px;margin-top:22px;text-align:center;line-height:1.5}.insignia-arte figcaption strong{color:#f5d594;font:600 18px var(--font-title)}.insignia-arte figcaption span{color:#c7acae;font-size:13px}
+.insignia-info{display:grid;gap:24px;min-width:0;line-height:1.75;color:#e9d9d3;overflow-wrap:anywhere}
+.insignia-secao{min-width:0;padding:0 0 24px;border-bottom:1px solid #ffffff15}.insignia-secao:last-child{border:0;padding-bottom:0}
+.insignia-info h3{font:600 clamp(19px,1.6vw,24px)/1.4 var(--font-title);color:#f5d594;margin:0 0 12px}
+.insignia-info p{font-size:16px;line-height:1.8;margin:0 0 14px;max-width:74ch}.insignia-info p:last-child{margin-bottom:0}
+.insignia-info ul{list-style:none;padding:0;margin:18px 0;display:grid;gap:0}.insignia-info li{position:relative;padding:14px 14px 14px 28px;border-bottom:1px solid #ffffff12;line-height:1.6}.insignia-info li:before{content:'';position:absolute;left:2px;top:23px;width:6px;height:6px;border:1px solid #bd965f;transform:rotate(45deg)}
+.insignia-info blockquote{margin:24px 0;padding:16px 20px;border-left:3px solid var(--insignia-cor);background:#ffffff05;font-size:21px;color:#fff0d4;line-height:1.6}
+.insignia-virtudes{display:flex;flex-wrap:wrap;gap:8px}.insignia-virtudes span{padding:7px 12px;border:1px solid #735244;border-radius:6px;background:#392620;color:#f0d8b2;font-size:14px}
+.insignia-info .medalha-detalhes{display:grid;gap:18px;font-size:16px}.insignia-info .medalha-descricao{font:500 clamp(20px,1.8vw,26px)/1.55 var(--font-title);color:#fff0df;padding-bottom:6px}
+.insignia-info .medalha-condicao{display:grid;gap:8px;padding:20px 22px;border:1px solid #ffffff15;border-left:3px solid #ac8754;border-radius:0 10px 10px 0;background:#26161e}.insignia-info .medalha-condicao strong{font-size:14px;color:#f5d594}.insignia-info .medalha-condicao>span{color:#e8d7d1;line-height:1.7}
+.insignia-info .insignia-xp{margin-top:22px;color:#f7d38e;font-weight:700}.insignia-info .insignia-posse{margin-top:10px;font-size:14px;color:#cbb4ad}
+.insignia-info .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:10px;padding:11px 18px;text-decoration:none;background:#413021;border:1px solid #a7824b;color:#ffe3aa;border-radius:8px}
+.insignia-rodape{grid-row:4;display:flex;justify-content:flex-end;padding:16px calc(28px + var(--insignia-safe-right)) calc(18px + var(--insignia-safe-bottom)) calc(28px + var(--insignia-safe-left));border-top:1px solid #ffffff14;background:#211118}
+.insignia-rodape button{min-width:180px;padding:11px 22px;border:1px solid #e0ba79;background:#e0ba79;color:#2b1b16;border-radius:9px}
+@media(max-width:639px){
+ .modal-overlay.insignia-detalhe-overlay{padding:0}
+ .modal.insignia-detalhe{height:100dvh;max-height:100dvh;max-width:none;border-radius:0;border:0;margin:0}
+ .insignia-detalhe>header{padding:calc(18px + var(--insignia-safe-top)) calc(116px + var(--insignia-safe-right)) 18px calc(20px + var(--insignia-safe-left))}
+ .insignia-detalhe h2{font-size:24px;letter-spacing:-.5px}.insignia-categoria{font-size:12px}
+ .modal.insignia-detalhe>.modal-close{right:calc(18px + var(--insignia-safe-right));top:calc(22px + var(--insignia-safe-top))}
+ .insignia-abas{gap:6px;padding:0 calc(18px + var(--insignia-safe-right)) 14px calc(18px + var(--insignia-safe-left))}.insignia-abas button{padding:10px 12px;flex:1 1 auto;font-size:14px}
+ .insignia-corpo{grid-template-columns:minmax(0,1fr);gap:26px;padding:18px calc(20px + var(--insignia-safe-right)) 24px calc(20px + var(--insignia-safe-left));scrollbar-gutter:auto}
+ .insignia-arte{position:relative;top:auto;min-height:280px;padding:20px 12px}.insignia-objeto{min-height:190px}.insignia-objeto>picture{height:210px}.insignia-objeto .rank-oficial{width:min(100%,210px)}.insignia-objeto .medalhao-tempo{width:min(100%,220px);height:auto;aspect-ratio:1}
+ .insignia-arte figcaption{margin-top:14px}.insignia-arte figcaption strong{font-size:16px}.insignia-arte figcaption span{font-size:12px}
+ .insignia-info{gap:22px}.insignia-info .medalha-condicao{padding:17px}.insignia-info .medalha-descricao{font-size:21px}
+ .insignia-rodape{padding:12px calc(20px + var(--insignia-safe-right)) calc(14px + var(--insignia-safe-bottom)) calc(20px + var(--insignia-safe-left))}.insignia-rodape button{width:100%;min-width:0}
+}

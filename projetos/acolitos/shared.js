@@ -3327,21 +3327,20 @@ async function abrirDetalheInsignia(tipo,chave,contexto={}){
  let fechado=false,versao=0;
  function fechar(){if(fechado)return;fechado=true;versao++;ov.remove();document.body.style.overflow=antes;if(origem?.isConnected)origem.focus({preventScroll:true});}
  ov._acResolveClose=fechar;ov.onclick=e=>{if(e.target===ov)fechar();};
- const head=document.createElement('header'),titulo=document.createElement('h2'),close=document.createElement('button');titulo.textContent='Detalhes da insígnia';close.type='button';close.className='modal-close';close.setAttribute('aria-label','Fechar detalhes');close.textContent='Fechar';close.onclick=fechar;head.append(titulo);
+ const head=document.createElement('header'),categoria=document.createElement('p'),titulo=document.createElement('h2'),close=document.createElement('button');categoria.className='insignia-categoria';titulo.textContent='Detalhes da insígnia';close.type='button';close.className='modal-close';close.setAttribute('aria-label','Fechar detalhes');close.textContent='Fechar';close.onclick=fechar;head.append(categoria,titulo);
  const nav=document.createElement('nav');nav.className='insignia-abas';nav.setAttribute('aria-label','Símbolos do membro');
- const corpo=document.createElement('div');corpo.className='insignia-corpo';md.append(close,head,nav,corpo);ov.append(md);document.body.style.overflow='hidden';document.body.append(ov);
+ const corpo=document.createElement('div');corpo.className='insignia-corpo';const rodape=document.createElement('footer');rodape.className='insignia-rodape';const concluir=document.createElement('button');concluir.type='button';concluir.textContent='Entendi';concluir.onclick=fechar;rodape.append(concluir);md.append(close,head,nav,corpo,rodape);ov.append(md);document.body.style.overflow='hidden';document.body.append(ov);
  function texto(tag,conteudo){const el=document.createElement(tag);el.textContent=conteudo;return el;}
  const opcoes=[['nivel',contexto.nivel,'Nível'],['casa',contexto.casa,'Casa'],['medalha',contexto.icone,'Tempo de pastoral']].filter(o=>o[1]);
  for(const [t,c,label] of opcoes){const b=document.createElement('button');b.type='button';b.textContent=label;b.dataset.tipo=t;b.onclick=()=>desenhar(t,c);nav.append(b);}
  nav.hidden=opcoes.length<2;
  async function desenhar(t,c){
   const atual=++versao;corpo.replaceChildren(texto('p','Carregando detalhes…'));nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tipo===t)));
-  const arte=document.createElement('div');arte.className='insignia-arte';const info=document.createElement('div');info.className='insignia-info';
+  const arte=document.createElement('figure');arte.className='insignia-arte';const objeto=document.createElement('div');objeto.className='insignia-objeto';const legenda=document.createElement('figcaption');arte.append(objeto,legenda);const info=document.createElement('div');info.className='insignia-info';categoria.textContent={nivel:'Nível da Jornada',casa:'Casa da pastoral',medalha:'Reconhecimento de serviço'}[t];
   try{
    if(t==='nivel'){
     const i=RANKS_OFICIAIS.indexOf(c);if(i<0)throw Error();const n=nivelInfo(c);titulo.textContent=n.label;
-    const simbolo=buildRankEmblem(c,280);simbolo.removeAttribute('role');simbolo.removeAttribute('tabindex');arte.append(simbolo);info.append(texto('h3',SENTIDOS_BRASOES[i][0]),texto('p',SENTIDOS_BRASOES[i][1]));
-    if(n.titulo)info.append(texto('p',n.titulo));
+    const simbolo=buildRankEmblem(c,280);simbolo.removeAttribute('role');simbolo.removeAttribute('tabindex');objeto.append(simbolo);legenda.append(texto('strong','Nível '+(i+1)+' de '+RANKS_OFICIAIS.length),texto('span',n.titulo||n.label));md.style.setProperty('--insignia-cor',CORES_OFICIAIS[i]);info.append(texto('h3',SENTIDOS_BRASOES[i][0]),texto('p',SENTIDOS_BRASOES[i][1]));
     info.append(texto('h3','Formação para este nível'));
     if(i===0)info.append(texto('p','Este é o nível inicial da Jornada. A coordenação acompanha o ingresso na pastoral.'));
     else{
@@ -3354,24 +3353,36 @@ async function abrirDetalheInsignia(tipo,chave,contexto={}){
     }
     const link=document.createElement('a');link.className='btn gold';link.href='/projetos/acolitos/missoes.html';link.textContent='Ver minhas missões';info.append(link);
    }else if(t==='casa'){
-    titulo.textContent='Casa '+c.charAt(0).toUpperCase()+c.slice(1);arte.innerHTML=getCasaBrasao(c,260);
+    titulo.textContent='Casa '+c.charAt(0).toUpperCase()+c.slice(1);objeto.innerHTML=getCasaBrasao(c,260);legenda.append(texto('strong','Identidade da casa'),texto('span','Pertencimento e serviço em comunidade'));md.style.setProperty('--insignia-cor',CASA_COR[c]||'#d6b56c');
     const {data,error}=await sb.from('acolitos_casas').select('nome,tagline,lema,lema_pt,caracteristicas').eq('slug',c).maybeSingle();if(error)throw error;
     if(fechado||atual!==versao)return;
     if(data?.nome)titulo.textContent='Casa '+data.nome;
     info.append(texto('h3','Pertencimento à casa'),texto('p',data?.tagline||'Este brasão identifica a casa do membro na pastoral.'));
     if(data?.lema)info.append(texto('blockquote',data.lema));if(data?.lema_pt)info.append(texto('p',data.lema_pt));
-    if(data?.caracteristicas?.length)info.append(texto('p','Virtudes da casa: '+data.caracteristicas.join(', ')));
+    if(data?.caracteristicas?.length){info.append(texto('h3','Virtudes da casa'));const virtudes=document.createElement('div');virtudes.className='insignia-virtudes';for(const valor of data.caracteristicas)virtudes.append(texto('span',valor));info.append(virtudes);}
    }else{
     const artes=await carregarMedalhasArte();
     if(!_medalhasCatalogoPromise)_medalhasCatalogoPromise=sb.rpc('acolitos_medalhas_catalogo').then(r=>{if(r.error)throw r.error;return r.data||[];}).catch(e=>{_medalhasCatalogoPromise=null;throw e;});
     const catalogo=await _medalhasCatalogoPromise;if(fechado||atual!==versao)return;
-    const b=catalogo.find(m=>m.icone===c);if(!b)throw Error();titulo.textContent=b.label;arte.innerHTML=artes.html(b.icone,medalhaTier(b),280);
-    info.append(medalhaDetalhes(b));if(Number(b.xp)>0)info.append(texto('p','Reconhecimento: '+Number(b.xp)+' XP.'));
-    if(contexto.icone===c)info.append(texto('p','Este medalhão já consta entre as conquistas do membro.'));
+    const b=catalogo.find(m=>m.icone===c);if(!b)throw Error();titulo.textContent=b.label;objeto.innerHTML=artes.html(b.icone,medalhaTier(b),280);const material={bronze:'Bronze',prata:'Prata',ouro:'Ouro',onix:'Ônix',rubi:'Rubi'}[medalhaTier(b)]||'Medalha';legenda.append(texto('strong',material),texto('span',contexto.icone===c?'Na coleção do membro':'Medalha da Jornada'));md.style.setProperty('--insignia-cor',objeto.querySelector('.medalhao-tempo')?.style.getPropertyValue('--mt-color')||'#d6b56c');
+    info.append(medalhaDetalhes(b));if(Number(b.xp)>0){const xp=texto('p',Number(b.xp)+' XP de reconhecimento');xp.className='insignia-xp';info.append(xp);}
+    if(contexto.icone===c){const estado=texto('p','Este medalhão já consta entre as conquistas do membro.');estado.className='insignia-posse';info.append(estado);}
    }
-   if(!fechado&&atual===versao)corpo.replaceChildren(arte,info);
+   if(!fechado&&atual===versao){
+    const conteudo=[...info.childNodes];info.replaceChildren();let secao;
+    for(const el of conteudo){if(!secao||el.nodeName==='H3'){secao=document.createElement('section');secao.className='insignia-secao';info.append(secao);}secao.append(el);}
+    corpo.replaceChildren(arte,info);corpo.scrollTop=0;
+   }
   }catch(e){if(!fechado&&atual===versao){corpo.replaceChildren(texto('p','Não foi possível carregar estes detalhes.'));const retry=document.createElement('button');retry.type='button';retry.textContent='Tentar novamente';retry.onclick=()=>desenhar(t,c);corpo.append(retry);}}
  }
+ // O visor é de leitura: pan vertical permanece, gestos de escala não.
+ const impedirZoom=e=>e.preventDefault();
+ for(const nome of ['gesturestart','gesturechange','gestureend','dblclick'])ov.addEventListener(nome,impedirZoom,{passive:false});
+ for(const nome of ['touchstart','touchmove'])ov.addEventListener(nome,e=>{if(e.touches?.length>1)e.preventDefault();},{passive:false});
+ ov.addEventListener('wheel',e=>{if(e.ctrlKey||e.metaKey)e.preventDefault();},{passive:false});
+ ov.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&['+','-','=','0'].includes(e.key))e.preventDefault();});
+ md.addEventListener('dragstart',e=>{if(e.target.closest('.insignia-arte'))e.preventDefault();});
+ md.addEventListener('contextmenu',e=>{if(e.target.closest('.insignia-arte'))e.preventDefault();});
  md.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();fechar();return;}if(e.key==='Tab'){const controls=[...md.querySelectorAll('button,a[href]')].filter(el=>!el.disabled&&el.offsetParent!==null);if(!controls.length)return;const i=controls.indexOf(document.activeElement);if(e.shiftKey&&i<=0){e.preventDefault();controls.at(-1).focus();}else if(!e.shiftKey&&i===controls.length-1){e.preventDefault();controls[0].focus();}}});
  close.focus();await desenhar(tipo,chave);
 }

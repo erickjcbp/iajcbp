@@ -41,3 +41,9 @@ Marcos:1/2/3/5anos valem30/40/50/70XP. Desde a migração132, Veterano exige mai
 Avatares de membros usam o mesmo componente na Agenda, Escala/Chamada, Jornada, Membros/fichas, Casas/Minha Casa, Destaques, Configuração e Tarefas. Listas parciais completam foto, nível e casa em lote com uma RPC limitada a esses dados visuais e a contas vinculadas ao app. Dados já informados pela tela prevalecem sobre cache antigo. Casa sem vínculo e medalhão ainda não conquistado não são inventados.
 
 Toque no brasão de nível, no da casa ou no medalhão abre consulta com arte ampliada e explicação. O medalhão mostra os requisitos e as condições de posse do catálogo. O diálogo permite alternar os símbolos do avatar, respeita movimento reduzido, ocupa a tela do celular e restaura foco/rolagem ao fechar. Consultar não concede medalhas, XP nem dispara celebração.
+
+## Revisão do visor: margens seguras e gestos
+
+O visor separa a arte, o significado e as condições de conquista. Cabeçalho, navegação e rodapé permanecem acessíveis enquanto o conteúdo rola. O celular reserva `safe-area-inset` no topo, nas laterais e no rodapé; o computador e a TV usam a largura disponível.
+
+Pinça, gestos de escala, duplo toque/clique e atalhos de zoom são bloqueados enquanto o visor está aberto, preservando toque simples e rolagem vertical. A consulta segue sem conceder medalhas ou XP. Prova com5larguras simula áreas seguras, estressa conteúdo longo, verifica controles fixos, margens, ausência de sobreposição e cancelamento dos eventos de zoom.
