@@ -195,8 +195,8 @@ export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log =
       usadas = r.usadas
     }
     if (!texto) texto = 'Recebi sua mensagem e passei para a coordenação. Logo alguém responde. 🙏'
-    await evo.enviarTexto(numero, texto)
-    exigir(await db.from('tarcisio_mensagens').insert({ numero, direcao: 'saida', texto, membro_ids: ligados.map((m) => m.id), ferramentas: usadas.length ? usadas : null, respondida: true }), 'gravar resposta')
+    const enviada = await evo.enviarTexto(numero, texto)
+    exigir(await db.from('tarcisio_mensagens').insert({ numero, direcao: 'saida', texto, external_id: enviada?.key?.id || null, membro_ids: ligados.map((m) => m.id), ferramentas: usadas.length ? usadas : null, respondida: true }), 'gravar resposta')
     await marcar({ membro_ids: ligados.map((m) => m.id) })
     log.info(`respondeu ${numero.slice(0, 4)}…${numero.slice(-2)} (${ligados.length} servo(s), ${usadas.length} ferramenta(s))`)
   }

@@ -103,6 +103,9 @@ export function criarEvolution({ url, chave, instancia, fetchFn = fetch }) {
       const r = await chamar(`/chat/whatsappNumbers/${nome}`, { metodo: 'POST', corpo: { numbers: numeros } })
       return (Array.isArray(r) ? r : []).map((x) => ({ numero: String(x.number || '').replace(/\D/g, ''), existe: x.exists === true }))
     },
+    // Apaga para todos uma mensagem que o próprio número enviou. remoteJid = grupo (…@g.us) ou número.
+    apagarParaTodos: (remoteJid, id) => chamar(`/chat/deleteMessageForEveryone/${nome}`, { metodo: 'DELETE',
+      corpo: { id, remoteJid: String(remoteJid).includes('@') ? remoteJid : `${String(remoteJid).replace(/\D/g, '')}@s.whatsapp.net`, fromMe: true } }),
     enviarVideo: async (destino, url, legenda) => {
       await conferirGrupo(destino)
       return chamar(`/message/sendMedia/${nome}`, {

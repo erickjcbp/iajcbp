@@ -5,6 +5,7 @@
 // Projeto: docs/superpowers/specs/2026-10-20-escala-automatica-design.md (seções 5 e 7)
 import { agoraSP } from './regras.mjs'
 import { ehPdf, simOuNao, quemAutorizado, donoDe } from './ministros-pdf.mjs'
+import { criarComandosDono } from './conversa-comandos.mjs'
 
 const exigir = ({ data, error }, onde) => {
   if (error) throw new Error(`${onde}: ${error.message}`)
@@ -26,6 +27,7 @@ const JA_DECIDIDA = {
 // deps: db (chave de serviço), evo, confirmarSemana(semana) → { ok, erro? } (Task 6),
 // ministros = criarMinistrosPdf(...), relogio, log.
 export function criarEntradaDono({ db, evo, confirmarSemana, ministros, relogio = () => new Date(), log = console }) {
+  const comandos = criarComandosDono({ db, evo, log, agora: relogio })
   const lerCfg = async () => exigir(await db.from('tarcisio_config').select('*').eq('id', 1).single(), 'ler config')
 
   async function cas(semana, de, para, extra = {}) {
@@ -110,6 +112,7 @@ export function criarEntradaDono({ db, evo, confirmarSemana, ministros, relogio 
     if (msg.documento && ehPdf(msg.documento)) return true
     if (msg.tocou) return true
     if (!quemAutorizado(cfg, msg.numero)) return false
+    if (donoDe(cfg, msg.numero) && !msg.botao && comandos.ehComando(msg.texto)) return true
     return !!msg.botao || !!simOuNao(msg.texto)
   }
 
@@ -127,6 +130,11 @@ export function criarEntradaDono({ db, evo, confirmarSemana, ministros, relogio 
       return (await tratarRespostaDono({ numero: msg.numero, botao: msg.botao, cfg })) || msg.tocou
     }
     if (msg.tocou) return true   // botão de outra coisa: nada a fazer, e a IA não precisa ver
+    if (!msg.botao && donoDe(cfg, msg.numero) && comandos.ehComando(msg.texto)) {
+      const resposta = await comandos.executar(msg.texto)
+      if (resposta) await evo.enviarTexto(donoDe(cfg, msg.numero), resposta)
+      return true
+    }
     return ministros.responderPorTexto({ numero: msg.numero, texto: msg.texto, cfg })
   }
 

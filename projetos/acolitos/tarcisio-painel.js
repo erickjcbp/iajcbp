@@ -248,14 +248,14 @@
   };
   const iniciais = (nome) => (nome || '').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
   const ROTULO_FERRAMENTA = { escala_dos_meus:'consultou a escala', registrar_ausencia:'registrou ausência', chamar_coordenacao:'chamou a coordenação', identificar:'pediu vínculo do número' };
-  const previa = (m) => (m.direcao === 'saida' ? '✓ ' : '') + (m.texto || `[${m.midia || 'mídia'}]`).replace(/\s+/g, ' ');
+  const previa = (m) => m.apagada_em ? 'Mensagem apagada' : (m.direcao === 'saida' ? '✓ ' : '') + (m.texto || `[${m.midia || 'mídia'}]`).replace(/\s+/g, ' ');
 
   const conversas = montar(async (box, ctl) => {
     const desde = new Date(Date.now() - 30 * 864e5).toISOString();
     const [msgs, pend, envios, conf] = await Promise.all([
-      sb.from('tarcisio_mensagens').select('*').gte('created_at', desde).order('created_at', { ascending:false }).limit(1500),
+      sb.from('tarcisio_mensagens').select('*').eq('oculta', false).gte('created_at', desde).order('created_at', { ascending:false }).limit(1500),
       sb.from('tarcisio_pendencias').select('numero,resumo').eq('estado', 'aberta'),
-      sb.from('tarcisio_envios').select('id,destino_numero,texto,imagem_url,tipo,enviado_em,created_at,membro_id').eq('estado','enviado').not('destino_numero','is',null).gte('enviado_em',desde).order('enviado_em',{ascending:false}).limit(1500),
+      sb.from('tarcisio_envios').select('id,destino_numero,texto,imagem_url,tipo,estado,erro,enviado_em,created_at,membro_id,external_id,apagada_em,apagar_pedido_em,apagar_erro').eq('oculta', false).or('estado.eq.enviado,and(tipo.eq.manual,estado.in.(pendente,enviando,falhou))').not('destino_numero','is',null).gte('created_at',desde).order('created_at',{ascending:false}).limit(1500),
       sb.from('tarcisio_config').select('conexao,pausado,respostas_ligadas').eq('id',1).maybeSingle(),
     ]);
     if (erroBanco(msgs,'ler as conversas') || erroBanco(envios,'ler os envios privados')) return;
@@ -263,7 +263,8 @@
     (envios.data || []).forEach(e => {
       const horario=e.enviado_em||e.created_at;
       if (!historico.some(m=>m.direcao==='saida'&&m.numero===e.destino_numero&&normalizar(m.texto)===normalizar(e.texto)&&Math.abs(new Date(m.created_at)-new Date(horario))<=30000))
-        historico.push({id:'envio:'+e.id,numero:e.destino_numero,direcao:'saida',texto:e.texto,membro_ids:e.membro_id?[e.membro_id]:[],respondida:true,created_at:horario,automatico:true,imagem_url:e.imagem_url,tipo:e.tipo});
+        historico.push({id:'envio:'+e.id,fonte:'envios',linhaId:e.id,numero:e.destino_numero,direcao:'saida',texto:e.texto,membro_ids:e.membro_id?[e.membro_id]:[],respondida:true,created_at:horario,
+          automatico:e.tipo!=='manual',imagem_url:e.imagem_url,tipo:e.tipo,estado:e.estado,erro:e.erro,external_id:e.external_id,apagada_em:e.apagada_em,apagar_pedido_em:e.apagar_pedido_em,apagar_erro:e.apagar_erro});
     });
     const ids=[...new Set(historico.flatMap(m=>m.membro_ids||[]))], membros={}, etapas={};
     if(ids.length){
@@ -283,17 +284,28 @@
       if(m){if(mesmoNumero(m.celular_mae,numero))relacao=m.nome_mae?'Mãe: '+m.nome_mae:'Mãe / responsável';else if(mesmoNumero(m.celular_responsavel,numero))relacao='Responsável';else if(m.telefone_whatsapp&&mesmoNumero(m.telefone,numero))relacao='WhatsApp do membro';else relacao='Contato da família';}
       return {numero,lista,membros:ms,titulo:ms.length?ms.map(m=>m.nome).join(', '):foneBonito(numero),relacao,ultima:lista.at(-1),aguardando:lista.filter(m=>m.direcao==='entrada'&&!m.respondida).length,pendencias:(pend.data||[]).filter(p=>mesmoNumero(p.numero,numero))};
     }).sort((a,b)=>b.ultima.created_at.localeCompare(a.ultima.created_at));
-    const icon=(nome)=>{const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','1.7');svg.setAttribute('aria-hidden','true');const paths={busca:'M21 21l-5-5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0',atualizar:'M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1',voltar:'M15 5l-7 7 7 7',info:'M12 11v6M12 7h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',chat:'M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-2 2V11.5a9.5 9.5 0 0 1 19 0',fora:'M14 3h7v7M21 3L10 14M10 3H3v18h18v-7'};const p=document.createElementNS(svg.namespaceURI,'path');p.setAttribute('d',paths[nome]||paths.chat);svg.append(p);return svg;};
+    const icon=(nome)=>{const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','1.7');svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');svg.setAttribute('aria-hidden','true');const paths={busca:'M21 21l-5-5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0',atualizar:'M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1',voltar:'M15 5l-7 7 7 7',info:'M12 11v6M12 7h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',chat:'M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-2 2V11.5a9.5 9.5 0 0 1 19 0',fora:'M14 3h7v7M21 3L10 14M10 3H3v18h18v-7',enviar:'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7',lixo:'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',mais:'M12 5h.01M12 12h.01M12 19h.01',relogio:'M12 7v5l3 2M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',copiar:'M9 9h11v11H9zM5 15H4V4h11v1',ocultar:'M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A10 10 0 0 1 12 5c5 0 9 4 10 7a13 13 0 0 1-2.7 3.7M6.6 6.6A13 13 0 0 0 2 12c1 3 5 7 10 7a10 10 0 0 0 4-.8',novo:'M12 5v14M5 12h14'};const p=document.createElementNS(svg.namespaceURI,'path');p.setAttribute('d',paths[nome]||paths.chat);svg.append(p);return svg;};
     const icobtn=(nome,label,fn)=>{const b=el('button','zp-icon');b.type='button';b.title=label;b.setAttribute('aria-label',label);b.append(icon(nome));b.onclick=fn;return b;};
     const avatar=c=>{const av=el('div','zp-av zp-cor-'+(Number(digitos(c.numero).slice(-2))%4),iniciais(c.membros[0]?.nome)||'#');av.setAttribute('aria-hidden','true');return av;};
-    const toolbar=el('div','zp-toolbar'),titulo=el('div','zp-titulo');titulo.append(el('h3',null,'Atendimento da pastoral'),el('p',null,'Conversas, respostas e acompanhamento em um só lugar.'));
+    const toolbar=el('div','zp-toolbar'),titulo=el('div','zp-titulo');titulo.append(el('h3',null,'Conversas do Tarcísio'));
     const conectado=!conf.error&&conf.data?.conexao==='open',status=el('span','zp-conexao'+(conectado?' online':''),conectado?'WhatsApp conectado':'Conexão não confirmada');toolbar.append(titulo,status);box.append(toolbar);
     const zap=el('section','zp');zap.setAttribute('aria-label','Conversas do Tarcísio');const colLista=el('div','zp-lista'),colChat=el('div','zp-chat');zap.append(colLista,colChat);box.append(zap);
     let aberto=box.dataset.zpAberto||null,filtro=box.dataset.zpFiltro||'todas',busca=box.dataset.zpBusca||'',buscaChat='';
     if(!contatos.some(c=>c.numero===aberto))aberto=innerWidth>820?(contatos.find(c=>c.aguardando)?.numero||contatos[0]?.numero||null):null;
     if(aberto)zap.classList.add('zp-lendo');
     const cab=el('div','zp-cab'),cabTitulo=el('div','zp-lista-titulo');cabTitulo.append(el('strong',null,'Conversas'),el('span',null,String(contatos.length)));
-    const refresh=icobtn('atualizar','Atualizar conversas',()=>{box.dataset.zpAberto=aberto||'';ctl.redesenhar();});cabTitulo.append(refresh);
+    const refresh=icobtn('atualizar','Atualizar conversas',()=>{box.dataset.zpAberto=aberto||'';ctl.redesenhar();});
+    const novo=icobtn('novo','Nova conversa por número',()=>abrirNovo());novo.classList.add('zp-novo');cabTitulo.append(novo,refresh);
+    // Nova conversa: número digitado vira um contato vazio, pronto para receber a primeira mensagem.
+    function abrirNovo(){
+      if(cab.querySelector('.zp-novo-form'))return cab.querySelector('.zp-novo-form input').focus();
+      const f=el('form','zp-novo-form'),i=el('input','zp-busca');i.type='tel';i.inputMode='tel';i.placeholder='Número com DDD';i.setAttribute('aria-label','Número com DDD');
+      const ok=el('button','zp-enviar');ok.type='submit';ok.setAttribute('aria-label','Abrir conversa');ok.append(icon('enviar'));f.append(i,ok);cab.insertBefore(f,cab.children[1]);i.focus();
+      f.onsubmit=e=>{e.preventDefault();let d=digitos(i.value);if(d.length<10||d.length>13){toast('Digite o número com DDD.','error');return;}if(d.length<=11)d='55'+d;
+        let c=contatos.find(x=>mesmoNumero(x.numero,d));
+        if(!c){const agora=new Date().toISOString();c={numero:d,lista:[],membros:[],titulo:foneBonito(d),relacao:'Novo contato',ultima:{created_at:agora,direcao:'saida',texto:''},aguardando:0,pendencias:[]};contatos.unshift(c);}
+        f.remove();aberto=c.numero;box.dataset.zpAberto=aberto;zap.classList.add('zp-lendo');desenharItens();desenharChat();};
+    }
     const topo=el('label','zp-pesquisa');topo.append(icon('busca'));const campoBusca=el('input','zp-busca');campoBusca.type='search';campoBusca.placeholder='Buscar contato ou mensagem';campoBusca.setAttribute('aria-label','Buscar contato ou mensagem');campoBusca.value=busca;topo.append(campoBusca);
     const filtros=el('div','zp-filtros'),itens=el('div','zp-itens');itens.setAttribute('aria-label','Contatos');cab.append(cabTitulo,topo,filtros);colLista.append(cab,itens);
     const FILTROS=[['todas','Todas'],['aguardando','Aguardando'],['pendencia','Na Caixa']];
@@ -302,37 +314,158 @@
       itens.replaceChildren();const q=limpar(busca),qd=digitos(busca);
       const lista=contatos.filter(c=>(filtro==='todas'||(filtro==='aguardando'?c.aguardando:c.pendencias.length))&&(!q||limpar(c.titulo+' '+c.relacao+' '+c.lista.map(m=>m.texto||'').join(' ')).includes(q)||(qd&&c.numero.includes(qd))));
       if(!lista.length){const v=el('div','zp-vazio');v.append(icon('busca'),el('strong',null,contatos.length?'Nenhuma conversa encontrada':'As conversas vão aparecer aqui'),el('p',null,contatos.length?'Tente outro nome, número ou mensagem.':'Quando alguém falar com o Tarcísio, você poderá acompanhar por aqui.'));itens.append(v);}
-      lista.forEach(c=>{const b=el('button','zp-item'+(aberto===c.numero?' on':''));b.type='button';b.setAttribute('aria-pressed',String(aberto===c.numero));const meio=el('div','zp-meio'),linha=el('div','zp-nome-linha');linha.append(el('span','zp-nome',c.titulo),el('time','zp-hora'+(c.aguardando?' novo':''),diaChave(c.ultima.created_at)===diaChave(new Date().toISOString())?hora(c.ultima.created_at):new Date(c.ultima.created_at).toLocaleDateString('pt-BR',{timeZone:FUSO,day:'2-digit',month:'2-digit'})));
-        meio.append(linha,el('div','zp-relacao',c.relacao),el('div','zp-previa',previa(c.ultima)));const estado=el('div','zp-item-estado');if(c.aguardando)estado.append(el('span','zp-badge',String(c.aguardando)));else if(c.pendencias.length)estado.append(el('span','zp-alerta','!'));b.append(avatar(c),meio,estado);b.onclick=()=>{aberto=c.numero;box.dataset.zpAberto=aberto;buscaChat='';zap.classList.add('zp-lendo');desenharItens();desenharChat();};itens.append(b);});
+      lista.forEach(c=>{
+        const b=el('button','zp-item'+(aberto===c.numero?' on':''));b.type='button';b.setAttribute('aria-pressed',String(aberto===c.numero));
+        const meio=el('div','zp-meio'),linha=el('div','zp-nome-linha'),dia=diaChave(c.ultima.created_at)===diaChave(new Date().toISOString());
+        linha.append(el('span','zp-nome',c.titulo),el('time','zp-hora'+(c.aguardando?' novo':''),dia?hora(c.ultima.created_at):new Date(c.ultima.created_at).toLocaleDateString('pt-BR',{timeZone:FUSO,day:'2-digit',month:'2-digit'})));
+        const baixo=el('div','zp-baixo');baixo.append(el('span','zp-previa',c.lista.length?previa(c.ultima):'Nova conversa'));
+        if(c.aguardando)baixo.append(el('span','zp-badge',String(c.aguardando)));else if(c.pendencias.length)baixo.append(el('span','zp-alerta','!'));
+        meio.append(linha,baixo);b.append(avatar(c),meio);
+        b.onclick=()=>{aberto=c.numero;box.dataset.zpAberto=aberto;buscaChat='';zap.classList.add('zp-lendo');desenharItens();desenharChat();};itens.append(b);
+      });
     }
     const ETAPAS={aprovacao_cadastro:'Aprovação do cadastro',integracao:'Integração',whatsapp:'Entrada no WhatsApp',tunica:'Túnica',disponivel_escala:'Disponível para escala',integrado:'Integrado'};
+    // Rascunho por contato: trocar de conversa não perde o que estava sendo escrito.
+    const rascunhos=new Map();
+    const paraTodos=(m)=>m.direcao==='saida'&&m.external_id&&!m.apagada_em&&!m.apagar_pedido_em&&(!m.estado||m.estado==='enviado');
     function desenharChat(){
-      colChat.replaceChildren();colChat.classList.remove('zp-info-aberta');const c=contatos.find(x=>x.numero===aberto);
-      if(!c){const v=el('div','zp-sem');v.append(icon('chat'),el('h3',null,'Cada conversa, com seu contexto'),el('p',null,'Escolha um contato para acompanhar as mensagens, os encaminhamentos e a integração na pastoral.'),el('span','zp-sem-nota','Histórico dos últimos 30 dias'));colChat.append(v);return;}
-      const topoChat=el('div','zp-chat-topo'),voltar=icobtn('voltar','Voltar para as conversas',()=>{aberto=null;box.dataset.zpAberto='';zap.classList.remove('zp-lendo');desenharItens();desenharChat();});voltar.classList.add('zp-voltar');
-      const info=el('div','zp-chat-info');info.append(el('div','zp-nome',c.titulo),el('div','zp-sub',c.relacao+' · '+foneBonito(c.numero)));
+      colChat.replaceChildren();colChat.classList.remove('zp-info-aberta','zp-busca-aberta');const c=contatos.find(x=>x.numero===aberto);
+      if(!c){const v=el('div','zp-sem');v.append(icon('chat'),el('h3',null,'Escolha uma conversa'),el('p',null,'Leia o histórico, responda pelo número do Tarcísio e apague mensagens enviadas por engano.'),el('span','zp-sem-nota','Histórico dos últimos 30 dias'));colChat.append(v);return;}
+
+      // ── topo: quem é, estado e atalhos ──
+      const topoChat=el('div','zp-chat-topo');
+      const voltar=icobtn('voltar','Voltar para as conversas',()=>{aberto=null;box.dataset.zpAberto='';zap.classList.remove('zp-lendo');desenharItens();desenharChat();});voltar.classList.add('zp-voltar');
+      const info=el('div','zp-chat-info'),estadoTxt=c.aguardando?'Aguardando resposta':c.pendencias.length?'Pendência na Caixa':'';
+      const sub=el('div','zp-sub',c.relacao+' · '+foneBonito(c.numero));
+      if(estadoTxt){sub.append(document.createTextNode(' · '),el('span',c.aguardando?'zp-aguardando':'zp-pendente',estadoTxt));}
+      info.append(el('div','zp-nome',c.titulo),sub);
+      const lupa=icobtn('busca','Buscar nesta conversa',()=>{const aberta=colChat.classList.toggle('zp-busca-aberta');lupa.setAttribute('aria-expanded',String(aberta));if(aberta)input.focus();else{buscaChat='';input.value='';mensagens();}});lupa.setAttribute('aria-expanded','false');
       const toggle=icobtn('info','Ver dados do contato',()=>{colChat.classList.toggle('zp-info-aberta');toggle.setAttribute('aria-expanded',String(colChat.classList.contains('zp-info-aberta')));});toggle.setAttribute('aria-expanded','false');
-      topoChat.append(voltar,avatar(c),info,toggle);
-      const barra=el('div','zp-chat-barra');barra.append(el('span','zp-atendimento'+(c.aguardando?' aguardando':c.pendencias.length?' pendente':''),c.aguardando?'Aguardando resposta':c.pendencias.length?'Pendência na Caixa':'Conversa acompanhada'));
-      const pesquisa=el('label','zp-procurar');pesquisa.append(icon('busca'));const input=el('input','zp-busca-chat');input.type='search';input.placeholder='Buscar nesta conversa';input.setAttribute('aria-label','Buscar nesta conversa');input.value=buscaChat;pesquisa.append(input);barra.append(pesquisa);
+      topoChat.append(voltar,avatar(c),info,lupa,toggle);
+
+      const pesquisa=el('label','zp-procurar');pesquisa.append(icon('busca'));const input=el('input','zp-busca-chat');input.type='search';input.placeholder='Buscar nesta conversa';input.setAttribute('aria-label','Buscar nesta conversa');input.value=buscaChat;pesquisa.append(input);
+
+      // ── lateral de contexto (telas largas) ──
       const workspace=el('div','zp-workspace'),corpo=el('div','zp-corpo'),contexto=el('aside','zp-contexto');contexto.setAttribute('aria-label','Dados do contato');workspace.append(corpo,contexto);
       contexto.append(el('h4',null,'Sobre este contato'),el('div','zp-contexto-fone',foneBonito(c.numero)),el('p','zp-contexto-relacao',c.relacao));
       if(!c.membros.length)contexto.append(el('p','zp-contexto-nota','Este número ainda não está ligado a um membro. A identificação aparece na Caixa.'));
       c.membros.forEach(m=>{const ficha=el('div','zp-ficha');ficha.append(el('strong',null,m.nome),el('span','zp-etapa',ETAPAS[etapas[m.id]]||'Cadastro vinculado'));const dl=el('dl');[['Nível',m.nivel?m.nivel.replace(/_/g,' '):'Ainda não definido'],['Túnica',m.tem_tunica?'Recebida':'Sem recebimento registrado']].forEach(([k,v])=>{dl.append(el('dt',null,k),el('dd',null,v));});ficha.append(dl);contexto.append(ficha);});
       if(c.pendencias.length){const ps=el('div','zp-contexto-pend');ps.append(el('strong',null,'A coordenação precisa olhar'));c.pendencias.forEach(p=>ps.append(el('p',null,p.resumo||'Há uma pendência aberta para este contato.')));const a=el('a','zp-link','Abrir Caixa');a.href='caixa.html';ps.append(a);contexto.append(ps);}
       const crm=el('a','zp-link','Abrir CRM');crm.href='crm.html';contexto.append(crm);
-      const footer=el('div','zp-chat-footer');footer.append(el('span',null,'Respostas automáticas do Tarcísio'));const wa=el('a','zp-whatsapp','Abrir WhatsApp');wa.href='https://wa.me/'+digitos(c.numero);wa.target='_blank';wa.rel='noopener noreferrer';wa.append(icon('fora'));footer.append(wa);
-      colChat.append(topoChat,barra,workspace,footer);
-      function mensagens(){corpo.replaceChildren();let diaAtual='';const query=buscaChat.trim().toLowerCase(),lista=c.lista.filter(m=>!query||String(m.texto||'').toLowerCase().includes(query));
-        if(!lista.length)corpo.append(el('p','zp-nenhuma','Nenhuma mensagem encontrada nesta conversa.'));
-        lista.forEach(m=>{const k=diaChave(m.created_at);if(k!==diaAtual){diaAtual=k;corpo.append(el('div','zp-dia',diaRotulo(m.created_at)));}
-          const b=el('article','zp-bolha zp-'+m.direcao);b.append(el('div','zp-autor',m.direcao==='entrada'?'Contato':m.automatico?'Envio automático':'Tarcísio'));
-          const txt=el('div','zp-txt'),texto=m.texto||'['+(m.midia||'mídia')+']';let resto=texto;let ix=query?resto.toLowerCase().indexOf(query):-1;while(ix>=0){txt.append(document.createTextNode(resto.slice(0,ix)),el('mark',null,resto.slice(ix,ix+query.length)));resto=resto.slice(ix+query.length);ix=resto.toLowerCase().indexOf(query);}txt.append(document.createTextNode(resto));b.append(txt);
-          if(m.imagem_url){try{const u=new URL(m.imagem_url);if(u.protocol==='https:'&&u.hostname.endsWith('.supabase.co')&&/^\/storage\/v1\/object\/public\/(tarcisio|artes-escala)\//.test(u.pathname)){const a=el('a','zp-anexo',/\.mp4$/.test(u.pathname)?'Ver vídeo enviado':'Ver imagem enviada');a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';b.append(a);}}catch{}}
-          if(m.ferramentas?.length){const ações=el('div','zp-ferr');m.ferramentas.forEach(f=>{const falhou=!!f.saida?.erro||f.saida?.ok===false;const labels={registrar_acolhida:'Acompanhamento atualizado',trocar_responsavel:'Troca de responsável',ajuste_escala_autorizado:'Escala ajustada',troca_responsavel_autorizada:'Responsável atualizado'};const label=falhou?'Ação não concluída':labels[f.ferramenta]||ROTULO_FERRAMENTA[f.ferramenta]||'Registro de atendimento';const d=el('details','zp-acao'+(falhou?' falhou':''));d.append(el('summary',null,label));d.append(el('p',null,f.saida?.erro||(f.ferramenta==='chamar_coordenacao'?'O assunto foi encaminhado para a Caixa.':'Registro realizado durante esta conversa.')));ações.append(d);});b.append(ações);}
-          b.append(el('div','zp-rodape',hora(m.created_at)+(m.direcao==='saida'?' · Enviada':m.respondida?'':' · Aguardando resposta')));corpo.append(b);
-        });if(!query)corpo.scrollTop=corpo.scrollHeight;
+      const wa=el('a','zp-link','Abrir no WhatsApp');wa.href='https://wa.me/'+digitos(c.numero);wa.target='_blank';wa.rel='noopener noreferrer';contexto.append(wa);
+
+      // ── compositor: escrever e enviar pelo número do Tarcísio ──
+      const compor=el('form','zp-compor');compor.setAttribute('aria-label','Enviar mensagem');
+      const campo=el('textarea','zp-campo-msg');campo.rows=1;campo.maxLength=4000;campo.placeholder='Escreva uma mensagem…';campo.setAttribute('aria-label','Mensagem');campo.value=rascunhos.get(c.numero)||'';
+      const enviarBtn=el('button','zp-enviar');enviarBtn.type='submit';enviarBtn.setAttribute('aria-label','Enviar mensagem');enviarBtn.append(icon('enviar'));
+      const ajuda=el('div','zp-ajuda',conectado?'Sai agora pelo número do Tarcísio.':'WhatsApp desconectado: a mensagem fica na fila até reconectar.');
+      compor.append(campo,enviarBtn);
+      const crescer=()=>{campo.style.height='auto';campo.style.height=Math.min(campo.scrollHeight,150)+'px';};
+      campo.oninput=()=>{rascunhos.set(c.numero,campo.value);crescer();};
+      // Computador: Enter envia, Shift+Enter quebra linha. Celular: Enter quebra linha (o botão envia).
+      campo.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&matchMedia('(pointer:fine)').matches){e.preventDefault();compor.requestSubmit();}};
+      compor.onsubmit=async e=>{e.preventDefault();const t=campo.value.trim();if(!t||enviarBtn.disabled)return;enviarBtn.disabled=true;
+        const ok=await enviarMensagem(c,t);enviarBtn.disabled=false;if(ok){campo.value='';rascunhos.delete(c.numero);crescer();}campo.focus();};
+
+      colChat.append(topoChat,pesquisa,workspace,compor,ajuda);crescer();
+
+      // ── mensagens ──
+      let menuAberto=null;
+      const fecharMenu=()=>{if(menuAberto){menuAberto.remove();menuAberto=null;}};
+      function autorDe(m){return m.direcao==='entrada'?'':m.tipo==='manual'?'Equipe':m.automatico?'Envio automático':'Tarcísio';}
+      function acoesDe(m){
+        const lista=[];
+        if(m.texto)lista.push(['copiar','Copiar texto',async()=>{try{await navigator.clipboard.writeText(m.texto);toast('Texto copiado.');}catch{toast('Não foi possível copiar.','error');}}]);
+        if(paraTodos(m))lista.push(['lixo','Apagar para todos',()=>pedirApagar(m),true]);
+        if(!m.apagar_pedido_em)lista.push(['ocultar','Ocultar do painel',()=>ocultar(m)]);
+        return lista;
       }
+      function abrirMenu(m,bolha,botaoMais){
+        const jaEra=menuAberto&&menuAberto.dataset.id===m.id;fecharMenu();if(jaEra)return;
+        const menu=el('div','zp-menu');menu.dataset.id=m.id;menu.setAttribute('role','menu');
+        acoesDe(m).forEach(([ic,rot,fn,perigo])=>{
+          const b=el('button','zp-menu-item'+(perigo?' perigo':''));b.type='button';b.setAttribute('role','menuitem');b.append(icon(ic),el('span',null,rot));
+          let confirmando=false;
+          b.onclick=ev=>{ev.stopPropagation();
+            if(perigo&&!confirmando){confirmando=true;b.classList.add('confirmar');b.lastChild.textContent='Toque de novo para apagar';return;}
+            fecharMenu();fn();};
+          menu.append(b);
+        });
+        if(!menu.children.length)return;
+        bolha.append(menu);menuAberto=menu;
+      }
+      colChat.onclick=e=>{if(menuAberto&&!menuAberto.contains(e.target)&&!e.target.closest('.zp-mais'))fecharMenu();};
+
+      function bolha(m,query){
+        const b=el('article','zp-bolha zp-'+m.direcao+(m.apagada_em?' zp-apagada':'')+(m.estado==='falhou'?' zp-falhou':''));
+        const autor=autorDe(m);if(autor)b.append(el('div','zp-autor',autor));
+        const txt=el('div','zp-txt');
+        if(m.apagada_em){txt.append(icon('lixo'),document.createTextNode(' Mensagem apagada'));}
+        else{
+          const texto=m.texto||'['+(m.midia||'mídia')+']';let resto=texto,ix=query?resto.toLowerCase().indexOf(query):-1;
+          while(ix>=0){txt.append(document.createTextNode(resto.slice(0,ix)),el('mark',null,resto.slice(ix,ix+query.length)));resto=resto.slice(ix+query.length);ix=resto.toLowerCase().indexOf(query);}
+          txt.append(document.createTextNode(resto));
+        }
+        b.append(txt);
+        if(m.imagem_url&&!m.apagada_em){try{const u=new URL(m.imagem_url);if(u.protocol==='https:'&&u.hostname.endsWith('.supabase.co')&&/^\/storage\/v1\/object\/public\/(tarcisio|artes-escala)\//.test(u.pathname)){const a=el('a','zp-anexo',/\.mp4$/.test(u.pathname)?'Ver vídeo enviado':'Ver imagem enviada');a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';b.append(a);}}catch{}}
+        if(m.ferramentas?.length&&!m.apagada_em){const acoes=el('div','zp-ferr');m.ferramentas.forEach(f=>{const falhou=!!f.saida?.erro||f.saida?.ok===false;const labels={registrar_acolhida:'Acompanhamento atualizado',trocar_responsavel:'Troca de responsável',ajuste_escala_autorizado:'Escala ajustada',troca_responsavel_autorizada:'Responsável atualizado'};const label=falhou?'Ação não concluída':labels[f.ferramenta]||ROTULO_FERRAMENTA[f.ferramenta]||'Ação registrada';const d=el('details','zp-acao'+(falhou?' falhou':''));d.append(el('summary',null,label));const det=falhou?(f.saida?.erro||'A ação não foi concluída.'):(f.saida?.mensagem||f.saida?.resumo||'');if(det)d.append(el('p',null,String(det)));acoes.append(d);});b.append(acoes);}
+        // rodapé: hora + estado do envio
+        const rod=el('div','zp-rodape');
+        let estado='';
+        if(m.direcao==='saida'){
+          if(m.apagar_pedido_em&&!m.apagada_em&&!m.apagar_erro)estado='Apagando…';
+          else if(m.estado==='pendente'||m.estado==='enviando')estado='Enviando…';
+          else if(m.estado==='falhou')estado='Não enviada';
+          else if(!m.apagada_em)estado='✓';
+        }else if(!m.respondida)estado='Aguardando resposta';
+        rod.append(el('span',null,hora(m.created_at)));if(estado)rod.append(el('span','zp-estado',estado));
+        b.append(rod);
+        const falha=m.estado==='falhou'?(m.erro||'O envio falhou.'):m.apagar_erro?('Não consegui apagar: '+m.apagar_erro):'';
+        if(falha)b.append(el('div','zp-erro',falha));
+        if(acoesDe(m).length&&!m.apagada_em){const mais=el('button','zp-mais');mais.type='button';mais.setAttribute('aria-label','Opções da mensagem');mais.setAttribute('aria-haspopup','menu');mais.append(icon('mais'));mais.onclick=ev=>{ev.stopPropagation();abrirMenu(m,b,mais);};b.append(mais);}
+        return b;
+      }
+      function mensagens(manter){
+        fecharMenu();const antes=corpo.scrollHeight-corpo.scrollTop;corpo.replaceChildren();let diaAtual='';
+        const query=buscaChat.trim().toLowerCase(),lista=c.lista.filter(m=>!query||String(m.texto||'').toLowerCase().includes(query));
+        if(!lista.length)corpo.append(el('p','zp-nenhuma',query?'Nenhuma mensagem encontrada nesta conversa.':'Ainda não há mensagens. Escreva a primeira abaixo.'));
+        lista.forEach(m=>{const k=diaChave(m.created_at);if(k!==diaAtual){diaAtual=k;corpo.append(el('div','zp-dia',diaRotulo(m.created_at)));}corpo.append(bolha(m,query));});
+        if(!query&&!manter)corpo.scrollTop=corpo.scrollHeight;else if(manter)corpo.scrollTop=corpo.scrollHeight-antes;
+      }
+
+      // ── ações: enviar, apagar, ocultar ──
+      async function enviarMensagem(c,t){
+        const agora=new Date().toISOString();
+        const r=await sb.from('tarcisio_envios').insert({tipo:'manual',destino_numero:c.numero,destino_nome:c.titulo,texto:t,estado:'pendente',agendado_para:agora,chave_unica:'manual:'+crypto.randomUUID(),membro_id:c.membros[0]?.id||null}).select('id').single();
+        if(erroBanco(r,'enviar a mensagem'))return false;
+        const m={id:'envio:'+r.data.id,fonte:'envios',linhaId:r.data.id,numero:c.numero,direcao:'saida',texto:t,membro_ids:[],respondida:true,created_at:agora,tipo:'manual',estado:'pendente'};
+        c.lista.push(m);c.ultima=m;mensagens();desenharItens();acompanhar(m,'tarcisio_envios','estado,erro,external_id,enviado_em',x=>x.estado==='enviado'||x.estado==='falhou'||x.estado==='cancelado');
+        return true;
+      }
+      // Olha a linha de tempos em tempos (o robô responde em segundos) e atualiza a bolha.
+      function acompanhar(m,tabela,colunas,pronto,tentativas=0){
+        if(tentativas>=15||!colunas)return;
+        setTimeout(async()=>{
+          if(!box.isConnected)return;
+          const r=await sb.from(tabela).select(colunas).eq('id',m.linhaId).maybeSingle();
+          if(r.data){Object.assign(m,r.data);if(r.data.enviado_em)m.created_at=r.data.enviado_em;if(aberto===c.numero&&c.lista.includes(m))mensagens(true);}
+          if(!r.data||!pronto(r.data))acompanhar(m,tabela,colunas,pronto,tentativas+1);
+        },tentativas<4?2000:5000);
+      }
+      const tabelaDe=m=>m.fonte==='envios'?'tarcisio_envios':'tarcisio_mensagens';
+      async function pedirApagar(m){
+        const r=await sb.from(tabelaDe(m)).update({apagar_pedido_em:new Date().toISOString()}).eq('id',m.linhaId||m.id);
+        if(erroBanco(r,'pedir para apagar'))return;
+        m.apagar_pedido_em=new Date().toISOString();m.apagar_erro=null;mensagens(true);
+        acompanhar(m,tabelaDe(m),'apagada_em,apagar_erro,apagar_pedido_em',x=>!!x.apagada_em||!!x.apagar_erro);
+      }
+      async function ocultar(m){
+        const r=await sb.from(tabelaDe(m)).update({oculta:true}).eq('id',m.linhaId||m.id);
+        if(erroBanco(r,'ocultar a mensagem'))return;
+        const i=c.lista.indexOf(m);if(i>=0)c.lista.splice(i,1);
+        if(c.lista.length)c.ultima=c.lista.at(-1);mensagens(true);desenharItens();toast('Mensagem ocultada do painel.');
+      }
+
       input.oninput=()=>{buscaChat=input.value;mensagens();};mensagens();
     }
     campoBusca.oninput=()=>{busca=campoBusca.value;box.dataset.zpBusca=busca;desenharItens();};desenharFiltros();desenharItens();desenharChat();

@@ -8,6 +8,7 @@ import {
 } from './regras.mjs'
 
 import { cuidarPreparacao } from './avisos-programados.mjs'
+import { cuidarApagarPedidos } from './conversa-comandos.mjs'
 
 const CAMPOS_MEMBRO = 'id,nome,apelido,nivel,user_id,data_nascimento,telefone,celular_recado,celular_responsavel,celular_mae,acolitos_logins(usuario)'
 const PAPEL_GRUPO = { pais: 'Pais', acolitos: 'Acólitos', cerimoniarios: 'Cerimoniários', equipe: 'Equipe' }
@@ -247,14 +248,16 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
     if (st.conexao !== 'open' || +agora < st.proximoEnvioEm) return
     let consulta = db.from('tarcisio_envios').select('*').eq('estado', 'pendente')
       .lte('agendado_para', agora.toISOString())
-    if (cfg.pausado) consulta = consulta.or(`chave_unica.like.${CAMPANHA_RETIRO}%,chave_unica.like.preparacao-missa:%`)
+    if (cfg.pausado) consulta = consulta.or(`chave_unica.like.${CAMPANHA_RETIRO}%,chave_unica.like.preparacao-missa:%,tipo.eq.manual`)
     const item = exigir(await consulta.order('agendado_para').order('created_at').limit(1).maybeSingle(), 'ler fila')
     if (!item) return
     const retiroAutorizado = String(item.chave_unica || '').startsWith(CAMPANHA_RETIRO)
     let pai = null
     if (item.aviso_id) pai = exigir(await db.from('tarcisio_avisos').select('*').eq('id', item.aviso_id).maybeSingle(), 'ler aviso do envio')
     const preparacao = String(item.chave_unica || '').startsWith('preparacao-missa:') && pai?.configuracao?.tipo === 'preparacao_missa'
-    if (cfg.pausado && !retiroAutorizado && !preparacao) return
+    // Envio manual (painel ou WhatsApp do dono) é gesto humano: não espera a janela nem a pausa.
+    const manual = item.tipo === 'manual'
+    if (cfg.pausado && !retiroAutorizado && !preparacao && !manual) return
     if (pai?.configuracao?.tipo && !pai.ativo) {
       exigir(await db.from('tarcisio_envios').update({ estado: 'cancelado', erro: 'Aviso encerrado na configuração' }).eq('id', item.id).eq('estado', 'pendente'), 'encerrar envio'); return
     }
@@ -266,7 +269,7 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
         exigir(await db.from('tarcisio_envios').update({ estado: 'cancelado', erro: 'Passou do horário da primeira missa' }).eq('id', item.id).eq('estado', 'pendente'), 'cancelar preparação vencida'); return
       }
     }
-    if (!preparacao && !dentroDaJanela(sp.hm, cfg.janela_inicio, cfg.janela_fim)) return
+    if (!preparacao && !manual && !dentroDaJanela(sp.hm, cfg.janela_inicio, cfg.janela_fim)) return
     if (pai?.configuracao?.tipo) { item.texto = pai.texto; item.imagem_url = pai.imagem_url }
     if (retiroAutorizado && +agora >= LIMITE_RETIRO) {
       exigir(await db.from('tarcisio_envios').update({ estado: 'cancelado', erro: 'Encerrado o prazo de envio do retiro de 24/10' })
@@ -278,7 +281,7 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
         .eq('chave_unica', `${CAMPANHA_RETIRO}apresentacao:${item.destino_jid}`).maybeSingle(), 'conferir apresentação')
       if (intro?.estado !== 'enviado') return
     }
-    if (item.destino_numero) {
+    if (item.destino_numero && !manual) {
       const { count, error } = await db.from('tarcisio_envios').select('id', { count: 'exact', head: true })
         .eq('estado', 'enviado').not('destino_numero', 'is', null).gte('enviado_em', `${sp.data}T00:00:00-03:00`)
       if (error) throw new Error(`contar envios do dia: ${error.message}`)
@@ -311,15 +314,16 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
       const texto = await talvezVariar(cfg, item)
       if ((item.tipo === 'aviso' || !imagem) && (typeof texto !== 'string' || !texto.trim()))
         throw new Error('Mensagem vazia: envio bloqueado; revise o texto do aviso.')
-      if (imagem && /\.mp4(?:\?|$)/.test(imagem)) await evo.enviarVideo(destino, imagem, texto)
+      let resp = null
+      if (imagem && /\.mp4(?:\?|$)/.test(imagem)) resp = await evo.enviarVideo(destino, imagem, texto)
       else if (imagem && arteCatequese && texto.length > 1024) {
         // Legendas longas variam por cliente do WhatsApp: mantém o capítulo inteiro em texto separado.
         await evo.enviarImagem(destino, imagem, texto.split('\n').find(l=>l.startsWith('Texto ')) || 'Formação da pastoral')
         await evo.enviarTexto(destino, texto)
       }
-      else if (imagem) await evo.enviarImagem(destino, imagem, texto)
-      else await evo.enviarTexto(destino, texto)
-      exigir(await db.from('tarcisio_envios').update({ estado: 'enviado', enviado_em: agora.toISOString(), erro: null }).eq('id', item.id), 'marcar enviado')
+      else if (imagem) resp = await evo.enviarImagem(destino, imagem, texto)
+      else resp = await evo.enviarTexto(destino, texto)
+      exigir(await db.from('tarcisio_envios').update({ estado: 'enviado', enviado_em: agora.toISOString(), erro: null, external_id: resp?.key?.id || null }).eq('id', item.id), 'marcar enviado')
     } catch (e) {
       const tentativas = item.tentativas + 1
       const desiste = e.semWhatsapp || String(item.chave_unica||'').startsWith('acolhida:') || tentativas >= 3
@@ -423,6 +427,7 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
       ['escala automática', () => escalaAuto?.cuidar(agora, cfg)],
       ['validade', () => expirar(agora)],
       ['acolhida', () => acolhida?.cuidar(agora,cfg)],
+      ['apagar mensagens', () => st.conexao === 'open' ? cuidarApagarPedidos({ db, evo, log }) : null],
       ['conversas', () => cuidarConversas(cfg, agora)],
       ['rascunhos', () => cuidarRascunhos(cfg)],
       ['envio', () => enviarProximo(cfg, agora, sp)],
