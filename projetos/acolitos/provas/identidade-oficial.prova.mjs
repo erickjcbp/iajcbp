@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {iniciarProvas,PAPEIS} from './abrir-tela.mjs';
-const dir=new URL('../../../estudos/medalhoes-integracao-2026-11-01/provas-app/',import.meta.url).pathname;fs.mkdirSync(dir,{recursive:true});
+const dir=new URL('../../../estudos/medalhoes-integracao-2026-11-01/provas-hero-compacto/',import.meta.url).pathname;fs.mkdirSync(dir,{recursive:true});
 const p=await iniciarProvas();
 try{for(const largura of [360,390,768,1366,2560]){
  const r=await p.abrir('index.html',{papel:{...PAPEIS.membro,nivel:'acolito_sentinela'},largura,altura:1000,tabelas:{acolitos_casas:{data:[{id:'c1',slug:'sanctaris'}]}},rpcs:{acolitos_tempo_marcos_lote:{data:{m1:{label:'Raiz da Pastoral',icone:'tempo_raiz',tier:'ouro',marco:'3'}}}},avaliar:`
@@ -13,9 +13,9 @@ try{for(const largura of [360,390,768,1366,2560]){
  const slugs=['aspirante','coroinha','acolito_aspirante','acolito_guardiao','acolito_sentinela','aspirante_cerimoniario','cerimoniario_aspirante','cerimoniario_guardiao','cerimoniario_magistral','cerimoniario_mor'];
  const artes=slugs.map(s=>getNivelSvg(s,80));
  const anim=getComputedStyle(avatar.querySelector('.av-energy')).animationName;
- const rect=avatar.getBoundingClientRect();return {hero:true,size:rect.width,slots,artes,anim,overflow:document.documentElement.scrollWidth>innerWidth+1,mainWidth:document.querySelector('.jornada-hero').getBoundingClientRect().width};`,foto:{caminho:dir+'jornada-'+largura+'.png'}});
+ const feixe=getComputedStyle(avatar.querySelector('.avatar-nivel'),'::before');const heroRect=document.querySelector('.jornada-hero').getBoundingClientRect();const rect=avatar.getBoundingClientRect();return {altura:heroRect.height,feixe:feixe.animationName,orbita:Number(getComputedStyle(avatar.querySelector('.mt-orbit')).opacity),hero:true,size:rect.width,slots,artes,anim,overflow:document.documentElement.scrollWidth>innerWidth+1,mainWidth:document.querySelector('.jornada-hero').getBoundingClientRect().width};`,foto:{caminho:dir+'jornada-'+largura+'.png'}});
  assert.deepEqual(r.erros,[]);assert.equal(r.erroAvaliar,null);assert.equal(r.avaliado.hero,true,'Minha Jornada precisa do avatar hero');
- assert.ok(r.avaliado.size>=190);assert.equal(r.avaliado.slots.length,3);assert.ok(r.avaliado.slots.every(([w,h])=>w===h&&w===r.avaliado.slots[0][0]));
+ assert.equal(r.avaliado.size,largura<640?112:largura<1000?140:largura<1900?160:180);assert.ok(r.avaliado.altura<310,'Hero ocupa altura excessiva');assert.equal(r.avaliado.feixe,'nivelRays');assert.ok(r.avaliado.orbita<.3);assert.equal(r.avaliado.slots.length,3);assert.ok(r.avaliado.slots.every(([w,h])=>w===h&&w===r.avaliado.slots[0][0]));
  assert.ok(r.avaliado.artes.every(a=>a.includes('/identidade-oficial/brasoes/')&&a.includes('rank-art')));assert.notEqual(r.avaliado.anim,'none');assert.equal(r.avaliado.overflow,false);
  if(largura===2560)assert.ok(r.avaliado.mainWidth>2000);console.log('Identidade oficial / hero / slots / movimento / largura',largura,'OK');
  }

@@ -19,7 +19,7 @@ Cinco artes oficiais: Primeira Chama/bronze, Pilar do Tempo/prata, Raiz da Pasto
 
 A implementação usa estes arquivos na Jornada, nos avatares, nas listas, na Escala e nas conquistas. Os PNGs originais são preservados; derivados WebP384×576 reduzem o conjunto dos dez brasões para aproximadamente520KB. O gerador de brasões ainda aceita uma especificação explícita para edição, enquanto a apresentação normal usa a identidade oficial.
 
-O avatar da Minha Jornada mede190/220/264/300px conforme a tela. Casa, nível e tempo usam caixas quadradas iguais, de36%; o medalhão tem ajuste óptico interno. Anel e luz seguem o nível; órbitas seguem o marco de tempo. Movimento reduzido é respeitado.
+Após ajuste pedido pelo dono, o avatar da Minha Jornada mede112/140/160/180px conforme a tela, com foto e informações lado a lado e sem altura mínima vazia. Casa, nível e tempo usam caixas quadradas iguais, de36%; o medalhão tem ajuste óptico interno. Anel e luz seguem o nível; órbitas seguem o marco de tempo. O feixe giratório atrás dos brasões foi restaurado; órbitas dos medalhões ficaram mais leves, com apenas uma no avatar. Movimento reduzido é respeitado.
 
 A migração130 separa instalação e ativação. A ativação exige cliente publicado: `update acolitos_tempo_config set ativo=true,ativado_em=now() where id; select acolitos_tempo_processar();`. O processador é restrito ao serviço; o membro sincroniza somente seu cadastro, e avatares consultam uma lista limitada de marcos sem datas pessoais.
 

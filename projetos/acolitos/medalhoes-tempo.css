@@ -28,11 +28,27 @@
 .avatar-tempo .mt-orbit{inset:11%}.avatar-tempo .mt-orbit-2{inset:9%;display:block}.avatar-tempo .mt-orbit-3{inset:7%;display:block}
 .avatar-compacto .av-rays,.avatar-compacto .av-orbit,.avatar-compacto .mt-orbit-2,.avatar-compacto .mt-orbit-3{display:none}.avatar-compacto .av-halo{inset:-10px;filter:blur(3px)}.avatar-compacto .av-energy{inset:-3px}.avatar-compacto .av-base{inset:-2px;border-width:1px}
 .rank-0 .av-energy,.rank-0 .av-orbit,.rank-0 .av-rays,.rank-1 .av-orbit,.rank-2 .av-orbit{display:none}
-.jornada-hero{padding:clamp(30px,4vw,64px);gap:clamp(32px,5vw,100px);min-height:400px;border:1px solid var(--border-wine);border-radius:18px;background:radial-gradient(ellipse at 20% 40%,#50302955,transparent 65%),var(--surface);margin-bottom:24px!important}
-.jornada-hero .greet-info{min-width:0}.jornada-hero .greet-nome{font-size:clamp(32px,3.5vw,56px);overflow-wrap:anywhere}.jornada-hero .greet-sub{font-size:clamp(17px,1.7vw,24px);margin-top:12px}.jornada-hero .tempo-pastoral{margin-top:14px}
-.avatar-hero-wrap{padding:20px 30px 0}.avatar-hero-wrap button{margin-top:42px!important}
-@media(min-width:1900px){.avatar-hero{--avatar-size:300px!important}.jornada-hero{min-height:480px}}
-@media(min-width:1000px) and (max-width:1899px){.avatar-hero{--avatar-size:264px!important}}
-@media(min-width:640px) and (max-width:999px){.avatar-hero{--avatar-size:220px!important}.jornada-hero{gap:32px}}
-@media(max-width:639px){.avatar-hero{--avatar-size:190px!important}.jornada-hero{flex-direction:column;text-align:center;padding:28px 16px;gap:20px}.jornada-hero .greet-nome{font-size:32px}.jornada-hero .greet-sub{font-size:18px}.jornada-hero .greet-info{width:100%}}
-@media(prefers-reduced-motion:reduce){.avatar-oficial *,.avatar-oficial *:before,.avatar-oficial *:after{animation:none!important;transition:none!important}}
+
+/* Hero compacto: identidade ao lado do nome, sem reservar altura vazia. */
+.jornada-hero{display:flex;align-items:center;padding:20px 28px;gap:24px;min-height:0;border:1px solid var(--border-wine);border-radius:16px;background:radial-gradient(ellipse at 20% 40%,#50302955,transparent 65%),var(--surface);margin-bottom:18px!important}
+.jornada-hero .greet-info{min-width:0}.jornada-hero .greet-nome{font-size:clamp(23px,2.4vw,36px);overflow-wrap:anywhere}.jornada-hero .greet-sub{font-size:clamp(15px,1.4vw,20px);margin-top:8px}.jornada-hero .tempo-pastoral{margin-top:10px}
+.avatar-hero-wrap{padding:14px 18px 0}.avatar-hero-wrap button{margin-top:24px!important}
+.avatar-hero{--avatar-size:160px!important}
+@media(min-width:1900px){.avatar-hero{--avatar-size:180px!important}}
+@media(min-width:640px) and (max-width:999px){.avatar-hero{--avatar-size:140px!important}.jornada-hero{padding:18px 22px;gap:20px}}
+@media(max-width:639px){.avatar-hero{--avatar-size:112px!important}.jornada-hero{padding:16px 12px;gap:12px;text-align:left}.jornada-hero .greet-nome{font-size:21px}.jornada-hero .greet-sub{font-size:14px;line-height:1.4}.jornada-hero .greet-info{width:100%}.avatar-hero-wrap{padding:12px 14px 0}.avatar-hero-wrap button{font-size:10px!important;padding:7px 8px!important;margin-top:18px!important}.jornada-hero .tempo-pastoral{font-size:12px}}
+/* Feixe anterior: gira ATRÁS do brasão; a arte oficial permanece intacta. */
+.rank-oficial{display:inline-flex;position:relative;isolation:isolate;flex:none;line-height:0}
+.rank-oficial>svg{position:relative;z-index:1}
+.rank-oficial:before,.avatar-nivel:before{content:'';position:absolute;inset:-22%;z-index:-1;pointer-events:none;border-radius:50%;background:repeating-conic-gradient(transparent 0deg 27deg,var(--emblem-color,var(--av-color,var(--gold))) 28deg 30deg,transparent 31deg 45deg);mask-image:radial-gradient(circle,transparent 26%,#000 47%,transparent 71%);opacity:var(--feixe-forca,.16);animation:nivelRays var(--feixe-tempo,32s) linear infinite}
+.avatar-nivel{isolation:isolate}.avatar-nivel:before{inset:-16%}
+/* Órbitas mantidas circulares, com uma presença mais leve e próxima do metal. */
+.medalhao-tempo .mt-orbit{opacity:calc(var(--mt-orbit)*.45);border-color:color-mix(in srgb,var(--mt-color),transparent 82%)}
+.medalhao-tempo .mt-orbit-2{opacity:calc(var(--mt-orbit)*.2)}
+.medalhao-tempo .mt-orbit-3{display:none}
+.medalhao-tempo .mt-orbit:before,.medalhao-tempo .mt-orbit:after{width:2px;height:2px;box-shadow:0 0 4px var(--mt-color)}
+.medalhao-tempo .mt-aura{opacity:calc(var(--mt-glow)*.65);animation-name:mt-breathe-suave}
+.medalhao-tempo .mt-rays{opacity:calc(var(--mt-rays)*.35)}
+.avatar-tempo .mt-orbit-2,.avatar-tempo .mt-orbit-3{display:none}
+@keyframes mt-breathe-suave{0%,100%{transform:scale(.96);opacity:calc(var(--mt-glow)*.4)}50%{transform:scale(1.02);opacity:calc(var(--mt-glow)*.65)}}
+@media(prefers-reduced-motion:reduce){.avatar-oficial *,.avatar-oficial *:before,.avatar-oficial *:after,.rank-oficial:before{animation:none!important;transition:none!important}}

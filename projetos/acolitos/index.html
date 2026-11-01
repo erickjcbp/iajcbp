@@ -620,7 +620,7 @@ async function renderDashboardMembro(ctx) {
 
   // Saudação: foto à esquerda, informações à direita
   const greet = document.createElement('div'); greet.className = 'greet-section jornada-hero';
-  greet.appendChild(buildAvatarEl(m?.foto_url, role, innerWidth < 640 ? 190 : innerWidth < 1000 ? 220 : innerWidth < 1900 ? 264 : 300, {
+  greet.appendChild(buildAvatarEl(m?.foto_url, role, innerWidth < 640 ? 112 : innerWidth < 1000 ? 140 : innerWidth < 1900 ? 160 : 180, {
     nivelSlug: nivel, hero:true,
     tempoMembroId:m?.id, casaSlug: casaSlugDe(m),
     editable: !!m, membro: m || undefined,

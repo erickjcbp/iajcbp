@@ -3335,7 +3335,7 @@ function getNivelSvg(slug, size, spec) {
 // spec opcional (gerador de patch); senão usa o _patch salvo no nível, senão o padrão por slug.
 function buildRankEmblem(slug, size, spec) {
   const info = nivelInfo(slug); size = size || 80;
-  if(!spec && RANKS_OFICIAIS.includes(slug)){const el=document.createElement('div');el.className='rank-oficial';el.innerHTML=getNivelSvg(slug,size);return el;}
+  if(!spec && RANKS_OFICIAIS.includes(slug)){const el=document.createElement('div');el.className='rank-oficial';const i=RANKS_OFICIAIS.indexOf(slug);el.style.cssText=`--emblem-color:${CORES_OFICIAIS[i]};--feixe-forca:${.1+i*.015};--feixe-tempo:${42-i}s`;el.innerHTML=getNivelSvg(slug,size);return el;}
   spec = spec || info._patch || null;
   const activeSpec = spec || info._patch || specPadraoNivel(slug);
   const color = (PATCH_ESQUEMAS[activeSpec.esquema] || PATCH_ESQUEMAS.ouro).edge;
