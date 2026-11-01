@@ -19,6 +19,8 @@ export function limparDestino(frase) {
 }
 
 export function numeroDoDestino(frase) {
+  // só vale se a frase INTEIRA for um número (dígitos soltos no meio de um nome de grupo não contam)
+  if (/[^\d\s().+-]/.test(String(frase || ''))) return null
   const d = String(frase || '').replace(/\D/g, '')
   if (d.length < 10 || d.length > 13) return null
   return d.length <= 11 ? '55' + d : d
@@ -33,7 +35,7 @@ export function escolherGrupo(consulta, grupos) {
   const pontuados = grupos
     .filter((g) => querPais || !/^pais/.test(sem(g.nome)))
     .map((g) => ({ g, n: palavras.filter((p) => sem(g.nome).includes(p)).length }))
-    .filter((x) => x.n > 0)
+    .filter((x) => x.n === palavras.length)   // toda palavra do pedido precisa estar no nome do grupo
   if (!pontuados.length) return { erro: 'nenhum', opcoes: grupos.map((g) => g.nome) }
   const topo = Math.max(...pontuados.map((x) => x.n))
   const melhores = pontuados.filter((x) => x.n === topo)
@@ -107,6 +109,14 @@ export function criarComandosDono({ db, evo, log = console, agora = () => new Da
   }
 
   async function apagar(c) {
+    // "apagar" logo depois de "enviar": se o envio ainda está na fila, cancela ELE (não apaga outra mensagem mais antiga).
+    const fila = exigir(await db.from('tarcisio_envios').select('*').eq('tipo', 'manual').eq('estado', 'pendente')
+      .order('created_at', { ascending: false }).limit(1), 'achar envio na fila')[0]
+    if (fila) {
+      const feito = exigir(await db.from('tarcisio_envios').update({ estado: 'cancelado', erro: 'Cancelado a pedido do dono antes de sair' })
+        .eq('id', fila.id).eq('estado', 'pendente').select('id'), 'cancelar envio na fila')
+      if (feito.length) return `Cancelei o envio que ainda estava na fila para ${fila.destino_nome || fila.destino_numero}: «${resumo(fila.texto)}». Nada foi enviado.`
+    }
     let d = null
     if (limparDestino(c.destino) || numeroDoDestino(c.destino)) {
       d = await resolverDestino(c.destino)

@@ -26,6 +26,7 @@ test('limpa a frase do destino e reconhece número', () => {
   assert.equal(numeroDoDestino('(19) 99123-4567'), '5519991234567')
   assert.equal(numeroDoDestino('5519991234567'), '5519991234567')
   assert.equal(numeroDoDestino('cerimoniarios'), null)
+  assert.equal(numeroDoDestino('grupo 2026 1234567890'), null)   // dígitos no meio de texto não são número
 })
 
 test('escolhe o grupo certo, sem confundir Pais com Acólitos', () => {
@@ -33,6 +34,7 @@ test('escolhe o grupo certo, sem confundir Pais com Acólitos', () => {
   assert.equal(escolherGrupo('pais', GRUPOS).grupo.jid, 'pais@g.us')
   assert.equal(escolherGrupo('acolitos', GRUPOS).grupo.jid, 'aco@g.us')       // Pais fica de fora se não pediu
   assert.equal(escolherGrupo('escala', GRUPOS).grupo.jid, 'esc@g.us')
+  assert.equal(escolherGrupo('cerimoniarios de ouro', GRUPOS).erro, 'nenhum')   // toda palavra precisa casar
   assert.equal(escolherGrupo('coroinhas', GRUPOS).erro, 'varios')             // Acólitos e Escala
   assert.equal(escolherGrupo('xyz', GRUPOS).erro, 'nenhum')
   assert.equal(escolherGrupo('', GRUPOS).erro, 'sem_destino')
@@ -51,7 +53,7 @@ function bancoFalso({ envios = [], mensagens = [] } = {}) {
       is: (c) => { linhas = linhas.filter((l) => l[c] == null); return q },
       insert: (l) => { log.insert.push({ nome, l }); return Promise.resolve({ data: null, error: null }) },
       update: (u) => { upd = u; return q },
-      then: (ok) => ok({ data: upd ? null : linhas, error: null }),
+      then: (ok) => ok({ data: linhas, error: null }),
     }
     return q
   }
@@ -108,4 +110,17 @@ test('pedido de apagar vindo do painel é executado pelo robô', async () => {
   const db = bancoFalso({ mensagens: [{ id: 'm1', direcao: 'saida', numero: '5519991234567', external_id: 'WA9', apagar_pedido_em: '2026-11-01T10:00:00Z', apagada_em: null, apagar_erro: null }] })
   await cuidarApagarPedidos({ db, evo: { apagarParaTodos: async (...a) => { chamadas.push(a) } }, log: { info() {}, warn() {} } })
   assert.deepEqual(chamadas, [['5519991234567', 'WA9']])
+})
+
+test('apagar logo depois de enviar cancela o envio da fila, sem tocar em mensagem antiga', async () => {
+  const db = bancoFalso({ envios: [
+    { id: 'novo', tipo: 'manual', estado: 'pendente', destino_nome: 'Cerimoniários', texto: 'Oops' },
+    { id: 'velho', estado: 'enviado', external_id: 'WA-VELHO', enviado_em: '2026-11-01T10:00:00Z', destino_jid: 'cer@g.us', apagada_em: null },
+  ] })
+  let chamou = false
+  const c = criarComandosDono({ db, evo: { grupos: async () => GRUPOS, apagarParaTodos: async () => { chamou = true } }, log: { error() {} } })
+  const r = await c.executar('apagar')
+  assert.match(r, /Cancelei o envio que ainda estava na fila/)
+  assert.equal(chamou, false)
+  assert.equal(db.log.update.at(-1).upd.estado, 'cancelado')
 })
