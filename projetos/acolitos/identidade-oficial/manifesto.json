@@ -1,0 +1,201 @@
+{
+  "aprovado_em": "2026-11-01",
+  "status": "oficial_aprovado",
+  "versao_visual": "v19",
+  "formas_base": [
+    "aspirante",
+    "coroinha",
+    "acolitos",
+    "cerimoniarios"
+  ],
+  "brasoes": [
+    {
+      "slug": "aspirante",
+      "nome": "Aspirante",
+      "familia": "aspirante",
+      "arquivo": "brasoes/aspirante.png",
+      "sha256": "44dabdcb18ea0a1f8e1fa1be3dbe8e8594439fac4c7f663934b6f7d51409d968",
+      "arquivo_web": "brasoes/aspirante.webp",
+      "sha256_web": "967dc0cbd8b4fd17a5f6ce50a486c9ebc02fc95d1ebef13c55112370ff8f1164"
+    },
+    {
+      "slug": "coroinha",
+      "nome": "Coroinha",
+      "familia": "coroinha",
+      "arquivo": "brasoes/coroinha.png",
+      "sha256": "ce6e2a08d625e1d18374e91d9d10513e0798f4939adeb45d9584dccb3d308824",
+      "arquivo_web": "brasoes/coroinha.webp",
+      "sha256_web": "0d7e82f299c301d04f0269ea2be2c99d4b738af6f0ccf21ed410d3e8155c7910"
+    },
+    {
+      "slug": "acolito_aspirante",
+      "nome": "Acólito Aspirante",
+      "familia": "acolitos",
+      "arquivo": "brasoes/acolito_aspirante.png",
+      "sha256": "ef1a8697953516fa20808fa5a7036a43d915337a27c471ffcbcf206ae49c5ba8",
+      "arquivo_web": "brasoes/acolito_aspirante.webp",
+      "sha256_web": "fbb2ed67afed9feab5f5d0e4a80b938d861d39baefce7d049d7980521da68547"
+    },
+    {
+      "slug": "acolito_guardiao",
+      "nome": "Acólito Guardião",
+      "familia": "acolitos",
+      "arquivo": "brasoes/acolito_guardiao.png",
+      "sha256": "0f67bf762eb327f191a459eaba6346ab1c61236685edb70ecf198853cc3a6f31",
+      "arquivo_web": "brasoes/acolito_guardiao.webp",
+      "sha256_web": "2a42a97f18276515f404818709456797477a130c6ec81ddc3b331bf9539b4e70"
+    },
+    {
+      "slug": "acolito_sentinela",
+      "nome": "Acólito Sentinela",
+      "familia": "acolitos",
+      "arquivo": "brasoes/acolito_sentinela.png",
+      "sha256": "25c4130122a2e4e61c40900b57b602725619e9005beb63295e722957811a03fb",
+      "arquivo_web": "brasoes/acolito_sentinela.webp",
+      "sha256_web": "12c47a169091cff9cd7a0b82fcd326de452b9b7bf56f91f4685da59b0a6d55ed"
+    },
+    {
+      "slug": "aspirante_cerimoniario",
+      "nome": "Aspirante a Cerimoniário",
+      "familia": "cerimoniarios",
+      "arquivo": "brasoes/aspirante_cerimoniario.png",
+      "sha256": "11bae00fe5cf59147eb6b16806365baf9b26ffcac79185481d180a19cb076422",
+      "arquivo_web": "brasoes/aspirante_cerimoniario.webp",
+      "sha256_web": "8936d164e4dcf489f49fd8534cac3a9695d0585815af07df198af0d29ebcb72c"
+    },
+    {
+      "slug": "cerimoniario_aspirante",
+      "nome": "Cerimoniário Aspirante",
+      "familia": "cerimoniarios",
+      "arquivo": "brasoes/cerimoniario_aspirante.png",
+      "sha256": "d8f979ad520c4c74510128d42a4843b62aec2d56f3c9364096ee9c7a6557d7d4",
+      "arquivo_web": "brasoes/cerimoniario_aspirante.webp",
+      "sha256_web": "e33f2b45e00843d90f2ee96402b15ebd98c40a745ac4a87192d65fad6cfb9946"
+    },
+    {
+      "slug": "cerimoniario_guardiao",
+      "nome": "Cerimoniário Guardião",
+      "familia": "cerimoniarios",
+      "arquivo": "brasoes/cerimoniario_guardiao.png",
+      "sha256": "7565823c85dddf2aa302d61a8e4fa8db22c9f06b1d1bf763f3c1e62d48168891",
+      "arquivo_web": "brasoes/cerimoniario_guardiao.webp",
+      "sha256_web": "59921f345cb23765fe7a9022157430481ea741b2699bb12a7376c14606a215d4"
+    },
+    {
+      "slug": "cerimoniario_magistral",
+      "nome": "Cerimoniário Magistral",
+      "familia": "cerimoniarios",
+      "arquivo": "brasoes/cerimoniario_magistral.png",
+      "sha256": "d19057835ff13a92bccbce17f633dc31ac5b6523b3f05051eafb85c49b070f22",
+      "arquivo_web": "brasoes/cerimoniario_magistral.webp",
+      "sha256_web": "9a89814489d20c774201de6d4e47c27dc9c8ddb72bd241342ad875405a31605c"
+    },
+    {
+      "slug": "cerimoniario_mor",
+      "nome": "Cerimoniário Mor",
+      "familia": "cerimoniarios",
+      "arquivo": "brasoes/cerimoniario_mor.png",
+      "sha256": "fd06866829c07ad2e90bce4929d444c92f8bb168049ecebe296aa04b5a49fe7c",
+      "arquivo_web": "brasoes/cerimoniario_mor.webp",
+      "sha256_web": "f7bf7b5bc51861b8b78f59b23e4d069e9d7206d165cecb7a9e35ce095057a148"
+    }
+  ],
+  "medalhoes": [
+    {
+      "slug": "tempo_chama",
+      "nome": "Primeira Chama",
+      "material": "bronze",
+      "arquivo": "medalhoes/tempo-bronze-prata-ouro.png",
+      "atlas": [
+        2172,
+        724
+      ],
+      "recorte_xy_diametro": [
+        0,
+        155,
+        395
+      ],
+      "sha256": "7fb773a52c4a9749fe3e7b435870a14b6d9d9d6fe433fb3612de0a0256f64d4e",
+      "arquivo_web": "medalhoes/tempo-bronze-prata-ouro.webp",
+      "sha256_web": "33f8886c6b82b4718f642e60c6ef4a399420c4679807f16fe41016477091f033"
+    },
+    {
+      "slug": "tempo_pilar",
+      "nome": "Pilar do Tempo",
+      "material": "prata",
+      "arquivo": "medalhoes/tempo-bronze-prata-ouro.png",
+      "atlas": [
+        2172,
+        724
+      ],
+      "recorte_xy_diametro": [
+        382,
+        148,
+        415
+      ],
+      "sha256": "7fb773a52c4a9749fe3e7b435870a14b6d9d9d6fe433fb3612de0a0256f64d4e",
+      "arquivo_web": "medalhoes/tempo-bronze-prata-ouro.webp",
+      "sha256_web": "33f8886c6b82b4718f642e60c6ef4a399420c4679807f16fe41016477091f033"
+    },
+    {
+      "slug": "tempo_raiz",
+      "nome": "Raiz da Pastoral",
+      "material": "ouro",
+      "arquivo": "medalhoes/tempo-bronze-prata-ouro.png",
+      "atlas": [
+        2172,
+        724
+      ],
+      "recorte_xy_diametro": [
+        800,
+        140,
+        435
+      ],
+      "sha256": "7fb773a52c4a9749fe3e7b435870a14b6d9d9d6fe433fb3612de0a0256f64d4e",
+      "arquivo_web": "medalhoes/tempo-bronze-prata-ouro.webp",
+      "sha256_web": "33f8886c6b82b4718f642e60c6ef4a399420c4679807f16fe41016477091f033"
+    },
+    {
+      "slug": "tempo_altar",
+      "nome": "Coluna do Altar",
+      "material": "onix",
+      "arquivo": "medalhoes/tempo-onix-rubi.png",
+      "atlas": [
+        2172,
+        724
+      ],
+      "recorte_xy_diametro": [
+        1228,
+        117,
+        485
+      ],
+      "sha256": "a934091987e023ab1beb83f09aaf3edd8bd6292403cc12555ae1658027134ce6",
+      "arquivo_web": "medalhoes/tempo-onix-rubi.webp",
+      "sha256_web": "568b8d94908f6e9ad857573423d264f4ad0ecad2c50d786d8f4e6a0b10165fea"
+    },
+    {
+      "slug": "tempo_veterano",
+      "nome": "Veterano",
+      "material": "rubi",
+      "arquivo": "medalhoes/tempo-onix-rubi.png",
+      "atlas": [
+        2172,
+        724
+      ],
+      "recorte_xy_diametro": [
+        1692,
+        112,
+        480
+      ],
+      "sha256": "a934091987e023ab1beb83f09aaf3edd8bd6292403cc12555ae1658027134ce6",
+      "arquivo_web": "medalhoes/tempo-onix-rubi.webp",
+      "sha256_web": "568b8d94908f6e9ad857573423d264f4ad0ecad2c50d786d8f4e6a0b10165fea"
+    }
+  ],
+  "movimento": {
+    "brasoes": "luz e pulso progressivos por nível",
+    "medalhoes": "órbitas circulares próximas à arte; brilho sem faixa externa"
+  },
+  "observacao": "Aprovação visual registrada. Este manifesto não aplica migrações, não concede XP e não comprova publicação na interface.",
+  "derivados_web": "WebP384x576, qualidade88, alpha100; PNGs originais preservados. Medalhões WebP qualidade92, atlas e recortes preservados."
+}

@@ -859,7 +859,7 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
   function cardDe(m) {
     const row = document.createElement('div'); row.style.cssText = 'display:flex;flex-direction:column;gap:5px;padding:5px 8px;border:1px solid var(--border);border-radius:8px;margin-bottom:4px;background:var(--surface2);';
     const top = document.createElement('div'); top.style.cssText = 'display:flex;align-items:center;gap:8px;';
-    const av = buildAvatarEl(m.foto_url, null, 30, { nivelSlug: m.nivel || 'aspirante', casaSlug: casaSlugDe(m) }); av.style.flex = 'none';
+    const av = buildAvatarEl(m.foto_url, null, 30, { nivelSlug: m.nivel || 'aspirante', tempoMembroId:m?.id, casaSlug: casaSlugDe(m) }); av.style.flex = 'none';
     const info = document.createElement('div'); info.style.cssText = 'flex:1;min-width:0;';
     const nm = document.createElement('div'); nm.style.cssText = 'font-weight:700;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; nm.textContent = nomeExibir(m);
     // Quantas funções a pessoa já domina é O número desta aba — antes só aparecia

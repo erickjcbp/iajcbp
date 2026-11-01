@@ -1683,7 +1683,7 @@ function renderPlanilha(opts={}) {
     bFicha.style.cssText='border:none;background:none;cursor:pointer;font-size:13px;padding:2px;flex:none;';
     comIcone(bFicha, 'editar', '', 'Editar');bFicha.onclick=()=>abrirFichaRapida(m,{aoMudar:aoFichaRapidaMudou});
     wrapN.appendChild(bFicha);
-    wrapN.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30, { nivelSlug: m.nivel || nivelFromRole(patchRoleFromHabs(habs)), casaSlug: casaSlugDe(m) }));
+    wrapN.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30, { nivelSlug: m.nivel || nivelFromRole(patchRoleFromHabs(habs)), tempoMembroId:m?.id, casaSlug: casaSlugDe(m) }));
     const nm=document.createElement('div'); nm.style.cssText='min-width:0;line-height:1.15;';
     if((m.apelido||'').trim() && !nomeEmTelaPequena()){ const a=document.createElement('div'); a.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; a.textContent=m.apelido; const n=document.createElement('div'); n.style.cssText='font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; n.textContent=m.nome; nm.append(a,n); }
     else { nm.style.cssText='font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; nm.textContent=nomeExibir(m); }
@@ -2233,7 +2233,7 @@ function pintarRodizio(lista){
     bFichaRod.style.cssText='border:none;background:none;cursor:pointer;font-size:13px;padding:2px;flex:none;';
     comIcone(bFichaRod, 'editar', '', 'Editar');bFichaRod.onclick=()=>abrirFichaRapida(m,{aoMudar:aoFichaRapidaMudou});
     box.appendChild(bFichaRod);
-    box.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30, { nivelSlug: m.nivel || nivelFromRole(patchRoleFromHabs(habs)), casaSlug: casaSlugDe(m) }));
+    box.appendChild(buildAvatarEl(m.foto_url, patchRoleFromHabs(habs), 30, { nivelSlug: m.nivel || nivelFromRole(patchRoleFromHabs(habs)), tempoMembroId:m?.id, casaSlug: casaSlugDe(m) }));
     const nm=document.createElement('div'); nm.style.cssText='min-width:0;line-height:1.15;';
     const n1=document.createElement('div'); n1.style.cssText='font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'; n1.textContent=nomeExibir(m);
     const n2=document.createElement('div'); n2.style.cssText='font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';

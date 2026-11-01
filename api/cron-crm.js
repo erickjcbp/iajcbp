@@ -22,6 +22,7 @@
 // se cala. Aviso diário que chega vazio ensina a ignorar aviso — e aí o dia em que importa
 // passa batido também.
 import crypto from 'node:crypto';
+import { garantirMarcosTempo } from './_medalhoes-tempo.js';
 import { garantirCelebracoesRecorrentes } from './_celebracoes-recorrentes.js';
 
 // Compara segredos sem vazar tempo. Falso se qualquer um estiver vazio.
@@ -46,6 +47,13 @@ export default async function handler(req, res) {
   // A Vercel manda `Authorization: Bearer <CRON_SECRET>` nas chamadas de cron.
   const enviado = (req.headers.authorization || '').replace('Bearer ', '');
   if (!segredoConfere(enviado, CRON_SECRET)) return res.status(403).json({ error: 'Acesso negado' });
+
+  // Os aniversários são verificados diariamente (8h e 18h BRT), mesmo sem
+  // ninguém abrir a Jornada. A RPC é idempotente e restrita a service_role.
+  try {
+    const marcos=await garantirMarcosTempo({url:URL,serviceKey:SRK});
+    if(marcos.novas)console.log('cron-crm: medalhões de tempo concedidos:',marcos.novas);
+  } catch(e) { console.error('cron-crm: medalhões de tempo falharam:',e.message); }
 
   const h = { apikey: SRK, Authorization: `Bearer ${SRK}` };
   const jget = async (path) => {
