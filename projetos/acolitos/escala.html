@@ -663,9 +663,13 @@ async function loadDados() {
   rodizioLinhas = null; rodizioErro = null;
   const com = document.getElementById('filtro-com').value;
   const hoje = new Date(); const fim = new Date(hoje); fim.setDate(hoje.getDate()+56);
-  const ini = new Date(hoje); if(verHistorico) ini.setDate(hoje.getDate()-90);
+  // Semana vigente inteira (segunda a domingo): a missa de sábado que já passou continua na tela até a semana acabar.
+  // Só depois que a semana passa ela arquiva (some daqui e fica no Histórico).
+  const ini = new Date(hoje); ini.setDate(hoje.getDate() - ((hoje.getDay()+6)%7));
+  if(verHistorico) ini.setDate(hoje.getDate()-90);
+  const isoLocal = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   let q = sb.from('acolitos_celebracoes').select('*')
-    .gte('data', ini.toISOString().slice(0,10))
+    .gte('data', isoLocal(ini))
     .lte('data', fim.toISOString().slice(0,10))
     .order('data').order('minutos');
   if (com) q = q.eq('comunidade', com);
@@ -804,7 +808,10 @@ function renderCards() {
     const acoesSem=document.createElement('div');acoesSem.className='semana-acoes';acoesSem.style.cssText='display:flex;gap:6px;flex-wrap:wrap;';
     // Seleção de quais missas da semana entram no "Gerar": todas marcadas por padrão
     // (um clique continua gerando a semana inteira), e quem quiser deixa alguma de fora.
-    const selSemana=new Set(sem.items.map(c=>c.id));
+    // Missa que já passou continua visível na semana, mas fica FORA do Gerar e do Limpar (não se refaz escala do passado).
+    const hojeLocal=(()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+    const futuras=sem.items.filter(c=>c.data>=hojeLocal);
+    const selSemana=new Set(futuras.map(c=>c.id));
     const atualizaTextoGer=()=>{ comIcone(bGer, 'raio', 'Gerar escala ('+selSemana.size+'/'+sem.items.length+')'); };
     const bGer=document.createElement('button');bGer.className='btn-sm wine';bGer.style.flexShrink='0';bGer.onclick=()=>{
       const sel=sem.items.filter(c=>selSemana.has(c.id));
@@ -812,7 +819,7 @@ function renderCards() {
       gerarEscalaSemana(sel,bGer,sem.items);
     };
     atualizaTextoGer();
-    const bLimp=document.createElement('button');bLimp.className='btn-sm gray';bLimp.style.flexShrink='0';comIcone(bLimp, 'borracha', 'Limpar semana');bLimp.onclick=()=>limparEscalaSemana(sem.items,bLimp);
+    const bLimp=document.createElement('button');bLimp.className='btn-sm gray';bLimp.style.flexShrink='0';comIcone(bLimp, 'borracha', 'Limpar semana');bLimp.onclick=()=>{ if(!futuras.length){ uiAlert('Esta semana só tem missas que já passaram. Elas ficam guardadas e não podem ser limpas.'); return; } limparEscalaSemana(futuras,bLimp); };
     const bExp=document.createElement('button');bExp.className='btn-sm';bExp.style.cssText='flex-shrink:0;background:linear-gradient(165deg,rgba(232,185,74,.16),var(--surface2));border:1px solid var(--gold-dim);color:var(--gold-light);';comIcone(bExp, 'enviar', 'Exportar');bExp.onclick=()=>exportarSemana(sem.items,sem.label);
     const bConf=document.createElement('button');bConf.className='btn-sm';bConf.style.cssText='flex-shrink:0;background:linear-gradient(165deg,rgba(46,139,87,.20),var(--surface2));border:1px solid rgba(46,139,87,.55);color:#8fdCa8;';
     bConf.textContent='Confirmar escala da semana';bConf.onclick=()=>confirmarEscalaSemana(sem.items,sem.key,bConf);
