@@ -19,7 +19,7 @@ body{width:1080px;height:1350px;background:#F4E9D8;font-family:Inter,sans-serif;
 .t1{position:absolute;top:350px;width:100%;text-align:center;font:600 44px Sora;letter-spacing:.3em;color:${esc}}
 .t2{position:absolute;top:416px;width:100%;text-align:center;font:800 124px/1 Sora;color:${cor};letter-spacing:-.02em}
 .card{position:absolute;left:100px;right:100px;border-radius:28px;background:${cor};border:5px solid ${esc};box-shadow:0 10px 0 ${esc};color:#FBF7EC;padding:20px 40px}
-.c1{top:580px}.c2{top:870px}
+.c1{top:580px;background:#FBF7EC;border-color:#B08A2E;box-shadow:0 10px 0 #B08A2E;color:#2B1C0E}.c2{top:870px}
 .dia{font:700 30px Sora;letter-spacing:.2em}
 .data{font:800 54px/1.05 Sora;margin-top:2px}
 .hs{font:800 40px/1.1 Sora;margin-top:4px}
@@ -44,4 +44,4 @@ mkdirSync('html',{recursive:true}); writeFileSync('html/arte-finados.html',html)
 const b=await puppeteer.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',args:['--no-sandbox','--allow-file-access-from-files']})
 const p=await b.newPage(); await p.setViewport({width:1080,height:1350,deviceScaleFactor:1})
 await p.goto('file://'+process.cwd()+'/html/arte-finados.html',{waitUntil:'networkidle0'}); await p.evaluate(()=>document.fonts.ready)
-await p.screenshot({path:'arte-finados-cerimoniarios-v2.png'}); await b.close(); console.log('ok')
+await p.screenshot({path:'arte-finados-cerimoniarios-v3.png'}); await b.close(); console.log('ok')
