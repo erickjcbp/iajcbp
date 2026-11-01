@@ -674,8 +674,10 @@ async function loadDados() {
 
   if (celebracoes.length) {
     const ids = celebracoes.map(c=>c.id);
-    const { data: esc, error: escErr } = await sb.from('acolitos_escalas')
-      .select('*, acolitos_membros!membro_id(id,nome)').in('celebracao_id', ids);
+    // PAGINADA: com o Histórico ligado são 112 missas e mais de mil escalados, e o teto do banco é mil
+    // por resposta. Sem paginar, as linhas além do teto somem calado e falta gente nas funções.
+    const { data: esc, error: escErr } = await lerTudo(() => sb.from('acolitos_escalas')
+      .select('*, acolitos_membros!membro_id(id,nome)').in('celebracao_id', ids).order('id'));
     if (escErr) console.error('Erro lendo escalas:', escErr);
     escalasMap = {};
     (esc||[]).forEach(e => {
