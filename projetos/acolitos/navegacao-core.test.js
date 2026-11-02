@@ -38,7 +38,7 @@ test('jornada: lista fixa, independente de permissão', () => {
   // Lista mudou na Task 6: Conquistas entrou na barra do membro.
   // 'Faltar' saiu em 17/08: avisar ausência virou botão dentro das Escalas.
   assert.deepStrictEqual(ids(r),
-    ['home','quests','games','escalas-membro','agenda','conquistas','destaques','minha-casa']);
+    ['home','quests','escalas-membro','agenda','conquistas','destaques','minha-casa']);
 });
 
 test('jornada: Conquistas está na barra', () => {
@@ -57,7 +57,7 @@ test('jornada: ordem salva citando o id aposentado não quebra a barra', () => {
   const r = montarItensNav({ ...base, modo:'jornada', perms:[], isAdmin:false, ordemCfg: salva });
   assert.strictEqual(r.find(x => x.id === 'ausencias'), undefined);
   assert.strictEqual(ids(r)[0], 'home');
-  assert.strictEqual(ids(r).length, 8);
+  assert.strictEqual(ids(r).length, 7);
 });
 
 test('a ordem salva no Config manda, e ninguém é perdido no caminho', () => {

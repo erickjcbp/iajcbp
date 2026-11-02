@@ -9,7 +9,6 @@
   var ITENS_JORNADA = [
     { id:'home',            href:'index.html',           label:'Início',     icon:'home' },
     { id:'quests',          href:'missoes.html',         label:'Quests',     icon:'star' },
-    { id:'games', href:'games.html', label:'Games', icon:'play' },
     { id:'escalas-membro',  href:'escalas-membro.html',  label:'Escalas',    icon:'calendar' },
     { id:'agenda',          href:'agenda.html',          label:'Agenda',     icon:'calendar-days' },
     { id:'conquistas',      href:'conquistas.html',      label:'Conquistas', icon:'award' },
@@ -96,6 +95,7 @@
   // o id de uma tela vizinha é mentir sobre onde a pessoa está; a barra passa a acender
   // a SEÇÃO de onde a tela sai, que é para onde o Voltar também leva.
   var SECAO_DA_TELA = {
+    games: { coordenacao:'jornada', jornada:'quests' },
     ausencias: { coordenacao:'escala', jornada:'escalas-membro' },
     chamada:   { coordenacao:'escala', jornada:'escalas-membro' },
   };

@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="shared.css">
   <link rel="stylesheet" href="jornada-quests.css">
   <link rel="stylesheet" href="bonus-semana.css">
-  <link rel="stylesheet" href="quests-vivas.css">
+  <link rel="stylesheet" href="quests-vivas.css"><link rel="stylesheet" href="mensageiro-entrada.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
   <link rel="icon" href="icon-192.png">
@@ -108,6 +108,7 @@ async function renderAll() {
   content.appendChild(title);
   const intro = document.createElement('p'); intro.className = 'jq-intro'; intro.textContent = 'Escolha um desafio. O resto da história é com você.'; content.appendChild(intro);
 
+  if(ctx.membro&&ctx.membro.serve!==false){const game=document.createElement('a');game.className='quest-game-card';game.href='games.html';game.innerHTML='<img src="games-art/mensageiro/abertura-leve-v3.webp" alt="" width="180" height="120" loading="lazy"><div><span class="quest-game-tag">MINIGAMES · ATÉ 20 XP POR PARTIDA</span><strong>Tíquico — O Mensageiro da Esperança</strong><p>Uma carta de Paulo. Uma aventura pelas ruas da cidade.</p></div><span class="quest-game-cta">Jogar →</span>';content.appendChild(game);}
   if (ctx.membro) await renderBoard(content);
   else { const e = document.createElement('p'); e.className = 'mx-empty'; e.textContent = 'Sua conta não tem um perfil de membro ativo.'; content.appendChild(e); }
   main.style.minHeight=oldHeight+'px';main.replaceChildren(...content.childNodes);QuestUX.restore(pos);await new Promise(requestAnimationFrame);main.style.minHeight='';QuestUX.restore(pos);
