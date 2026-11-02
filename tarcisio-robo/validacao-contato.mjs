@@ -41,7 +41,9 @@ export function lerResposta(texto) {
   if (FILHO.test(limpo)) return { filho: true }
   if (NAO_SERVE.test(limpo)) return { naoServe: true }
   const idade = /\b(\d{1,2})\b/.exec(String(texto || ''))?.[1]
-  const original = String(texto || '').replace(/\d+/g, ' ')
+  // tira o que não é nome: rótulos ("Nome:", "Idade:") e a frase de quem confirma que serve
+  const original = String(texto || '').split('\n').filter((l) => !/^\s*idade\b/i.test(l) && !/^\s*(?:e\s+)?sirvo\b/i.test(l)).join('\n')
+    .replace(/\bnome(?:\s+completo)?\s*:/gi, ' ').replace(/\b(?:e\s+)?sirvo\b.*$/gim, ' ').replace(/\d+/g, ' ')
   const nome = original.split(/[\n,.;:]+/).map((p) => {
     const palavras = p.trim().split(/\s+/).filter(Boolean)
     return palavras.filter((w, i) => !(i === 0 && SOBRA.test(semAcento(w)))).join(' ')

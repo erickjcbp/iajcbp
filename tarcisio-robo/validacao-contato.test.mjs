@@ -257,3 +257,8 @@ test('o mesmo número para dois filhos vai para revisão', async () => {
   await v.receber({ numero: FAM, texto: 'João\n19 98888-7777\nMaria\n19 98888-7777' })
   assert.equal(grupos.length, 0); assert.equal(enviadas[0], RESPOSTAS.revisar)
 })
+test('ignora rótulos e a frase de quem confirma que serve', () => {
+  assert.deepEqual(lerResposta('Davi Martins Assis 11 anos e sirvo sim para o altar'), { nome: 'davi martins assis', idade: 11 })
+  assert.deepEqual(lerResposta('Nome: Maria Souza\nIdade: 21\nSirvo no altar'), { nome: 'maria souza', idade: 21 })
+  assert.deepEqual(lerResposta('Nome: Primo\nIdade: 21\nSirvo no altar'), { nome: 'primo', idade: 21 })
+})
