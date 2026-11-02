@@ -8,7 +8,7 @@ class MensageiroRenderer {
   this.reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;this.frames=MENSAGEIRO_ATLAS.frames;this.propFrames=MENSAGEIRO_ATLAS.propFrames;this.runnerHeight=Math.max(...this.frames.slice(0,6).map(f=>f.h));
   this.resize();this.observer=new ResizeObserver(()=>this.resize());this.observer.observe(canvas);
   const base='games-art/mensageiro/';
-  this.ready=Promise.all(Object.entries({background:'cidade-ampla-v6.webp',runner:'poses-leve-v3.webp',props:'objetos-leve-v3.webp',encounters:'encontros-v4.webp',guard:'soldado-ataque-v5.webp',road:'piso-natural-v6.webp'}).map(async([key,file])=>{const image=await this.load(base+file);if(image)this.assets[key]=image;else this.failed.push(file);})).then(()=>{this.scene.init(this.assets.road);this.resize();return this.failed.length===0;});
+  this.ready=Promise.all(Object.entries({background:'cidade-ampla-v6.webp',runner:'poses-leve-v3.webp',props:'objetos-leve-v3.webp',encounters:'encontros-v4.webp',guard:'soldado-ataque-v5.webp',road:'piso-natural-v6.webp',facades:'fachadas-v7.webp',plants:'laterais-v5.webp'}).map(async([key,file])=>{const image=await this.load(base+file);if(image)this.assets[key]=image;else this.failed.push(file);})).then(()=>{this.scene.init(this.assets.road,this.assets.facades,this.assets.plants);this.resize();return this.failed.length===0;});
  }
  load(src){return new Promise(resolve=>{const image=new Image();image.decoding='async';const timeout=setTimeout(()=>resolve(null),30000);image.onload=()=>{clearTimeout(timeout);resolve(image);};image.onerror=()=>{clearTimeout(timeout);resolve(null);};image.src=src;});}
  resize(){const r=this.canvas.getBoundingClientRect();this.w=Math.max(1,r.width);this.h=Math.max(1,r.height);this.ratio=Math.min(devicePixelRatio||1,1.5,Math.sqrt(1200000/(this.w*this.h)));this.canvas.width=Math.round(this.w*this.ratio);this.canvas.height=Math.round(this.h*this.ratio);this.ctx.setTransform(this.ratio,0,0,this.ratio,0,0);this.camera=MensageiroCamera.create(this.w,this.h,this.assets.background?.width||1024,this.assets.background?.height||683);this.backgroundCache=null;this.scene.resize(this.canvas.width,this.canvas.height);this.needsRedraw=true;}
@@ -43,10 +43,10 @@ class MensageiroRenderer {
   this.needsRedraw=false;
  }
  object(o,time,tick){
-  const c=this.ctx,p=this.project(o.z,o.lane),size=this.heroSize()*p.scale,lane=this.camera.gap*p.scale;
+  const c=this.ctx,p=MensageiroCamera.projectObject(this.camera,o.z,o.lane),size=this.heroSize()*p.scale,lane=this.camera.gap*p.scale;
   if(['guard','ally','water'].includes(o.kind)){
    const index=o.kind==='guard'?0:o.kind==='water'?3:1+o.id%2,f=ENCONTROS_FRAMES[index],height=size*(o.kind==='water'?.55:1.05),width=height*(o.kind==='guard'&&this.assets.guard?this.assets.guard.width/this.assets.guard.height:f.w/f.h);
-   c.save();c.globalAlpha=o.z>1?Math.max(0,1-(o.z-1)*7):1;this.ellipse(p.x,p.y,width*.43,size*.035,'#362b2540');
+   c.save();c.globalAlpha=Math.min(1,o.z*6)*(o.z>1?Math.max(0,1-(o.z-1)*7):1);this.ellipse(p.x,p.y,width*.43,size*.035,'#362b2540');
    if(o.kind==='guard'&&this.assets.guard)c.drawImage(this.assets.guard,p.x-width/2,p.y-height,width,height);
    else if(this.assets.encounters)c.drawImage(this.assets.encounters,f.x,f.y,f.w,f.h,p.x-width/2,p.y-height,width,height);
    else{c.fillStyle=o.kind==='guard'?'#ae3b35':o.kind==='water'?'#6bb8dc':'#7ebd74';c.fillRect(p.x-width/2,p.y-height,width,height);}
@@ -56,7 +56,7 @@ class MensageiroRenderer {
   const types={crate:{i:0,w:.75,h:.63},barrier:{i:1,w:.9,h:.42},arch:{i:2,w:.96,h:1.07},scroll:{i:3,w:.35,h:.38}},type=types[o.kind];if(!type)return;
   const dw=Math.min(lane*type.w,size*(o.kind==='scroll'?.4:1.15)),dh=size*type.h;
   const float=!this.reduced&&o.kind==='scroll'?Math.sin(time/250+o.id)*3*p.scale:0;
-  c.save();c.globalAlpha=o.z>1?Math.max(.12,1-(o.z-1)*5):1;
+  c.save();c.globalAlpha=Math.min(1,o.z*6)*(o.z>1?Math.max(.12,1-(o.z-1)*5):1);
   this.ellipse(p.x,p.y+2,dw*.42,size*.035,'#3c2d2540');
   if(o.kind==='scroll'){this.ellipse(p.x,p.y-dh*.55,dw*.85,dh*.7,'#ffe5a22b');}
   if(this.assets.props){const f=this.propFrames[type.i];c.drawImage(this.assets.props,f.x,f.y,f.w,f.h,p.x-dw/2,p.y-dh+float,dw,dh);}

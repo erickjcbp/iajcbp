@@ -57,3 +57,13 @@ Concluída otimização solicitada para público90%celular, câmera alinhada à 
 - CPU4x/rede50KB/s:pronto17009ms,artes562874bytes,29.8fps,drawP95=1.2ms,simulação98.2%,idle0. Revisão independente sem crítico/importante; prova de contextloss/restauração e faltaWebGL solicitada e executada separadamente.
 - Sem iPhone físico nesta validação; confirmação visual no aparelho segue necessária.
 - Prova gráfica passou:contexto perdido→fallback2D→contexto restaurado→piso; WebGLnull preserva2D; movimento reduzido produz quadros idênticos. Sem errosGLno desenho.
+
+## Rua tridimensional — v7 (foco confirmado pelo dono: deslocamento e laterais)
+
+- Saiu a composição de apenas fundo fixo+piso. Novo módulo mensageiro-cidade-3d gera uma rua com casas volumétricas, quatro fachadas IA, telhados, calçadas, toldos, bancas e vegetação, em um único buffer WebGL. Aproximadamente5500triângulos/0.86MB locais; sem biblioteca externa. Materiais, profundidade, iluminação e neblina de distância; fundo artístico distante preservado.
+- Materiais principais:atlasfachadas512POT57KB,vegetação reutiliza atlas existente; madeira/telha geradas localmente. Câmera adapta altura à proporção da tela mantendo avatar1.6m e três faixas abertas.
+- Trechos inteiros se deslocam e são reaproveitados fora da tela:testeRED/GREEN revelou uma planta ainda visível ao reciclar; margemNEAR6→4.5m garante todos os vértices laterais fora da tela antes do retorno ao fundo. Neblina oculta a entrada distante.
+- Revisão independente passou11testes câmera/geometria, sem falha crítica/importante noGL. Observação de deslize de sprites foi reclassificada como necessária ao pedido do dono e corrigida no único passe de ajustes.
+- CorreçãoRED/GREEN do deslize:projectObject mapeia progresso para distância física linear7+12.6*(1-z). City.advance usa o mesmo12.6m e velocidades exatas dos três estágios; teste em várias distâncias e estágios comprova igual deslocamento por tick. Sprites entram com fade suave; colisão e replay do motor não mudam.
+- Provas:598regras/API; geometria mantém zona jogável livre, reciclagem sem pop e velocidades iguais; E2Econtroles/áudio/pausa/reenvio; recuperaçãoWebGL/movimento reduzido/fallback; fotos360/390/768/1366/2560. Captura real da composição8s para inspeção de movimento; prova mede deslocamento das duas laterais, além do piso.
+- PerfCPU4x/rede50KB/s:29.96fps,P95draw1.5ms,simulação98.2%,artes687262B,pronto20056ms,idle0. Sem iPhone físico para teste de GPU/Safari. Nenhuma alteração em regras de pontuação, XP, ranking, narração ou localização no fim deQuests.
