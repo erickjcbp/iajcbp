@@ -291,3 +291,17 @@ test('mensagens seguidas do mesmo número são tratadas uma de cada vez', async 
   await Promise.all([v.receber({ numero: '5519', texto: 'oi' }).then(() => ordem.push(1)), v.receber({ numero: '5519', texto: 'oi' }).then(() => ordem.push(2))])
   assert.deepEqual(ordem, [1, 2])
 })
+test('dois filhos já na primeira resposta seguem direto, sem pedir de novo', async () => {
+  const { v, enviadas } = falso(dados('perguntado'))
+  await v.receber({ numero: FAM, texto: 'João Pedro da Silva, 14\nMaria de Souza Lima, 13' })
+  assert.match(enviadas[0], /WhatsApp próprio/)
+})
+test('a IA preserva os filhos quando a intenção é vários filhos', async () => {
+  const r = await interpretar({ ia: iaFalsa({ intencao: 'varios_filhos', nome: '', idade: null, filhos: [{ nome: 'João Silva', idade: 14 }, { nome: 'Ana Souza', idade: 12 }] }), modelo: 'm', texto: 'x', etapa: 'perguntado' })
+  assert.equal(r.filhos.length, 2)
+})
+test('pediu irmãos e veio um só: segue com esse, sem travar', async () => {
+  const { v, enviadas } = falso(dados('filhos_dados'))
+  await v.receber({ numero: FAM, texto: 'João Pedro da Silva, 14' })
+  assert.match(enviadas[0], /somente para comunicados/)
+})

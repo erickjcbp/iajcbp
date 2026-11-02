@@ -182,9 +182,9 @@ export async function interpretar({ ia, modelo, texto, etapa, log = console }) {
     if (!['dados', 'nao_serve', 'filho', 'varios_filhos', 'outro'].includes(v?.intencao)) return reserva()
     if (v.intencao === 'nao_serve') return { naoServe: true, filhos: [] }
     if (v.intencao === 'filho') return { filho: true, filhos: [] }
-    if (v.intencao === 'varios_filhos' && !etapaDeFilhos(etapa)) return { variosFilhos: true, filhos: [] }
     const filhos = (Array.isArray(v.filhos) ? v.filhos : []).slice(0, 6)
       .map((f) => ({ nome: limparNome(f?.nome), idade: limparIdade(f?.idade) })).filter((f) => f.nome.split(' ').length >= 2 && f.idade != null)
+    if (v.intencao === 'varios_filhos' && !etapaDeFilhos(etapa)) return { variosFilhos: true, filhos }
     return { nome: limparNome(v.nome), idade: limparIdade(v.idade), filhos }
   } catch (e) {
     // sem e.message: o erro de leitura pode carregar trechos da resposta de um menor
@@ -262,6 +262,8 @@ export function criarValidacaoContato({ db, evo, ia = null, relogio = () => new 
 
   async function receberDadosDosFilhos({ msg, linha, salvar, revisar }) {
     const lidos = (await entender(msg.texto, 'filhos_dados')).filhos
+    // quem disse que eram vários e mandou só um: segue com esse
+    if (lidos.length === 1) return resolver({ lidos, origem: 'filho', msg, linha, salvar, revisar })
     if (lidos.length < 2) {
       if (linha.tentativas >= 2) return revisar('dados dos filhos incompletos')
       exigir(await salvar({ tentativas: linha.tentativas + 1 }), 'contar tentativa')
@@ -394,7 +396,8 @@ export function criarValidacaoContato({ db, evo, ia = null, relogio = () => new 
     const completo = lido.nome?.split(' ').length >= 2 && lido.idade != null
     const parcial = { nome_informado: lido.nome || null, idade_informada: lido.idade ?? null }
     if (linha.situacao === 'filho_dados') {
-      if (lido.variosFilhos) return abrirIrmaos(salvar, msg.numero)
+      if (lido.filhos?.length >= 2) return resolver({ lidos: lido.filhos, origem: 'irmaos', msg, linha, salvar, revisar })
+    if (lido.variosFilhos) return abrirIrmaos(salvar, msg.numero)
       if (!completo) {
         if (linha.tentativas >= 2) return revisar('dados do filho incompletos', parcial)
         exigir(await salvar({ ...parcial, tentativas: linha.tentativas + 1 }), 'contar tentativa')
@@ -403,6 +406,7 @@ export function criarValidacaoContato({ db, evo, ia = null, relogio = () => new 
       }
       return resolver({ lidos: [lido], origem: 'filho', msg, linha, salvar, revisar })
     }
+    if (lido.filhos?.length >= 2) return resolver({ lidos: lido.filhos, origem: 'irmaos', msg, linha, salvar, revisar })
     if (lido.variosFilhos) return abrirIrmaos(salvar, msg.numero)
     if (lido.filho) {
       exigir(await salvar({ situacao: 'filho_dados', tentativas: 0 }), 'passar para os dados do filho')
