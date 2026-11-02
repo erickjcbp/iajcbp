@@ -7,15 +7,19 @@ const voice=$('intro-narration');let voiceOn=storage.get('mensageiro-voice','1')
 const INTRO_TEXT='Eu sou Tíquico. Levo uma carta de Paulo, e uma mensagem de esperança para uma comunidade que nos espera. O caminho é cheio de desafios. Você vem comigo? Vamos entregar esta mensagem, juntos.';
 const hudValues={},visualEvents=new Set();function setText(id,value){if(hudValues[id]!==value){$(id).textContent=value;hudValues[id]=value;}}
 audio.musicOn=storage.get('mensageiro-music','1')==='1';audio.fxOn=storage.get('mensageiro-fx','1')==='1';
-function soundLabels(){$('quick-sound').setAttribute('aria-pressed',String(audio.musicOn||audio.fxOn||voiceOn));$('quick-sound').setAttribute('aria-label',audio.musicOn||audio.fxOn||voiceOn?'Silenciar áudio':'Ativar áudio');for(const [id,on,label] of [['music',audio.musicOn,'Trilha'],['effects',audio.fxOn,'Efeitos'],['narration-toggle',voiceOn,'Narração']]){$(id).setAttribute('aria-pressed',String(on));$(id).querySelector('span').textContent=label+(id==='effects'?(on?' ligados':' desligados'):(on?' ligada':' desligada'));}}
+function soundLabels(){soundRecovery();$('quick-sound').setAttribute('aria-pressed',String(audio.musicOn||audio.fxOn||voiceOn));$('quick-sound').setAttribute('aria-label',audio.musicOn||audio.fxOn||voiceOn?'Silenciar áudio':'Ativar áudio');for(const [id,on,label] of [['music',audio.musicOn,'Trilha'],['effects',audio.fxOn,'Efeitos'],['narration-toggle',voiceOn,'Narração']]){$(id).setAttribute('aria-pressed',String(on));$(id).querySelector('span').textContent=label+(id==='effects'?(on?' ligados':' desligados'):(on?' ligada':' desligada'));}}
+function soundRecovery(){const button=$('audio-recover');if(button)button.hidden=mode!=='running'||((audio.musicOn||audio.fxOn)&&audio.ctx?.state==='running');}
+audio.onState=soundRecovery;
+function wakeSound(){audio.unlock().then(()=>{if(mode==='running'&&!document.hidden)audio.start();else if(['paused','finished','saving','save-error'].includes(mode))audio.pause();soundRecovery();}).catch(()=>soundRecovery());}
+$('audio-recover').onclick=()=>{audio.setMusic(true);audio.setFx(true);storage.set('mensageiro-music','1');storage.set('mensageiro-fx','1');wakeSound();soundLabels();};
 soundLabels();
-$('quick-sound').onclick=()=>{const on=!(audio.musicOn||audio.fxOn||voiceOn);voiceOn=on;voice.muted=!on;storage.set('mensageiro-voice',on?'1':'0');audio.setMusic(on);audio.setFx(on);storage.set('mensageiro-music',on?'1':'0');storage.set('mensageiro-fx',on?'1':'0');soundLabels();};
+$('quick-sound').onclick=()=>{const on=!(audio.musicOn||audio.fxOn||voiceOn);voiceOn=on;voice.muted=!on;storage.set('mensageiro-voice',on?'1':'0');audio.setMusic(on);audio.setFx(on);storage.set('mensageiro-music',on?'1':'0');storage.set('mensageiro-fx',on?'1':'0');if(on)wakeSound();soundLabels();};
 $('discard').onclick=()=>{mode='finished';lastSubmission=null;session=null;$('discard').hidden=true;start();};
-$('music').onclick=()=>{audio.setMusic(!audio.musicOn);storage.set('mensageiro-music',audio.musicOn?'1':'0');soundLabels();};
+$('music').onclick=()=>{audio.setMusic(!audio.musicOn);storage.set('mensageiro-music',audio.musicOn?'1':'0');if(audio.musicOn)wakeSound();soundLabels();};
 $('narration-toggle').onclick=()=>{voiceOn=!voiceOn;voice.muted=!voiceOn;storage.set('mensageiro-voice',voiceOn?'1':'0');soundLabels();};
 $('replay-intro').onclick=()=>{voiceOn=true;storage.set('mensageiro-voice','1');soundLabels();beginIntro();};
 $('skip-intro').onclick=()=>finishIntro();
-$('effects').onclick=()=>{audio.setFx(!audio.fxOn);storage.set('mensageiro-fx',audio.fxOn?'1':'0');soundLabels();};
+$('effects').onclick=()=>{audio.setFx(!audio.fxOn);storage.set('mensageiro-fx',audio.fxOn?'1':'0');if(audio.fxOn)wakeSound();soundLabels();};
 function status(text){$('xp-status').textContent=text;}
 async function api(action,body={}){const token=await freshToken();if(!token)throw Error('Entre novamente para registrar o XP.');const r=await fetch('/api/acolito-admin',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({action,membro_id:ctx.membro.id,...body}),signal:AbortSignal.timeout(15000)});const d=await r.json().catch(()=>null);if(!r.ok||!d)throw Error(d?.error||'Sem conexão para registrar esta partida.');return d;}
 function record(){renderer.needsRedraw=true;const n=$('record');n.textContent=best+' ';const sm=document.createElement('small');sm.textContent='PTS';n.append(sm);}
@@ -41,7 +45,7 @@ document.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target
 let touch=null;canvas.addEventListener('pointerdown',e=>{if(mode!=='running')return;touch={id:e.pointerId,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);});
 canvas.addEventListener('pointermove',e=>{if(!touch||e.pointerId!==touch.id)return;const dx=e.clientX-touch.x,dy=e.clientY-touch.y;if(Math.max(Math.abs(dx),Math.abs(dy))<24)return;input(Math.abs(dx)>Math.abs(dy)?dx>0?'right':'left':dy>0?'slide':'jump');touch=null;});
 for(const ev of ['pointerup','pointercancel'])canvas.addEventListener(ev,()=>touch=null);
-function pause(){if(mode==='narrating'){voice.pause();clearTimeout(narrationWait);mode='narration-paused';$('play').textContent='Continuar introdução';$('pause').setAttribute('aria-label','Retomar introdução');syncIntroControls();return;}if(mode==='starting'){startPaused=true;audio.pause();return;}if(mode!=='running')return;mode='paused';renderer.needsRedraw=true;audio.pause();pending=null;accumulator=0;$('pause').setAttribute('aria-label','Retomar partida');overlay('Uma pausa.','Sua carta está segura. Continue quando estiver pronto.','Continuar corrida','P ou Esc também retoma a partida.');}
+function pause(){if(mode==='narrating'){voice.pause();clearTimeout(narrationWait);mode='narration-paused';$('play').textContent='Continuar introdução';$('pause').setAttribute('aria-label','Retomar introdução');syncIntroControls();return;}if(mode==='starting'){startPaused=true;audio.pause();return;}if(mode!=='running')return;mode='paused';soundRecovery();renderer.needsRedraw=true;audio.pause();pending=null;accumulator=0;$('pause').setAttribute('aria-label','Retomar partida');overlay('Uma pausa.','Sua carta está segura. Continue quando estiver pronto.','Continuar corrida','P ou Esc também retoma a partida.');}
 function resume(){mode='running';$('game-overlay').hidden=true;audio.unlock().then(()=>{if(mode==='running'&&!document.hidden)audio.start();else audio.pause();}).catch(()=>{});$('pause').setAttribute('aria-label','Pausar partida');previous=performance.now();accumulator=0;canvas.focus({preventScroll:true});}
 function togglePause(){if(mode==='narrating'){pause();return;}if(mode==='narration-paused'){resumeIntro();return;}if(mode==='running')pause();else if(mode==='paused')resume();}
 $('pause').onclick=togglePause;document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});window.addEventListener('blur',pause);
@@ -51,9 +55,9 @@ async function start(){
  busy=true;mode='starting';syncIntroControls();startPaused=false;$('play').disabled=true;$('play').textContent='Abrindo caminho…';
  // Desbloqueia áudio dentro do gesto antes de esperar pela rede.
  audio.unlock().catch(()=>{});session=null;lastSubmission=null;
- try{session=await api('game_iniciar_v2');best=Math.max(best,session.record||0);status('Até 20 XP por corrida · '+session.day_xp+'/60 XP conquistados hoje.');}
+ try{session=await api('game_iniciar_v3');best=Math.max(best,session.record||0);status('Até 20 XP por corrida · '+session.day_xp+'/60 XP conquistados hoje.');}
  catch(e){status('Modo treino · '+e.message+' Esta partida não concede XP.');}
- const seed=session?.seed??crypto.getRandomValues(new Uint32Array(1))[0];state=C.create(seed);commands=[];pending=null;mode='running';previous=performance.now();accumulator=0;$('game-overlay').hidden=true;$('game-shell').classList.remove('story-intro');$('pause').setAttribute('aria-label','Pausar partida');$('pause').disabled=false;$('play').disabled=false;record();hud();busy=false;if(document.hidden||startPaused)pause();else{audio.start();canvas.focus({preventScroll:true});}
+ const seed=session?.seed??crypto.getRandomValues(new Uint32Array(1))[0];state=C.create(seed);commands=[];pending=null;mode='running';previous=performance.now();accumulator=0;$('game-overlay').hidden=true;$('game-shell').classList.remove('story-intro');$('pause').setAttribute('aria-label','Pausar partida');$('pause').disabled=false;$('play').disabled=false;record();hud();busy=false;if(document.hidden||startPaused)pause();else{audio.start();soundRecovery();canvas.focus({preventScroll:true});}
 }
 $('play').onclick=playAction;
 async function saveResult(){
@@ -64,7 +68,7 @@ async function saveResult(){
  finally{saving=null;}
 }
 function finish(){
- mode='finished';renderer.needsRedraw=true;syncIntroControls();$('pause').disabled=true;audio.stopNotes();audio.effect(state.won?'win':'end');best=Math.max(best,state.score);storage.set(key+'best-v2',best);record();hud();
+ mode='finished';renderer.needsRedraw=true;syncIntroControls();$('pause').disabled=true;soundRecovery();audio.stopNotes();audio.effect(state.won?'win':'end');best=Math.max(best,state.score);storage.set(key+'best-v2',best);record();hud();
  overlay(state.won?'Carta entregue!':'Mais uma tentativa?',state.score+' pontos · '+state.distance+' m · '+state.scrolls+' pergaminhos',session?'Confirmando XP…':'Jogar de novo',state.won?'A mensagem de esperança chegou à comunidade.':'Cada caminho ensina. A próxima corrida espera por você.');
  if(session){lastSubmission={sessao_id:session.id,ticks:state.tick,commands};saveResult();}else status('Treino concluído · recorde neste aparelho. Sem XP nesta partida.');
 }

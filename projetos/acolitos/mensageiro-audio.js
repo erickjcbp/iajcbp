@@ -3,8 +3,12 @@
 class MensageiroAudio {
  constructor(){this.ctx=null;this.timer=null;this.musicOn=true;this.fxOn=true;this.nodes=new Set();}
  async unlock(){
-  if(!this.ctx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;this.ctx=new AC();this.music=this.ctx.createGain();this.fx=this.ctx.createGain();this.music.gain.value=this.musicOn?.24:0;this.fx.gain.value=this.fxOn?.32:0;this.music.connect(this.ctx.destination);this.fx.connect(this.ctx.destination);}
-  await this.ctx.resume();return true;
+  // Safari/iPhone: sessão de mídia evita o silenciamento do Web Audio pela chave lateral.
+  try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(_){}
+  if(!this.ctx||this.ctx.state==='closed'){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;this.ctx=new AC();this.music=this.ctx.createGain();this.fx=this.ctx.createGain();this.music.gain.value=this.musicOn?.45:0;this.fx.gain.value=this.fxOn?.55:0;this.music.connect(this.ctx.destination);this.fx.connect(this.ctx.destination);this.ctx.onstatechange=()=>this.onState?.(this.ctx.state);}
+  // Buffer mínimo acionado no mesmo toque que criou/retomou o contexto.
+  const buffer=this.ctx.createBufferSource();buffer.buffer=this.ctx.createBuffer(1,1,this.ctx.sampleRate);buffer.connect(this.ctx.destination);buffer.start();buffer.onended=()=>buffer.disconnect();
+  await this.ctx.resume();this.onState?.(this.ctx.state);return this.ctx.state==='running';
  }
  tone(midi,time,duration,volume=.15,type='triangle',bus=this.music){
   if(!this.ctx)return;const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type=type;o.frequency.value=440*Math.pow(2,(midi-69)/12);g.gain.setValueAtTime(.0001,time);g.gain.exponentialRampToValueAtTime(volume,time+.012);g.gain.exponentialRampToValueAtTime(.0001,time+duration);o.connect(g);g.connect(bus);o.start(time);o.stop(time+duration+.02);this.nodes.add(o);o.onended=()=>{this.nodes.delete(o);o.disconnect();g.disconnect();};
@@ -18,8 +22,8 @@ class MensageiroAudio {
  }
  stopNotes(){clearInterval(this.timer);this.timer=null;for(const o of this.nodes){try{o.stop();}catch(_){} }this.nodes.clear();}
  pause(){this.stopNotes();if(this.ctx)this.ctx.suspend().catch(()=>{});}
- setMusic(on){this.musicOn=on;if(this.ctx)this.music.gain.setTargetAtTime(on?.24:0,this.ctx.currentTime,.025);}
- setFx(on){this.fxOn=on;if(this.ctx)this.fx.gain.setTargetAtTime(on?.32:0,this.ctx.currentTime,.025);}
+ setMusic(on){this.musicOn=on;if(this.ctx)this.music.gain.setTargetAtTime(on?.45:0,this.ctx.currentTime,.025);}
+ setFx(on){this.fxOn=on;if(this.ctx)this.fx.gain.setTargetAtTime(on?.55:0,this.ctx.currentTime,.025);}
  effect(kind){if(!this.ctx||!this.fxOn)return;const t=this.ctx.currentTime;
   if(kind==='collect'){this.tone(86,t,.09,.22,'sine',this.fx);this.tone(93,t+.055,.12,.15,'sine',this.fx);}
   if(kind==='jump')this.tone(67,t,.13,.1,'triangle',this.fx);

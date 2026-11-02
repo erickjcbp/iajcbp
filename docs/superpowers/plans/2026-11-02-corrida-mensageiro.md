@@ -36,3 +36,13 @@ Concluída otimização solicitada para público90%celular, câmera alinhada à 
 - Ranking autenticado semanal e geral, melhor partida por membro, desempate por primeiro resultado. Nova versão separa placar anterior e preserva replay v1.
 - Efeitos locais para aliado, água, combo, mudança de etapa, guarda e fim. Arte IA transparente única de 77KB.
 - Testes: regras unitárias/API, PostgreSQL isolado, interação real com áudio/touch/pausa/reenvio/treino, fotos 360/390/768/1366/2560 e CPU4x + rede50KB/s.
+
+## Ajustes solicitados após teste no iPhone — v5
+
+- Bug reproduzido: ligar trilha não retomava contexto WebAudio suspenso. Teste RED/GREEN cobrindo toggle, botão de recuperação, contexto fechado e audioSession playback. WebKit documenta mute switch e playback desde iOS17: https://bugs.webkit.org/show_bug.cgi?id=237322 . Sem iPhone físico para atestar reprodução final.
+- Abertura das faixas .30→.36 da largura; personagem .34→.30. Rua com textura IA em plano projetado e 101 bandas animadas, laterais de mercado que passam, sem vídeo pesado. Respeita movimento reduzido.
+- Soldado em nova pose de ataque com escudo/espada. Água com probabilidade5% e cooldown900ticks, média2.33 por90s (antes14.7 em30sementes).
+- Motor3 separado; replay1/2 preservados. Ranking inclui2/3 e mantém recordes; cap XP continua compartilhado.
+- Seção Games é o último append de Quests, após todas as missões.
+- Regras/API593 aprovados; banco isolado aprovado; telas/áudio/touch/pausa/reenvio/offline e cinco larguras aprovados. PerfCPU4x/rede50KB/s: artes678408B, ready19303ms, desenhoP95=1.2ms,29.8fps,simulação98%,idle0.
+- Revisão independente sem crítico/importante. Limitação: Safari/PWA físico precisa ser confirmado pelo dono.

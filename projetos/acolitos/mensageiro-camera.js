@@ -4,7 +4,7 @@
  function toScreen(c,x,y){return {x:c.offsetX+x*c.imageWidth*c.zoom,y:c.offsetY+y*c.imageHeight*c.zoom};}
  function create(width,height,imageWidth,imageHeight){
   const zoom=Math.max(width/imageWidth,height/imageHeight)*1.025;
-  const c={width,height,imageWidth,imageHeight,zoom,offsetX:(width-imageWidth*zoom)/2,offsetY:(height-imageHeight*zoom)/2,gap:width*.30};
+  const c={width,height,imageWidth,imageHeight,zoom,offsetX:(width-imageWidth*zoom)/2,offsetY:(height-imageHeight*zoom)/2,gap:width*.36};
   c.vanish=toScreen(c,LANDMARK.x,LANDMARK.y);const y=height*.84,bottom=toScreen(c,.5,1),t=(y-c.vanish.y)/(bottom.y-c.vanish.y);
   c.ground={x:c.vanish.x+(bottom.x-c.vanish.x)*t,y};return c;
  }

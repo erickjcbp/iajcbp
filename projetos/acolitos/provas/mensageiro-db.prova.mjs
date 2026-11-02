@@ -28,6 +28,7 @@ insert into acolitos_membros(id,user_id,grupo_irmaos,escalar_com_irmao)values(${
 insert into acolitos_temporadas default values;`);
 sql(fs.readFileSync(path.join(root,'supabase/migrations/20261102180000_corrida_mensageiro.sql'),'utf8'));
 sql(fs.readFileSync(path.join(root,'supabase/migrations/20261102210000_mensageiro_ranking.sql'),'utf8'));
+sql(fs.readFileSync(path.join(root,'supabase/migrations/20261102223000_mensageiro_agua_rara.sql'),'utf8'));
 assert.equal(sql("select has_function_privilege('anon','public.acolitos_game_sessao(uuid,uuid)','execute')"),'f');assert.equal(sql("select has_function_privilege('authenticated','public.acolitos_game_creditar(uuid,uuid,int,int,int)','execute')"),'f');assert.equal(sql("select has_table_privilege('authenticated','acolitos_game_sessoes','select')"),'f');
 assert.throws(()=>start(other),/Command failed/);const a=start();assert.throws(()=>rpc('authenticated',other,'acolitos_game_sessao',q(m)+','+q(a.id)),/Command failed/);
 assert.throws(()=>credit(a.id),/Command failed/);age(a.id);assert.equal(credit(a.id).xp,20);assert.equal(credit(a.id).novo,false);assert.equal(sql(`select xp_avulso from acolitos_membros where id=${q(m)}`),'20');
@@ -47,5 +48,6 @@ const v22=rpc('authenticated',uid,'acolitos_game_iniciar_v2',q(m));age(v22.id);c
 const rank=rpc('authenticated',uid,'acolitos_game_ranking',q(m)+",'semana'");assert.equal(rank.participantes,1);assert.equal(rank.top.length,1);assert.equal(rank.meu.pontos,900);assert.equal(rank.meu.eu,true);assert.equal(rank.meu.posicao,1);
 assert.throws(()=>rpc('authenticated',other,'acolitos_game_ranking',q(m)+",'geral'"));assert.throws(()=>rpc('anon',uid,'acolitos_game_ranking',q(m)+",'geral'"));
 assert.equal(sql("select has_function_privilege('anon','public.acolitos_game_ranking(uuid,text)','execute')"),'f');
+const v3=rpc('authenticated',uid,'acolitos_game_iniciar_v3',q(m));assert.equal(v3.versao,3);age(v3.id);credit(v3.id);assert.equal(rpc('authenticated',uid,'acolitos_game_ranking',q(m)+",'geral'").participantes,1);assert.throws(()=>rpc('authenticated',other,'acolitos_game_iniciar_v3',q(m)));assert.equal(sql("select has_function_privilege('anon','public.acolitos_game_iniciar_v3(uuid)','execute')"),'f');
 console.log(JSON.stringify({ok:true,checks:['grants','RLS privada','propriedade','família','tempo mínimo','idempotência','limite diário','temporada','sessão expirada','concorrência']}));
 }finally{if(running)execFileSync(bin+'pg_ctl',['-D',path.join(dir,'data'),'-m','fast','-w','stop'],{stdio:'pipe'});}
