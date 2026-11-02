@@ -91,6 +91,20 @@ export function decidir({ nome, idade, numero, membros, hoje }) {
   return { situacao: 'gravado', ficha, gravar: !digitos }
 }
 
+// Muita gente manda nome e idade em mensagens separadas: guarda a parte que já chegou.
+const juntar = (lido, linha) => (lido.filho || lido.variosFilhos || lido.naoServe) ? lido : {
+  ...lido,
+  nome: lido.nome?.split(' ').length >= 2 ? lido.nome : linha.nome_informado || lido.nome || '',
+  idade: lido.idade ?? linha.idade_informada ?? null,
+}
+// Pede só o que falta. quem: 'sua' ou 'de quem serve'.
+const faltando = (lido, tudo, quem) => {
+  const temNome = lido.nome?.split(' ').length >= 2
+  if (temNome && lido.idade == null) return `Obrigado! Agora só falta a idade${quem === 'sua' ? '' : ' de quem serve'}.`
+  if (!temNome && lido.idade != null) return `Obrigado! Agora só falta o nome completo${quem === 'sua' ? '' : ' de quem serve'}.`
+  return tudo
+}
+
 const ABERTAS = ['perguntado', 'filho_dados', 'filho_numero']
 
 export function criarValidacaoContato({ db, evo, relogio = () => new Date(), log = console }) {
@@ -160,13 +174,15 @@ export function criarValidacaoContato({ db, evo, relogio = () => new Date(), log
       return true
     }
     if (linha.situacao === 'filho_numero') return receberNumeroDoFilho({ msg, linha, salvar, revisar })
-    const lido = lerResposta(msg.texto)
+    const lido = juntar(lerResposta(msg.texto), linha)
+    const completo = lido.nome?.split(' ').length >= 2 && lido.idade != null
+    const parcial = { nome_informado: lido.nome || null, idade_informada: lido.idade ?? null }
     if (linha.situacao === 'filho_dados') {
       if (lido.variosFilhos) return revisar('família com mais de um filho')
-      if ((lido.nome || '').split(' ').length < 2 || lido.idade == null) {
-        if (linha.tentativas >= 2) return revisar('dados do filho incompletos')
-        exigir(await salvar({ tentativas: linha.tentativas + 1 }), 'contar tentativa')
-        await responder(msg.numero, RESPOSTAS.filho_repetir)
+      if (!completo) {
+        if (linha.tentativas >= 2) return revisar('dados do filho incompletos', parcial)
+        exigir(await salvar({ ...parcial, tentativas: linha.tentativas + 1 }), 'contar tentativa')
+        await responder(msg.numero, faltando(lido, RESPOSTAS.filho_repetir, 'de quem serve'))
         return true
       }
       const membros = await lerFichas()
@@ -191,9 +207,9 @@ export function criarValidacaoContato({ db, evo, relogio = () => new Date(), log
       await responder(msg.numero, RESPOSTAS.nao_serve)
       return true
     }
-    if ((lido.nome.split(' ').length < 2 || lido.idade == null) && linha.tentativas < 1) {
-      exigir(await salvar({ tentativas: linha.tentativas + 1 }), 'contar tentativa')
-      await responder(msg.numero, RESPOSTAS.repetir)
+    if (!completo && linha.tentativas < 2) {
+      exigir(await salvar({ ...parcial, tentativas: linha.tentativas + 1 }), 'contar tentativa')
+      await responder(msg.numero, faltando(lido, RESPOSTAS.repetir, 'sua'))
       return true
     }
     const membros = await lerFichas()
