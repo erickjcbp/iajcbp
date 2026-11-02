@@ -1,11 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { lerResposta, lerNumero, mesmoNumero, decidir, idadeEm, criarValidacaoContato, RESPOSTAS } from './validacao-contato.mjs'
+import { lerResposta, lerNumero, lerFilhos, lerCelulares, mesmoNumero, decidir, idadeEm, criarValidacaoContato, RESPOSTAS } from './validacao-contato.mjs'
 
 const hoje = '2026-11-02'
 const membros = [
   { id: 'a', nome: 'João Pedro da Silva', data_nascimento: '2012-03-10', telefone: null, celular_mae: '19 91111-2222', celular_recado: null },
   { id: 'b', nome: 'Ana Souza', data_nascimento: '2010-12-01', telefone: '19 99999-1111' },
+  { id: 'e', nome: 'Maria de Souza Lima', data_nascimento: '2013-01-01', telefone: null, celular_mae: '19 91111-2222', celular_recado: null },
   { id: 'c', nome: 'Luiz Costa', data_nascimento: '2011-01-01', telefone: null },
   { id: 'd', nome: 'Luiz Costa', data_nascimento: '2011-02-01', telefone: null },
 ]
@@ -119,9 +120,6 @@ test('falha ao incluir no grupo vai para revisão, sem dizer que deu certo', asy
   await v.receber({ numero: '5519911112222', texto: '19 98888-7777' })
   assert.equal(enviadas[0], RESPOSTAS.revisar)
 })
-test('mais de um filho vai para revisão', () => {
-  assert.equal(lerResposta('meus filhos servem').variosFilhos, true)
-})
 test('lê número em formatos comuns', () => {
   assert.equal(lerNumero('(19) 98888-7777'), '5519988887777')
   assert.equal(lerNumero('+55 19 98888 7777'), '5519988887777')
@@ -173,4 +171,43 @@ test('também junta os dados do filho vindos separados', async () => {
   const b = falso(dados('filho_dados', { tentativas: 1, nome_informado: 'joao pedro da silva' }))
   await b.v.receber({ numero: '5519911112222', texto: '14' })
   assert.match(b.enviadas[0], /somente para comunicados/)
+})
+const FAM = '5519911112222'
+test('lê irmãos em formatos comuns e ignora partículas do nome', () => {
+  assert.deepEqual(lerFilhos('João Pedro da Silva, 14\nMaria Souza Lima 13 anos').map((f) => f.idade), [14, 13])
+  assert.equal(lerFilhos('João Pedro da Silva 14 e Maria Souza Lima 13').length, 2)
+  assert.equal(decidir({ nome: 'maria souza lima', idade: 13, numero: FAM, membros, hoje }).ficha.id, 'e')
+  assert.deepEqual(lerCelulares('Pedro 19 98888-7777'), [{ nome: 'pedro', numero: '5519988887777' }])
+})
+test('irmãos: "meus filhos" pede nome e idade de cada um', async () => {
+  const { v, enviadas } = falso(dados('perguntado'))
+  await v.receber({ numero: FAM, texto: 'meus filhos servem' })
+  assert.equal(enviadas[0], RESPOSTAS.filhos_dados)
+})
+test('irmãos localizados: pergunta se têm celular próprio', async () => {
+  const { v, enviadas, escritas } = falso(dados('filhos_dados'))
+  await v.receber({ numero: FAM, texto: 'João Pedro da Silva, 14\nMaria de Souza Lima, 13' })
+  assert.match(enviadas[0], /WhatsApp próprio/)
+  assert.equal(escritas.find(([t]) => t === 'tarcisio_validacao_contato')[1].filhos.length, 2)
+})
+test('irmãos sem celular: mantém o contato da família e não mexe nas fichas', async () => {
+  const { v, enviadas, escritas, grupos } = falso(dados('filhos_celular', { filhos: [{ id: 'a', nome: 'João' }, { id: 'e', nome: 'Maria' }] }))
+  await v.receber({ numero: FAM, texto: 'não' })
+  assert.equal(enviadas[0], RESPOSTAS.filhos_sem_celular)
+  assert.equal(escritas.some(([t]) => t === 'acolitos_membros'), false); assert.equal(grupos.length, 0)
+})
+test('irmão com celular entra no grupo; o outro segue com o contato da família', async () => {
+  const { v, grupos, enviadas } = falso(dados('filhos_celular', { filhos: [{ id: 'a', nome: 'João' }, { id: 'e', nome: 'Maria' }] }))
+  await v.receber({ numero: FAM, texto: 'João 19 98888-7777' })
+  assert.equal(grupos.length, 1); assert.match(enviadas[0], /somente para comunicados/)
+})
+test('número sem nome reconhecível vai para revisão', async () => {
+  const { v, grupos, enviadas } = falso(dados('filhos_celular', { filhos: [{ id: 'a', nome: 'João' }, { id: 'e', nome: 'Maria' }] }))
+  await v.receber({ numero: FAM, texto: 'Carlos 19 98888-7777' })
+  assert.equal(grupos.length, 0); assert.equal(enviadas[0], RESPOSTAS.revisar)
+})
+test('irmãos: número fora da ficha vai para revisão', async () => {
+  const { v, enviadas } = falso(dados('filhos_dados', { numero: '5519977776666' }))
+  await v.receber({ numero: '5519977776666', texto: 'João Pedro da Silva, 14\nMaria de Souza Lima, 13' })
+  assert.equal(enviadas[0], RESPOSTAS.revisar)
 })
