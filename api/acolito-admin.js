@@ -1,3 +1,4 @@
+import gamesHandler from './_games.js';
 import bonusHandler from './_bonus.js';
 import {rotina as rotinaJornada} from './_bonus-rotina.js';
 import jornadaHandler from './_jornada.js';
@@ -135,6 +136,7 @@ function synthEmail(u) {
 }
 
 export default async function handler(req, res) {
+  if (typeof req.body?.action === 'string' && req.body.action.startsWith('game_')) return gamesHandler(req,res);
   if (req.method==='GET' && req.query?.action==='jornada_rotina') return rotinaJornada(req,res);
   if (typeof req.body?.action==='string' && req.body.action.startsWith('bonus_')) return bonusHandler(req,res);
   if (typeof req.body?.action === 'string' && req.body.action.startsWith('jornada_')) return jornadaHandler(req, res);

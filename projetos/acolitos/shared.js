@@ -2609,7 +2609,7 @@ const ORDEM_MODULOS = ['jornada','caixa','membros','escala','crm','tesouraria','
 // Rótulos amigáveis por arquivo, p/ o chip "Continuar" da Home (Fase 4).
 // Cobre telas de coordenação (NAV_COORD_MODULOS) e de jornada.
 const TELA_LABEL = {
-  'quizzes.html':'Dinâmicas', 'membros.html':'Membros', 'escala.html':'Escala', 'crm.html':'CRM',
+  'games.html':'Games', 'quizzes.html':'Dinâmicas', 'membros.html':'Membros', 'escala.html':'Escala', 'crm.html':'CRM',
   'tesouraria.html':'Tesouraria', 'casas.html':'Casas', 'tarefas.html':'Tarefas', 'retiros.html':'Retiros',
   'missoes.html':'Quests', 'escalas-membro.html':'Minhas Escalas', 'agenda.html':'Agenda',
   'destaques.html':'Destaques', 'minha-casa.html':'Minha Casa', 'ausencias.html':'Ausências',
@@ -2662,6 +2662,7 @@ function navMode(ctx) {
 
 function _svgIcon(name) {
   const d = {
+    play: 'M8 5l12 7-12 7V5z',
     home:           'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10',
     users:          'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75',
     shuffle:        'M16 3h5v5 M4 20L21 3 M21 16v5h-5 M15 15l6 6 M4 4l5 5',

@@ -38,7 +38,7 @@ test('jornada: lista fixa, independente de permissão', () => {
   // Lista mudou na Task 6: Conquistas entrou na barra do membro.
   // 'Faltar' saiu em 17/08: avisar ausência virou botão dentro das Escalas.
   assert.deepStrictEqual(ids(r),
-    ['home','quests','escalas-membro','agenda','conquistas','destaques','minha-casa']);
+    ['home','quests','games','escalas-membro','agenda','conquistas','destaques','minha-casa']);
 });
 
 test('jornada: Conquistas está na barra', () => {
@@ -57,7 +57,7 @@ test('jornada: ordem salva citando o id aposentado não quebra a barra', () => {
   const r = montarItensNav({ ...base, modo:'jornada', perms:[], isAdmin:false, ordemCfg: salva });
   assert.strictEqual(r.find(x => x.id === 'ausencias'), undefined);
   assert.strictEqual(ids(r)[0], 'home');
-  assert.strictEqual(ids(r).length, 7);
+  assert.strictEqual(ids(r).length, 8);
 });
 
 test('a ordem salva no Config manda, e ninguém é perdido no caminho', () => {
@@ -241,7 +241,7 @@ test('modo ausente ou torto não acende a barra da coordenação por engano', ()
 
 const { podeAbrirPaginaServico } = require('./navegacao-core.js');
 test('quem não serve não abre páginas pessoais de serviço, mas mantém coordenação', () => {
-  for(const tela of ['missoes','escalas-membro','conquistas','destaques','minha-casa'])assert.strictEqual(podeAbrirPaginaServico('/projetos/acolitos/'+tela+'.html',false),false);
+  for(const tela of ['games','missoes','escalas-membro','conquistas','destaques','minha-casa'])assert.strictEqual(podeAbrirPaginaServico('/projetos/acolitos/'+tela+'.html',false),false);
   for(const tela of ['index','jornada-admin','tarefas','membros','escala','casas','config'])assert.strictEqual(podeAbrirPaginaServico(tela+'.html',false),true);
   assert.strictEqual(modoDaBarra({ehEquipe:true,serve:false,salvo:'jornada'}),'coordenacao');
 });

@@ -9,6 +9,7 @@
   var ITENS_JORNADA = [
     { id:'home',            href:'index.html',           label:'Início',     icon:'home' },
     { id:'quests',          href:'missoes.html',         label:'Quests',     icon:'star' },
+    { id:'games', href:'games.html', label:'Games', icon:'play' },
     { id:'escalas-membro',  href:'escalas-membro.html',  label:'Escalas',    icon:'calendar' },
     { id:'agenda',          href:'agenda.html',          label:'Agenda',     icon:'calendar-days' },
     { id:'conquistas',      href:'conquistas.html',      label:'Conquistas', icon:'award' },
@@ -85,7 +86,7 @@
   // Conta que não serve usa os módulos da coordenação, sem páginas pessoais de serviço.
   function podeAbrirPaginaServico(caminho, serve) {
     var tela=String(caminho||'').split('?')[0].split('/').pop();
-    return serve !== false || ['missoes.html','escalas-membro.html','conquistas.html','destaques.html','minha-casa.html'].indexOf(tela)===-1;
+    return serve !== false || ['games.html','missoes.html','escalas-membro.html','conquistas.html','destaques.html','minha-casa.html'].indexOf(tela)===-1;
   }
 
   // ── Qual botão acende numa tela que não tem botão próprio ──────────────────

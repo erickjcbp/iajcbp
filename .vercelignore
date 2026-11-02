@@ -3,3 +3,9 @@ materiais-paroquia
 publicacoes
 estudos
 docs/encontros-nov-2026
+
+projetos/acolitos/provas/mensageiro-*
+projetos/acolitos/mensageiro-*.test.js
+testes-api/games.test.mjs
+supabase/migrations/20261102180000_corrida_mensageiro.sql
+docs/superpowers/plans/2026-11-02-corrida-mensageiro.md

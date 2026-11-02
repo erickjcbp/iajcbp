@@ -1,0 +1,47 @@
+{
+  "nome": "Tíquico — O Mensageiro da Esperança",
+  "versao": "mobile-v3",
+  "assets": [
+    {
+      "arquivo": "abertura-leve-v3.webp",
+      "bytes": 126570,
+      "sha256": "662a57e46331f0eea7a2769c9c88fe97044eca9173df525a4468e699ff764260",
+      "sob_demanda": false
+    },
+    {
+      "arquivo": "cidade-leve-v3.webp",
+      "bytes": 157702,
+      "sha256": "c0432700a24b5cf2e5e0348dc4e38f9a08ff056555edca7c6d43e785d084a86b",
+      "sob_demanda": false
+    },
+    {
+      "arquivo": "manto-oliva-v3.webp",
+      "bytes": 144862,
+      "sha256": "8e838f634c0848b142e70800103f3a7de2330c95798a3d38f481a41e7a729a7a",
+      "sob_demanda": true
+    },
+    {
+      "arquivo": "manto-vinho-v3.webp",
+      "bytes": 145052,
+      "sha256": "a08d04a99ba0923f61ccc67e7530c663fb053993bdbfd2b14872a97d45d69d99",
+      "sob_demanda": true
+    },
+    {
+      "arquivo": "objetos-leve-v3.webp",
+      "bytes": 72832,
+      "sha256": "774f09f47426c0a15903be6c0e9786dc6e9792a5eecd287023f5c4118b93b8ce",
+      "sob_demanda": false
+    },
+    {
+      "arquivo": "poses-leve-v3.webp",
+      "bytes": 144424,
+      "sha256": "cce5f6ac6555064f64e10dc446cafdaaf4e4add0b10278a1a81136cb23130c72",
+      "sob_demanda": false
+    },
+    {
+      "arquivo": "introducao-fish-v3.mp3",
+      "bytes": 74996,
+      "sob_demanda": true
+    }
+  ]
+}
