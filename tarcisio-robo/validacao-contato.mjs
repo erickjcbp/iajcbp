@@ -258,6 +258,8 @@ export function criarValidacaoContato({ db, evo, relogio = () => new Date(), log
       const ficha = r.ficha || r.sugestao
       if (!ficha) return revisar(`${r.motivo}: ${l.nome}`, base)
       if (origem !== 'proprio' && !linha.teste && !DA_FAMILIA(ficha, msg.numero)) return revisar('número não é o da família na ficha', { ...base, membro_id: ficha.id })
+      // para o próprio servo não há número da família: a idade certa é o que libera a sugestão do nome
+      if (r.sugestao && origem === 'proprio' && idadeEm(ficha.data_nascimento, hoje) !== l.idade) return revisar('nome incompleto e idade diferente da ficha', base)
       if (r.sugestao) sugerir = true
       fichas.push({ id: ficha.id, nome: ficha.nome, idadeDifere: !!r.idadeDifere })
     }

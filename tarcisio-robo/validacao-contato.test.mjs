@@ -244,3 +244,8 @@ test('irmãos confirmados seguem para a pergunta do celular', async () => {
   await v.receber({ numero: FAM, texto: 'sim' })
   assert.match(enviadas[0], /WhatsApp próprio/)
 })
+test('sem número da família, nome incompleto com idade errada não revela a ficha', async () => {
+  const { v, enviadas } = falso({ numero: '5519988887777', situacao: 'perguntado', tentativas: 0, teste: false })
+  await v.receber({ numero: '5519988887777', texto: 'João Silva, 30' })
+  assert.equal(enviadas[0], RESPOSTAS.revisar)
+})
