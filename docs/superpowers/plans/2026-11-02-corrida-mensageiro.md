@@ -46,3 +46,14 @@ Concluída otimização solicitada para público90%celular, câmera alinhada à 
 - Seção Games é o último append de Quests, após todas as missões.
 - Regras/API593 aprovados; banco isolado aprovado; telas/áudio/touch/pausa/reenvio/offline e cinco larguras aprovados. PerfCPU4x/rede50KB/s: artes678408B, ready19303ms, desenhoP95=1.2ms,29.8fps,simulação98%,idle0.
 - Revisão independente sem crítico/importante. Limitação: Safari/PWA físico precisa ser confirmado pelo dono.
+
+## Correção visual após rejeição do cenário v5 — v6
+
+- Teste RED/GREEN reproduziu a abertura insuficiente no meio do caminho: projeção z^1.55 mantinha os objetos concentrados no centro. Nova projeção z^.9, gap .40w: separação lateral42.87%no meio e80%na base. Ponto de fuga central elevado31.5%, pés86%.
+- Nova cidade IA portrait640x960112KB, rua ampla e livre; piso natural256x2569KB. Saiu toda a composição de barracas replicadas e piso em101bandas.
+- Piso único WebGL com textura contínua, projeção correta, mipmaps, juntas discretas e bordas suaves; movimento acelera junto com as etapas. Fallback preserva cenário2D. Respeita movimento reduzido.
+- Sem mudanças na física, pontuação, XP, ranking, áudio ou localização em Quests.
+- Validações:594regras/API; E2E/touch/pausa/reenvio/áudio; fotos360/390/tablet/notebook/TV. Piso compila e muda325862pixels/1.2Mentrequadros.
+- CPU4x/rede50KB/s:pronto17009ms,artes562874bytes,29.8fps,drawP95=1.2ms,simulação98.2%,idle0. Revisão independente sem crítico/importante; prova de contextloss/restauração e faltaWebGL solicitada e executada separadamente.
+- Sem iPhone físico nesta validação; confirmação visual no aparelho segue necessária.
+- Prova gráfica passou:contexto perdido→fallback2D→contexto restaurado→piso; WebGLnull preserva2D; movimento reduzido produz quadros idênticos. Sem errosGLno desenho.

@@ -1,21 +1,20 @@
-const LATERAIS_FRAMES=[{"x": 13, "y": 27, "w": 166, "h": 206}, {"x": 198, "y": 26, "w": 177, "h": 207}, {"x": 399, "y": 12, "w": 163, "h": 225}, {"x": 588, "y": 29, "w": 169, "h": 204}];
 const ENCONTROS_FRAMES=[{"x": 65, "y": 0, "w": 174, "h": 370}, {"x": 297, "y": 34, "w": 169, "h": 335}, {"x": 552, "y": 26, "w": 207, "h": 344}, {"x": 814, "y": 65, "w": 170, "h": 292}];
 const MENSAGEIRO_ATLAS={"frames":[{"x":54,"y":92,"w":179,"h":288},{"x":327,"y":92,"w":187,"h":280},{"x":625,"y":91,"w":167,"h":288},{"x":895,"y":92,"w":194,"h":282},{"x":43,"y":440,"w":185,"h":283},{"x":328,"y":439,"w":191,"h":270},{"x":595,"y":452,"w":244,"h":234},{"x":865,"y":507,"w":252,"h":191}],"propFrames":[{"x":20,"y":141,"w":214,"h":187},{"x":265,"y":201,"w":283,"h":127},{"x":564,"y":12,"w":324,"h":317},{"x":927,"y":132,"w":145,"h":195}],"runnerWidth":1152,"runnerHeight":768};
 /* Tíquico — arte original gerada a partir da direção visual aprovada.
    Atlas, animação e câmera são visuais; a física e o replay permanecem no Core. */
 class MensageiroRenderer {
  constructor(canvas){
-  this.canvas=canvas;this.ctx=canvas.getContext('2d');this.w=1;this.h=1;this.lane=1;this.assets={};this.failed=[];this.needsRedraw=true;
+  this.canvas=canvas;this.ctx=canvas.getContext('2d');this.w=1;this.h=1;this.lane=1;this.assets={};this.failed=[];this.needsRedraw=true;this.scene=new MensageiroCenario();
   this.reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;this.frames=MENSAGEIRO_ATLAS.frames;this.propFrames=MENSAGEIRO_ATLAS.propFrames;this.runnerHeight=Math.max(...this.frames.slice(0,6).map(f=>f.h));
   this.resize();this.observer=new ResizeObserver(()=>this.resize());this.observer.observe(canvas);
   const base='games-art/mensageiro/';
-  this.ready=Promise.all(Object.entries({background:'cidade-leve-v3.webp',runner:'poses-leve-v3.webp',props:'objetos-leve-v3.webp',encounters:'encontros-v4.webp',guard:'soldado-ataque-v5.webp',road:'piso-rua-v5.webp',scenery:'laterais-v5.webp'}).map(async([key,file])=>{const image=await this.load(base+file);if(image)this.assets[key]=image;else this.failed.push(file);})).then(()=>{this.resize();return this.failed.length===0;});
+  this.ready=Promise.all(Object.entries({background:'cidade-ampla-v6.webp',runner:'poses-leve-v3.webp',props:'objetos-leve-v3.webp',encounters:'encontros-v4.webp',guard:'soldado-ataque-v5.webp',road:'piso-natural-v6.webp'}).map(async([key,file])=>{const image=await this.load(base+file);if(image)this.assets[key]=image;else this.failed.push(file);})).then(()=>{this.scene.init(this.assets.road);this.resize();return this.failed.length===0;});
  }
  load(src){return new Promise(resolve=>{const image=new Image();image.decoding='async';const timeout=setTimeout(()=>resolve(null),30000);image.onload=()=>{clearTimeout(timeout);resolve(image);};image.onerror=()=>{clearTimeout(timeout);resolve(null);};image.src=src;});}
- resize(){const r=this.canvas.getBoundingClientRect();this.w=Math.max(1,r.width);this.h=Math.max(1,r.height);this.ratio=Math.min(devicePixelRatio||1,1.5,Math.sqrt(1200000/(this.w*this.h)));this.canvas.width=Math.round(this.w*this.ratio);this.canvas.height=Math.round(this.h*this.ratio);this.ctx.setTransform(this.ratio,0,0,this.ratio,0,0);this.camera=MensageiroCamera.create(this.w,this.h,this.assets.background?.width||1024,this.assets.background?.height||683);this.backgroundCache=null;this.roadBands=null;this.roadTile=null;this.needsRedraw=true;}
+ resize(){const r=this.canvas.getBoundingClientRect();this.w=Math.max(1,r.width);this.h=Math.max(1,r.height);this.ratio=Math.min(devicePixelRatio||1,1.5,Math.sqrt(1200000/(this.w*this.h)));this.canvas.width=Math.round(this.w*this.ratio);this.canvas.height=Math.round(this.h*this.ratio);this.ctx.setTransform(this.ratio,0,0,this.ratio,0,0);this.camera=MensageiroCamera.create(this.w,this.h,this.assets.background?.width||1024,this.assets.background?.height||683);this.backgroundCache=null;this.scene.resize(this.canvas.width,this.canvas.height);this.needsRedraw=true;}
  ellipse(x,y,rx,ry,color){const c=this.ctx;c.fillStyle=color;c.beginPath();c.ellipse(x,y,Math.max(0,rx),Math.max(0,ry),0,0,Math.PI*2);c.fill();}
  project(z,lane){return MensageiroCamera.project(this.camera,z,lane);}
- heroSize(){return Math.min(this.w*.30,this.h*.265);}
+ heroSize(){return Math.min(this.w*.26,this.h*.265);}
  background(s){
   const c=this.ctx,w=this.w,h=this.h;
   if(!this.backgroundCache){const buffer=document.createElement('canvas');buffer.width=this.canvas.width;buffer.height=this.canvas.height;const x=buffer.getContext('2d');x.setTransform(this.ratio,0,0,this.ratio,0,0);const im=this.assets.background;
@@ -23,29 +22,10 @@ class MensageiroRenderer {
    const shade=x.createLinearGradient(0,0,0,h);shade.addColorStop(0,'#1027390a');shade.addColorStop(.6,'#3c2d1710');shade.addColorStop(1,'#231b222e');x.fillStyle=shade;x.fillRect(0,0,w,h);this.backgroundCache=buffer;
   }
   c.drawImage(this.backgroundCache,0,0,w,h);
-  this.road(s);
- }
- road(s){
-  const c=this.ctx,cam=this.camera,source=this.assets.road;if(!source)return;
-  if(!this.roadTile){const tile=document.createElement('canvas');tile.width=source.width*2;tile.height=source.height;const x=tile.getContext('2d');x.drawImage(source,0,0);x.drawImage(source,source.width,0);this.roadTile=tile;}const im=this.roadTile;
-  if(!this.roadBands){this.roadBands=[];const start=Math.max(0,cam.vanish.y+7),step=Math.max(3,(this.h-start)/100),depth=cam.ground.y-cam.vanish.y;
-   for(let y=start;y<this.h;y+=step){const p=(y+step/2-cam.vanish.y)/depth,p2=(y+step-cam.vanish.y)/depth;if(p<=0)continue;this.roadBands.push({y,h:step+1,x:cam.vanish.x+(cam.ground.x-cam.gap*1.6-cam.vanish.x)*p,w:cam.gap*3.2*p,v:80/p,sh:Math.max(.7,80/p-80/p2),alpha:Math.min(1,p*8)});}
-  }
-  const travel=this.reduced?0:s.tick*.65;
-  c.save();for(const b of this.roadBands){c.globalAlpha=b.alpha*.9;const sy=(b.v+travel)%im.height,sample=Math.min(b.sh,im.height),sh=Math.min(sample,im.height-sy),height=b.h*sh/sample;c.drawImage(im,0,sy,im.width,sh,b.x,b.y,b.w,height);if(sh<sample)c.drawImage(im,0,0,im.width,sample-sh,b.x,b.y+height,b.w,b.h-height);}
-  c.globalAlpha=1;
-  // Bordas laterais convergem para o mesmo ponto de fuga da rua e dos obstáculos.
-  for(const side of [-.62,2.62]){const far=this.project(.04,side),near=this.project(1.6,side);c.strokeStyle='#7f654a45';c.lineWidth=3;c.beginPath();c.moveTo(far.x,far.y);c.lineTo(near.x,near.y);c.stroke();}
-  c.restore();
-
- }
- scenery(s){
-  const im=this.assets.scenery;if(!im)return;const c=this.ctx;
-  const items=[];for(let i=0;i<8;i++){const side=i%2?-1:1,z=(i/8*1.5+(this.reduced?0:s.tick*.00115))%1.5;if(z<.13)continue;items.push({side,z,index:i%4});}
-  for(const item of items.sort((a,b)=>a.z-b.z)){const p=this.project(item.z,item.side<0?-.9:2.9),f=LATERAIS_FRAMES[item.index],height=this.heroSize()*p.scale*(item.index===2?1.7:2.6),width=height*f.w/f.h;const x=p.x+(item.side<0?-width*.65:-width*.35);c.save();c.globalAlpha=Math.min(1,(item.z-.13)*6);c.drawImage(im,f.x,f.y,f.w,f.h,x,p.y-height,width,height);c.restore();}
+  this.scene.draw(c,this.camera,s.tick,this.reduced);
  }
  draw(s,time,outfit=0,delta=1/30,events=s.events){
-  const c=this.ctx,w=this.w,h=this.h;c.clearRect(0,0,w,h);this.lane+=(s.lane-this.lane)*(1-Math.exp(-18*delta));this.background(s);this.scenery(s);
+  const c=this.ctx,w=this.w,h=this.h;c.clearRect(0,0,w,h);this.lane+=(s.lane-this.lane)*(1-Math.exp(-18*delta));this.background(s);
   const visible=s.objects.filter(o=>o.z>0&&o.z<1.16).slice().sort((a,b)=>a.z-b.z);
   for(const o of visible.filter(o=>o.z<=1))this.object(o,time,s.tick);
   const pos=this.project(1,this.lane),unit=this.heroSize(),lift=s.jump?Math.sin(Math.PI*(48-s.jump)/48)*unit*.65:0;
