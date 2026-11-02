@@ -28,8 +28,8 @@ test('só grava com nome e idade batendo em uma ficha de telefone vazio', () => 
   assert.equal(r.situacao, 'gravado'); assert.equal(r.gravar, true); assert.equal(r.ficha.id, 'a')
 })
 test('qualquer dúvida vai para revisão', () => {
-  assert.equal(decidir({ nome: 'joao pedro da silva', idade: 15, numero: '5519', membros, hoje }).motivo, 'idade não confere com a ficha')
   assert.equal(decidir({ nome: 'ninguem aqui', idade: 14, numero: '5519', membros, hoje }).motivo, 'nome não encontrado no cadastro')
+  assert.equal(decidir({ nome: 'luiz costa', idade: 20, numero: '5519', membros, hoje }).motivo, 'mais de uma ficha possível')
   assert.equal(decidir({ nome: 'ana souza', idade: 15, numero: '5519988887777', membros, hoje }).motivo, 'ficha já tem outro número')
   assert.equal(decidir({ nome: 'luiz costa', idade: 15, numero: '5519', membros, hoje }).motivo, 'mais de uma ficha possível')
 })
@@ -210,4 +210,37 @@ test('irmãos: número fora da ficha vai para revisão', async () => {
   const { v, enviadas } = falso(dados('filhos_dados', { numero: '5519977776666' }))
   await v.receber({ numero: '5519977776666', texto: 'João Pedro da Silva, 14\nMaria de Souza Lima, 13' })
   assert.equal(enviadas[0], RESPOSTAS.revisar)
+})
+test('idade diferente não barra: vale a resposta e a divergência fica anotada', async () => {
+  const { v, escritas, enviadas } = falso({ numero: '5519988887777', situacao: 'perguntado', tentativas: 0, teste: false })
+  await v.receber({ numero: '5519988887777', texto: 'João Pedro da Silva, 15 anos' })
+  assert.equal(enviadas[0], RESPOSTAS.gravado('João'))
+  assert.equal(escritas.findLast(([t]) => t === 'tarcisio_validacao_contato')[1].motivo, 'idade informada difere da ficha')
+})
+test('nome incompleto recebe sugestão; sim segue, não vai para revisão', async () => {
+  const a = falso({ numero: '5519988887777', situacao: 'perguntado', tentativas: 0, teste: false })
+  await a.v.receber({ numero: '5519988887777', texto: 'João Silva, 14' })
+  assert.equal(a.enviadas[0], RESPOSTAS.confirmar_nome('João Pedro da Silva'))
+  assert.equal(a.escritas.some(([t]) => t === 'acolitos_membros'), false)
+  const pendente = { origem: 'proprio', fichas: [{ id: 'a', nome: 'João Pedro da Silva' }] }
+  const b = falso({ numero: '5519988887777', situacao: 'confirmar_nome', tentativas: 0, teste: false, pendente })
+  await b.v.receber({ numero: '5519988887777', texto: 'Sim' })
+  assert.deepEqual(b.escritas.find(([t]) => t === 'acolitos_membros')[1], { telefone: '19988887777' })
+  const c = falso({ numero: '5519988887777', situacao: 'confirmar_nome', tentativas: 0, teste: false, pendente })
+  await c.v.receber({ numero: '5519988887777', texto: 'não' })
+  assert.equal(c.enviadas[0], RESPOSTAS.revisar)
+})
+test('nome de filho só é sugerido a quem já tem o número da família na ficha', async () => {
+  const a = falso(dados('filho_dados', { numero: '5519977776666' }))
+  await a.v.receber({ numero: '5519977776666', texto: 'João Silva, 14' })
+  assert.equal(a.enviadas[0], RESPOSTAS.revisar)
+  const b = falso(dados('filhos_dados'))
+  await b.v.receber({ numero: FAM, texto: 'João Silva 14 e Maria Lima 13' })
+  assert.equal(b.enviadas[0], RESPOSTAS.confirmar_nome('João Pedro da Silva e Maria de Souza Lima'))
+})
+test('irmãos confirmados seguem para a pergunta do celular', async () => {
+  const pendente = { origem: 'irmaos', fichas: [{ id: 'a', nome: 'João Pedro da Silva' }, { id: 'e', nome: 'Maria de Souza Lima' }] }
+  const { v, enviadas } = falso(dados('confirmar_nome', { pendente }))
+  await v.receber({ numero: FAM, texto: 'sim' })
+  assert.match(enviadas[0], /WhatsApp próprio/)
 })

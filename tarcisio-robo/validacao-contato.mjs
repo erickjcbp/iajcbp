@@ -24,6 +24,8 @@ export const RESPOSTAS = {
   filhos_celular_repetir: 'Pode mandar o primeiro nome e o número com DDD, um por linha? Se nenhum tiver celular, responda "não".',
   filhos_sem_celular: 'Combinado! Mantive o contato da família nos cadastros. Paz e bem! 🙏',
   filhos_incluidos: (nomes) => `Prontinho! ${nomes} no grupo de Acólitos e Coroinhas, que é somente para comunicados. Os demais seguem com o contato da família. Paz e bem! 🙏`,
+  confirmar_nome: (nomes) => `Só para confirmar: é ${nomes}? Responda sim ou não.`,
+  confirmar_repetir: 'Pode responder sim ou não?',
   filho_incluido: (nome) => `Prontinho! ${nome} já está no grupo de Acólitos e Coroinhas. Lembrando que ele é somente para comunicados. Paz e bem! 🙏`,
 }
 
@@ -98,22 +100,37 @@ export const idadeEm = (nascimento, hoje) => {
 
 // Acha a ficha de quem serve pelo nome e pela idade que a família informou.
 const chaveNome = (n) => semAcento(n).split(' ').filter((p) => !['de', 'da', 'do', 'das', 'dos', 'e'].includes(p)).join(' ')
+// O nome decide. A idade que a pessoa informa vale mais que a da ficha: só desempata homônimos.
 export function acharFicha({ nome, idade, membros, hoje }) {
   if (nome.split(' ').length < 2 || idade == null) return { motivo: 'resposta incompleta' }
-  const iguais = membros.filter((m) => chaveNome(m.nome) === chaveNome(nome))
-  if (!iguais.length) return { motivo: 'nome não encontrado no cadastro' }
-  const certos = iguais.filter((m) => idadeEm(m.data_nascimento, hoje) === idade)
-  if (certos.length !== 1) return { motivo: certos.length ? 'mais de uma ficha possível' : 'idade não confere com a ficha' }
-  return { ficha: certos[0] }
+  const porIdade = (lista) => lista.filter((m) => idadeEm(m.data_nascimento, hoje) === idade)
+  const chave = chaveNome(nome)
+  const iguais = membros.filter((m) => chaveNome(m.nome) === chave)
+  if (iguais.length === 1) return { ficha: iguais[0], idadeDifere: idadeEm(iguais[0].data_nascimento, hoje) !== idade }
+  if (iguais.length) {
+    const certos = porIdade(iguais)
+    return certos.length === 1 ? { ficha: certos[0] } : { motivo: 'mais de uma ficha possível' }
+  }
+  // nome incompleto: mesmo primeiro nome e todas as palavras na ficha
+  const partes = chave.split(' ')
+  let parecidos = membros.filter((m) => {
+    const da = chaveNome(m.nome).split(' ')
+    return da[0] === partes[0] && partes.every((p) => da.includes(p))
+  })
+  if (parecidos.length > 1) parecidos = porIdade(parecidos)
+  if (parecidos.length === 1) return { sugestao: parecidos[0] }
+  return { motivo: parecidos.length ? 'mais de uma ficha possível' : 'nome não encontrado no cadastro' }
 }
 
 // membros: fichas do cadastro. Decide o que fazer, sem tocar no banco.
-export function decidir({ nome, idade, numero, membros, hoje }) {
-  const { ficha, motivo } = acharFicha({ nome, idade, membros, hoje })
-  if (!ficha) return { situacao: 'revisar', motivo }
+export function decidirTelefone(ficha, numero) {
   const digitos = String(ficha.telefone || '').replace(/\D/g, '')
   if (digitos && !mesmoNumero(digitos, numero)) return { situacao: 'revisar', motivo: 'ficha já tem outro número', ficha }
   return { situacao: 'gravado', ficha, gravar: !digitos }
+}
+export function decidir({ nome, idade, numero, membros, hoje }) {
+  const { ficha, motivo } = acharFicha({ nome, idade, membros, hoje })
+  return ficha ? decidirTelefone(ficha, numero) : { situacao: 'revisar', motivo: motivo || 'nome incompleto' }
 }
 
 // Muita gente manda nome e idade em mensagens separadas: guarda a parte que já chegou.
@@ -130,7 +147,8 @@ const faltando = (lido, tudo, quem) => {
   return tudo
 }
 
-const ABERTAS = ['perguntado', 'filho_dados', 'filho_numero', 'filhos_dados', 'filhos_celular']
+const ABERTAS = ['perguntado', 'filho_dados', 'filho_numero', 'filhos_dados', 'filhos_celular', 'confirmar_nome']
+const DA_FAMILIA = (f, numero) => [f.celular_mae, f.celular_recado, f.celular_responsavel].some((c) => mesmoNumero(c, numero))
 
 export function criarValidacaoContato({ db, evo, relogio = () => new Date(), log = console }) {
   const ler = async (numero) => exigir(await db.from('tarcisio_validacao_contato').select('*').eq('numero', numero).maybeSingle(), 'ler validação')
@@ -138,7 +156,7 @@ export function criarValidacaoContato({ db, evo, relogio = () => new Date(), log
     const linha = await ler(numero)
     return ABERTAS.includes(linha?.situacao)
   }
-  const lerFichas = async () => exigir(await db.from('acolitos_membros').select('id,nome,data_nascimento,telefone').eq('status', 'ativo').eq('serve', true), 'ler fichas')
+  const lerFichas = async () => exigir(await db.from('acolitos_membros').select('id,nome,data_nascimento,telefone,celular_mae,celular_recado,celular_responsavel').eq('status', 'ativo').eq('serve', true), 'ler fichas')
   async function responder(numero, texto) {
     const enviada = await evo.enviarTexto(numero, texto)
     exigir(await db.from('tarcisio_mensagens').insert({ numero, direcao: 'saida', texto, external_id: enviada?.key?.id || null, respondida: true }), 'guardar resposta')
@@ -199,19 +217,7 @@ export function criarValidacaoContato({ db, evo, relogio = () => new Date(), log
       await responder(msg.numero, RESPOSTAS.filhos_repetir)
       return true
     }
-    const membros = await lerFichas(), hoje = agoraSP(relogio()).data, filhos = []
-    for (const f of lidos) {
-      const { ficha, motivo } = acharFicha({ ...f, membros, hoje })
-      if (!ficha) return revisar(`${motivo}: ${f.nome}`, { filhos: lidos })
-      const contatos = exigir(await db.from('acolitos_membros').select('celular_mae,celular_recado,celular_responsavel').eq('id', ficha.id).maybeSingle(), 'ler contatos da ficha')
-      if (!linha.teste && ![contatos?.celular_mae, contatos?.celular_recado, contatos?.celular_responsavel].some((c) => mesmoNumero(c, msg.numero)))
-        return revisar('número não é o da família na ficha', { filhos: lidos })
-      filhos.push({ id: ficha.id, nome: ficha.nome.split(' ')[0] })
-    }
-    if (new Set(filhos.map((f) => f.id)).size !== filhos.length) return revisar('mesma ficha informada duas vezes', { filhos: lidos })
-    exigir(await salvar({ situacao: 'filhos_celular', tentativas: 0, filhos }), 'guardar fichas dos filhos')
-    await responder(msg.numero, RESPOSTAS.filhos_celular(filhos.map((f) => f.nome).join(' e ')))
-    return true
+    return resolver({ lidos, origem: 'irmaos', msg, linha, salvar, revisar })
   }
 
   async function receberCelularesDosFilhos({ msg, linha, salvar, revisar }) {
@@ -241,6 +247,67 @@ export function criarValidacaoContato({ db, evo, relogio = () => new Date(), log
     return true
   }
 
+  // Acha as fichas. Quem fala por filho precisa estar com o número da família em CADA ficha,
+  // e isso vem antes de sugerir: nome de criança não é revelado a número desconhecido.
+  async function resolver({ lidos, origem, msg, linha, salvar, revisar }) {
+    const membros = await lerFichas(), hoje = agoraSP(relogio()).data, fichas = []
+    const base = lidos.length === 1 ? { nome_informado: lidos[0].nome, idade_informada: lidos[0].idade } : { filhos: lidos }
+    let sugerir = false
+    for (const l of lidos) {
+      const r = acharFicha({ ...l, membros, hoje })
+      const ficha = r.ficha || r.sugestao
+      if (!ficha) return revisar(`${r.motivo}: ${l.nome}`, base)
+      if (origem !== 'proprio' && !linha.teste && !DA_FAMILIA(ficha, msg.numero)) return revisar('número não é o da família na ficha', { ...base, membro_id: ficha.id })
+      if (r.sugestao) sugerir = true
+      fichas.push({ id: ficha.id, nome: ficha.nome, idadeDifere: !!r.idadeDifere })
+    }
+    if (new Set(fichas.map((f) => f.id)).size !== fichas.length) return revisar('mesma ficha informada duas vezes', base)
+    if (sugerir) {
+      exigir(await salvar({ ...base, situacao: 'confirmar_nome', tentativas: 0, pendente: { origem, fichas } }), 'guardar sugestão')
+      await responder(msg.numero, RESPOSTAS.confirmar_nome(fichas.map((f) => f.nome).join(' e ')))
+      return true
+    }
+    return seguir({ origem, fichas, base, msg, linha, salvar, revisar })
+  }
+
+  async function confirmarNome({ msg, linha, salvar, revisar }) {
+    const t = semAcento(msg.texto)
+    if (/^(sim|s|isso|correto|confirmo|exato|e sim)\b/.test(t)) return seguir({ ...linha.pendente, base: {}, msg, linha, salvar, revisar })
+    if (/^(nao|n)\b/.test(t)) return revisar('família não confirmou o nome sugerido')
+    if (linha.tentativas >= 1) return revisar('nome sugerido sem confirmação')
+    exigir(await salvar({ tentativas: linha.tentativas + 1 }), 'contar tentativa')
+    await responder(msg.numero, RESPOSTAS.confirmar_repetir)
+    return true
+  }
+
+  async function seguir({ origem, fichas, base, msg, linha, salvar, revisar }) {
+    const aviso = fichas.some((f) => f.idadeDifere) ? { motivo: 'idade informada difere da ficha' } : {}
+    if (origem === 'irmaos') {
+      const filhos = fichas.map((f) => ({ id: f.id, nome: f.nome.split(' ')[0] }))
+      exigir(await salvar({ ...base, ...aviso, situacao: 'filhos_celular', tentativas: 0, filhos }), 'guardar fichas dos filhos')
+      await responder(msg.numero, RESPOSTAS.filhos_celular(filhos.map((f) => f.nome).join(' e ')))
+      return true
+    }
+    const [f] = fichas
+    if (origem === 'filho') {
+      exigir(await salvar({ ...base, ...aviso, situacao: 'filho_numero', tentativas: 0, membro_id: f.id }), 'guardar ficha do filho')
+      await responder(msg.numero, RESPOSTAS.filho_numero(f.nome.split(' ')[0]))
+      return true
+    }
+    const ficha = exigir(await db.from('acolitos_membros').select('id,nome,telefone').eq('id', f.id).maybeSingle(), 'ler ficha')
+    const r = decidirTelefone(ficha, msg.numero)
+    if (r.situacao === 'revisar') return revisar(r.motivo, { ...base, membro_id: f.id })
+    if (r.gravar && !linha.teste) {
+      // o filtro repete a condição: se a ficha ganhou telefone neste meio-tempo, nada é sobrescrito
+      const feitas = exigir(await db.from('acolitos_membros').update({ telefone: String(msg.numero).replace(/^55/, '') }).eq('id', f.id).or('telefone.is.null,telefone.eq.').select('id'), 'gravar telefone')
+      if (!feitas.length) return revisar('ficha ganhou telefone durante a validação', { ...base, membro_id: f.id })
+    }
+    exigir(await salvar({ ...base, ...aviso, situacao: 'gravado', membro_id: f.id }), 'concluir validação')
+    await responder(msg.numero, RESPOSTAS.gravado(f.nome.split(' ')[0]))
+    log.info('validação de contato: gravado')
+    return true
+  }
+
   // Devolve true quando a mensagem era resposta da validação: aí ela não vai para a IA.
   async function receber(msg) {
     const linha = await ler(msg.numero)
@@ -255,6 +322,7 @@ export function criarValidacaoContato({ db, evo, relogio = () => new Date(), log
       await responder(msg.numero, linha.situacao === 'perguntado' ? RESPOSTAS.repetir : linha.situacao === 'filho_dados' ? RESPOSTAS.filho_repetir : RESPOSTAS.filho_numero_repetir)
       return true
     }
+    if (linha.situacao === 'confirmar_nome') return confirmarNome({ msg, linha, salvar, revisar })
     if (linha.situacao === 'filho_numero') return receberNumeroDoFilho({ msg, linha, salvar, revisar })
     if (linha.situacao === 'filhos_dados') return receberDadosDosFilhos({ msg, linha, salvar, revisar })
     if (linha.situacao === 'filhos_celular') return receberCelularesDosFilhos({ msg, linha, salvar, revisar })
@@ -269,16 +337,7 @@ export function criarValidacaoContato({ db, evo, relogio = () => new Date(), log
         await responder(msg.numero, faltando(lido, RESPOSTAS.filho_repetir, 'de quem serve'))
         return true
       }
-      const membros = await lerFichas()
-      const achado = acharFicha({ ...lido, membros, hoje: agoraSP(relogio()).data })
-      const base = { nome_informado: lido.nome, idade_informada: lido.idade }
-      if (!achado.ficha) return revisar(achado.motivo, base)
-      const contatos = exigir(await db.from('acolitos_membros').select('celular_mae,celular_recado,celular_responsavel').eq('id', achado.ficha.id).maybeSingle(), 'ler contatos da ficha')
-      if (!linha.teste && ![contatos?.celular_mae, contatos?.celular_recado, contatos?.celular_responsavel].some((c) => mesmoNumero(c, msg.numero)))
-        return revisar('número não é o da família na ficha', { ...base, membro_id: achado.ficha.id })
-      exigir(await salvar({ ...base, situacao: 'filho_numero', tentativas: 0, membro_id: achado.ficha.id }), 'guardar ficha do filho')
-      await responder(msg.numero, RESPOSTAS.filho_numero(achado.ficha.nome.split(' ')[0]))
-      return true
+      return resolver({ lidos: [lido], origem: 'filho', msg, linha, salvar, revisar })
     }
     if (lido.variosFilhos) return abrirIrmaos(salvar, msg.numero)
     if (lido.filho) {
@@ -296,23 +355,7 @@ export function criarValidacaoContato({ db, evo, relogio = () => new Date(), log
       await responder(msg.numero, faltando(lido, RESPOSTAS.repetir, 'sua'))
       return true
     }
-    const membros = await lerFichas()
-    const r = decidir({ ...lido, numero: msg.numero, membros, hoje: agoraSP(relogio()).data })
-    const base = { nome_informado: lido.nome, idade_informada: lido.idade, membro_id: r.ficha?.id || null, motivo: r.motivo || null }
-    if (r.situacao === 'gravado' && r.gravar && !linha.teste) {
-      const nacional = String(msg.numero).replace(/^55/, '')
-      // o filtro repete a condição: se a ficha ganhou telefone neste meio-tempo, nada é sobrescrito
-      const feitas = exigir(await db.from('acolitos_membros').update({ telefone: nacional }).eq('id', r.ficha.id).or('telefone.is.null,telefone.eq.').select('id'), 'gravar telefone')
-      if (!feitas.length) {
-        exigir(await salvar({ ...base, situacao: 'revisar', motivo: 'ficha ganhou telefone durante a validação' }), 'marcar revisão')
-        await responder(msg.numero, RESPOSTAS.revisar)
-        return true
-      }
-    }
-    exigir(await salvar({ ...base, situacao: r.situacao }), 'concluir validação')
-    await responder(msg.numero, r.situacao === 'gravado' ? RESPOSTAS.gravado(r.ficha.nome.split(' ')[0]) : RESPOSTAS.revisar)
-    log.info(`validação de contato: ${r.situacao}`)
-    return true
+    return resolver({ lidos: [lido], origem: 'proprio', msg, linha, salvar, revisar })
   }
   return { aguardando, receber }
 }
