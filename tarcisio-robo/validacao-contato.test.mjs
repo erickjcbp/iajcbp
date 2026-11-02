@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { lerResposta, lerNumero, lerFilhos, lerCelulares, mesmoNumero, decidir, idadeEm, criarValidacaoContato, RESPOSTAS } from './validacao-contato.mjs'
+import { interpretar, lerResposta, lerNumero, lerFilhos, lerCelulares, mesmoNumero, decidir, idadeEm, criarValidacaoContato, RESPOSTAS } from './validacao-contato.mjs'
 
 const hoje = '2026-11-02'
 const membros = [
@@ -261,4 +261,26 @@ test('ignora rótulos e a frase de quem confirma que serve', () => {
   assert.deepEqual(lerResposta('Davi Martins Assis 11 anos e sirvo sim para o altar'), { nome: 'davi martins assis', idade: 11 })
   assert.deepEqual(lerResposta('Nome: Maria Souza\nIdade: 21\nSirvo no altar'), { nome: 'maria souza', idade: 21 })
   assert.deepEqual(lerResposta('Nome: Primo\nIdade: 21\nSirvo no altar'), { nome: 'primo', idade: 21 })
+})
+const iaFalsa = (r) => ({ texto: async () => (typeof r === 'string' ? r : JSON.stringify(r)) })
+test('a leitura pela IA entrega nome e idade limpos', async () => {
+  const r = await interpretar({ ia: iaFalsa({ intencao: 'dados', nome: 'Yasmin da Silva Oliveira', idade: 11, filhos: [] }), modelo: 'm', texto: 'x', etapa: 'perguntado', log: { warn() {} } })
+  assert.equal(r.nome, 'yasmin da silva oliveira'); assert.equal(r.idade, 11)
+})
+test('intenções da IA viram os mesmos caminhos da conversa', async () => {
+  const ler = (intencao) => interpretar({ ia: iaFalsa({ intencao, nome: '', idade: null, filhos: [] }), modelo: 'm', texto: 'x', etapa: 'perguntado' })
+  assert.equal((await ler('nao_serve')).naoServe, true)
+  assert.equal((await ler('filho')).filho, true)
+  assert.equal((await ler('varios_filhos')).variosFilhos, true)
+  assert.equal((await ler('outro')).nome, '')
+})
+test('idade inválida da IA vira nula, e JSON ruim cai nas regras', async () => {
+  const a = await interpretar({ ia: iaFalsa({ intencao: 'dados', nome: 'Ana Souza', idade: 300, filhos: [] }), modelo: 'm', texto: 'x', etapa: 'perguntado' })
+  assert.equal(a.idade, null)
+  const b = await interpretar({ ia: iaFalsa('nao sei'), modelo: 'm', texto: 'João Pedro da Silva, 14', etapa: 'perguntado', log: { warn() {} } })
+  assert.equal(b.nome, 'joao pedro da silva')
+})
+test('sem IA, a conversa segue pelas regras', async () => {
+  const r = await interpretar({ ia: null, texto: 'João Pedro da Silva, 14', etapa: 'perguntado' })
+  assert.equal(r.idade, 14)
 })

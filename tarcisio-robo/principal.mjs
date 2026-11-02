@@ -66,7 +66,7 @@ const confirmarSemana = async (sabado) => {
     return r.ok ? r : { ...r, erro: r.erro || r.motivo || 'não consegui confirmar' }
   } catch (e) { return { ok: false, erro: e.message } }
 }
-const validacao = criarValidacaoContato({ db, evo, log: console })
+const validacao = criarValidacaoContato({ db, evo, ia, log: console })
 const entradaDono = criarEntradaDono({ db, evo, ministros, confirmarSemana, validacao, log: console })
 const robo = criarRobo({ db, evo, ia, assistente, escalaAuto, acolhida, supabaseUrl: process.env.SUPABASE_URL })
 
