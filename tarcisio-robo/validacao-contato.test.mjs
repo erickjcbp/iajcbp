@@ -4,7 +4,7 @@ import { lerResposta, lerNumero, decidir, idadeEm, criarValidacaoContato, RESPOS
 
 const hoje = '2026-11-02'
 const membros = [
-  { id: 'a', nome: 'João Pedro da Silva', data_nascimento: '2012-03-10', telefone: null },
+  { id: 'a', nome: 'João Pedro da Silva', data_nascimento: '2012-03-10', telefone: null, celular_mae: '19 91111-2222', celular_recado: null },
   { id: 'b', nome: 'Ana Souza', data_nascimento: '2010-12-01', telefone: '19 99999-1111' },
   { id: 'c', nome: 'Luiz Costa', data_nascimento: '2011-01-01', telefone: null },
   { id: 'd', nome: 'Luiz Costa', data_nascimento: '2011-02-01', telefone: null },
@@ -45,7 +45,8 @@ function falso(linha, ficha = membros[0]) {
     update: (v) => { escritas.push([t, v]); return fim([{ id: 'a' }]) },
     insert: (v) => { escritas.push([t, v]); return fim(null) },
   }) }
-  return { v: criarValidacaoContato({ db, evo: { enviarTexto: async (_n, x) => { enviadas.push(x); return {} }, adicionarAoGrupo: async (j, n) => { if (ficha?.semGrupo) throw new Error('sem permissão'); grupos.push([j, n]) } }, relogio: () => new Date('2026-11-02T15:00:00Z'), log: { info() {}, warn() {} } }), escritas, enviadas, grupos }
+  const evo = { enviarTexto: async (_n, x) => { enviadas.push(x); return {} }, adicionarAoGrupo: async (j, n) => { if (ficha?.semGrupo) throw new Error('sem permissão'); grupos.push([j, n]) } }
+  return { evo, v: criarValidacaoContato({ db, evo, relogio: () => new Date('2026-11-02T15:00:00Z'), log: { info() {}, warn() {} } }), escritas, enviadas, grupos }
 }
 test('modo teste responde, mas nunca escreve na ficha', async () => {
   const { v, escritas, enviadas } = falso({ numero: '5519', situacao: 'perguntado', tentativas: 0, teste: true })
@@ -110,7 +111,7 @@ test('ficha com outro número, ou filho no número da família, não entra no gr
   await a.v.receber({ numero: '5519911112222', texto: '19 98888-7777' })
   assert.equal(a.grupos.length, 0); assert.equal(a.enviadas[0], RESPOSTAS.revisar)
   const b = falso(dados('filho_numero'))
-  await b.v.receber({ numero: '5519911112222', texto: 'usa o meu, 19 91111-2222' })
+  await b.v.receber({ numero: '5519911112222', texto: '19 91111-2222' })
   assert.equal(b.grupos.length, 0); assert.equal(b.enviadas[0], RESPOSTAS.revisar)
 })
 test('falha ao incluir no grupo vai para revisão, sem dizer que deu certo', async () => {
@@ -125,4 +126,22 @@ test('lê número em formatos comuns', () => {
   assert.equal(lerNumero('(19) 98888-7777'), '5519988887777')
   assert.equal(lerNumero('+55 19 98888 7777'), '5519988887777')
   assert.equal(lerNumero('não tem'), null)
+  assert.equal(lerNumero('usa o meu, 19 91111-2222'), null)
+})
+test('quem fala pelo filho precisa estar com o número da família na ficha', async () => {
+  const { v, enviadas, escritas } = falso(dados('filho_dados', { numero: '5519977776666' }))
+  await v.receber({ numero: '5519977776666', texto: 'João Pedro da Silva, 14 anos' })
+  assert.equal(enviadas[0], RESPOSTAS.revisar)
+  assert.equal(escritas.find(([t]) => t === 'tarcisio_validacao_contato')[1].motivo, 'número não é o da família na ficha')
+})
+test('número da família escrito em outro formato também não entra como número do filho', async () => {
+  const { v, grupos, enviadas } = falso(dados('filho_numero', { numero: '5519933334444' }))
+  await v.receber({ numero: '5519933334444', texto: '(19) 91111-2222' })
+  assert.equal(grupos.length, 0); assert.equal(enviadas[0], RESPOSTAS.revisar)
+})
+test('número sem WhatsApp confirmado vai para revisão e não entra no grupo', async () => {
+  const f = falso(dados('filho_numero'))
+  f.evo.numerosComWhatsapp = async () => [{ existe: false }]
+  await f.v.receber({ numero: '5519911112222', texto: '19 98888-7777' })
+  assert.equal(f.grupos.length, 0); assert.equal(f.enviadas[0], RESPOSTAS.revisar)
 })

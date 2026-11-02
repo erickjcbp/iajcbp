@@ -46,11 +46,17 @@ export function lerResposta(texto) {
 
 // "19 99999-8888" ou "+55 19 99999-8888" → "5519999998888". Sem número válido: null.
 export function lerNumero(texto) {
-  const achado = /(?:\+?55[\s-]*)?\(?\d{2}\)?[\s.-]*9?[\s.-]*\d{4}[\s.-]*\d{4}/.exec(String(texto || ''))
-  if (!achado) return null
-  let n = achado[0].replace(/\D/g, '')
+  const limpo = String(texto || '').trim()
+  if (!/^[+\d\s().-]+$/.test(limpo)) return null
+  let n = limpo.replace(/\D/g, '')
   if (n.startsWith('55') && n.length >= 12) n = n.slice(2)
   return n.length === 10 || n.length === 11 ? '55' + n : null
+}
+
+// Compara pelos 8 últimos dígitos: o 9º dígito e o 55 variam entre cadastro e WhatsApp.
+const mesmoNumero = (a, b) => {
+  const x = String(a || '').replace(/\D/g, '').slice(-8), y = String(b || '').replace(/\D/g, '').slice(-8)
+  return x.length === 8 && x === y
 }
 
 export const idadeEm = (nascimento, hoje) => {
@@ -87,6 +93,7 @@ export function criarValidacaoContato({ db, evo, relogio = () => new Date(), log
     const linha = await ler(numero)
     return ABERTAS.includes(linha?.situacao)
   }
+  const lerFichas = async () => exigir(await db.from('acolitos_membros').select('id,nome,data_nascimento,telefone').eq('status', 'ativo').eq('serve', true), 'ler fichas')
   async function responder(numero, texto) {
     const enviada = await evo.enviarTexto(numero, texto)
     exigir(await db.from('tarcisio_mensagens').insert({ numero, direcao: 'saida', texto, external_id: enviada?.key?.id || null, respondida: true }), 'guardar resposta')
@@ -100,11 +107,17 @@ export function criarValidacaoContato({ db, evo, relogio = () => new Date(), log
       await responder(msg.numero, RESPOSTAS.filho_numero_repetir)
       return true
     }
-    if (novo === msg.numero) return revisar('filho usa o número da família')
-    const ficha = exigir(await db.from('acolitos_membros').select('id,nome,telefone').eq('id', linha.membro_id).maybeSingle(), 'ler ficha do filho')
+    if (mesmoNumero(novo, msg.numero)) return revisar('filho usa o número da família')
+    const ficha = exigir(await db.from('acolitos_membros').select('id,nome,telefone,celular_mae,celular_recado,celular_responsavel').eq('id', linha.membro_id).maybeSingle(), 'ler ficha do filho')
     if (!ficha) return revisar('ficha do filho não encontrada')
+    if ([ficha.celular_mae, ficha.celular_recado, ficha.celular_responsavel].some((c) => mesmoNumero(c, novo))) return revisar('filho usa o número da família')
     const digitos = String(ficha.telefone || '').replace(/\D/g, '')
-    if (digitos && !novo.endsWith(digitos.slice(-8))) return revisar('ficha já tem outro número')
+    if (digitos && !mesmoNumero(digitos, novo)) return revisar('ficha já tem outro número')
+    if (evo.numerosComWhatsapp) {
+      let existe = false
+      try { existe = (await evo.numerosComWhatsapp([novo])).some((r) => r.existe) } catch (e) { log.warn(`validação de contato: não conferi o WhatsApp: ${e.message}`) }
+      if (!existe) return revisar('número sem WhatsApp confirmado')
+    }
     const nome = ficha.nome.split(' ')[0]
     if (linha.teste) {
       exigir(await salvar({ situacao: 'gravado' }), 'concluir teste')
@@ -150,10 +163,13 @@ export function criarValidacaoContato({ db, evo, relogio = () => new Date(), log
         await responder(msg.numero, RESPOSTAS.filho_repetir)
         return true
       }
-      const membros = exigir(await db.from('acolitos_membros').select('id,nome,data_nascimento,telefone'), 'ler fichas')
+      const membros = await lerFichas()
       const achado = acharFicha({ ...lido, membros, hoje: agoraSP(relogio()).data })
       const base = { nome_informado: lido.nome, idade_informada: lido.idade }
       if (!achado.ficha) return revisar(achado.motivo, base)
+      const contatos = exigir(await db.from('acolitos_membros').select('celular_mae,celular_recado,celular_responsavel').eq('id', achado.ficha.id).maybeSingle(), 'ler contatos da ficha')
+      if (!linha.teste && ![contatos?.celular_mae, contatos?.celular_recado, contatos?.celular_responsavel].some((c) => mesmoNumero(c, msg.numero)))
+        return revisar('número não é o da família na ficha', { ...base, membro_id: achado.ficha.id })
       exigir(await salvar({ ...base, situacao: 'filho_numero', tentativas: 0, membro_id: achado.ficha.id }), 'guardar ficha do filho')
       await responder(msg.numero, RESPOSTAS.filho_numero(achado.ficha.nome.split(' ')[0]))
       return true
@@ -174,7 +190,7 @@ export function criarValidacaoContato({ db, evo, relogio = () => new Date(), log
       await responder(msg.numero, RESPOSTAS.repetir)
       return true
     }
-    const membros = exigir(await db.from('acolitos_membros').select('id,nome,data_nascimento,telefone'), 'ler fichas')
+    const membros = await lerFichas()
     const r = decidir({ ...lido, numero: msg.numero, membros, hoje: agoraSP(relogio()).data })
     const base = { nome_informado: lido.nome, idade_informada: lido.idade, membro_id: r.ficha?.id || null, motivo: r.motivo || null }
     if (r.situacao === 'gravado' && r.gravar && !linha.teste) {
