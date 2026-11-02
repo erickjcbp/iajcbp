@@ -6,6 +6,7 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
 import { criarEvolution, lerMensagemRecebida } from './evolution.mjs'
+import { criarValidacaoContato } from './validacao-contato.mjs'
 import { criarRobo } from './robo.mjs'
 import { criarIA } from './ia.mjs'
 import { criarAcolhida } from './acolhida.mjs'
@@ -65,7 +66,8 @@ const confirmarSemana = async (sabado) => {
     return r.ok ? r : { ...r, erro: r.erro || r.motivo || 'não consegui confirmar' }
   } catch (e) { return { ok: false, erro: e.message } }
 }
-const entradaDono = criarEntradaDono({ db, evo, ministros, confirmarSemana, log: console })
+const validacao = criarValidacaoContato({ db, evo, log: console })
+const entradaDono = criarEntradaDono({ db, evo, ministros, confirmarSemana, validacao, log: console })
 const robo = criarRobo({ db, evo, ia, assistente, escalaAuto, acolhida, supabaseUrl: process.env.SUPABASE_URL })
 
 // Entrada das mensagens: só a Evolution, de dentro do compose, fala com esta porta (não é publicada).

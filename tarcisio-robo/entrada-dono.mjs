@@ -26,7 +26,7 @@ const JA_DECIDIDA = {
 
 // deps: db (chave de serviço), evo, confirmarSemana(semana) → { ok, erro? } (Task 6),
 // ministros = criarMinistrosPdf(...), relogio, log.
-export function criarEntradaDono({ db, evo, confirmarSemana, ministros, relogio = () => new Date(), log = console }) {
+export function criarEntradaDono({ db, evo, confirmarSemana, ministros, validacao = null, relogio = () => new Date(), log = console }) {
   const comandos = criarComandosDono({ db, evo, log, agora: relogio })
   const lerCfg = async () => exigir(await db.from('tarcisio_config').select('*').eq('id', 1).single(), 'ler config')
 
@@ -147,8 +147,18 @@ export function criarEntradaDono({ db, evo, confirmarSemana, ministros, relogio 
     let cfg = null
     try { cfg = await lerCfg() } catch (e) { log.error(`webhook sem config: ${e.message}`) }
     const olhar = !!cfg && precisaOlhar(msg, cfg)
-    const linha = { numero: msg.numero, external_id: msg.external_id, texto: msg.texto, midia: msg.midia, direcao: 'entrada', respondida: olhar }
+    // resposta da validação de contato não pode cair na IA: já entra como respondida
+    let emValidacao = false
+    try { emValidacao = !!validacao && await validacao.aguardando(msg.numero) } catch (e) { log.error(`validação de contato: ${e.message}`) }
+    const linha = { numero: msg.numero, external_id: msg.external_id, texto: msg.texto, midia: msg.midia, direcao: 'entrada', respondida: olhar || emValidacao }
     const gravada = exigir(await db.from('tarcisio_mensagens').upsert(linha, { onConflict: 'external_id', ignoreDuplicates: true }).select('id'), 'guardar mensagem')
+    if (emValidacao && gravada.length) {
+      try { await validacao.receber(msg) } catch (e) {
+        log.error(`validação de contato: ${e.message}`)
+        exigir(await db.from('tarcisio_mensagens').update({ respondida: false }).eq('id', gravada[0].id), 'devolver para a IA')
+      }
+      return
+    }
     if (!olhar || !gravada.length) return
     let tratada = true
     try { tratada = await tratar(msg, cfg) } catch (e) {
