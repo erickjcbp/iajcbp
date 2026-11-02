@@ -636,6 +636,7 @@ function gerarPanoramasLote(){
   });
 }
 async function salvarProficiencia(membroId, funcao, nivel){
+  if(!podeEditarFicha(ctx)){ toast('Só administradores editam fichas.','error'); return; }
   const { error } = await sb.from('acolitos_habilitacoes')
     .upsert([{ membro_id:membroId, funcao, proficiencia:nivel, updated_at:new Date().toISOString() }], { onConflict:'membro_id,funcao' });
   if(error){ toast('Erro ao salvar.','error'); return false; }
@@ -884,6 +885,7 @@ async function renderDesenvolvimento(main, depoisDoMapa) {
       renderAll();
     } }));
     btns.append(mk('📊 Panorama', true, () => abrirPanorama(m)), mk('⚙ Funções', false, () => abrirFuncoesEditor(m)), mk('🎯 Competências', false, () => abrirCompetenciasEditor(m, desenha)), bNivel);
+    if (!podeEditarFicha(ctx)) [...btns.children].forEach(b => { if (!b.textContent.includes('Panorama')) b.style.display = 'none'; });
     btns.style.display = 'none';
     mais.onclick = () => { btns.style.display = btns.style.display === 'none' ? 'grid' : 'none'; };
     row.append(top, btns); return row;

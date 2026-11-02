@@ -182,6 +182,7 @@ function renderConsilium(main, casa) {
 // A regra de sair vive em times-core.js, compartilhada com a seção Times do Config. Aqui só
 // se grava o que ela mandar — duas cópias divergiriam no primeiro conserto.
 async function removerSetor(m, slug) {
+  if (!podeEditarFicha(ctx)) { toast('Só administradores editam fichas.', 'error'); return; }
   const r = sairDoTime(m, slug, roleMap[m.user_id], nivelInfo(m.nivel || 'aspirante').base);
   if (r.semEfeito) return;
   const { error } = await sbAdmin.from('acolitos_membros').update(r.patch).eq('id', m.id);
@@ -196,6 +197,7 @@ async function removerSetor(m, slug) {
 }
 
 async function addMembroSetor(m, slug) {
+  if (!podeEditarFicha(ctx)) { toast('Só administradores editam fichas.', 'error'); return; }
   // Mesma boas-vinda do Config › Times: são duas portas para o mesmo lugar, e a festa mora
   // no shared.js justamente para não existir em duas versões.
   const recado = await pedirRecadoDeBoasVindas(m.nome || m.apelido || '', SETOR_LABEL[slug] || slug);
@@ -246,6 +248,7 @@ async function adicionarSetor() {
 }
 
 async function moverMembro(m, casaId) {
+  if (!podeEditarFicha(ctx)) { toast('Só administradores editam fichas.', 'error'); return; }
   const { error } = await sbAdmin.from('acolitos_membros').update({ casa_id: casaId }).eq('id', m.id);
   if (error) { toast('Erro ao mover.', 'error'); return; }
   m.casa_id = casaId;

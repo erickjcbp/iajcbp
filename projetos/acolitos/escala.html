@@ -2076,6 +2076,7 @@ function botaoSuspensao(m){
   b.title = susp ? 'Tirar da suspensão antes do prazo' : 'Fica '+RodizioCore.DIAS_SUSPENSAO+' dias sem ser escalado';
   b.style.cssText='padding:5px 9px;font-size:11px;white-space:nowrap;';
   b.onclick=()=> susp ? reativarMembro(m) : suspenderMembro(m);
+  if(!podeEditarFicha(ctx)) b.style.display='none';
   return b;
 }
 

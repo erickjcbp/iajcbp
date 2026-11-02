@@ -32,6 +32,7 @@ function barraLoteMatriz(){
  const limpar=document.createElement('button');limpar.className='btn-sm gray';limpar.textContent='Limpar seleção';limpar.onclick=()=>{matrizSelecionados.clear();atualizarSelecaoMatriz()};bar.appendChild(limpar);return bar;
 }
 function abrirEdicaoMatrizLote(acao){
+ if(!podeEditarFicha()){toast('Só administradores editam fichas.','error');return;}
  const ids=_devMembros.filter(m=>matrizSelecionados.has(m.id)).map(m=>m.id);if(!ids.length)return;
  const ov=document.createElement('div');ov.className='modal-overlay open';const md=document.createElement('div');md.className='modal matriz-lote-modal';md.style.setProperty('--modal-max','520px');
  const title=document.createElement('h2');title.className='modal-title';title.textContent={nivel:'Alterar nível',funcoes:'Aptidão por função',disponibilidade:'Disponibilidade'}[acao]+' · '+ids.length+' membros';md.appendChild(title);

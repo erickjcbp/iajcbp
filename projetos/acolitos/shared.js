@@ -130,6 +130,12 @@ function diasNaEtapa(etapaIniciada) {
 // requiredRoles: null (qualquer membro integrado) ou array de roles permitidos
 // Retorna { user, membership, membro } ou null (e redireciona)
 // Toast de feedback rápido (sucesso/erro)
+// Só administração edita ficha; a equipe consulta. A trava de verdade é o gatilho proteger_acesso.
+function podeEditarFicha(c) {
+  const atual = c || (typeof ctx !== 'undefined' ? ctx : null);
+  return ['coord_admin', 'subadmin'].includes(atual && atual.membership && atual.membership.role);
+}
+
 function toast(msg, tipo) {
   let t = document.getElementById('app-toast');
   if (!t) { t = document.createElement('div'); t.id = 'app-toast'; document.body.appendChild(t); }
@@ -3476,6 +3482,7 @@ function buildRankEmblem(slug, size, spec) {
 // "Promoções pendentes" da Jornada, só avança para o PRÓXIMO nível elegível —
 // aqui a coordenação define qualquer nível (inclusive corrigir pra baixo).
 function abrirSeletorNivel(membro, opts) {
+  if (!podeEditarFicha()) { toast('Só administradores editam fichas.', 'error'); return; }
   opts = opts || {};
   let escolha = membro.nivel || nivelFromRole(membro.role);
   const ov = document.createElement('div'); ov.className = 'modal-overlay open'; ov.style.zIndex = '200';

@@ -105,7 +105,7 @@
       <button class="view-sw active" id="vt-cards" onclick="setVista('cards')" title="Cards">▦</button>
       <button class="view-sw" id="vt-lista" onclick="setVista('lista')" title="Lista">☰</button>
     </div>
-    <button class="btn-sm gold" onclick="abrirNovoMembro()">+ Novo</button>
+    <button class="btn-sm gold" id="btn-novo-membro" onclick="abrirNovoMembro()">+ Novo</button>
     <button class="btn-sm gray" id="btn-arq" onclick="toggleArquivados()" title="Ver arquivados"><span data-icone="arquivo"></span></button>
     <button class="btn-sm gray" onclick="abrirRelatorioMembros()" title="Relatório / backup"><span data-icone="documento"></span>Relatório</button>
   </div>
@@ -352,6 +352,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 async function init() {
   ctx = await initModulo(['coord_admin','subadmin','membro_equipe'], { perm: 'membros' });
   if (!ctx) return;
+  document.getElementById('btn-novo-membro').style.display = podeEditarFicha(ctx) ? '' : 'none';
   renderHeader(ctx, 'membros');
   renderBottomNav(ctx, 'membros');
   document.getElementById('vt-cards').classList.toggle('active', vista === 'cards');
@@ -672,7 +673,7 @@ async function abrirFicha(membro) {
     comIcone(rankBtn, 'seta-cima', 'Alterar nível · ' + nivelInfo(nv).label);
     renderGrid();
   } });
-  hdr.appendChild(rankBtn);
+  if (podeEditarFicha(ctx)) hdr.appendChild(rankBtn);
 
   // Tabs
   const ehAdmin = ['coord_admin','subadmin'].includes(ctx.membership.role);
@@ -909,7 +910,7 @@ async function renderTab(tab) {
       const b = document.createElement('button'); b.className = 'btn-sm wine'; comIcone(b, 'arquivo', 'Arquivar membro'); b.onclick = () => arquivarMembro(m); dz.appendChild(b);
       const note = document.createElement('div'); note.style.cssText = 'font-size:11px;color:var(--text-muted);margin-top:6px;'; note.textContent = 'Tira o membro das listas e da escala sem apagar cadastro/histórico. Reversível.'; dz.appendChild(note);
     }
-    el.appendChild(dz);
+    if (podeEditarFicha(ctx)) el.appendChild(dz);
   }
 
 

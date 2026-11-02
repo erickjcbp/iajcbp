@@ -91,7 +91,7 @@
     const rankBtn = document.createElement('button'); rankBtn.type = 'button'; rankBtn.className = 'btn-sm gold'; rankBtn.style.marginTop = '4px';
     comIcone(rankBtn, 'seta-cima', 'Alterar nível · ' + nivelInfo(membro.nivel || 'aspirante').label);
     rankBtn.onclick = () => abrirSeletorNivel(membro, { onSalvo: (nv) => { membro.nivel = nv; comIcone(rankBtn, 'seta-cima', 'Alterar nível · ' + nivelInfo(nv).label); aoMudar(); } });
-    hdr.appendChild(rankBtn);
+    if (podeEditarFicha()) hdr.appendChild(rankBtn);
     md.appendChild(hdr);
 
     if (RodizioCore.suspensoNaData(membro, hojeLocal())) {
@@ -135,7 +135,7 @@
     const notaSemanal=document.createElement('p');notaSemanal.style.cssText='font-size:12px;line-height:1.5;color:var(--text-muted);';notaSemanal.textContent='4 escalas por mês, uma por semana: 2 em funções aptas e 2 em apoio. Ativar desliga a preferência de mais frequência.';md.appendChild(notaSemanal);
 
     // ── Suspensão / Arquivar ──
-    md.appendChild(blocoSuspensaoRapida(membro, aoMudar));
+    if (podeEditarFicha()) md.appendChild(blocoSuspensaoRapida(membro, aoMudar));
     const acoes = document.createElement('div'); acoes.style.cssText = 'display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;';
     const bArq = document.createElement('button'); bArq.type = 'button';
     const ehAfastado = membro.status === 'afastado';
@@ -157,7 +157,7 @@
       ov.remove(); aoMudar();
     };
     acoes.appendChild(bArq);
-    md.appendChild(acoes);
+    if (podeEditarFicha()) md.appendChild(acoes);
 
     // ── Ver ficha completa (Família/Frequência/Mensagem/Acessos) ──
     const linkCompleta = document.createElement('a');
@@ -192,7 +192,9 @@
       bSalvar.disabled = false; bSalvar.textContent = 'Salvar';
       aoMudar();
     };
-    rodape.append(bFechar, bSalvar);
+    rodape.append(bFechar);
+    if (podeEditarFicha()) rodape.append(bSalvar);
+    else md.querySelectorAll('input,select,textarea').forEach((campo) => { campo.disabled = true; });
     md.appendChild(rodape);
 
     ov.appendChild(md); document.body.appendChild(ov);
