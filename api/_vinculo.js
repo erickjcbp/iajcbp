@@ -37,6 +37,7 @@ function papelDoNivel(nivel) {
 //   acao 'seguir'       = o cadastro conclui normalmente (cria a pessoa)
 //   acao 'ligar'        = a conta é desta ficha; NÃO se cria uma segunda pessoa
 //   acao 'ja_tem_conta' = a ficha já é de OUTRA conta; não liga e não cria em cima dela
+//   acao 'travado'      = limite atingido; não avalia provas nem cria outra ficha
 //
 //   registrar é o que vai para acolitos_vinculo_tentativas (a fila da coordenação),
 //   ou null quando não há nada que gente precise olhar.
@@ -47,9 +48,9 @@ function decidirVinculo(o) {
 
   // FREIO. Sem parede, chutar data de nascimento não custa nada a quem chuta, e um
   // acerto entrega a ficha de uma criança. Ele ficou MAIS necessário depois de 30/08,
-  // não menos — mas agora ele trava a LIGAÇÃO, nunca o cadastro.
+  // não menos. Também não pode liberar uma duplicata na tentativa seguinte.
   if ((o.errosRecentes || 0) >= LIMITE_ERROS) {
-    return { ...nada, registrar: 'travado' };
+    return { ...nada, acao: 'travado', registrar: 'travado' };
   }
 
   const parecidos = nomes.acharParecidos(o.nome, o.membros || []);

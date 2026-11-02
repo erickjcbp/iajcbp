@@ -64,13 +64,22 @@ test('mas se a conta que pede JÁ É a dona da ficha, ligar é o certo', () => {
   assert.strictEqual(v.membro_id, 'lu');
 });
 
-test('FREIO: três erros em 24h param a LIGAÇÃO, nunca o cadastro', () => {
+test('FREIO: três erros em 24h impedem ligação e criação, mesmo com prova correta', () => {
   // Sem parede, chutar data de nascimento não custa nada a quem chuta — e um acerto
   // entrega a ficha de uma criança. O freio ficou MAIS necessário, não menos.
   const v = decidirVinculo({ ...base, errosRecentes: 3, nome: 'Rafaella Ferreira Moinhos', nascimento: '2013-05-02' });
-  assert.strictEqual(v.acao, 'seguir', 'o cadastro conclui');
+  assert.strictEqual(v.acao, 'travado', 'o limite não autoriza criar uma duplicata');
   assert.strictEqual(v.registrar, 'travado');
   assert.ok(!v.membro_id, 'e NÃO liga, mesmo com a prova batendo');
+});
+
+test('conta já existente continua bloqueada depois de três tentativas', () => {
+  for (let erros = 0; erros < 6; erros++) {
+    const v = decidirVinculo({ ...base, nome: 'Luana Prado', nascimento: '2011-01-09', errosRecentes: erros });
+    assert.strictEqual(v.acao, erros < 3 ? 'ja_tem_conta' : 'travado');
+    assert.notStrictEqual(v.acao, 'seguir');
+    assert.notStrictEqual(v.acao, 'ligar');
+  }
 });
 
 test('não junta as gêmeas: mesmo sobrenome e mesma data não bastam', () => {

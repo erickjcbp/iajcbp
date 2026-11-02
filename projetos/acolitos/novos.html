@@ -347,16 +347,16 @@ async function enviarCadastro() {
     }
     const s = r.data && r.data.situacao;
     if (s === 'confirmado') { jaExiste[i] = r.data.membro_id; continue; }
-    // SEGUE em tudo que não for "essa ficha já é de outra conta". Desde 30/08/2026,
-    // prova que não bate não levanta mais parede: o cadastro conclui e o caso aparece
-    // em Config › Cadastros barrados no mesmo dia. Parede numa tela de cadastro faz a
-    // pessoa sumir na porta sem ninguém saber, e 25 das fichas antigas não guardam nem
-    // nascimento nem nome da mãe — nelas a prova nunca teria como bater.
-    // Os nomes antigos ('sem_parecido', 'prova_nao_bateu', 'travado') continuam aceitos
-    // de propósito: durante um deploy o servidor velho ainda pode respondê-los, e a
-    // tela nova não pode transformar isso em parede.
-    if (s !== 'ja_tem_conta') continue;
-    // A ÚNICA parede que fica de pé: a prova BATEU e a ficha já tem dono. Aqui a pessoa
+    // Sem prova histórica, o cadastro ainda segue para revisão. Limite atingido
+    // e respostas desconhecidas não podem ser interpretados como autorização.
+    if (['seguir', 'sem_parecido', 'prova_nao_bateu'].includes(s)) continue;
+    if (s !== 'ja_tem_conta') {
+      showMsg(s === 'travado'
+        ? 'O limite de tentativas foi atingido. Se você já é membro, use "Esqueci minha senha" ou fale com a coordenação para conferir seu cadastro.'
+        : 'Não consegui confirmar o cadastro. Tente novamente em instantes.', 'error');
+      btn.disabled = false; btn.textContent = 'Concluir Cadastro'; return;
+    }
+    // A prova BATEU e a ficha já tem dono. Aqui a pessoa
     // já tem login, e o caminho certo é recuperar a senha — não uma segunda ficha.
     showMsg('Já existe um cadastro de ' + nomeM + ' ligado a outra conta. Se a conta é sua, '
           + 'use "Esqueci minha senha" na tela de entrada. Se não for, fale com a coordenação. '

@@ -93,7 +93,8 @@ export default async function handler(req, res) {
   let membros = [];
   {
     const r = await fetch(`${URL}/rest/v1/acolitos_membros?select=id,nome,data_nascimento,nome_mae,user_id,nivel,status&limit=2000`, { headers: auth });
-    membros = r.ok ? (await r.json().catch(() => [])) : [];
+    if (!r.ok) return res.status(503).json({ error: 'Não consegui consultar o cadastro. Tente novamente em instantes.' });
+    membros = await r.json();
   }
 
   // A fila da coordenação (Config › Cadastros barrados). Nunca pode derrubar o cadastro.
@@ -112,15 +113,16 @@ export default async function handler(req, res) {
   // FREIO contra chutar data de nascimento. Aqui NÃO há conta logada para contar por
   // ela — cada tentativa cria contas novas —, então a contagem é pelo NOME digitado,
   // que é justamente o que se repete quando alguém insiste numa criança só. Três erros
-  // com o mesmo nome em 24h e o app para de TENTAR LIGAR; o cadastro conclui igual.
+  // com o mesmo nome em 24h bloqueiam a criação e o vínculo até a revisão.
   async function errosDe(nomeDigitado) {
     try {
       const desde = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
       const r = await fetch(`${URL}/rest/v1/acolitos_vinculo_tentativas?select=id` +
         `&nome_digitado=eq.${encodeURIComponent(nomeDigitado)}` +
         `&resultado=in.(prova_nao_bateu,travado)&quando=gte.${desde}`, { headers: auth });
-      return r.ok ? (await r.json()).length : 0;
-    } catch (e) { return 0; }
+      if (!r.ok) throw new Error('Não consegui conferir as tentativas. Tente novamente em instantes.');
+      return (await r.json()).length;
+    } catch (e) { throw new Error('Não consegui conferir as tentativas. Tente novamente em instantes.'); }
   }
 
   try {
@@ -134,7 +136,11 @@ export default async function handler(req, res) {
         nome, nascimento: f.data_nascimento, nome_mae: nomeMae,
         membros, userId: null, errosRecentes: await errosDe(nome),
       });
-      // Única parada que sobrou: a prova BATEU e a ficha já é de outra conta. Aí a
+      if (v.acao === 'travado') {
+        await registrar('travado', nome, f.data_nascimento, null);
+        throw new Error('O limite de tentativas foi atingido. Se você já é membro, use "Esqueci minha senha" ou fale com a coordenação para conferir seu cadastro.');
+      }
+      // Antes do limite, a prova BATEU e a ficha já é de outra conta. Aí a
       // criança já tem login, e o certo é recuperar a senha — nunca uma segunda ficha
       // por cima da que já existe.
       if (v.acao === 'ja_tem_conta') {

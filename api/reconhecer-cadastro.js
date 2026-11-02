@@ -11,7 +11,7 @@
 //   parecido + prova bate  -> 'confirmado'    (liga a conta à ficha que já existe)
 //   parecido + prova falha -> 'seguir'        (segue, MAS vai para a fila da coordenação)
 //   parecido já tem dono   -> 'ja_tem_conta'  (a ficha já está ligada a outra conta)
-//   três erros em 24h      -> 'seguir'        (o freio trava a LIGAÇÃO, nunca o cadastro)
+//   três erros em 24h      -> 'travado'       (não liga nem cria outra ficha)
 //
 // EM 30/08/2026 A REGRA MUDOU, por decisão do dono: prova que não bate NÃO trava mais
 // o cadastro. Antes travava (decisão de 27/08). Medido: 25 das 139 fichas sem login não
@@ -66,7 +66,8 @@ export default async function handler(req, res) {
   const errosRes = await fetch(
     `${URL}/rest/v1/acolitos_vinculo_tentativas?select=id&user_id=eq.${caller.id}` +
     `&resultado=in.(prova_nao_bateu,travado)&quando=gte.${desde}`, { headers: h });
-  const erros = errosRes.ok ? (await errosRes.json()).length : 0;
+  if (!errosRes.ok) return res.status(503).json({ error: 'Não consegui conferir as tentativas. Tente novamente em instantes.' });
+  const erros = (await errosRes.json()).length;
   if (erros >= LIMITE_ERROS) {
     await registrar('travado', null);
     return res.status(200).json({ situacao: 'travado' });
