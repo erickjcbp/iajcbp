@@ -20,13 +20,14 @@ create or replace function auth.role() returns text language sql stable as $$sel
 grant usage on schema auth to public;grant execute on all functions in schema auth to public;
 create table pastoral_modules(id uuid primary key default gen_random_uuid(),slug text,ativo boolean default true);
 create table pastoral_members(user_id uuid,module_id uuid,role text);
-create table acolitos_membros(id uuid primary key,user_id uuid,status text default 'ativo',serve boolean default true,grupo_irmaos uuid,escalar_com_irmao boolean default false,xp_avulso int default 0);
+create table acolitos_membros(id uuid primary key,user_id uuid,status text default 'ativo',serve boolean default true,nome text default 'Teste',apelido text,grupo_irmaos uuid,escalar_com_irmao boolean default false,xp_avulso int default 0);
 create table acolitos_temporadas(id uuid default gen_random_uuid(),ativa boolean default true,created_at timestamptz default now());
 create table acolitos_xp_temporada(membro_id uuid,temporada_id uuid,xp int,origem text);
 insert into pastoral_modules(slug)values('acolitos');insert into pastoral_members select ${q(uid)},id,'coroinha' from pastoral_modules;insert into pastoral_members select ${q(other)},id,'coroinha' from pastoral_modules;
 insert into acolitos_membros(id,user_id,grupo_irmaos,escalar_com_irmao)values(${q(m)},${q(uid)},${q(group)},true),(${q(sibling)},null,${q(group)},true);
 insert into acolitos_temporadas default values;`);
 sql(fs.readFileSync(path.join(root,'supabase/migrations/20261102180000_corrida_mensageiro.sql'),'utf8'));
+sql(fs.readFileSync(path.join(root,'supabase/migrations/20261102210000_mensageiro_ranking.sql'),'utf8'));
 assert.equal(sql("select has_function_privilege('anon','public.acolitos_game_sessao(uuid,uuid)','execute')"),'f');assert.equal(sql("select has_function_privilege('authenticated','public.acolitos_game_creditar(uuid,uuid,int,int,int)','execute')"),'f');assert.equal(sql("select has_table_privilege('authenticated','acolitos_game_sessoes','select')"),'f');
 assert.throws(()=>start(other),/Command failed/);const a=start();assert.throws(()=>rpc('authenticated',other,'acolitos_game_sessao',q(m)+','+q(a.id)),/Command failed/);
 assert.throws(()=>credit(a.id),/Command failed/);age(a.id);assert.equal(credit(a.id).xp,20);assert.equal(credit(a.id).novo,false);assert.equal(sql(`select xp_avulso from acolitos_membros where id=${q(m)}`),'20');
@@ -40,5 +41,11 @@ sql(`update acolitos_membros set xp_avulso=0 where id=${q(sibling)};delete from 
 for(let i=0;i<2;i++){const prior=start(uid,sibling);age(prior.id);credit(prior.id);}
 const x=start(uid,sibling);age(x.id);sql(`update acolitos_game_sessoes set expira_em=now()+interval '20 minutes' where id=${q(x.id)}`);const y=start(uid,sibling);age(y.id);sql(`update acolitos_game_sessoes set expira_em=now()+interval '20 minutes' where id=${q(x.id)}`);
 const query=id=>as('service_role',uid,`select public.acolitos_game_creditar(${q(id)},${q(uid)},5400,900,20)`);await Promise.all([exec(bin+'psql',[...args,'-c',query(x.id)]),exec(bin+'psql',[...args,'-c',query(y.id)])]);assert.equal(sql(`select xp_avulso from acolitos_membros where id=${q(sibling)}`),'60');
+// Versões, ranking por melhor partida e isolamento do perfil.
+const v2=rpc('authenticated',uid,'acolitos_game_iniciar_v2',q(m));assert.equal(v2.versao,2);age(v2.id);credit(v2.id);
+const v22=rpc('authenticated',uid,'acolitos_game_iniciar_v2',q(m));age(v22.id);credit(v22.id);
+const rank=rpc('authenticated',uid,'acolitos_game_ranking',q(m)+",'semana'");assert.equal(rank.participantes,1);assert.equal(rank.top.length,1);assert.equal(rank.meu.pontos,900);assert.equal(rank.meu.eu,true);assert.equal(rank.meu.posicao,1);
+assert.throws(()=>rpc('authenticated',other,'acolitos_game_ranking',q(m)+",'geral'"));assert.throws(()=>rpc('anon',uid,'acolitos_game_ranking',q(m)+",'geral'"));
+assert.equal(sql("select has_function_privilege('anon','public.acolitos_game_ranking(uuid,text)','execute')"),'f');
 console.log(JSON.stringify({ok:true,checks:['grants','RLS privada','propriedade','família','tempo mínimo','idempotência','limite diário','temporada','sessão expirada','concorrência']}));
 }finally{if(running)execFileSync(bin+'pg_ctl',['-D',path.join(dir,'data'),'-m','fast','-w','stop'],{stdio:'pipe'});}

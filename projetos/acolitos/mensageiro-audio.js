@@ -25,6 +25,12 @@ class MensageiroAudio {
   if(kind==='jump')this.tone(67,t,.13,.1,'triangle',this.fx);
   if(kind==='slide')this.tone(46,t,.16,.13,'triangle',this.fx);
   if(kind==='hit'){this.tone(35,t,.2,.2,'sawtooth',this.fx);this.tone(36,t+.06,.14,.1,'triangle',this.fx);}
+  if(kind==='ally')[74,78,81].forEach((n,i)=>this.tone(n,t+i*.07,.23,.14,'triangle',this.fx));
+  if(kind==='water')[81,86,93,98].forEach((n,i)=>this.tone(n,t+i*.045,.14,.14,'sine',this.fx));
+  if(kind==='combo')[86,93,98].forEach((n,i)=>this.tone(n,t+i*.06,.2,.12,'sine',this.fx));
+  if(kind==='stage')[62,69,74].forEach((n,i)=>this.tone(n,t+i*.16,.32,.17,'triangle',this.fx));
+  if(kind==='guard')this.tone(29,t+.16,.28,.15,'triangle',this.fx);
+  if(kind==='end')[57,53,50].forEach((n,i)=>this.tone(n,t+i*.13,.27,.12,'triangle',this.fx));
   if(kind==='win')[74,77,81,86].forEach((n,i)=>this.tone(n,t+i*.13,.5,.18,'triangle',this.fx));
  }
 }

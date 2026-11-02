@@ -25,3 +25,14 @@ Integração concluída do conceito aprovado com personagem bíblico, abertura n
 ## Mobile v3
 
 Concluída otimização solicitada para público90%celular, câmera alinhada à rua e introdução narrada com a voz Fish Audio pedida.585regras, provas de UI/atlas/voz/rede limitada e fotografias360–2560passaram. Rede limitada:37,15s→15,67s para liberar jogo; física preservada. Evidências: materiais-paroquia/provas/mensageiro/VALIDACAO-MOBILE-V3.md. Prévia local atualizada; sem publicação.
+
+## Evolução aprovada em 02/11 — v4
+
+- Remover seleção de manto por pedido explícito; visual azul permanece.
+- Abrir faixas laterais (.30 da largura, mesmo ponto de fuga).
+- Guardas: perder uma chance e 40 pontos; obstáculos comuns: 20 pontos.
+- Aliados: 50 pontos; água recupera uma chance até três, ou 15 pontos com chances completas.
+- Três etapas de 30 s: intervalos 90/66/48 ticks e velocidade .0065/.008/.0095.
+- Ranking autenticado semanal e geral, melhor partida por membro, desempate por primeiro resultado. Nova versão separa placar anterior e preserva replay v1.
+- Efeitos locais para aliado, água, combo, mudança de etapa, guarda e fim. Arte IA transparente única de 77KB.
+- Testes: regras unitárias/API, PostgreSQL isolado, interação real com áudio/touch/pausa/reenvio/treino, fotos 360/390/768/1366/2560 e CPU4x + rede50KB/s.
