@@ -21,14 +21,10 @@ do $$declare a uuid;b uuid;c uuid;papel text;begin
  update acolitos_membros set nivel='cerimoniario_guardiao' where id=b;
  update acolitos_crm set etapa='integrado' where membro_id=b;
  assert (select pm.role from pastoral_members pm join acolitos_membros m on m.user_id=pm.user_id where m.id=b)='cerimonario','Nível existente ignorado';
- -- equipe
- update acolitos_membros set eh_equipe=true where id=c;
- update acolitos_crm set etapa='integrado' where membro_id=c;
- assert (select pm.role from pastoral_members pm join acolitos_membros m on m.user_id=pm.user_id where m.id=c)='membro_equipe','Equipe';
  -- papel definido não é rebaixado
  update pastoral_members set role='coroinha' where user_id=(select user_id from acolitos_membros where id=a);
  update acolitos_crm set etapa='disponivel_escala' where membro_id=a;update acolitos_crm set etapa='integrado' where membro_id=a;
  assert (select pm.role from pastoral_members pm join acolitos_membros m on m.user_id=pm.user_id where m.id=a)='coroinha','Rebaixou papel definido';
  assert (select count(*) from information_schema.role_routine_grants where routine_name='acolitos_integrado_atualiza_papel' and grantee in('anon','authenticated','PUBLIC'))=0,'Função exposta';
 end $$;
-select '135: 8 corrigidos, 5 preservados, etapas, nível, equipe e não rebaixamento OK';
+select '135: 8 corrigidos, 5 preservados, etapas, nível e não rebaixamento OK; caso de equipe saiu na 136';

@@ -10,8 +10,7 @@ delete from acolitos_crm where membro_id=(select a from f136);
 -- ataque: o próprio membro marca equipe e se insere como integrado
 select set_config('request.jwt.claims',json_build_object('sub',a_user,'role','authenticated')::text,true) from f136;
 set local role authenticated;
-update acolitos_membros set eh_equipe=true where id=(select a from f136);
-insert into acolitos_crm(membro_id,etapa) select a,'integrado' from f136;
+do $$begin insert into acolitos_crm(membro_id,etapa) select a,'integrado' from f136;raise exception 'Membro se inseriu integrado';exception when insufficient_privilege then null;end $$;
 reset role;
 do $$begin assert (select pm.role from pastoral_members pm,f136 where pm.user_id=a_user)='novo','Membro se promoveu';end $$;
 -- coordenação: libera, e eh_equipe não vira equipe
