@@ -249,3 +249,11 @@ test('sem número da família, nome incompleto com idade errada não revela a fi
   await v.receber({ numero: '5519988887777', texto: 'João Silva, 30' })
   assert.equal(enviadas[0], RESPOSTAS.revisar)
 })
+test('celulares: nome e número em linhas separadas, com "sim" antes', () => {
+  assert.deepEqual(lerCelulares('Sim\n\nMatheus\n19 98888-7777\n\nLucas\n19 97777-6666').map((c) => [c.nome, c.numero]), [['matheus', '5519988887777'], ['lucas', '5519977776666']])
+})
+test('o mesmo número para dois filhos vai para revisão', async () => {
+  const { v, grupos, enviadas } = falso(dados('filhos_celular', { filhos: [{ id: 'a', nome: 'João' }, { id: 'e', nome: 'Maria' }] }))
+  await v.receber({ numero: FAM, texto: 'João\n19 98888-7777\nMaria\n19 98888-7777' })
+  assert.equal(grupos.length, 0); assert.equal(enviadas[0], RESPOSTAS.revisar)
+})

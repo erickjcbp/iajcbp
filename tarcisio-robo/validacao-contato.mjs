@@ -63,11 +63,21 @@ export function lerFilhos(texto) {
 }
 
 // "Pedro 19 98888-7777" → { nome: 'pedro', numero } por linha.
+// Aceita o nome e o número na mesma linha ou em linhas seguidas.
 export function lerCelulares(texto) {
-  return String(texto || '').split('\n').map((l) => {
+  const lista = []
+  let nomeAntes = ''
+  for (const l of String(texto || '').split('\n')) {
     const achado = /\+?[\d(][\d\s().-]{8,}\d/.exec(l)
-    return achado ? { nome: semAcento(l.replace(achado[0], '')).split(' ').filter(Boolean)[0] || '', numero: lerNumero(achado[0]) } : null
-  }).filter(Boolean)
+    const nome = semAcento(achado ? l.replace(achado[0], '') : l).split(' ').filter(Boolean)[0] || ''
+    if (!achado) {
+      if (nome && !['sim', 's', 'tem', 'tenho'].includes(nome)) nomeAntes = nome
+      continue
+    }
+    lista.push({ nome: nome || nomeAntes, numero: lerNumero(achado[0]) })
+    nomeAntes = ''
+  }
+  return lista
 }
 
 // "19 99999-8888" ou "+55 19 99999-8888" → "5519999998888". Sem número válido: null.
@@ -233,6 +243,7 @@ export function criarValidacaoContato({ db, evo, relogio = () => new Date(), log
       await responder(msg.numero, RESPOSTAS.filhos_celular_repetir)
       return true
     }
+    if (new Set(celulares.map((c) => c.numero)).size !== celulares.length) return revisar('mesmo número para mais de um filho')
     const incluidos = [], problemas = []
     for (const c of celulares) {
       const alvo = linha.filhos.filter((f) => semAcento(f.nome) === c.nome)
