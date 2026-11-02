@@ -7,6 +7,8 @@ Quando algo sair daqui, sai porque foi feito **e conferido**, não porque foi co
 
 ## 1. Pendente
 
+- **Vídeo da igreja inteira (dono grava, pedido em 02/11/2026).** Caminhar pela Matriz e pelo Santo Antônio (vitrais, imagens, placas, altares, sacristia, salas) para mapear as pistas das novas missões de descoberta e da missão interativa em forma de história. Sacrário e presbitério ficam fora da caça. Enquanto o vídeo não vem, a base é o acervo já existente.
+
 **Rodízio — o que a medição de 23/09/2026 deixou pendente.** A aba Rodízio está na Escala
 (terceira aba, junto de Operacional e Planilha). A régua dela é **A REGRA DA PASTORAL: todo
 membro serve 2× por mês**, dita pelo dono em 23/09. Mostra "este mês" (X/2, destacado quem
