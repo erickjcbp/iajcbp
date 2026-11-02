@@ -13,3 +13,6 @@ docs/superpowers/plans/2026-11-02-corrida-mensageiro.md
 supabase/migrations/20261102210000_mensageiro_ranking.sql
 
 supabase/migrations/20261102223000_mensageiro_agua_rara.sql
+
+supabase/migrations/20261103000000_mensageiro_rota_aberta.sql
+docs/superpowers/plans/2026-11-02-mensageiro-progressao.md

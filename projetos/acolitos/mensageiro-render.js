@@ -26,7 +26,7 @@ class MensageiroRenderer {
    const shade=x.createLinearGradient(0,0,0,h);shade.addColorStop(0,'#1027390a');shade.addColorStop(.6,'#3c2d1710');shade.addColorStop(1,'#231b222e');x.fillStyle=shade;x.fillRect(0,0,w,h);this.backgroundCache=buffer;
   }
   c.drawImage(this.backgroundCache,0,0,w,h);
-  this.scene.draw(c,this.camera,s.tick,this.reduced);
+  this.scene.draw(c,this.camera,s.tick,this.reduced,s.travel);
  }
  draw(s,time,outfit=0,delta=1/30,events=s.events){
   const c=this.ctx,w=this.w,h=this.h;c.clearRect(0,0,w,h);this.lane+=(s.lane-this.lane)*(1-Math.exp(-18*delta));this.background(s);
@@ -47,14 +47,15 @@ class MensageiroRenderer {
   this.needsRedraw=false;
  }
  object(o,time,tick){
-  const c=this.ctx,p=MensageiroCamera.projectObject(this.camera,o.z,o.lane),size=this.heroSize()*p.scale,lane=this.camera.gap*p.scale;
+  const t=o.fromLane==null?1:Math.max(0,Math.min(1,(o.z-o.moveAt)/(o.moveEnd-o.moveAt))),lanePosition=o.fromLane==null?o.lane:o.fromLane+(o.targetLane-o.fromLane)*(t*t*(3-2*t));
+  const c=this.ctx,p=MensageiroCamera.projectObject(this.camera,o.z,lanePosition),size=this.heroSize()*p.scale,lane=this.camera.gap*p.scale;
   if(['guard','ally','water'].includes(o.kind)){
    const index=o.kind==='guard'?0:o.kind==='water'?3:1+o.id%2,f=ENCONTROS_FRAMES[index],height=size*(o.kind==='water'?.55:1.05),width=height*(o.kind==='guard'&&this.assets.guard?this.assets.guard.width/this.assets.guard.height:f.w/f.h);
    c.save();c.globalAlpha=Math.min(1,o.z*6)*(o.z>1?Math.max(0,1-(o.z-1)*7):1);this.ellipse(p.x,p.y,width*.43,size*.035,'#362b2540');
    if(o.kind==='guard'&&this.assets.guard)c.drawImage(this.assets.guard,p.x-width/2,p.y-height,width,height);
    else if(this.assets.encounters)c.drawImage(this.assets.encounters,f.x,f.y,f.w,f.h,p.x-width/2,p.y-height,width,height);
    else{c.fillStyle=o.kind==='guard'?'#ae3b35':o.kind==='water'?'#6bb8dc':'#7ebd74';c.fillRect(p.x-width/2,p.y-height,width,height);}
-   if(o.z>.48&&o.z<1){const label=o.kind==='guard'?'−40':o.kind==='ally'?'+50':'♥',r=Math.max(9,13*p.scale);c.font='bold '+Math.round(r*1.1)+'px sans-serif';c.textAlign='center';c.fillStyle=o.kind==='guard'?'#ffcdc1':o.kind==='ally'?'#d7ffc2':'#bdeeff';c.strokeStyle='#1c273a';c.lineWidth=3;c.strokeText(label,p.x,p.y-height-r);c.fillText(label,p.x,p.y-height-r);}
+   if(o.z>(o.kind==='guard'&&o.fromLane!=null?.08:.48)&&o.z<1){const label=o.kind==='guard'?(o.fromLane!=null&&o.z<o.moveEnd?(o.targetLane>o.fromLane?'→ −40':'← −40'):'−40'):o.kind==='ally'?'+50':'♥',r=Math.max(9,13*p.scale);c.font='bold '+Math.round(r*1.1)+'px sans-serif';c.textAlign='center';c.fillStyle=o.kind==='guard'?'#ffcdc1':o.kind==='ally'?'#d7ffc2':'#bdeeff';c.strokeStyle='#1c273a';c.lineWidth=3;c.strokeText(label,p.x,p.y-height-r);c.fillText(label,p.x,p.y-height-r);}
    c.restore();return;
   }
   const types={crate:{i:0,w:.75,h:.63},barrier:{i:1,w:.9,h:.42},arch:{i:2,w:.96,h:1.07},scroll:{i:3,w:.35,h:.38}},type=types[o.kind];if(!type)return;
