@@ -53,10 +53,16 @@ export function lerNumero(texto) {
   return n.length === 10 || n.length === 11 ? '55' + n : null
 }
 
-// Compara pelos 8 últimos dígitos: o 9º dígito e o 55 variam entre cadastro e WhatsApp.
-const mesmoNumero = (a, b) => {
-  const x = String(a || '').replace(/\D/g, '').slice(-8), y = String(b || '').replace(/\D/g, '').slice(-8)
-  return x.length === 8 && x === y
+// Compara DDD + 8 últimos dígitos: o 55 e o 9º dígito variam entre cadastro e WhatsApp, o DDD não.
+// Número sem DDD não confirma ninguém: cai em revisão.
+const canonico = (n) => {
+  let d = String(n || '').replace(/\D/g, '')
+  if (d.startsWith('55') && d.length >= 12) d = d.slice(2)
+  return d.length === 10 || d.length === 11 ? d.slice(0, 2) + d.slice(-8) : ''
+}
+export const mesmoNumero = (a, b) => {
+  const x = canonico(a)
+  return !!x && x === canonico(b)
 }
 
 export const idadeEm = (nascimento, hoje) => {
@@ -81,7 +87,7 @@ export function decidir({ nome, idade, numero, membros, hoje }) {
   const { ficha, motivo } = acharFicha({ nome, idade, membros, hoje })
   if (!ficha) return { situacao: 'revisar', motivo }
   const digitos = String(ficha.telefone || '').replace(/\D/g, '')
-  if (digitos && !String(numero).endsWith(digitos.slice(-8))) return { situacao: 'revisar', motivo: 'ficha já tem outro número', ficha }
+  if (digitos && !mesmoNumero(digitos, numero)) return { situacao: 'revisar', motivo: 'ficha já tem outro número', ficha }
   return { situacao: 'gravado', ficha, gravar: !digitos }
 }
 

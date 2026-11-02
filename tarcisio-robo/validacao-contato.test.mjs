@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { lerResposta, lerNumero, decidir, idadeEm, criarValidacaoContato, RESPOSTAS } from './validacao-contato.mjs'
+import { lerResposta, lerNumero, mesmoNumero, decidir, idadeEm, criarValidacaoContato, RESPOSTAS } from './validacao-contato.mjs'
 
 const hoje = '2026-11-02'
 const membros = [
@@ -144,4 +144,10 @@ test('número sem WhatsApp confirmado vai para revisão e não entra no grupo', 
   f.evo.numerosComWhatsapp = async () => [{ existe: false }]
   await f.v.receber({ numero: '5519911112222', texto: '19 98888-7777' })
   assert.equal(f.grupos.length, 0); assert.equal(f.enviadas[0], RESPOSTAS.revisar)
+})
+test('compara número pelo DDD, tolerando 55 e nono dígito', () => {
+  assert.equal(mesmoNumero('5519988887777', '19 8888-7777'), true)
+  assert.equal(mesmoNumero('5519988887777', '11 98888-7777'), false)
+  assert.equal(mesmoNumero('5519988887777', '98888-7777'), false)
+  assert.equal(mesmoNumero('', ''), false)
 })
