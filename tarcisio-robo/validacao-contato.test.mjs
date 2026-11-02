@@ -284,3 +284,10 @@ test('sem IA, a conversa segue pelas regras', async () => {
   const r = await interpretar({ ia: null, texto: 'João Pedro da Silva, 14', etapa: 'perguntado' })
   assert.equal(r.idade, 14)
 })
+test('mensagens seguidas do mesmo número são tratadas uma de cada vez', async () => {
+  const ordem = []
+  const linha = { numero: '5519', situacao: 'perguntado', tentativas: 0, teste: false }
+  const { v } = falso(linha)
+  await Promise.all([v.receber({ numero: '5519', texto: 'oi' }).then(() => ordem.push(1)), v.receber({ numero: '5519', texto: 'oi' }).then(() => ordem.push(2))])
+  assert.deepEqual(ordem, [1, 2])
+})

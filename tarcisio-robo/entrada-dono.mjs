@@ -153,7 +153,10 @@ export function criarEntradaDono({ db, evo, confirmarSemana, ministros, validaca
     const linha = { numero: msg.numero, external_id: msg.external_id, texto: msg.texto, midia: msg.midia, direcao: 'entrada', respondida: olhar || emValidacao }
     const gravada = exigir(await db.from('tarcisio_mensagens').upsert(linha, { onConflict: 'external_id', ignoreDuplicates: true }).select('id'), 'guardar mensagem')
     if (emValidacao && gravada.length) {
-      try { await validacao.receber(msg) } catch (e) {
+      try {
+        // a validação pode ter terminado na mensagem anterior: esta volta para a conversa normal
+        if (!await validacao.receber(msg)) exigir(await db.from('tarcisio_mensagens').update({ respondida: false }).eq('id', gravada[0].id), 'devolver para a IA')
+      } catch (e) {
         log.error(`validação de contato: ${e.message}`)
         exigir(await db.from('tarcisio_mensagens').update({ respondida: false }).eq('id', gravada[0].id), 'devolver para a IA')
       }

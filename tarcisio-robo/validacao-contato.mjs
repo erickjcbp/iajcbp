@@ -187,7 +187,8 @@ export async function interpretar({ ia, modelo, texto, etapa, log = console }) {
       .map((f) => ({ nome: limparNome(f?.nome), idade: limparIdade(f?.idade) })).filter((f) => f.nome.split(' ').length >= 2 && f.idade != null)
     return { nome: limparNome(v.nome), idade: limparIdade(v.idade), filhos }
   } catch (e) {
-    log.warn(`validação de contato: leitura pela IA falhou: ${e.message}`)
+    // sem e.message: o erro de leitura pode carregar trechos da resposta de um menor
+    log.warn(`validação de contato: leitura pela IA falhou (${e.name})`)
     return reserva()
   }
 }
@@ -362,7 +363,17 @@ export function criarValidacaoContato({ db, evo, ia = null, relogio = () => new 
   }
 
   // Devolve true quando a mensagem era resposta da validação: aí ela não vai para a IA.
-  async function receber(msg) {
+  // Mensagens seguidas do mesmo número entram em fila: a leitura pela IA leva segundos,
+  // e duas ao mesmo tempo partiriam do mesmo estado e uma apagaria a outra.
+  const filas = new Map()
+  function receber(msg) {
+    const anterior = filas.get(msg.numero) || Promise.resolve()
+    const atual = anterior.catch(() => {}).then(() => processar(msg))
+    filas.set(msg.numero, atual)
+    atual.finally(() => { if (filas.get(msg.numero) === atual) filas.delete(msg.numero) }).catch(() => {})
+    return atual
+  }
+  async function processar(msg) {
     const linha = await ler(msg.numero)
     if (!ABERTAS.includes(linha?.situacao)) return false
     const salvar = (extra) => db.from('tarcisio_validacao_contato').update({ ...extra, resposta: msg.texto, atualizado_em: relogio().toISOString() }).eq('numero', msg.numero)
