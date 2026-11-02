@@ -745,9 +745,8 @@ async function confirmarAvancar() {
     await sbAdmin.from('acolitos_membros').update({ no_grupo_whatsapp: true }).eq('id', membroId);
   }
 
-  // Se integrado → "sobe" o membro (status ativo) e atualiza role (apenas coord_admin e subadmin)
+  // Se integrado → o gatilho do banco ativa o membro; aqui só o papel escolhido (coord_admin e subadmin)
   if (proximaEtapa === 'integrado') {
-    await sbAdmin.from('acolitos_membros').update({ status: 'ativo' }).eq('id', membroId);
     const podeAtribuirRole = ['coord_admin','subadmin'].includes(ctx.membership.role);
     if (podeAtribuirRole) {
       const { data: membroRow } = await sb

@@ -43,25 +43,6 @@ do $$declare f f138;begin select * into f from f138;
  begin insert into acolitos_crm(membro_id,etapa) values(f.alheio,'aprovacao_cadastro');raise exception 'CRM de ficha alheia';exception when insufficient_privilege then null;end;
 end $$;
 reset role;
--- equipe sem permissão de membros
-select set_config('request.jwt.claims',json_build_object('sub',mi_user,'role','authenticated')::text,true) from f138;
-set local role authenticated;
-do $$declare f f138;n int;begin select * into f from f138;
- begin update acolitos_membros set permissoes=permissoes||'{membros}' where id=f.mi;raise exception 'Equipe se deu acesso';exception when insufficient_privilege then null;end;
- begin update acolitos_membros set eh_equipe=true where id=f.outro;raise exception 'Equipe sem permissão deu acesso';exception when insufficient_privilege then null;end;
- update acolitos_membros set observacoes='prova' where id=f.outro;get diagnostics n=row_count;assert n=1,'Equipe perdeu edição comum';
-end $$;
-reset role;
--- equipe com permissão de membros
-select set_config('request.jwt.claims',json_build_object('sub',fran_user,'role','authenticated')::text,true) from f138;
-set local role authenticated;
-do $$declare f f138;n int;begin select * into f from f138;
- update acolitos_membros set eh_equipe=true,permissoes='{tarefas}',setores='{liturgia}' where id=f.outro;get diagnostics n=row_count;assert n=1,'Franciele não deu acesso';
- begin update acolitos_membros set permissoes=permissoes||'{config}' where id=f.fran;raise exception 'Mudou o próprio acesso';exception when insufficient_privilege then null;end;
- begin update acolitos_membros set permissoes='{}' where id=f.coord;raise exception 'Mexeu em coord_admin';exception when insufficient_privilege then null;end;
- begin update acolitos_membros set user_id=null where id=f.outro;raise exception 'Trocou user_id';exception when insufficient_privilege then null;end;
-end $$;
-reset role;
 -- coordenação
 select set_config('request.jwt.claims',json_build_object('sub',coord_user,'role','authenticated')::text,true) from f138;
 set local role authenticated;
@@ -69,4 +50,4 @@ do $$declare f f138;n int;begin select * into f from f138;
  update acolitos_membros set status='ativo',permissoes='{}' where id=f.outro;get diagnostics n=row_count;assert n=1,'Coordenação bloqueada';
 end $$;
 reset role;
-select '138: lista de edição, dono da ficha e acesso da equipe OK; cadastro, equipe e coordenação funcionam';
+select '138: lista de edição, dono da ficha e CRM OK; cadastro e coordenação funcionam; regras da equipe na prova 140';

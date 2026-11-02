@@ -1,4 +1,4 @@
--- Executar após137 em transação com ROLLBACK.
+-- Executar após137b em transação com ROLLBACK.
 create temp table f137 as select
  (select id from acolitos_membros where nome like 'Adryan Miguel%') a,
  (select user_id from acolitos_membros where nome like 'Adryan Miguel%') a_user,
@@ -53,4 +53,4 @@ do $$declare n int;begin
  begin truncate acolitos_membros;raise exception 'Anon truncou';exception when insufficient_privilege then null;end;
 end $$;
 reset role;
-select '137: campos, CRM e grants travados; membro, cadastro, coordenação e serviço seguem funcionando';
+select '137b: campos, CRM e grants travados; membro, cadastro, coordenação e serviço seguem funcionando';

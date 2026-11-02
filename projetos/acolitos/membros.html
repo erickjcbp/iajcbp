@@ -676,6 +676,8 @@ async function abrirFicha(membro) {
 
   // Tabs
   const ehAdmin = ['coord_admin','subadmin'].includes(ctx.membership.role);
+  // Só administração edita ficha; a equipe consulta. A trava de verdade é o gatilho proteger_acesso.
+  document.getElementById('btn-salvar').style.display = ehAdmin ? '' : 'none';
   const tabs = ['Pessoal'];
   if (ehAdmin) tabs.push('Acessos'); // logo no começo, bem visível
   tabs.push('Disponibilidade','Família','Frequência','Mensagem');

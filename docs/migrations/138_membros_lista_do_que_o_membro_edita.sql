@@ -1,4 +1,4 @@
--- Substitui a trava da 137, que listava só três colunas proibidas. Agora vale o contrário:
+-- Substitui a trava da 137b, que listava só três colunas proibidas. Agora vale o contrário:
 -- membro comum altera apenas as colunas de CAMPOS_OBRIGATORIOS (shared.js) e as de perfil
 -- abaixo. Coluna nova nasce protegida. Quem está na coordenação segue a regra por papel:
 -- coord_admin e subadmin livres; membro_equipe só mexe em acesso com permissão membros ou
