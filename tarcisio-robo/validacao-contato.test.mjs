@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { lerResposta, decidir, idadeEm, criarValidacaoContato, RESPOSTAS } from './validacao-contato.mjs'
+import { lerResposta, lerNumero, decidir, idadeEm, criarValidacaoContato, RESPOSTAS } from './validacao-contato.mjs'
 
 const hoje = '2026-11-02'
 const membros = [
@@ -16,7 +16,7 @@ test('lê nome e idade em jeitos comuns de responder', () => {
   assert.deepEqual(lerResposta('João Pedro da Silva\n14'), { nome: 'joao pedro da silva', idade: 14 })
 })
 test('reconhece quem não serve', () => {
-  for (const t of ['Não sirvo no altar', 'sou mãe do Pedro', 'Sou o coordenador']) assert.equal(lerResposta(t).naoServe, true)
+  for (const t of ['Não sirvo no altar', 'Sou o coordenador']) assert.equal(lerResposta(t).naoServe, true)
 })
 test('idade respeita o aniversário', () => {
   assert.equal(idadeEm('2012-11-03', hoje), 13)
@@ -37,15 +37,15 @@ test('mesmo número da ficha confirma sem regravar', () => {
   assert.equal(r.situacao, 'gravado'); assert.equal(r.gravar, false)
 })
 
-function falso(linha) {
-  const escritas = [], enviadas = []
-  const fim = (data) => { const p = Promise.resolve({ data, error: null }); return Object.assign(p, { eq: () => fim(data), or: () => fim(data), select: () => fim(data), maybeSingle: () => fim(data) }) }
+function falso(linha, ficha = membros[0]) {
+  const escritas = [], enviadas = [], grupos = []
+  const fim = (data) => { const p = Promise.resolve({ data, error: null }); return Object.assign(p, { eq: () => fim(data), or: () => fim(data), select: () => fim(data), maybeSingle: () => fim(Array.isArray(data) ? ficha : data) }) }
   const db = { from: (t) => ({
-    select: () => fim(t === 'tarcisio_validacao_contato' ? linha : membros),
+    select: () => fim(t === 'tarcisio_validacao_contato' ? linha : t === 'tarcisio_grupos' ? { jid: 'g@g.us' } : membros),
     update: (v) => { escritas.push([t, v]); return fim([{ id: 'a' }]) },
     insert: (v) => { escritas.push([t, v]); return fim(null) },
   }) }
-  return { v: criarValidacaoContato({ db, evo: { enviarTexto: async (_n, x) => { enviadas.push(x); return {} } }, relogio: () => new Date('2026-11-02T15:00:00Z'), log: { info() {} } }), escritas, enviadas }
+  return { v: criarValidacaoContato({ db, evo: { enviarTexto: async (_n, x) => { enviadas.push(x); return {} }, adicionarAoGrupo: async (j, n) => { if (ficha?.semGrupo) throw new Error('sem permissão'); grupos.push([j, n]) } }, relogio: () => new Date('2026-11-02T15:00:00Z'), log: { info() {}, warn() {} } }), escritas, enviadas, grupos }
 }
 test('modo teste responde, mas nunca escreve na ficha', async () => {
   const { v, escritas, enviadas } = falso({ numero: '5519', situacao: 'perguntado', tentativas: 0, teste: true })
@@ -70,4 +70,59 @@ test('resposta incompleta pede de novo uma vez, depois vai para revisão', async
   const b = falso({ numero: '5519', situacao: 'perguntado', tentativas: 1, teste: false })
   await b.v.receber({ numero: '5519', texto: 'oi' })
   assert.equal(b.enviadas[0], RESPOSTAS.revisar)
+})
+
+const dados = (situacao, extra = {}) => ({ numero: '5519911112222', situacao, tentativas: 0, teste: false, membro_id: 'a', ...extra })
+const FRASE_PAI = 'Eu não sirvo mais, meu filho serve, é o Pedro'
+test('pai ou mãe que diz que o filho serve abre a conversa, em vez de encerrar', async () => {
+  assert.equal(lerResposta(FRASE_PAI).filho, true)
+  assert.equal(lerResposta('sou mãe do Pedro').filho, true)
+  const { v, escritas, enviadas } = falso(dados('perguntado'))
+  await v.receber({ numero: '5519911112222', texto: FRASE_PAI })
+  assert.equal(enviadas[0], RESPOSTAS.filho_dados)
+  assert.equal(escritas.find(([t]) => t === 'tarcisio_validacao_contato')[1].situacao, 'filho_dados')
+})
+test('com a ficha do filho achada, pede o número e diz que o grupo é só de comunicados', async () => {
+  const { v, escritas, enviadas } = falso(dados('filho_dados'))
+  await v.receber({ numero: '5519911112222', texto: 'João Pedro da Silva, 14 anos' })
+  assert.match(enviadas[0], /somente para comunicados/)
+  assert.equal(escritas.find(([t]) => t === 'tarcisio_validacao_contato')[1].situacao, 'filho_numero')
+})
+test('filho não localizado vai para revisão e nada entra no grupo', async () => {
+  const { v, enviadas, grupos } = falso(dados('filho_dados'))
+  await v.receber({ numero: '5519911112222', texto: 'Fulano de Tal, 12 anos' })
+  assert.equal(enviadas[0], RESPOSTAS.revisar); assert.equal(grupos.length, 0)
+})
+test('número do filho entra na ficha vazia e no grupo, com o reforço de comunicados', async () => {
+  const { v, escritas, enviadas, grupos } = falso(dados('filho_numero'))
+  await v.receber({ numero: '5519911112222', texto: '19 98888-7777' })
+  assert.deepEqual(escritas.find(([t]) => t === 'acolitos_membros')[1], { telefone: '19988887777' })
+  assert.deepEqual(grupos, [['g@g.us', ['5519988887777']]])
+  assert.match(enviadas[0], /somente para comunicados/)
+})
+test('modo teste simula a inclusão sem gravar nem mexer no grupo', async () => {
+  const { v, escritas, grupos } = falso(dados('filho_numero', { teste: true }))
+  await v.receber({ numero: '5519911112222', texto: '19 98888-7777' })
+  assert.equal(escritas.some(([t]) => t === 'acolitos_membros'), false); assert.equal(grupos.length, 0)
+})
+test('ficha com outro número, ou filho no número da família, não entra no grupo', async () => {
+  const a = falso(dados('filho_numero'), membros[1])
+  await a.v.receber({ numero: '5519911112222', texto: '19 98888-7777' })
+  assert.equal(a.grupos.length, 0); assert.equal(a.enviadas[0], RESPOSTAS.revisar)
+  const b = falso(dados('filho_numero'))
+  await b.v.receber({ numero: '5519911112222', texto: 'usa o meu, 19 91111-2222' })
+  assert.equal(b.grupos.length, 0); assert.equal(b.enviadas[0], RESPOSTAS.revisar)
+})
+test('falha ao incluir no grupo vai para revisão, sem dizer que deu certo', async () => {
+  const { v, enviadas } = falso(dados('filho_numero'), { ...membros[0], semGrupo: true })
+  await v.receber({ numero: '5519911112222', texto: '19 98888-7777' })
+  assert.equal(enviadas[0], RESPOSTAS.revisar)
+})
+test('mais de um filho vai para revisão', () => {
+  assert.equal(lerResposta('meus filhos servem').variosFilhos, true)
+})
+test('lê número em formatos comuns', () => {
+  assert.equal(lerNumero('(19) 98888-7777'), '5519988887777')
+  assert.equal(lerNumero('+55 19 98888 7777'), '5519988887777')
+  assert.equal(lerNumero('não tem'), null)
 })
