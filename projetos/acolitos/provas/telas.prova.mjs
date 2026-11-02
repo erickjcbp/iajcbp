@@ -2806,13 +2806,13 @@ async function provaAcompanhamentoDaFormacao(provas) {
       // textContent, não innerText: o innerText devolve o texto DEPOIS do CSS, e o cabeçalho
       // do cartão é maiúsculo por folha de estilo — a busca pelo título nunca casaria.
       var txt = (document.getElementById('main') || document.body).textContent || '';
-      var so = txt.slice(txt.indexOf('Quem não está andando'));
+      var so = txt.slice(txt.indexOf('Acompanhamento da Formação'));
       var zaps = [].slice.call(document.querySelectorAll('a[href*="wa.me"]'));
       return {
-        temCartao: txt.indexOf('Quem não está andando') >= 0,
+        temCartao: txt.indexOf('Acompanhamento da Formação') >= 0,
         abriuComListaFechada: !!verQuem,
-        contagens: /Nunca entrou no app: 2/.test(so) && /Entrou e não começou: 1/.test(so)
-                   && /Parou: 1/.test(so) && /Andando: 1/.test(so),
+        contagens: /2Nunca entrou no app/.test(so) && /1Entrou e não começou/.test(so)
+                   && /1Parou/.test(so) && /1Andando/.test(so),
         ordem: so.indexOf('Ana Nunca Entrou') < so.indexOf('Caio Travado')
                && so.indexOf('Caio Travado') < so.indexOf('Zeca Parado'),
         andandoForaDaLista: so.indexOf('Duda Andando') < 0,
@@ -3254,7 +3254,7 @@ async function provaRetiros(provas) {
   exigir(/prazo vencido/.test(l.texto), 'a lista avisa que há coisa com prazo vencido', l.texto.slice(0, 400));
 
   // 2) DENTRO DA ÁREA: cronograma ordenado por hora, vencido marcado
-  const a = await abrir('retiros.html', { ...base, passos: [{ chamar: 'abrirArea', args: ['a1'] }], foto: '/tmp/retiros-2-area.png',
+  const a = await abrir('retiros.html', { ...base, passos: [{ chamar: 'abrirAreaDaLista', args: ['a1'] }], foto: '/tmp/retiros-2-area.png',
     avaliar: `const t = [...document.querySelectorAll('.rt-card .rt-tit')].map(e => e.textContent);
       return { titulos: t, texto: document.getElementById('main-content').innerText };` });
   exigir(!a.erroAvaliar && a.passosFalhos.length === 0, 'a área abre', (a.erroAvaliar || '') + a.passosFalhos.join('|'));
@@ -3264,7 +3264,7 @@ async function provaRetiros(provas) {
   exigir(/Responsável: Daiane Silva/.test(av.texto), 'o responsável aparece pelo nome', av.texto.slice(0, 500));
 
   // 3) COMPRAS: totais por categoria, cotações, menor preço
-  const c = await abrir('retiros.html', { ...base, passos: [{ chamar: 'abrirArea', args: ['a1'] }, { clicar: 'Compras' }], foto: '/tmp/retiros-3-compras.png',
+  const c = await abrir('retiros.html', { ...base, passos: [{ chamar: 'abrirAreaDaLista', args: ['a1'] }, { clicar: 'Compras' }], foto: '/tmp/retiros-3-compras.png',
     avaliar: `return document.getElementById('main-content').innerText;` });
   const ct = c.avaliado || '';
   exigir(/Arroz 5 kg/.test(ct) && /2 cotações/.test(ct), 'a compra mostra quantas cotações tem', ct.slice(0, 600));
@@ -3273,14 +3273,14 @@ async function provaRetiros(provas) {
   exigir(/Pago R\$\s*48,00/.test(ct), 'compra feita mostra o valor PAGO, não o estimado', ct.slice(0, 600));
 
   // 4) CAIXA: a compra marcada como comprada sem lançamento na Tesouraria é denunciada
-  const k = await abrir('retiros.html', { ...base, passos: [{ chamar: 'abrirArea', args: ['a1'] }, { clicar: 'Caixa' }], foto: '/tmp/retiros-4-caixa.png',
+  const k = await abrir('retiros.html', { ...base, passos: [{ chamar: 'abrirAreaDaLista', args: ['a1'] }, { clicar: 'Caixa' }], foto: '/tmp/retiros-4-caixa.png',
     avaliar: `return document.getElementById('main-content').innerText;` });
   const kt = k.avaliado || '';
   exigir(/SEM lançamento na Tesouraria/.test(kt), 'compra "comprada" sem lançamento na Tesouraria é denunciada', kt.slice(0, 700));
   exigir(/Doações\s*R\$\s*200,00/i.test(kt.replace(/\n/g, ' ')) && /Vendas\s*R\$\s*90,00/i.test(kt.replace(/\n/g, ' ')), 'doações e vendas aparecem separadas', kt.slice(0, 700));
 
   // 5) COMPREI grava pela função atômica, com o valor digitado
-  const g = await abrir('retiros.html', { ...base, passos: [{ chamar: 'abrirArea', args: ['a1'] }, { clicar: 'Compras' }, { clicar: 'Comprei' }],
+  const g = await abrir('retiros.html', { ...base, passos: [{ chamar: 'abrirAreaDaLista', args: ['a1'] }, { clicar: 'Compras' }, { clicar: 'Comprei' }],
     avaliar: `const b = [...document.querySelectorAll('.modal button')].find(x => x.textContent.includes('Registrar e lançar'));
       if (!b) return 'sem botão'; b.click(); await new Promise(r => setTimeout(r, 300)); return 'ok';` });
   exigir(g.avaliado === 'ok', 'o botão de registrar a compra existe na janela', String(g.avaliado));
@@ -3359,7 +3359,7 @@ async function provaEquipesDoRetiro(provas) {
       { id: 'p2', equipe_id: 'e1', nome: 'Paulo Lima', whatsapp: null, funcao: null, lider: false },
     ] },
   };
-  const abrirE = (passos, avaliar) => provas.abrir('retiros.html', { papel: PAPEIS.equipe, tabelas, passos: [{ chamar: 'abrirArea', args: ['a1'] }, { clicar: 'Equipes' }, ...passos],
+  const abrirE = (passos, avaliar) => provas.abrir('retiros.html', { papel: PAPEIS.equipe, tabelas, passos: [{ chamar: 'abrirAreaDaLista', args: ['a1'] }, { clicar: 'Equipes' }, ...passos],
     avaliar: "const sp = document.getElementById('splash'); if (sp) sp.remove();" + avaliar });
 
   // 1) a aba lista as equipes, o link do grupo e o WhatsApp de cada pessoa

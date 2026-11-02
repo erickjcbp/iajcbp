@@ -286,7 +286,7 @@ function abrirAreaDaLista(id) {
   history.pushState({ retirosView:'area', areaId:id, aba, scrollListaY, scrollY:0, veioDaLista:true }, '', u);
   rotaRetiroAtual = location.pathname + location.search;
   restaurarRolagemRetiro = 0;
-  abrirArea(id);
+  return abrirArea(id);
 }
 async function abrirArea(id) {
   const main = document.getElementById('main-content');
