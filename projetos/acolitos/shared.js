@@ -2599,7 +2599,7 @@ const ORDEM_MODULOS = ['jornada','caixa','membros','escala','crm','tesouraria','
 const TELA_LABEL = {
   'games.html':'Games', 'quizzes.html':'Dinâmicas', 'membros.html':'Membros', 'escala.html':'Escala', 'crm.html':'CRM',
   'tesouraria.html':'Tesouraria', 'casas.html':'Casas', 'tarefas.html':'Tarefas', 'retiros.html':'Retiros',
-  'missoes.html':'Quests', 'escalas-membro.html':'Minhas Escalas', 'agenda.html':'Agenda',
+  'davi.html':'Davi — Guardião do Rebanho', 'missoes.html':'Quests', 'escalas-membro.html':'Minhas Escalas', 'agenda.html':'Agenda',
   'destaques.html':'Destaques', 'minha-casa.html':'Minha Casa', 'ausencias.html':'Ausências',
   'jornada-admin.html':'Jornada', 'conquistas.html':'Conquistas'
   // config.html propositalmente FORA: painel superadmin (gate por username, não perm) — não deve virar chip "Continuar"

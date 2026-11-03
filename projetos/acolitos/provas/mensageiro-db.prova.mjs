@@ -31,6 +31,7 @@ sql(fs.readFileSync(path.join(root,'supabase/migrations/20261102210000_mensageir
 sql(fs.readFileSync(path.join(root,'supabase/migrations/20261102223000_mensageiro_agua_rara.sql'),'utf8'));
 sql(fs.readFileSync(path.join(root,'supabase/migrations/20261103000000_mensageiro_rota_aberta.sql'),'utf8'));
 sql(fs.readFileSync(path.join(root,'supabase/migrations/20261103010000_mensageiro_desafio.sql'),'utf8'));
+sql(fs.readFileSync(path.join(root,'supabase/migrations/20261103020000_davi_game.sql'),'utf8'));
 assert.equal(sql("select has_function_privilege('anon','public.acolitos_game_sessao(uuid,uuid)','execute')"),'f');assert.equal(sql("select has_function_privilege('authenticated','public.acolitos_game_creditar(uuid,uuid,int,int,int)','execute')"),'f');assert.equal(sql("select has_table_privilege('authenticated','acolitos_game_sessoes','select')"),'f');
 assert.throws(()=>start(other),/Command failed/);const a=start();assert.throws(()=>rpc('authenticated',other,'acolitos_game_sessao',q(m)+','+q(a.id)),/Command failed/);
 assert.throws(()=>credit(a.id),/Command failed/);age(a.id);assert.equal(credit(a.id).xp,20);assert.equal(credit(a.id).novo,false);assert.equal(sql(`select xp_avulso from acolitos_membros where id=${q(m)}`),'20');
@@ -64,5 +65,12 @@ const credit5=()=>rpc('service_role',uid,'acolitos_game_creditar_v5',`${q(a5.id)
 assert.equal(credit5().xp,0);assert.equal(credit5().novo,false);assert.equal(rpc('authenticated',uid,'acolitos_game_ranking_v5',q(m4)+",'semana'").meu.distancia,1900);
 assert.throws(()=>rpc('authenticated',other,'acolitos_game_iniciar_v5',q(m4)));
 assert.equal(sql("select has_function_privilege('authenticated','public.acolitos_game_creditar_v5(uuid,uuid,int,int,int,int,int)','execute')"),'f');assert.equal(sql("select has_function_privilege('anon','public.acolitos_game_ranking_v5(uuid,text)','execute')"),'f');
+// Davi usa versão6 e compartilha o teto com partidas anteriores.
+const davi=rpc('authenticated',uid,'acolitos_davi_iniciar',q(m4));assert.equal(davi.versao,6);age(davi.id);
+const creditDavi=()=>rpc('service_role',uid,'acolitos_davi_creditar',`${q(davi.id)},${q(uid)},7200,4000,20,7,80`);
+assert.equal(creditDavi().xp,0);assert.equal(creditDavi().novo,false);assert.equal(rpc('authenticated',uid,'acolitos_davi_ranking',q(m4)+",'semana'").meu.ondas,7);
+assert.throws(()=>rpc('authenticated',other,'acolitos_davi_iniciar',q(m4)));assert.throws(()=>rpc('authenticated',uid,'acolitos_davi_creditar',`${q(davi.id)},${q(uid)},7200,4000,20,7,80`));
+assert.equal(sql("select has_function_privilege('anon','public.acolitos_davi_ranking(uuid,text)','execute')"),'f');
+const dvMember='77777777-7777-4777-8777-777777777777';sql(`insert into acolitos_membros(id,user_id,nome)values(${q(dvMember)},${q(uid)},'Guardiao teste')`);const ds=rpc('authenticated',uid,'acolitos_davi_iniciar',q(dvMember));age(ds.id);const dr=rpc('service_role',uid,'acolitos_davi_creditar',`${q(ds.id)},${q(uid)},7200,4000,20,7,80`);assert.equal(dr.xp,20);assert.equal(dr.ondas,7);assert.equal(dr.afastados,80);assert.equal(sql(`select xp_avulso from acolitos_membros where id=${q(dvMember)}`),'20');
 console.log(JSON.stringify({ok:true,checks:['grants','RLS privada','propriedade','família','tempo mínimo','idempotência','limite diário','temporada','sessão expirada','concorrência']}));
 }finally{if(running)execFileSync(bin+'pg_ctl',['-D',path.join(dir,'data'),'-m','fast','-w','stop'],{stdio:'pipe'});}

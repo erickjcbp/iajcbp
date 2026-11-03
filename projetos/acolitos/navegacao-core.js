@@ -85,7 +85,7 @@
   // Conta que não serve usa os módulos da coordenação, sem páginas pessoais de serviço.
   function podeAbrirPaginaServico(caminho, serve) {
     var tela=String(caminho||'').split('?')[0].split('/').pop();
-    return serve !== false || ['games.html','missoes.html','escalas-membro.html','conquistas.html','destaques.html','minha-casa.html'].indexOf(tela)===-1;
+    return serve !== false || ['davi.html','games.html','missoes.html','escalas-membro.html','conquistas.html','destaques.html','minha-casa.html'].indexOf(tela)===-1;
   }
 
   // ── Qual botão acende numa tela que não tem botão próprio ──────────────────
