@@ -72,5 +72,12 @@ assert.equal(creditDavi().xp,0);assert.equal(creditDavi().novo,false);assert.equ
 assert.throws(()=>rpc('authenticated',other,'acolitos_davi_iniciar',q(m4)));assert.throws(()=>rpc('authenticated',uid,'acolitos_davi_creditar',`${q(davi.id)},${q(uid)},7200,4000,20,7,80`));
 assert.equal(sql("select has_function_privilege('anon','public.acolitos_davi_ranking(uuid,text)','execute')"),'f');
 const dvMember='77777777-7777-4777-8777-777777777777';sql(`insert into acolitos_membros(id,user_id,nome)values(${q(dvMember)},${q(uid)},'Guardiao teste')`);const ds=rpc('authenticated',uid,'acolitos_davi_iniciar',q(dvMember));age(ds.id);const dr=rpc('service_role',uid,'acolitos_davi_creditar',`${q(ds.id)},${q(uid)},7200,4000,20,7,80`);assert.equal(dr.xp,20);assert.equal(dr.ondas,7);assert.equal(dr.afastados,80);assert.equal(sql(`select xp_avulso from acolitos_membros where id=${q(dvMember)}`),'20');
+// Davi resgate: versão7, cap compartilhado e replay antigo preservado.
+sql(fs.readFileSync(path.join(root,'supabase/migrations/20261103030000_davi_resgate.sql'),'utf8'));
+const d7=rpc('authenticated',uid,'acolitos_davi_iniciar_v2',q(dvMember));assert.equal(d7.versao,7);age(d7.id);
+const credit7=()=>rpc('service_role',uid,'acolitos_davi_creditar_v2',`${q(d7.id)},${q(uid)},7200,5000,20,8,90`);
+assert.equal(credit7().xp,20);assert.equal(credit7().novo,false);assert.equal(rpc('authenticated',uid,'acolitos_davi_ranking_v2',q(dvMember)+",'geral'").meu.ondas,8);
+assert.throws(()=>rpc('authenticated',other,'acolitos_davi_iniciar',q(dvMember)));assert.throws(()=>rpc('authenticated',uid,'acolitos_davi_creditar_v2',`${q(d7.id)},${q(uid)},7200,5000,20,8,90`));assert.equal(sql("select has_function_privilege('anon','public.acolitos_davi_creditar_v2(uuid,uuid,int,int,int,int,int)','execute')"),'f');
+assert.equal(rpc('authenticated',uid,'acolitos_davi_iniciar',q(m4)).versao,6,'cliente anterior continua iniciando6');
 console.log(JSON.stringify({ok:true,checks:['grants','RLS privada','propriedade','família','tempo mínimo','idempotência','limite diário','temporada','sessão expirada','concorrência']}));
 }finally{if(running)execFileSync(bin+'pg_ctl',['-D',path.join(dir,'data'),'-m','fast','-w','stop'],{stdio:'pipe'});}
