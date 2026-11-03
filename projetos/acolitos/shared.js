@@ -235,29 +235,46 @@ async function whatsappResponsavelFaltando(conta, grupoIrmaos) {
   }
 }
 
+// Uma consulta que falhou não prova falta de acesso. Mantém a rota e permite refazer.
+function mostrarFalhaNavegacao() {
+  hideSplash();
+  if (document.getElementById('ac-connection-screen')) return null;
+  const screen = document.createElement('section');
+  screen.id = 'ac-connection-screen'; screen.setAttribute('role','alert');
+  screen.style.cssText = 'position:fixed;inset:0;z-index:10000;background:#150a0d;color:#f7ebe7;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:clamp(20px,4vw,64px);overflow:auto;font:16px/1.6 var(--font-body,system-ui)';
+  screen.innerHTML = '<h1 style="font-size:clamp(28px,4vw,48px);line-height:1.15">Não foi possível abrir esta tela.</h1><p style="max-width:55ch;margin:18px 0;color:#c6a7ac">A conexão falhou ao carregar seu perfil. Tente novamente para continuar de onde você está.</p><button type="button" style="min-height:48px;border:0;border-radius:10px;padding:12px 20px;background:#efca7c;color:#291721;font:700 16px var(--font-body,system-ui);cursor:pointer">Tentar novamente</button><a href="index.html" style="display:inline-flex;align-items:center;min-height:48px;margin-top:12px;color:#efca7c">Ir para o início</a>';
+  screen.querySelector('button').onclick = () => location.reload();
+  document.body.appendChild(screen); screen.querySelector('button').focus();
+  return null;
+}
+
 async function initModulo(requiredRoles = null, opts = null) {
-  const { data: { session } } = await sb.auth.getSession();
+  const { data: { session }, error: sessionError } = await sb.auth.getSession();
+  if (sessionError) return mostrarFalhaNavegacao();
   if (!session) { window.location.href = 'login.html'; return null; }
 
   await loadListasCustom();
   try { await loadConfig(); } catch (e) {}
   await loadCasas();   // de-para casa_id → slug, para o brasão no avatar
 
-  const { data: modulo } = await sbAdmin
+  const { data: modulo, error: moduloError } = await sbAdmin
     .from('pastoral_modules').select('id').eq('slug','acolitos').maybeSingle();
 
+  if (moduloError) return mostrarFalhaNavegacao();
   if (!modulo) {
     console.error('Módulo acolitos não encontrado no banco.');
     window.location.href = 'login.html';
     return null;
   }
 
-  const { data: membership } = await sbAdmin
+  const { data: membership, error: membershipError } = await sbAdmin
     .from('pastoral_members')
     .select('*')
     .eq('user_id', session.user.id)
     .eq('module_id', modulo.id)
     .maybeSingle();
+
+  if (membershipError) return mostrarFalhaNavegacao();
 
   // Sem vínculo → cadastro
   if (!membership) {
@@ -282,15 +299,18 @@ async function initModulo(requiredRoles = null, opts = null) {
   }
 
   // Busca ficha do membro (a conta logada)
-  const { data: conta } = await sb
+  const { data: conta, error: contaError } = await sb
     .from('acolitos_membros').select('*').eq('user_id', session.user.id).maybeSingle();
+
+  if (contaError) return mostrarFalhaNavegacao();
 
   // Conta de família: só vale para irmãos que são escalados JUNTOS (escalar_com_irmao)
   let membro = conta;
   let grupoIrmaos = [];
   if (conta && conta.grupo_irmaos && conta.escalar_com_irmao) {
-    const { data: irmaos } = await sb
+    const { data: irmaos, error: irmaosError } = await sb
       .from('acolitos_membros').select('*').eq('grupo_irmaos', conta.grupo_irmaos).eq('status', 'ativo');
+    if (irmaosError) return mostrarFalhaNavegacao();
     const juntos = (irmaos || []).filter(m => m.escalar_com_irmao);
     if (juntos.length >= 2) {
       juntos.sort((a, b) => (a.data_nascimento || '9999').localeCompare(b.data_nascimento || '9999'));

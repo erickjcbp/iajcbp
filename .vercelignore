@@ -35,3 +35,6 @@ supabase/migrations/20261103030000_davi_resgate.sql
 
 projetos/acolitos/davi-core-v3.test.js
 supabase/migrations/20261103190548_davi_funda_arraste.sql
+
+projetos/acolitos/navegacao-conexao.test.js
+projetos/acolitos/provas/navegacao-conexao.prova.mjs

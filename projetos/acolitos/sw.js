@@ -1,6 +1,6 @@
 // Service worker do app Acólitos — network-first (sempre o conteúdo mais novo), cache só p/ fallback offline.
 // O fetch handler "de verdade" é o que torna o app instalável no Chrome.
-const BUILD = '20261103-marcos-pastoral-v1'; // versão do cache offline; atualiza sem interromper telas abertas
+const BUILD = '20261103-navegacao-estavel-v1'; // versão do cache offline; atualiza sem interromper telas abertas
 const CACHE = 'acolitos-' + BUILD;
 const EMBLEMAS = ["./emblemas/aspirante.webp", "./emblemas/coroinha.webp", "./emblemas/acolito_aspirante.webp", "./emblemas/acolito_guardiao.webp", "./emblemas/acolito_sentinela.webp", "./emblemas/aspirante_cerimoniario.webp", "./emblemas/cerimoniario_aspirante.webp", "./emblemas/cerimoniario_guardiao.webp", "./emblemas/cerimoniario_magistral.webp", "./emblemas/cerimoniario_mor.webp"];
 const MEDALHAS = ["./medalhas-arte/calice-bronze.webp", "./medalhas-arte/calice-prata.webp", "./medalhas-arte/calice_sagrado-ouro.webp", "./medalhas-arte/coracao-bronze.webp", "./medalhas-arte/coracao-prata.webp", "./medalhas-arte/coroa-ouro.webp", "./medalhas-arte/coroa-prata.webp", "./medalhas-arte/crucifixo-ouro.webp", "./medalhas-arte/crucifixo-prata.webp", "./medalhas-arte/espadas-ouro.webp", "./medalhas-arte/estrela-bronze.webp", "./medalhas-arte/estrela-ouro.webp", "./medalhas-arte/estrela-prata.webp", "./medalhas-arte/hostia-ouro.webp", "./medalhas-arte/livro-bronze.webp", "./medalhas-arte/livro-ouro.webp", "./medalhas-arte/livro-prata.webp", "./medalhas-arte/pomba-ouro.webp", "./medalhas-arte/pomba-prata.webp", "./medalhas-arte/rosario-ouro.webp", "./medalhas-arte/rosario-prata.webp", "./medalhas-arte/sino-prata.webp", "./medalhas-arte/sino2-prata.webp", "./medalhas-arte/trigo-bronze.webp", "./medalhas-arte/trigo-prata.webp", "./medalhas-arte/turibulo-ouro.webp", "./medalhas-arte/vela-bronze.webp", "./medalhas-arte/samaritano-ouro.webp", "./medalhas-arte/acolhedor-ouro.webp", "./medalhas-arte/bastidores-ouro.webp", "./medalhas-arte/ponte_paz-ouro.webp", "./medalhas-arte/criacao-ouro.webp", "./medalhas-arte/escuta-ouro.webp", "./medalhas-arte/recomecar-ouro.webp", "./medalhas-arte/palavra_semeada-ouro.webp", "./medalhas-arte/amigo_todos-ouro.webp", "./medalhas-arte/memoria-ouro.webp"];
@@ -27,11 +27,26 @@ self.addEventListener('fetch', (e) => {
   let url;
   try { url = new URL(req.url); } catch (_) { return; }
   if (url.origin !== self.location.origin) return; // só mesma origem
-  e.respondWith(
-    fetch(req)
-      .then((resp) => { const cp = resp.clone(); caches.open(CACHE).then((c) => c.put(req, cp)).catch(() => {}); return resp; })
-      .catch(() => caches.match(req).then((r) => r || (req.mode === 'navigate' ? caches.match('./index.html') : undefined)))
-  );
+  e.respondWith((async () => {
+    let unavailable;
+    try {
+      const resp = await fetch(req);
+      if (resp.status >= 500) { unavailable = resp; throw Error('Servidor indisponível'); }
+      // Erros e redirecionamentos nunca substituem uma cópia válida da tela.
+      if (resp.ok && !resp.redirected) {
+        const cp = resp.clone();
+        e.waitUntil(caches.open(CACHE).then((c) => c.put(req, cp)).catch(() => {}));
+      }
+      return resp;
+    } catch (_) {
+      // Parâmetros de apresentação (como expandido=1) compartilham o mesmo HTML.
+      const cached = await caches.match(req, { ignoreSearch: req.mode === 'navigate' }).catch(() => null);
+      if (cached) return cached;
+      // Servir index.html aqui fazia a Home aparecer sob a URL do jogo.
+      if (req.mode === 'navigate') return new Response(`<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><title>Conexão · Acólitos</title><style>*{box-sizing:border-box}body{margin:0;background:#150a0d;color:#f7ebe7;font:16px/1.6 system-ui}main{min-height:100dvh;padding:clamp(20px,4vw,64px);display:flex;flex-direction:column;justify-content:center;align-items:flex-start}h1{font-size:clamp(28px,4vw,48px);line-height:1.15}p{max-width:55ch;color:#c6a7ac}button,a{display:inline-flex;align-items:center;min-height:48px;padding:12px 20px;margin:8px 0;font:700 16px system-ui;border-radius:10px}button{border:0;background:#efca7c;color:#291721;cursor:pointer}a{color:#efca7c}</style><main><h1>Vamos tentar de novo?</h1><p>A conexão falhou ao abrir esta tela. Conecte-se à internet e tente novamente.</p><button onclick="location.reload()">Tentar novamente</button><a href="index.html">Ir para o início</a></main></html>`, { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+      return unavailable || Response.error();
+    }
+  })());
 });
 
 // --- PUSH ---
