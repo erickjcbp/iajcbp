@@ -125,9 +125,11 @@ export function acharFicha({ nome, idade, membros, hoje }) {
   }
   // nome incompleto: mesmo primeiro nome e todas as palavras na ficha
   const partes = chave.split(' ')
+  // ficha com sobrenome abreviado ("Ana Luísa C. Guerra"): a inicial casa com a palavra que começa por ela
+  const casaInicial = (da) => da.length >= 2 && da[0] === partes[0] && da.every((p) => partes.includes(p) || (p.length === 1 && partes.some((q) => q.startsWith(p))))
   let parecidos = membros.filter((m) => {
     const da = chaveNome(m.nome).split(' ')
-    return da[0] === partes[0] && partes.every((p) => da.includes(p))
+    return da[0] === partes[0] && (partes.every((p) => da.includes(p)) || casaInicial(da))
   })
   if (parecidos.length > 1) parecidos = porIdade(parecidos)
   if (parecidos.length === 1) return { sugestao: parecidos[0] }

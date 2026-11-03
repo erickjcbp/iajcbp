@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { interpretar, lerResposta, lerNumero, lerFilhos, lerCelulares, mesmoNumero, decidir, idadeEm, criarValidacaoContato, RESPOSTAS } from './validacao-contato.mjs'
+import { interpretar, acharFicha, lerResposta, lerNumero, lerFilhos, lerCelulares, mesmoNumero, decidir, idadeEm, criarValidacaoContato, RESPOSTAS } from './validacao-contato.mjs'
 
 const hoje = '2026-11-02'
 const membros = [
@@ -314,4 +314,10 @@ test('celulares de irmãos chegando como cartões', async () => {
   const { v, grupos } = falso(dados('filhos_celular', { filhos: [{ id: 'a', nome: 'João' }, { id: 'e', nome: 'Maria' }] }))
   await v.receber({ numero: FAM, texto: 'João 5519988887777', contatos: [{ nome: 'João', numero: '5519988887777' }] })
   assert.equal(grupos.length, 1)
+})
+test('ficha com sobrenome abreviado vira sugestão do nome da ficha', () => {
+  const lista = [{ id: 'g', nome: 'Ana Luísa C. Guerra', data_nascimento: '2012-06-15', telefone: null }]
+  const r = acharFicha({ nome: 'ana luisa campos guerra', idade: 14, membros: lista, hoje })
+  assert.equal(r.sugestao?.id, 'g')
+  assert.equal(acharFicha({ nome: 'ana luisa souza guerra', idade: 14, membros: lista, hoje }).sugestao, undefined)
 })
