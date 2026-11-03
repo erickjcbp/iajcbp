@@ -1396,8 +1396,8 @@ let painelNovidadesPromise=null;
 async function carregarPainelNovidades(){
  if(window.abrirNovidades&&[...document.styleSheets].some(s=>s.href?.includes('/novidades.css')))return;
  if(!painelNovidadesPromise)painelNovidadesPromise=new Promise((resolve,reject)=>{
- const css=document.createElement('link');css.rel='stylesheet';css.href='novidades.css?v=20261103b';
- const js=document.createElement('script');js.src='novidades.js?v=20261103b';
+ const css=document.createElement('link');css.rel='stylesheet';css.href='novidades.css?v=20261103d';
+ const js=document.createElement('script');js.src='novidades.js?v=20261103d';
  Promise.all([new Promise((ok,no)=>{css.onload=ok;css.onerror=no;}),new Promise((ok,no)=>{js.onload=ok;js.onerror=no;})]).then(resolve,()=>{css.remove();js.remove();painelNovidadesPromise=null;reject(Error('Sem conexão'));});
  document.head.append(css,js);
  });return painelNovidadesPromise;
