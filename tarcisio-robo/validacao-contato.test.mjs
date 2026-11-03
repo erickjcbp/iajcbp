@@ -321,3 +321,9 @@ test('ficha com sobrenome abreviado vira sugestão do nome da ficha', () => {
   assert.equal(r.sugestao?.id, 'g')
   assert.equal(acharFicha({ nome: 'ana luisa souza guerra', idade: 14, membros: lista, hoje }).sugestao, undefined)
 })
+test('inicial só vale palavra por palavra: nome extra ou ficha sem inicial não casam', () => {
+  const lista = [{ id: 'g', nome: 'Ana Luísa C. Guerra', data_nascimento: '2012-06-15', telefone: null }, { id: 'h', nome: 'Ana Luísa', data_nascimento: '2012-06-15', telefone: null }]
+  assert.equal(acharFicha({ nome: 'ana luisa campos guerra', idade: 14, membros: lista, hoje }).sugestao?.id, 'g')
+  assert.equal(acharFicha({ nome: 'ana luisa campos guerra silva', idade: 14, membros: [lista[0]], hoje }).sugestao, undefined)
+  assert.equal(acharFicha({ nome: 'ana luisa pereira', idade: 14, membros: [lista[1]], hoje }).sugestao, undefined)
+})
