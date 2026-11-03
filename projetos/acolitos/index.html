@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="novidades.css?v=20261103">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#150a0d">
   <link rel="icon" href="icon-192.png">
@@ -148,6 +149,7 @@
 <script src="identidade-core.js"></script>
 <script src="tempo-pastoral-core.js"></script>
 <script src="shared.js"></script>
+<script src="novidades.js?v=20261103"></script>
 <script>
 // EQUIPE_ROLES já vem do shared.js (redeclarar com const aqui quebrava o script)
 // Splash (turíbulo) é centralizado no shared.js — roda só na ABERTURA do app (1x por sessão).
@@ -188,6 +190,7 @@ async function init() {
   else await renderDashboardMembro(ctx);
   // depois do conteúdo montar (cada render limpa #main); senão o chip/banner seriam apagados.
   renderContinuar(ctx);
+  if (window.renderNovidades) window.renderNovidades(ctx);
   renderAvisoAusencias(ctx);
 }
 
