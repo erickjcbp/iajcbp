@@ -79,5 +79,12 @@ const credit7=()=>rpc('service_role',uid,'acolitos_davi_creditar_v2',`${q(d7.id)
 assert.equal(credit7().xp,20);assert.equal(credit7().novo,false);assert.equal(rpc('authenticated',uid,'acolitos_davi_ranking_v2',q(dvMember)+",'geral'").meu.ondas,8);
 assert.throws(()=>rpc('authenticated',other,'acolitos_davi_iniciar',q(dvMember)));assert.throws(()=>rpc('authenticated',uid,'acolitos_davi_creditar_v2',`${q(d7.id)},${q(uid)},7200,5000,20,8,90`));assert.equal(sql("select has_function_privilege('anon','public.acolitos_davi_creditar_v2(uuid,uuid,int,int,int,int,int)','execute')"),'f');
 assert.equal(rpc('authenticated',uid,'acolitos_davi_iniciar',q(m4)).versao,6,'cliente anterior continua iniciando6');
+sql(fs.readFileSync(path.join(root,'supabase/migrations/20261103190548_davi_funda_arraste.sql'),'utf8'));
+const d8=rpc('authenticated',uid,'acolitos_davi_iniciar_v3',q(dvMember));assert.equal(d8.versao,8);age(d8.id);
+const credit8=()=>rpc('service_role',uid,'acolitos_davi_creditar_v3',`${q(d8.id)},${q(uid)},7200,6000,20,9,100`);
+assert.equal(credit8().xp,20);assert.equal(credit8().novo,false);assert.equal(rpc('authenticated',uid,'acolitos_davi_ranking_v3',q(dvMember)+",'geral'").meu.ondas,9);
+assert.equal(rpc('authenticated',uid,'acolitos_davi_iniciar_v2',q(m4)).versao,7);assert.equal(rpc('authenticated',uid,'acolitos_davi_iniciar',q(m4)).versao,6);
+assert.throws(()=>rpc('authenticated',other,'acolitos_davi_iniciar_v3',q(dvMember)));assert.throws(()=>rpc('authenticated',uid,'acolitos_davi_creditar_v3',`${q(d8.id)},${q(uid)},7200,6000,20,9,100`));assert.equal(sql("select has_function_privilege('anon','public.acolitos_davi_creditar_v3(uuid,uuid,int,int,int,int,int)','execute')"),'f');
+
 console.log(JSON.stringify({ok:true,checks:['grants','RLS privada','propriedade','família','tempo mínimo','idempotência','limite diário','temporada','sessão expirada','concorrência']}));
 }finally{if(running)execFileSync(bin+'pg_ctl',['-D',path.join(dir,'data'),'-m','fast','-w','stop'],{stdio:'pipe'});}
