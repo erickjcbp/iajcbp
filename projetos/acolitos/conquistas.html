@@ -120,6 +120,17 @@
     .cq-medal{display:flex;flex-direction:column;align-items:center;gap:12px;padding:18px!important;min-width:0}
     .cq-medal .cq-nome{font-size:16px;line-height:1.5}.cq-medal-info .medalha-detalhes{font-size:15px}
     @media(max-width:639px){.cq-medal-grid{grid-template-columns:minmax(0,1fr)!important}}
+
+    .cq-marcos{margin:24px 0 30px}.cq-marcos .cq-sec{font-size:16px;letter-spacing:.4px;text-transform:none}
+    .cq-marco-destaque{display:flex;align-items:center;gap:clamp(18px,3vw,40px);padding:clamp(18px,2vw,30px);border:1px solid var(--gold-dim);border-radius:16px;background:linear-gradient(120deg,rgba(232,185,74,.12),var(--surface));margin:16px 0 20px}
+    .cq-marco-arte{display:flex;align-items:center;justify-content:center;flex:none}.cq-marco-arte .medalhao-tempo{flex:none}
+    .cq-marco-info{min-width:0}.cq-marco-info h3{font-family:var(--font-title);font-size:clamp(20px,2vw,28px);line-height:1.4;color:var(--gold-light);margin:5px 0 12px}
+    .cq-marco-info p{font-size:14px;line-height:1.65;margin:6px 0;overflow-wrap:anywhere}.cq-marco-etiqueta{color:var(--text-muted)}.cq-marco-proximo{color:var(--text-muted)}
+    .cq-marcos-lista{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:14px;padding:0;margin:0;list-style:none}
+    .cq-marcos-lista>li{min-width:0}.cq-marco{appearance:none;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;gap:20px;padding:24px 16px;border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);font:inherit;cursor:pointer;min-width:0;min-height:44px}
+    .cq-marco.atual{border-color:var(--gold-dim)}.cq-marco:focus-visible{outline:2px solid var(--gold-light);outline-offset:4px}.cq-marco:hover{border-color:var(--gold-dim)}.cq-marco.locked .cq-marco-arte{filter:grayscale(.8);opacity:.5}
+    .cq-marco-texto{min-width:0;width:100%;text-align:left}.cq-marco-texto h3{font-family:var(--font-title);font-size:17px;line-height:1.4;margin:0 0 8px;overflow-wrap:anywhere}.cq-marco-texto p{font-size:13px;line-height:1.6;margin:6px 0;overflow-wrap:anywhere}.cq-marco-estado{color:var(--text-muted)}.cq-marco.ganha .cq-marco-estado{color:var(--success-text)}.cq-marco-requisito{color:var(--text-muted)}
+    @media(max-width:639px){.cq-marco-destaque{align-items:flex-start;gap:14px;padding:18px 14px}.cq-marco-destaque .cq-marco-arte .medalhao-tempo{--medalhao-size:92px!important}.cq-marco-info h3{font-size:20px}.cq-marcos-lista{grid-template-columns:minmax(0,1fr)}.cq-marco{display:grid;grid-template-columns:104px minmax(0,1fr);gap:18px;padding:20px 14px}.cq-marco .cq-marco-arte .medalhao-tempo{--medalhao-size:104px!important}.cq-marco-texto h3{font-size:17px}.cq-stat span{font-size:10px;letter-spacing:0}}
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
 </head>
@@ -139,6 +150,8 @@
 <script src="identidade-core.js"></script>
 <script src="shared.js"></script>
 <script src="medalhas-arte.js"></script>
+<script src="tempo-pastoral-core.js"></script>
+<script src="conquistas-marcos-core.js"></script>
 <script>
 let ctx = null;
 const LIGA_LABEL = { iniciantes:'Iniciantes', acolitos:'Acólitos', cerimoniarios:'Cerimoniários' };
@@ -221,7 +234,7 @@ async function init() {
   renderBottomNav(ctx, 'conquistas');
   const main = document.getElementById('main-content'); main.textContent = '';
   const title = document.createElement('h1'); title.className = 'page-title'; title.textContent = 'Conquistas'; main.appendChild(title);
-  const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 8px;line-height:1.5;'; hint.textContent = 'Sua coleção de insígnias e troféus na jornada do altar. 🏅'; main.appendChild(hint);
+  const hint = document.createElement('p'); hint.style.cssText = 'font-size:12px;color:var(--text-muted);margin:-6px 0 8px;line-height:1.5;'; hint.textContent = 'Sua história de serviço: insígnias, marcos, medalhas e troféus.'; main.appendChild(hint);
 
   const nivel = (ctx.membro && ctx.membro.nivel) || 'aspirante';
   const meuIdx = Math.max(0, nivelIndex(nivel));
@@ -233,11 +246,12 @@ async function init() {
     try { await sb.rpc('acolitos_badges_registrar', { p_membro: ctx.membro.id }); } catch (e) {}
     try { const { data } = await sb.rpc('acolitos_badges_membro', { p_membro: ctx.membro.id }); badges = data || []; } catch (e) {}
   }
-  const medGanhas = badges.filter(b => b.ganho).length;
+  const { marcos, medalhas, ultimo, proximo } = ConquistasMarcos.separar(badges);
+  const medGanhas = medalhas.filter(b => b.ganho).length;
 
   // resumo
   const resumo = document.createElement('div'); resumo.className = 'cq-resumo';
-  [[(meuIdx + 1) + '/' + NIVEIS.length, 'Insígnias'], [medGanhas + '/' + badges.length, 'Medalhas'], [String(campeoes.length), 'Troféus']].forEach(([v, l]) => {
+  [[(meuIdx + 1) + '/' + NIVEIS.length, 'Insígnias'], [marcos.filter(b => b.ganho).length + '/' + marcos.length, 'Marcos'], [medGanhas + '/' + medalhas.length, 'Medalhas'], [String(campeoes.length), 'Troféus']].forEach(([v, l]) => {
     const c = document.createElement('div'); c.className = 'cq-stat'; c.innerHTML = '<b>' + v + '</b><span>' + l + '</span>'; resumo.appendChild(c);
   });
   main.appendChild(resumo);
@@ -255,6 +269,8 @@ async function init() {
     if (!ganha) { const lk = document.createElement('div'); lk.className = 'cq-lock'; comIcone(lk, 'lock', '', 'Bloqueado'); cell.appendChild(lk); }
     grid.appendChild(cell);
   });
+
+  montarMarcosPastoral(main, { marcos, ultimo, proximo });
 
   // Troféus de temporada
   const s2 = document.createElement('div'); s2.className = 'cq-sec'; comIcone(s2, 'trophy', 'Troféus de Temporada'); main.appendChild(s2);
@@ -276,13 +292,37 @@ async function init() {
     });
   }
 
-  // Medalhas de marcos
+  // Coleção de medalhas, sem os marcos de pastoral
   const s3 = document.createElement('div'); s3.className = 'cq-sec'; comIcone(s3, 'award', 'Medalhas'); main.appendChild(s3);
   const d3 = document.createElement('div'); d3.className = 'cq-desc'; d3.textContent = 'Explore sua coleção ou veja os requisitos das medalhas que ainda pode conquistar.'; main.appendChild(d3);
-  if (!badges.length) { const e = document.createElement('span'); e.className = 'empty'; e.textContent = 'Sem medalhas por aqui ainda.'; main.appendChild(e); }
+  if (!medalhas.length) { const e = document.createElement('span'); e.className = 'empty'; e.textContent = 'Sem medalhas por aqui ainda.'; main.appendChild(e); }
   else {
-    montarColecaoMedalhas(main, badges);
+    montarColecaoMedalhas(main, medalhas);
   }
+}
+
+function montarMarcosPastoral(main, {marcos, ultimo, proximo}) {
+  const sec=document.createElement('section');sec.className='cq-marcos';sec.setAttribute('aria-labelledby','cq-marcos-titulo');
+  const title=document.createElement('h2');title.id='cq-marcos-titulo';title.className='cq-sec';comIcone(title,'award','Marcos de Pastoral');
+  const desc=document.createElement('p');desc.className='cq-desc';desc.textContent='Cada ano de serviço faz parte da sua história.';sec.append(title,desc);
+  if(!marcos.length){const empty=document.createElement('p');empty.className='cq-desc';empty.textContent='Os marcos da sua caminhada aparecerão aqui quando estiverem disponíveis.';sec.append(empty);main.append(sec);return;}
+  const destaque=document.createElement('div');destaque.className='cq-marco-destaque';
+  if(ultimo){const arte=document.createElement('div');arte.className='cq-marco-arte';arte.innerHTML=medalSvg(ultimo.icone,ultimo.tier||tierDe(ultimo.nivel),152);destaque.append(arte);}
+  const info=document.createElement('div');info.className='cq-marco-info';
+  const label=document.createElement('p');label.className='cq-marco-etiqueta';label.textContent=ultimo?'Seu último marco alcançado':'Sua caminhada está começando';
+  const nome=document.createElement('h3');nome.textContent=ultimo?ultimo.label:'Uma história que cresce com você';info.append(label,nome);
+  const tempo=TempoPastoral.dados(ctx.membro);if(tempo.meses!==null){const t=document.createElement('p');t.textContent='Tempo de pastoral: '+tempo.texto;t.title=tempo.titulo;info.append(t);}
+  const next=document.createElement('p');next.className='cq-marco-proximo';next.textContent=proximo?'Próximo marco: '+proximo.label+'. '+(proximo.requisito||proximo.desc||'Confira os requisitos do marco.'):'Você alcançou todos os marcos disponíveis. Sua história de serviço continua.';info.append(next);destaque.append(info);sec.append(destaque);
+  const lista=document.createElement('ol');lista.className='cq-marcos-lista';
+  marcos.forEach(b=>{
+    const item=document.createElement('li');const cell=document.createElement('button');cell.type='button';cell.className='cq-marco'+(b.ganho?' ganha':' locked')+(b===ultimo?' atual':'');cell.dataset.marco=b.icone;
+    cell.setAttribute('aria-label',b.label+(b.ganho?' — Marco alcançado':' — Marco ainda não alcançado'));cell.onclick=()=>abrirMedalha(b);
+    const icon=document.createElement('div');icon.className='cq-marco-arte';icon.innerHTML=medalSvg(b.icone,b.tier||tierDe(b.nivel),136);
+    const texto=document.createElement('div');texto.className='cq-marco-texto';const n=document.createElement('h3');n.textContent=b.label;
+    const status=document.createElement('p');status.className='cq-marco-estado';const date=b.ganho_em?new Date(b.ganho_em):null;status.textContent=b.ganho?(date&&!isNaN(date)?'Reconhecido em '+date.toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}):'Marco alcançado'):'Ainda por alcançar';
+    const requisito=document.createElement('p');requisito.className='cq-marco-requisito';requisito.textContent=b.requisito||b.desc||'Confira os detalhes deste marco.';
+    texto.append(n,status,requisito);cell.append(icon,texto);item.append(cell);lista.append(item);
+  });sec.append(lista);main.append(sec);
 }
 
 function montarColecaoMedalhas(main, badges) {
@@ -371,7 +411,7 @@ function abrirMedalha(b) {
   const ico = document.createElement('div'); ico.className = 'cq-medal-visual' + (b.ganho ? '' : ' locked'); ico.innerHTML = medalSvg(b.icone, b.tier || tierDe(b.nivel), 240);
   const info = document.createElement('div'); info.className = 'cq-medal-info';
   const nm = document.createElement('h2'); nm.id = 'cq-medal-title-' + (++_cqDialogN); nm.className = 'cq-medal-title'; nm.textContent = b.label; md.setAttribute('aria-labelledby', nm.id);
-  const st = document.createElement('p'); st.className = 'cq-medal-status' + (b.ganho ? ' ganha' : ''); st.textContent = b.ganho ? '✓ Conquistada' + (b.ganho_em ? ' em ' + new Date(b.ganho_em).toLocaleDateString('pt-BR', { timeZone:'America/Sao_Paulo' }) : '') : '🔒 Ainda não conquistada';
+  const st = document.createElement('p'); st.className = 'cq-medal-status' + (b.ganho ? ' ganha' : ''); st.textContent = b.ganho ? (ConquistasMarcos.esMarco(b) ? '✓ Marco alcançado' : '✓ Conquistada') + (b.ganho_em ? ' em ' + new Date(b.ganho_em).toLocaleDateString('pt-BR', { timeZone:'America/Sao_Paulo' }) : '') : '🔒 Ainda não conquistada';
   const detalhes=medalhaDetalhes(b);md.setAttribute('aria-describedby',detalhes.id);info.append(nm, st, detalhes); corpo.append(ico, info);
   const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn gold cq-medal-fechar'; btn.textContent = 'Fechar'; btn.onclick = fechar;
   md.append(corpo, btn); ov.appendChild(md); document.body.appendChild(ov);
