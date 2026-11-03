@@ -246,7 +246,7 @@ export function criarValidacaoContato({ db, evo, ia = null, relogio = () => new 
   }
 
   async function receberNumeroDoFilho({ msg, linha, salvar, revisar }) {
-    const novo = lerNumero(msg.texto)
+    const novo = msg.contatos?.length === 1 ? msg.contatos[0].numero : lerNumero(msg.texto)
     if (!novo) {
       if (linha.tentativas >= 1) return revisar('número do filho não informado')
       exigir(await salvar({ tentativas: linha.tentativas + 1 }), 'contar tentativa')

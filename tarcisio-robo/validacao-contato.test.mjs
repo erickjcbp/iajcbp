@@ -305,3 +305,13 @@ test('pediu irmãos e veio um só: segue com esse, sem travar', async () => {
   await v.receber({ numero: FAM, texto: 'João Pedro da Silva, 14' })
   assert.match(enviadas[0], /somente para comunicados/)
 })
+test('número do filho chegando como cartão de contato', async () => {
+  const { v, grupos } = falso(dados('filho_numero'))
+  await v.receber({ numero: '5519911112222', texto: 'Jheniffer 5519988887777', contatos: [{ nome: 'Jheniffer', numero: '5519988887777' }] })
+  assert.deepEqual(grupos, [['g@g.us', ['5519988887777']]])
+})
+test('celulares de irmãos chegando como cartões', async () => {
+  const { v, grupos } = falso(dados('filhos_celular', { filhos: [{ id: 'a', nome: 'João' }, { id: 'e', nome: 'Maria' }] }))
+  await v.receber({ numero: FAM, texto: 'João 5519988887777', contatos: [{ nome: 'João', numero: '5519988887777' }] })
+  assert.equal(grupos.length, 1)
+})

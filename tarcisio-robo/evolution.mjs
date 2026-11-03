@@ -150,6 +150,21 @@ export function botaoDoTexto(texto) {
 
 // Lê um evento da Evolution (portado de parseEvolutionEvent, satorhub/_shared/evolution.ts).
 // Só interessa mensagem recebida, no privado. Grupo, status e o que o próprio número mandou: ignora.
+// Cartões de contato do WhatsApp (um ou vários): nome e número de cada um. O número vem do waid
+// quando existe; senão, do primeiro TEL do vCard.
+export function lerContatos(m) {
+  const cartoes = m?.contactMessage ? [m.contactMessage] : (m?.contactsArrayMessage?.contacts || [])
+  return cartoes.slice(0, 6).map((c) => {
+    const v = String(c?.vcard || '')
+    const waid = /waid=(\d{10,13})/.exec(v)?.[1]
+    const tel = /TEL[^:\n]*:([+\d\s().-]{8,})/.exec(v)?.[1]
+    let n = String(waid || tel || '').replace(/\D/g, '')
+    if (n.length === 10 || n.length === 11) n = '55' + n
+    const nome = String(c?.displayName || /FN:(.*)/.exec(v)?.[1] || '').trim().slice(0, 60)
+    return n.length >= 12 && n.length <= 13 ? { nome, numero: n } : null
+  }).filter(Boolean)
+}
+
 export function lerMensagemRecebida(corpo) {
   const evento = String(corpo?.event || '').toLowerCase().replace(/_/g, '.')
   if (evento !== 'messages.upsert') return null
@@ -169,8 +184,10 @@ export function lerMensagemRecebida(corpo) {
     || ['reactionMessage', 'encReactionMessage'].includes(d?.messageType)) return null
   const doc = m.documentMessage || m.documentWithCaptionMessage?.message?.documentMessage || null
   const tocado = idDoBotao(m)
+  const contatos = lerContatos(m)
+  // cartão de contato vira texto ("Nome 5519…") para a conversa e a validação lerem como uma resposta escrita
   const texto = m.conversation || m.extendedTextMessage?.text || m.imageMessage?.caption || m.videoMessage?.caption
-    || doc?.caption || textoDoBotao(m) || null
+    || doc?.caption || textoDoBotao(m) || (contatos.length ? contatos.map((c) => `${c.nome} ${c.numero}`.trim()).join('\n') : null) || null
   const midia = m.audioMessage ? 'audio' : m.imageMessage ? 'imagem' : m.videoMessage ? 'video' : doc ? 'documento'
     : m.stickerMessage ? 'figurinha' : (!texto && !tocado ? 'outro' : null)
   const documento = doc ? { mimetype: doc.mimetype ? String(doc.mimetype) : null, nome: doc.fileName ? String(doc.fileName).slice(0, 200) : null } : null
@@ -180,5 +197,6 @@ export function lerMensagemRecebida(corpo) {
     botao: tocado ? String(tocado).slice(0, 200) : (!doc ? botaoDoTexto(texto) : null),
     tocou: !!tocado,
     documento,
+    ...(contatos.length ? { contatos } : {}),
   }
 }
