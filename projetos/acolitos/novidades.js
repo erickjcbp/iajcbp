@@ -29,11 +29,11 @@
     const jogar=elemento('a','btn gold','Conhecer o game');jogar.href='games.html';jogar.addEventListener('click',fechar);info.append(jogar);destaque.append(img,info);
     const lista=elemento('div','novidades-lista');for(const item of itens){const card=elemento('article','novidades-item');card.append(elemento('h3','',item.titulo),elemento('p','',item.texto));const link=elemento('a','novidades-link',item.acao);link.href=item.href;link.addEventListener('click',fechar);card.append(link);lista.append(card);}
     corpo.append(destaque,lista);
-    const rodape=elemento('footer','novidades-footer');rodape.append(elemento('p','','Você pode rever estas novidades pelo botão na tela inicial.'));
+    const rodape=elemento('footer','novidades-footer');rodape.append(elemento('p','','Você pode rever estas novidades pelo ícone ao lado do sino.'));
     const continuar=elemento('button','btn gold','Continuar no app');continuar.type='button';continuar.onclick=fechar;rodape.append(continuar);md.append(head,corpo,rodape);ov.append(md);
     md.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();fechar();return;}if(e.key!=='Tab')return;const links=[...md.querySelectorAll('button,a[href]')],primeiro=links[0],ultimo=links.at(-1);if(e.shiftKey&&document.activeElement===primeiro){e.preventDefault();ultimo.focus();}else if(!e.shiftKey&&document.activeElement===ultimo){e.preventDefault();primeiro.focus();}});
     document.body.style.overflow='hidden';document.body.append(ov);x.focus({preventScroll:true});
   }
   window.enfileirarNovidades=function(membro){if(!elegivel(membro)||enfileirados.has(chave(membro)))return;try{if(localStorage.getItem(chave(membro)))return;}catch(_){}enfileirados.add(chave(membro));enqueueNotif(40,done=>abrir(membro,done));};
-  window.renderNovidades=function(ctx){if(!elegivel(ctx?.membro)||ctx.membership?.role==='novo')return;const main=document.getElementById('main');if(!main||main.querySelector('.novidades-atalho'))return;const botao=elemento('button','novidades-atalho','Novidades do app');botao.type='button';const sub=elemento('span','','Game do Tíquico, desafios e conquistas');botao.append(sub);botao.onclick=()=>abrir(ctx.membro);main.prepend(botao);};
+  window.abrirNovidades=abrir;
 })();

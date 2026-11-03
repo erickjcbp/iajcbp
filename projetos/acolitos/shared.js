@@ -1371,6 +1371,18 @@ function applyTheme(theme, save) {
   if (save) localStorage.setItem('jcbp-theme', theme);
 }
 
+// Carregamento sob demanda nas telas internas; a Home já inclui o painel.
+let painelNovidadesPromise=null;
+async function carregarPainelNovidades(){
+ if(window.abrirNovidades&&[...document.styleSheets].some(s=>s.href?.includes('/novidades.css')))return;
+ if(!painelNovidadesPromise)painelNovidadesPromise=new Promise((resolve,reject)=>{
+ const css=document.createElement('link');css.rel='stylesheet';css.href='novidades.css?v=20261103b';
+ const js=document.createElement('script');js.src='novidades.js?v=20261103b';
+ Promise.all([new Promise((ok,no)=>{css.onload=ok;css.onerror=no;}),new Promise((ok,no)=>{js.onload=ok;js.onerror=no;})]).then(resolve,()=>{css.remove();js.remove();painelNovidadesPromise=null;reject(Error('Sem conexão'));});
+ document.head.append(css,js);
+ });return painelNovidadesPromise;
+}
+
 // ── HEADER ────────────────────────────────────────────────────
 function renderHeader(ctx, activePage) {
   const el = document.getElementById('app-header');
@@ -1456,6 +1468,12 @@ function renderHeader(ctx, activePage) {
     sino.appendChild(badge);
     sino.onclick = () => openNotificacoes(ctx.membro);
     actions.appendChild(sino);
+    if(ctx.membro.serve!==false&&ctx.membership?.role!=='novo'){
+      const novidades=document.createElement('button');novidades.type='button';novidades.className='btn-icon';novidades.id='novidades-abrir';novidades.style.cssText='width:44px;height:44px;';novidades.title='Novidades do app';novidades.setAttribute('aria-label','Novidades do app');
+      novidades.innerHTML='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 4h13v16H4zM17 8h3v12h-3M7 8h7M7 12h7M7 16h4"/></svg>';
+      novidades.onclick=async()=>{novidades.disabled=true;try{await carregarPainelNovidades();window.abrirNovidades(ctx.membro);}catch(_){toast('Não foi possível abrir as novidades. Tente novamente.','error');}finally{novidades.disabled=false;}};
+      actions.appendChild(novidades);
+    }
   }
 
   actions.append(contaBtn, sairBtn);

@@ -18,3 +18,7 @@ supabase/migrations/20261103000000_mensageiro_rota_aberta.sql
 docs/superpowers/plans/2026-11-02-mensageiro-progressao.md
 
 projetos/acolitos/provas/novidades.prova.mjs
+
+supabase/migrations/20261103010000_mensageiro_desafio.sql
+
+projetos/acolitos/provas/novidades-header.prova.mjs

@@ -66,7 +66,7 @@ class MensageiroRenderer {
   if(o.kind==='scroll'){this.ellipse(p.x,p.y-dh*.55,dw*.85,dh*.7,'#ffe5a22b');}
   if(this.assets.props){const f=this.propFrames[type.i];c.drawImage(this.assets.props,f.x,f.y,f.w,f.h,p.x-dw/2,p.y-dh+float,dw,dh);}
   else{c.fillStyle=o.kind==='scroll'?'#ffe8af':o.kind==='arch'?'#367f83':'#9b6845';c.fillRect(p.x-dw/2,p.y-dh,dw,dh);}
-  if((o.kind==='arch'||o.kind==='barrier')&&o.z>.6&&o.z<1){
+  if((o.kind==='arch'||o.kind==='barrier')&&o.z>(o.required?.25:.6)&&o.z<1){
    const label=o.kind==='arch'?'↓':'↑',r=Math.max(9,14*p.scale);this.ellipse(p.x,p.y-dh-r-5,r,r,'#122c3dcc');c.font='bold '+Math.round(r*1.25)+'px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillStyle='#fff0c4';c.fillText(label,p.x,p.y-dh-r-5);
   }
   c.restore();

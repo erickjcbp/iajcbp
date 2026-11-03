@@ -30,6 +30,7 @@ sql(fs.readFileSync(path.join(root,'supabase/migrations/20261102180000_corrida_m
 sql(fs.readFileSync(path.join(root,'supabase/migrations/20261102210000_mensageiro_ranking.sql'),'utf8'));
 sql(fs.readFileSync(path.join(root,'supabase/migrations/20261102223000_mensageiro_agua_rara.sql'),'utf8'));
 sql(fs.readFileSync(path.join(root,'supabase/migrations/20261103000000_mensageiro_rota_aberta.sql'),'utf8'));
+sql(fs.readFileSync(path.join(root,'supabase/migrations/20261103010000_mensageiro_desafio.sql'),'utf8'));
 assert.equal(sql("select has_function_privilege('anon','public.acolitos_game_sessao(uuid,uuid)','execute')"),'f');assert.equal(sql("select has_function_privilege('authenticated','public.acolitos_game_creditar(uuid,uuid,int,int,int)','execute')"),'f');assert.equal(sql("select has_table_privilege('authenticated','acolitos_game_sessoes','select')"),'f');
 assert.throws(()=>start(other),/Command failed/);const a=start();assert.throws(()=>rpc('authenticated',other,'acolitos_game_sessao',q(m)+','+q(a.id)),/Command failed/);
 assert.throws(()=>credit(a.id),/Command failed/);age(a.id);assert.equal(credit(a.id).xp,20);assert.equal(credit(a.id).novo,false);assert.equal(sql(`select xp_avulso from acolitos_membros where id=${q(m)}`),'20');
@@ -57,5 +58,11 @@ assert.throws(()=>rpc('authenticated',uid,'acolitos_game_creditar_v4',`${q(a4.id
 const b4=start4();age(b4.id);credit4(b4.id,300,1800);const c4=start4();age(c4.id);credit4(c4.id,2400,1900);const ranking4=rpc('authenticated',uid,'acolitos_game_ranking_v4',q(m4)+",'semana'");assert.equal(ranking4.participantes,1);assert.equal(ranking4.top.length,1);assert.equal(ranking4.meu.distancia,1900);assert.equal(ranking4.meu.pontos,2400);assert.equal(start4().record_distance,1900);
 const legacyAfter=start(uid,m4);age(legacyAfter.id);assert.equal(credit(legacyAfter.id).xp,0,'teto60 compartilhado entre versões');
 assert.equal(sql("select has_function_privilege('anon','public.acolitos_game_ranking_v4(uuid,text)','execute')"),'f');assert.equal(sql("select has_function_privilege('authenticated','public.acolitos_game_creditar_v4(uuid,uuid,int,int,int,int,int)','execute')"),'f');assert.equal(sql("select has_table_privilege('authenticated','acolitos_game_sessoes','select')"),'f');
+// Motor5: permissões, replay longo, crédito idempotente e teto compartilhado.
+const a5=rpc('authenticated',uid,'acolitos_game_iniciar_v5',q(m4));assert.equal(a5.versao,5);age(a5.id);
+const credit5=()=>rpc('service_role',uid,'acolitos_game_creditar_v5',`${q(a5.id)},${q(uid)},7200,3000,20,1900,1`);
+assert.equal(credit5().xp,0);assert.equal(credit5().novo,false);assert.equal(rpc('authenticated',uid,'acolitos_game_ranking_v5',q(m4)+",'semana'").meu.distancia,1900);
+assert.throws(()=>rpc('authenticated',other,'acolitos_game_iniciar_v5',q(m4)));
+assert.equal(sql("select has_function_privilege('authenticated','public.acolitos_game_creditar_v5(uuid,uuid,int,int,int,int,int)','execute')"),'f');assert.equal(sql("select has_function_privilege('anon','public.acolitos_game_ranking_v5(uuid,text)','execute')"),'f');
 console.log(JSON.stringify({ok:true,checks:['grants','RLS privada','propriedade','família','tempo mínimo','idempotência','limite diário','temporada','sessão expirada','concorrência']}));
 }finally{if(running)execFileSync(bin+'pg_ctl',['-D',path.join(dir,'data'),'-m','fast','-w','stop'],{stdio:'pipe'});}
