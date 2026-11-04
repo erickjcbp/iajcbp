@@ -114,3 +114,5 @@ test('se novo responsável não entra no grupo, não remove antigo nem muda cada
  let removeu=false;const a=criarAcolhida({db,ia:{avaliarTrocaResponsavel:async()=>({confirmado:true})},evo:{numerosComWhatsapp:async()=>[{numero:'5519992114793',existe:true}],participantes:async()=>[numero],adicionarAoGrupo:async()=>{},removerDoGrupo:async()=>{removeu=true;}},relogio:()=>agora});
  const r=await a.trocarResponsavel(numero,{membro_id:'m1',mensagem_id:msg.id,novo_numero:'992114793',retirar_solicitante:true},[msg]);assert.equal(r.entrada_pendente,true);assert.equal(removeu,false);assert.equal(db.t.acolitos_membros[0].celular_responsavel,null);
 });
+
+test('contato novo em integração zera só o passo do vídeo, para o vídeo seguir a acolhida',()=>{const st=[{membro_id:'m1',acolhido_em:'2026-10-20T18:00:00Z',ultimo_encontro:0,integracao_passo:1}],base={membros:[m],crm:[{...c,etapa:'integracao'}],estados:st,agora};const r=planejar({...base,envios:[{membros:['m1'],numero:'5519900000000'}]});assert.equal(r.planos[0].tipo,'acolhida');assert.deepEqual(r.planos[0].refazerVideo,['m1']);});
