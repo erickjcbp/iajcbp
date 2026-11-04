@@ -1,0 +1,3 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
+const files=fs.readdirSync('supabase/migrations').filter(n=>n.endsWith('_motor_missoes_editorial.sql'));const sql=()=>fs.readFileSync('supabase/migrations/'+files[0],'utf8');
+test('banco editorial possui tabelas privadas e quotas atômicas',()=>{assert.equal(files.length,1);for(const name of ['fontes','lotes','versoes','uso'])assert.match(sql(),new RegExp('acolitos_motor_'+name));assert.match(sql(),/enable row level security/);assert.match(sql(),/revoke all/);assert.match(sql(),/pg_advisory_xact_lock/);assert.match(sql(),/revisao=p_revisao/);});
