@@ -1,3 +1,5 @@
+import {tratarEditorial} from './_missoes-editorial.js';
+import {calendario} from './_bonus-rotina.js';
 import {bonusAdmin} from './_bonus.js';
 import { randomUUID, createHash } from 'node:crypto';
 import Core from '../projetos/acolitos/jornada-core.js';
@@ -20,6 +22,7 @@ export default async function jornadaHandler(req,res){
   if(role==='membro_equipe'){const me=await raw('/rest/v1/acolitos_membros?user_id=eq.'+user.id+'&select=permissoes');allowed=me?.some(m=>Array.isArray(m.permissoes)&&m.permissoes.includes('jornada'));}
   if(!allowed)return res.status(403).json({error:'Somente quem tem acesso à coordenação da Jornada pode editar episódios.'});
   const {action}=req.body||{};
+  if(action.startsWith('jornada_motor_')) return await tratarEditorial(req,res,{raw:(path,opts={})=>raw('/rest/v1/'+path,opts),user,cal:calendario()});
   if(action.startsWith('jornada_programacao_')) return await bonusAdmin(req,res,(path,opts={})=>raw('/rest/v1/'+path,opts));
   const getDraft=async id=>{if(!uuid(id))throw Object.assign(Error('Rascunho inválido.'),{status:400});const rows=await raw('/rest/v1/acolitos_config?chave=eq.'+keyFor(id)+'&select=valor');if(!rows?.[0])throw Object.assign(Error('Rascunho não encontrado.'),{status:404});return rows[0].valor;};
   const saveDraft=async(id,value)=>raw('/rest/v1/acolitos_config?chave=eq.'+keyFor(id),{method:'PATCH',body:{valor:value,updated_at:new Date().toISOString()},prefer:'return=representation'});
