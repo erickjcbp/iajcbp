@@ -8,7 +8,7 @@ export function planejarSemana({semana,membros,versoes,historico,capacidades,exi
  for(const m of [...membros].sort((a,b)=>score(semana+a.id).localeCompare(score(semana+b.id)))){
   if(existentes.filter(a=>a.membro_id===m.id).length===8)continue;
   const chosen=new Set();for(let slot=0;slot<SLOTS.length;slot++){
-   const tipo=SLOTS[slot];const candidates=versoes.filter(v=>v.estado==='aprovada'&&v.conteudo.tipo===tipo&&v.conteudo.niveis.includes(m.nivel)&&!chosen.has(v.conteudo.objetivo_chave)&&!historico.some(h=>h.membro_id===m.id&&h.objetivo_chave===v.conteudo.objetivo_chave&&(h.concluida||h.semana>=min))&&Number.isInteger(capacidades[v.conteudo.alvo_local])&&capacidades[v.conteudo.alvo_local]>(usage.get(v.conteudo.alvo_local)||0));
+   const tipo=SLOTS[slot];const candidates=versoes.filter(v=>v.estado==='aprovada'&&v.conteudo.tipo===tipo&&v.conteudo.niveis.includes(m.nivel)&&!chosen.has(v.conteudo.objetivo_chave)&&!historico.some(h=>h.membro_id===m.id&&h.objetivo_chave===v.conteudo.objetivo_chave&&(h.concluida||h.semana>=min))&&(tipo==='desafio'||(Number.isInteger(capacidades[v.conteudo.alvo_local])&&capacidades[v.conteudo.alvo_local]>(usage.get(v.conteudo.alvo_local)||0))));
    candidates.sort((a,b)=>(seenVersion.get(a.id)||0)-(seenVersion.get(b.id)||0)||score(semana+m.id+a.id).localeCompare(score(semana+m.id+b.id)));
    const v=candidates[0];if(!v){lacunas.push({membro_id:m.id,nivel:m.nivel,tipo,slot,motivo:'Falta missão inédita aprovada ou vaga confirmada.'});continue;}const c=v.conteudo;chosen.add(c.objetivo_chave);usage.set(c.alvo_local,(usage.get(c.alvo_local)||0)+1);seenVersion.set(v.id,(seenVersion.get(v.id)||0)+1);atribuicoes.push({membro_id:m.id,versao_id:v.id,slot,xp:classificarEsforco(tipo).xp});
   }
@@ -19,3 +19,5 @@ export async function prepararSemana(raw,semana,{publicar=false,capacidades:over
  const [membros,versoes,historico,existentes,cfg]=await Promise.all([paginar(raw,'acolitos_membros?status=eq.ativo&serve=eq.true&user_id=not.is.null&select=id,nivel&order=id'),paginar(raw,'acolitos_motor_versoes?estado=eq.aprovada&select=*&order=id'),paginar(raw,'acolitos_motor_historico?select=*&order=id'),paginar(raw,'acolitos_motor_atribuicoes?semana=eq.'+semana+'&select=*&order=id'),raw('acolitos_motor_config?id=eq.true')]);
  const plano=planejarSemana({semana,membros,versoes,historico,existentes,capacidades:override||cfg[0]?.capacidades||{}});if(publicar&&!plano.lacunas.length)await raw('rpc/acolitos_motor_publicar_semana',{method:'POST',body:{p_semana:semana,p_plano:plano.atribuicoes}});return plano;
 }
+
+export async function garantirSelecaoAtual(raw,cal,membro,listar,{planejar=prepararSemana}={}){let qs=await listar('acolitos_motor_minhas',{p_membro:membro});if(qs.filter(q=>!q.semana_anterior).length===8)return qs;try{await planejar(raw,cal.semana,{publicar:true});}catch{console.error('motor_selecao_incompleta_ou_concorrente');}return listar('acolitos_motor_minhas',{p_membro:membro});}

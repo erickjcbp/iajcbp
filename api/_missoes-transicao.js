@@ -1,7 +1,7 @@
 import {paginar} from './_missoes-util.js';
 export async function anexarLegadoIniciado(raw,member,cal,missoes){const cutoff=new Date(cal.data+'T12:00:00Z');cutoff.setUTCDate(cutoff.getUTCDate()-7);const ids=[...new Set((await paginar(raw,'acolitos_bonus_jogos?membro_id=eq.'+member+'&concluido_em=is.null&select=missao_id&order=id')).map(s=>s.missao_id))];const antigas=[];
  for(let i=0;i<ids.length;i+=50){const rows=await raw('acolitos_missoes?id=in.('+ids.slice(i,i+50).join(',')+')&criterio->motor=is.null&criterio->bonus_semanal=not.is.null&expira_em=gte.'+cutoff.toISOString().slice(0,10)+'&select=id,titulo,descricao,xp,criterio,expira_em');antigas.push(...rows);}
- const progress=ids.length?await paginar(raw,'acolitos_missao_progresso?membro_id=eq.'+member+'&status=in.(em_analise,revisao)&select=missao_id,status,obs_revisao&order=id'):[];
+ const progress=await paginar(raw,'acolitos_missao_progresso?membro_id=eq.'+member+'&status=in.(em_analise,revisao)&select=missao_id,status,obs_revisao&order=id');
  // Evidência em análise não perde acesso só porque o prazo de envio terminou.
  const extras=progress.filter(p=>!antigas.some(q=>q.id===p.missao_id)).map(p=>p.missao_id);for(let i=0;i<extras.length;i+=50)antigas.push(...await raw('acolitos_missoes?id=in.('+extras.slice(i,i+50).join(',')+')&criterio->motor=is.null&criterio->bonus_semanal=not.is.null&select=id,titulo,descricao,xp,criterio,expira_em'));
  const seen=new Set(missoes.map(q=>q.id));return [...missoes,...antigas.filter(q=>!seen.has(q.id)).map(q=>{const p=progress.find(p=>p.missao_id===q.id);return {...q,iniciada:true,semana_anterior:true,status:p?.status||'pendente',revisao:p?.obs_revisao};})];}
