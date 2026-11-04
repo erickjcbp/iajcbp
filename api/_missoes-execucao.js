@@ -1,0 +1,2 @@
+import {randomInt} from 'node:crypto';
+export function desafioPublico(c,rng=()=>randomInt(1000000)/1000000){return {publico:{rodadas:c.avaliacao.itens.map(i=>{const opcoes=i.opcoes.map(o=>({...o}));for(let n=opcoes.length-1;n>0;n--){const j=Math.floor(rng()*(n+1));[opcoes[n],opcoes[j]]=[opcoes[j],opcoes[n]];}return {texto:i.texto,ordenar:i.formato!=='alternativas',opcoes};})},respostas:c.avaliacao.itens.map(i=>i.correta)};}

@@ -1,0 +1,1 @@
+export async function paginar(raw,path){const out=[];for(let offset=0;offset<100000;offset+=500){const page=await raw(path+(path.includes('?')?'&':'?')+'limit=500&offset='+offset);if(!Array.isArray(page))throw Error('Resposta incompleta do banco.');out.push(...page);if(page.length<500)return out;}throw Error('Consulta excedeu o limite seguro; nenhum plano foi publicado.');}
