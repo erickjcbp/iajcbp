@@ -1,0 +1,85 @@
+{
+  "antes": {
+    "semanais": 21,
+    "progresso": 818,
+    "xp_missoes": 15340
+  },
+  "depois": {
+    "fontes": 233,
+    "semanais": 21,
+    "aprovadas": 0,
+    "migracoes": 3,
+    "progresso": 818,
+    "rascunhos": 22,
+    "xp_missoes": 15340,
+    "geracao_ativa": true,
+    "distribuicao_desde": null,
+    "lotes_ia_revisados": 1
+  },
+  "testes_focados": 51,
+  "suite": {
+    "passaram": 675,
+    "total": 678,
+    "falhas_preexistentes": 3
+  },
+  "geracao_real": {
+    "propostas": 4,
+    "modelo": "claude-haiku-5-5",
+    "geracao_ms": 9760,
+    "revisao_ms": 5741
+  },
+  "concorrencia_quota": "uma reserva e uma rejeição, cleanup concluído",
+  "publicacao": [
+    {
+      "arquivo": "projetos/acolitos/missoes.html",
+      "hash_confere": true
+    },
+    {
+      "arquivo": "projetos/acolitos/bonus-semana.js",
+      "hash_confere": true
+    },
+    {
+      "arquivo": "projetos/acolitos/jornada-admin.html",
+      "hash_confere": true
+    },
+    {
+      "arquivo": "projetos/acolitos/missoes-motor-admin.js",
+      "hash_confere": true
+    },
+    {
+      "arquivo": "projetos/acolitos/missoes-motor.css",
+      "hash_confere": true
+    },
+    {
+      "arquivo": "projetos/acolitos/sw.js",
+      "hash_confere": true
+    },
+    {
+      "arquivo": "projetos/acolitos/shared.js",
+      "hash_confere": true
+    },
+    {
+      "privado": "docs/missoes-paroquia/triagem-motor.json",
+      "status": 404
+    },
+    {
+      "privado": "docs/superpowers/specs/2026-11-04-motor-missoes-design.md",
+      "status": 404
+    },
+    {
+      "privado": "supabase/migrations/20261104120200_motor_missoes_execucao.sql",
+      "status": 404
+    },
+    {
+      "privado": "testes-api/missoes-editorial.test.mjs",
+      "status": 404
+    },
+    {
+      "privado": "api/_missoes-fontes.js",
+      "status": 404
+    },
+    {
+      "motor_anonimo": 401
+    }
+  ]
+}
