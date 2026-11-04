@@ -36,9 +36,18 @@ const sbAdmin = sb; // alias — todas as operações elevadas são via RLS com 
       });
     }
 
-    // banner "Instalar app"
+    // ── Instalar o app ──
+    // Android/Chrome/Edge: o navegador entrega o evento beforeinstallprompt e um toque abre a janela nativa.
+    // iPhone: a Apple não deixa site nenhum abrir essa janela; o único caminho é Compartilhar → Adicionar à Tela de Início,
+    // então mostramos um guia visual. Instagram/WhatsApp/Facebook não instalam: oferecemos abrir no navegador certo.
     const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-    if (standalone || localStorage.getItem('pwa-dismiss') === '1') return;
+    const ua = navigator.userAgent || '';
+    const toque = (navigator.maxTouchPoints || 0) > 1;
+    // abrirInstalacao() é global (declarada abaixo): qualquer botão do app pode chamá-la
+    if (standalone || localStorage.getItem('pwa-dismiss') === '1') {
+      window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); window.__bip = e; });
+      return;
+    }
     function banner(texto, btnLabel, onBtn) {
       if (document.getElementById('pwa-banner') || !document.body) return;
       const b = document.createElement('div'); b.id = 'pwa-banner';
@@ -50,35 +59,104 @@ const sbAdmin = sb; // alias — todas as operações elevadas são via RLS com 
       const cl = document.createElement('button'); cl.textContent = '×'; cl.title = 'Dispensar'; cl.setAttribute('aria-label','Dispensar convite para instalar'); cl.style.cssText = 'flex:none;width:44px;height:44px;background:none;border:none;color:#b88a8f;font-size:24px;line-height:1;cursor:pointer;'; cl.onclick = () => { localStorage.setItem('pwa-dismiss', '1'); b.remove(); }; b.appendChild(cl);
       document.body.appendChild(b);
     }
-    function mostrarPassos(passos) {
-      const b = document.getElementById('pwa-banner'); if (!b) return;
-      const anterior = b.querySelector('.pwa-passos');
-      if (anterior) { anterior.remove(); b.style.flexWrap = ''; return; }
-      const ol = document.createElement('ol'); ol.className = 'pwa-passos';
-      ol.style.cssText = 'width:100%;flex:0 0 100%;margin:4px 0 0;padding-left:22px;color:#f7ebe7;font-size:14px;line-height:1.5;';
-      passos.forEach((passo) => { const li = document.createElement('li'); li.textContent = passo; ol.appendChild(li); });
-      b.style.flexWrap = 'wrap'; b.appendChild(ol);
-    }
-    const passosIOS = () => mostrarPassos([
-      'Abra esta página no Safari.',
-      'Toque em Compartilhar e depois em “Adicionar à Tela de Início”.',
-      'Confirme em “Adicionar” e abra o app pelo ícone.'
-    ]);
-    const passosAndroid = () => mostrarPassos([
-      'Toque no menu do navegador (⋮).',
-      'Escolha “Instalar app” ou “Adicionar à tela inicial”.',
-      'Confirme para colocar o ícone na tela.'
-    ]);
-    function showInstall() { const ev = window.__bip; if (!ev) return; const old = document.getElementById('pwa-banner'); if (old) old.remove(); banner('Instale o app na sua tela inicial.', 'Instalar', () => { ev.prompt(); ev.userChoice.finally(() => { window.__bip = null; const el = document.getElementById('pwa-banner'); if (el) el.remove(); }); }); }
-    const ua = navigator.userAgent || '';
-    const isIOS = /iphone|ipad|ipod/i.test(ua), isSafari = /safari/i.test(ua) && !/crios|fxios|chrome|android/i.test(ua), isAndroidChrome = /android/i.test(ua) && /chrome/i.test(ua);
-    if (window.__bip) showInstall(); // evento já capturado no <head>
-    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); window.__bip = e; showInstall(); });
-    window.addEventListener('appinstalled', () => { const el = document.getElementById('pwa-banner'); if (el) el.remove(); });
-    if (isIOS) setTimeout(() => { if (!document.getElementById('pwa-banner')) banner('Instale o app na tela inicial e abra com um toque.', 'Como instalar', passosIOS); }, 1500);
-    else if (isAndroidChrome) setTimeout(() => { if (!document.getElementById('pwa-banner')) banner('Instale o app na tela inicial para abrir sem o navegador.', 'Como instalar', passosAndroid); }, 3000);
+    const modo = () => modoInstalacao({ ua, temBip: !!window.__bip, toque });
+    const convite = () => {
+      const m = modo();
+      const texto = m === 'nativo' ? 'Instale o app na sua tela inicial.' : m.startsWith('ios') ? 'Instale o app na Tela de Início e abra com um toque.' : 'Instale o app na tela inicial para abrir sem o navegador.';
+      const old = document.getElementById('pwa-banner'); if (old) old.remove();
+      banner(texto, 'Instalar', () => abrirInstalacao());
+    };
+    if (window.__bip) convite(); // evento já capturado no <head>
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); window.__bip = e; convite(); atualizarJanelaInstalacao(); });
+    window.addEventListener('appinstalled', () => { const el = document.getElementById('pwa-banner'); if (el) el.remove(); window.__bip = null; fecharInstalacao(true); });
+    const ehIOS = /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && toque);
+    if (ehIOS) setTimeout(() => { if (!document.getElementById('pwa-banner')) convite(); }, 1500);
+    else if (/android/i.test(ua)) setTimeout(() => { if (!document.getElementById('pwa-banner')) convite(); }, 3000);
   } catch (e) { /* PWA é progressivo — falha não quebra o app */ }
 })();
+
+// ── Janela "Instalar o app" ───────────────────────────────────
+// Decide o caminho pela realidade do aparelho. Função pura: testada em pwa.test.js.
+function modoInstalacao({ ua = '', temBip = false, toque = false } = {}) {
+  const dentroDeApp = /FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Line\/|TikTok|; wv\)|\bwv\b.*Chrome|GSA\//i.test(ua);
+  const ios = /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && toque);
+  if (ios) return dentroDeApp ? 'ios-app' : /CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua) ? 'ios-outro' : 'ios-safari';
+  if (dentroDeApp) return /android/i.test(ua) ? 'android-app' : 'outro-app';
+  if (temBip) return 'nativo';
+  return /android/i.test(ua) ? 'android-menu' : 'computador';
+}
+const ICONE_COMPARTILHAR = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12M8 7l4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>';
+const ICONE_MAIS = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+const ICONE_MENU = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="5" r="2" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="19" r="2" fill="currentColor"/></svg>';
+function conteudoInstalacao(m) {
+  const passo = (ic, txt) => `<li><span class="pi-ic">${ic}</span><span>${txt}</span></li>`;
+  const nome = 'Acólitos JCBP';
+  if (m === 'nativo') return { titulo: 'Instalar o app', texto: 'Um toque e o ícone do ' + nome + ' fica na sua tela inicial. Abre direto, sem navegador.', botao: 'Instalar agora', acao: 'nativo' };
+  if (m === 'ios-safari') return { titulo: 'Instale em 3 toques', texto: 'No iPhone, a Apple só permite instalar pelo menu Compartilhar do Safari:', passos: [
+    passo(ICONE_COMPARTILHAR, 'Toque em <b>Compartilhar</b> na barra do Safari (no iOS mais novo, ele fica dentro do <b>•••</b>).'),
+    passo(ICONE_MAIS, 'Role e toque em <b>Adicionar à Tela de Início</b>.'),
+    passo('✓', 'Toque em <b>Adicionar</b>. Pronto: o ícone ' + nome + ' aparece na tela.')], seta: true, botao: 'Entendi' };
+  if (m === 'ios-outro') return { titulo: 'Instale em 3 toques', texto: 'Neste navegador do iPhone:', passos: [
+    passo(ICONE_COMPARTILHAR, 'Toque em <b>Compartilhar</b> (perto do endereço do site).'),
+    passo(ICONE_MAIS, 'Toque em <b>Adicionar à Tela de Início</b>.'),
+    passo('✓', 'Confirme em <b>Adicionar</b>.')], botao: 'Entendi' };
+  if (m === 'ios-app') return { titulo: 'Abra no Safari para instalar', texto: 'Você abriu o link dentro de outro aplicativo (Instagram, WhatsApp…), e ele não deixa instalar. Abra no Safari e instale em 3 toques.', botao: 'Abrir no Safari', acao: 'safari', extra: 'Copiar link' };
+  if (m === 'android-app') return { titulo: 'Abra no Chrome para instalar', texto: 'Você abriu o link dentro de outro aplicativo (Instagram, WhatsApp…), e ele não deixa instalar. Abra no Chrome e instale com um toque.', botao: 'Abrir no Chrome', acao: 'chrome', extra: 'Copiar link' };
+  if (m === 'outro-app') return { titulo: 'Abra no navegador para instalar', texto: 'Este aplicativo não deixa instalar. Copie o link e abra no Chrome ou no Safari.', botao: 'Copiar link', acao: 'copiar' };
+  if (m === 'android-menu') return { titulo: 'Instale em 2 toques', texto: 'Seu navegador ainda não liberou o botão direto. Pelo menu também é rápido:', passos: [
+    passo(ICONE_MENU, 'Toque no menu <b>⋮</b> do navegador.'),
+    passo(ICONE_MAIS, 'Toque em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b> e confirme.')], botao: 'Entendi' };
+  return { titulo: 'Instalar no computador', texto: 'No Chrome ou no Edge, clique no ícone de instalar na barra de endereço (o monitor com a seta) ou no menu ⋮ → Instalar.', botao: 'Entendi' };
+}
+function fecharInstalacao(instalado) {
+  const ov = document.getElementById('pwa-instalar'); if (!ov) return;
+  if (instalado) { const c = ov.querySelector('.pi-card'); c.classList.add('pi-feito'); c.innerHTML = '<div class="pi-ok">✓</div><h2>App instalado!</h2><p>Procure o ícone <b>Acólitos JCBP</b> na sua tela inicial.</p>'; setTimeout(() => ov.remove(), 2600); return; }
+  ov.remove();
+}
+function atualizarJanelaInstalacao() { if (document.getElementById('pwa-instalar')) abrirInstalacao(); }
+function abrirInstalacao() {
+  const ua = navigator.userAgent || '', toque = (navigator.maxTouchPoints || 0) > 1;
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  const m = standalone ? 'instalado' : modoInstalacao({ ua, temBip: !!window.__bip, toque });
+  // Android com o evento pronto: o toque já abre a janela nativa, sem tela intermediária
+  if (m === 'nativo' && !document.getElementById('pwa-instalar')) { pedirInstalacaoNativa(); return; }
+  const c = m === 'instalado' ? { titulo: 'O app já está instalado', texto: 'Você já está usando o app pela tela inicial.', botao: 'Fechar' } : conteudoInstalacao(m);
+  document.getElementById('pwa-instalar')?.remove();
+  if (!document.getElementById('pwa-instalar-css')) { const st = document.createElement('style'); st.id = 'pwa-instalar-css'; st.textContent = `
+#pwa-instalar{position:fixed;inset:0;z-index:2000;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,4,6,.72);backdrop-filter:blur(4px)}
+#pwa-instalar .pi-card{position:relative;width:100%;max-width:460px;background:#1a0a0f;border:1px solid #8a6a24;border-bottom:0;border-radius:20px 20px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom));color:#f7ebe7;animation:piSobe .28s ease-out}
+#pwa-instalar .pi-topo{display:flex;align-items:center;gap:12px;margin-bottom:10px}#pwa-instalar .pi-topo img{width:52px;height:52px;border-radius:12px}
+#pwa-instalar h2{font-size:21px;line-height:1.2;margin:0}#pwa-instalar p{font-size:16px;line-height:1.5;color:#e9d8d3;margin:6px 0 12px}
+#pwa-instalar ol{list-style:none;margin:6px 0 14px;padding:0;display:grid;gap:10px}#pwa-instalar li{display:flex;align-items:center;gap:12px;background:#24101a;border-radius:12px;padding:12px;font-size:15.5px;line-height:1.4}
+#pwa-instalar .pi-ic{flex:none;width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:#f7ebe7;color:#0a62d6;font-weight:900;font-size:20px}
+#pwa-instalar .pi-bt{display:block;width:100%;min-height:52px;border:0;border-radius:12px;background:linear-gradient(160deg,#ffd97a,#8a6a24);color:#2a1500;font-weight:800;font-size:17px;cursor:pointer;margin-top:4px}
+#pwa-instalar .pi-sec{display:block;width:100%;min-height:48px;margin-top:8px;border:1px solid #8a6a24;border-radius:12px;background:none;color:#ffd97a;font-weight:700;font-size:16px;cursor:pointer}
+#pwa-instalar .pi-x{position:absolute;top:10px;right:10px;width:44px;height:44px;border:0;background:none;color:#b88a8f;font-size:26px;cursor:pointer}
+#pwa-instalar .pi-ok{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;margin:4px auto 10px;background:#ffd97a;color:#2a1500;font-size:34px;font-weight:900}#pwa-instalar .pi-feito>h2,#pwa-instalar .pi-feito>p{text-align:center}#pwa-instalar .pi-card.com-seta{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+#pwa-instalar .pi-seta{position:fixed;left:50%;bottom:calc(6px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:2001;color:#ffd97a;font-size:30px;text-shadow:0 0 12px #000;animation:piSeta 1s ease-in-out infinite;pointer-events:none}
+@keyframes piSobe{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}@keyframes piSeta{50%{transform:translate(-50%,8px)}}
+@media (min-width:700px){#pwa-instalar{align-items:center}#pwa-instalar .pi-card{border-radius:20px;border-bottom:1px solid #8a6a24}#pwa-instalar .pi-seta{display:none}}`; document.head.appendChild(st); }
+  const ov = document.createElement('div'); ov.id = 'pwa-instalar'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', c.titulo);
+  ov.innerHTML = `<div class="pi-card${c.seta ? ' com-seta' : ''}"><button class="pi-x" aria-label="Fechar">×</button><div class="pi-topo"><img src="icon-192.png" alt=""><h2>${c.titulo}</h2></div><p>${c.texto}</p>${c.passos ? '<ol>' + c.passos.join('') + '</ol>' : ''}<button class="pi-bt">${c.botao}</button>${c.extra ? `<button class="pi-sec">${c.extra}</button>` : ''}</div>${c.seta ? '<div class="pi-seta" aria-hidden="true">⬇</div>' : ''}`;
+  ov.addEventListener('click', (e) => { if (e.target === ov) fecharInstalacao(); });
+  ov.querySelector('.pi-x').onclick = () => fecharInstalacao();
+  const link = location.href;
+  const copiar = async (bt) => { try { await navigator.clipboard.writeText(link); } catch (_) { const t = document.createElement('textarea'); t.value = link; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (_) {} t.remove(); } bt.textContent = 'Link copiado ✓'; };
+  ov.querySelector('.pi-bt').onclick = (e) => {
+    if (c.acao === 'nativo') return pedirInstalacaoNativa();
+    if (c.acao === 'chrome') { location.href = 'intent://' + location.host + location.pathname + location.search + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(link) + ';end'; return; }
+    if (c.acao === 'safari') { location.href = 'x-safari-' + link; setTimeout(() => { e.target.textContent = 'Não abriu? Copie o link abaixo'; }, 1500); return; }
+    if (c.acao === 'copiar') return copiar(e.target);
+    fecharInstalacao();
+  };
+  const sec = ov.querySelector('.pi-sec'); if (sec) sec.onclick = () => copiar(sec);
+  document.body.appendChild(ov); ov.querySelector('.pi-bt').focus({ preventScroll: true });
+}
+function pedirInstalacaoNativa() {
+  const ev = window.__bip; if (!ev) { abrirInstalacao(); return; }
+  ev.prompt();
+  ev.userChoice.then((r) => { if (r && r.outcome === 'accepted') { document.getElementById('pwa-banner')?.remove(); fecharInstalacao(true); } }).finally(() => { window.__bip = null; });
+}
 
 // ── UTILS ─────────────────────────────────────────────────────
 function escHtml(s) {
