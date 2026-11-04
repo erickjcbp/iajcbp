@@ -115,6 +115,7 @@
     }
   </style>
   <script src="/projetos/acolitos/vendor/supabase-js-2.106.2.min.js"></script>
+<link rel="stylesheet" href="missoes-motor.css">
 </head>
 <body>
 <div id="app-header"></div>
@@ -140,6 +141,8 @@
 <script src="jornada-core.js"></script>
 <script src="jornada-quests.js"></script>
 <script src="jornada-autoria.js"></script>
+<script src="missoes-motor-admin.js"></script>
+
 <script src="jornada-programacao.js"></script>
 <script src="ficha-rapida.js"></script>
 <script src="historico-membro.js"></script>
@@ -197,6 +200,7 @@ async function renderAll() {
     box.appendChild(intro);
     const tools = document.createElement('div'); tools.className = 'ja-tools'; box.appendChild(tools);
     const sections = [
+      ['motor', 'Banco de missões', 'Crie rascunhos com fontes, revise a reserva e equilibre a seleção semanal.', body => MotorMissoes.render(body, { sb })],
       ['episodios', 'Episódios da Jornada', 'Prepare aventuras por nível, revise rascunhos e veja a reserva de episódios.', body => JornadaAutoria.render(body, { sb, niveis: NIVEIS })],
       ['semana', 'Missão da semana', 'Escolha uma missão para todos e organize as próximas semanas.', renderSemanaAdmin],
       ['exclusivas', 'Missões exclusivas', 'Crie um desafio para membros específicos.', renderCriarQuest],
