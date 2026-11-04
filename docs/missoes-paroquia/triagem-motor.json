@@ -1,0 +1,666 @@
+{
+  "fontes_confirmadas": 209,
+  "legado": [
+    {
+      "id": "7a00a8e0-5dd6-44fe-809e-96a8cd3f781e",
+      "titulo": "Diplomata litúrgico",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "5de12cf9-537a-43c5-8c3e-8acf2ae8e960",
+      "titulo": "Dupla no mesmo ritmo",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "4646ea5f-4206-478e-8314-cc71f46cb208",
+      "titulo": "Mensagem que vale guardar",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "46831222-1b76-43c3-9b9b-86b754e438db",
+      "titulo": "Pista de santidade",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "d09fec85-75c4-4856-9ceb-b05f273d5007",
+      "titulo": "Operação: sorriso desbloqueado",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "a81b225d-5d44-4e18-a01c-bf6f75413391",
+      "titulo": "Modo vela tranquila",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "36289cbd-1bc0-46a0-a293-5b2de6023186",
+      "titulo": "Pit stop da túnica",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "cbc849e2-82e4-4837-9c4b-64c0239b05a5",
+      "titulo": "O detalhe que passou batido",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "591f0336-5f82-469f-a3df-b24cdcde3432",
+      "titulo": "O código das badaladas",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "f6cc5297-59e0-4d55-b8bb-0e7b273a5951",
+      "titulo": "Print na memória",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "96722496-cd43-4053-b44a-2aa31217ae02",
+      "titulo": "Desbloqueie a frase",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "b7c3036d-ec3e-4c7c-99f5-d5aec82090c3",
+      "titulo": "O guarda-roupa tem pistas",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "9dcbd7d8-221c-4011-8e7e-483a53abaed6",
+      "titulo": "Arquivo IHS",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "aa2f40e8-1c0f-48b5-a2f7-9035b2322119",
+      "titulo": "Caso aberto na sacristia",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "ca5bd98b-7344-4c64-811f-0cd360aac3d6",
+      "titulo": "Um gesto, uma história",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "0bf8289a-b066-4e9a-b419-176b781378a6",
+      "titulo": "Uma ideia que muda o jogo",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "abd9bc6c-ee9d-49cc-8db1-fda5492e9ebb",
+      "titulo": "Modo celebração especial",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "0d65117f-6997-4b71-95b2-551b224eaa3b",
+      "titulo": "Trailer da nossa equipe",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "d2aa3e3d-5180-4f2f-9824-c2b063c915c9",
+      "titulo": "Combo de boas-vindas",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "075bb7c1-9eee-4bfd-aab7-be7b6dd2e6b9",
+      "titulo": "Uma intenção no bolso",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "ef6c7f32-d700-4009-97de-6d9c0a941577",
+      "titulo": "Replay das coisas boas",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "b87ffbdb-e6c5-4576-9b26-39d3ec3ef6ce",
+      "titulo": "Antes do primeiro passo",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "037ae4e5-15d5-44ba-8b30-11c29bc8ab51",
+      "titulo": "O mistério das galhetas",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "12d6a658-988f-4651-a277-43685bb056ff",
+      "titulo": "Símbolo encontrado!",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "6c597ba9-bb47-44fc-85fa-755728f25c35",
+      "titulo": "Zoom no que ninguém viu",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "463f21d7-1ca9-4c92-8ddc-53d66210b28f",
+      "titulo": "Mapa de memória",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "20ebaf27-d648-4248-ad81-36969af6f775",
+      "titulo": "Uma pergunta boa",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "29db2350-5ccc-4e5f-a2fc-5b5821512d52",
+      "titulo": "Check antes de entrar",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "c33b8f99-c3fa-4ee8-8c0b-fa3b641ddbad",
+      "titulo": "Por que o incenso?",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "c93ff66f-e561-46a1-8fdd-017771b176c6",
+      "titulo": "O que é a patena?",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "2927b302-e0cc-4481-8f7f-3e7ffb06c146",
+      "titulo": "As partes da missa",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "2c940ec9-5da2-4db2-b2f0-4ecd8a0afc8e",
+      "titulo": "Por que sineta?",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "701fb43c-ceed-404f-a3c3-bcd00ab5b971",
+      "titulo": "O que é o sacrário?",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "3c394765-9d06-40e3-b585-58266f54e8ba",
+      "titulo": "Cores do ano",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "593424da-4e7d-4be7-909e-c55c179131ff",
+      "titulo": "Advento x Quaresma",
+      "decisao": "sazonal",
+      "motivo": "Depende do calendário"
+    },
+    {
+      "id": "acbbd325-d6bc-4159-9650-5853212d668a",
+      "titulo": "De onde vem esse som?",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "75dfb64c-8443-4ee1-ac56-9ef4a3c95cd4",
+      "titulo": "Mestre do agradecimento",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "7ecbf6d1-c86a-4730-a6f4-5604f30f67ae",
+      "titulo": "Detetive das velas",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "3c3b68cb-cb9b-4826-9e8d-7dcc21816abb",
+      "titulo": "Pose de santo",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "7d6fc08a-3125-4ef1-8327-a95e2d207d57",
+      "titulo": "Caça ao tesouro",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "132e1638-0c82-4ff0-bc68-2caae3b11d3a",
+      "titulo": "Silêncio dourado",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "3eaea2df-a92b-4538-b8b2-cee65606b8da",
+      "titulo": "Mestre dos sinos",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "d5c75f6a-45fb-4cc0-9ffc-834a3bcd25b3",
+      "titulo": "Detetive das cores",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "b6c53930-4e97-4aa7-8089-0248fcedf2c2",
+      "titulo": "Cálice ou âmbula?",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "ed400573-7439-4a44-9bc8-e48f8518ede7",
+      "titulo": "Caçador do padroeiro",
+      "decisao": "sazonal",
+      "motivo": "Depende do calendário"
+    },
+    {
+      "id": "ed8b63b5-85f8-47f4-ac3b-5b8bfeba8383",
+      "titulo": "Mestre do gesto",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "dc91ed17-e54b-4d63-850d-535bc2be7990",
+      "titulo": "Mentor relâmpago",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "bcefe5a6-e8aa-458a-bc4b-5c1b973ae34b",
+      "titulo": "Cronista da missa",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "19015cbe-92aa-4041-a827-fa2fed7aee4d",
+      "titulo": "Inspetor de qualidade",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "d406882c-bc38-4b08-85e0-b73c63b01bca",
+      "titulo": "Diplomata",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "dbc8ccf4-0be9-46c7-963d-63d3e731bde8",
+      "titulo": "Historiador da paróquia",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "56e16bc3-03a3-402f-9f7e-052b22d05d29",
+      "titulo": "O que é a píxide?",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "20835f54-4a0f-49f3-b00a-af2b8525fa38",
+      "titulo": "Por que a água no vinho?",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "ae0c5746-dc36-4417-a58d-38bc8c6cc5e0",
+      "titulo": "O Aleluia some?",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "3b7a1c05-f1ad-44e1-9473-b8cc9c39dbed",
+      "titulo": "Guardião atento",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "aaa90a1a-2424-462a-8e8b-40ada213faf9",
+      "titulo": "Mestre do tempo",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "e19797da-97b2-45d9-b133-7ac9d51d38c9",
+      "titulo": "Detetive do erro",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "b27413cc-6172-4699-914b-beab42b87d46",
+      "titulo": "Nomes que viram encontros",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "15e7e191-116d-46e2-ab00-046269065a5e",
+      "titulo": "Versículo no bolso",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "c3869e02-9e2d-473b-b0e3-cfde0cbb753c",
+      "titulo": "Oferecimento",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "512d166c-caf8-442f-8d1f-4a13f4cbfb38",
+      "titulo": "Aula relâmpago",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "fd027d67-a657-437a-b9f8-beef1a4ffdb9",
+      "titulo": "Mestre dos ritos",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "6eddc4ab-f6c8-4a5e-b792-f279dd2a4e8d",
+      "titulo": "Guia da solene",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "51b058a0-64a6-4ed1-8089-d32f48ed0e75",
+      "titulo": "Professor de gestos",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "0dcd894b-11c7-45a3-8465-f453c248c3bb",
+      "titulo": "Contador de tradições",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "2d85b537-32a5-4a74-95c9-9c96e2940cfb",
+      "titulo": "Maestro",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "d69793f1-9e07-4e2a-87fa-db4d7dd8c2d6",
+      "titulo": "Olho clínico",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "412ee467-f7b9-49f9-b854-31a1efd726da",
+      "titulo": "Plano da missa",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "3207963a-e07f-4be4-b2e5-bd6b7c6bdc35",
+      "titulo": "Capitão da equipe",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "2324ee7a-4eef-4bf2-b0d8-c9bc71267fd6",
+      "titulo": "Resgate",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "dd481cf8-9002-4e9f-80d9-00e476631a90",
+      "titulo": "Contador de histórias",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "61b34889-8a19-4b74-b9ff-5a7bd1b25895",
+      "titulo": "Firmeza com leveza",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "a1293b86-0229-43e5-8464-127dbec122d7",
+      "titulo": "Luz no caminho",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "2c834b7c-b1c2-40c3-b62a-108071a959dd",
+      "titulo": "Um gesto com sentido",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "84412ead-bc03-4b59-87e2-d59419459df0",
+      "titulo": "Missão: página certa",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "b817ac80-8ff0-4a1f-9cd4-99f548531a71",
+      "titulo": "Professor por um dia",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "2c2499b5-bac3-4d43-ada8-1a564c52d2d8",
+      "titulo": "Cronista mor",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "4f7602da-edd1-4c35-9967-c45e46a4a3dd",
+      "titulo": "Estudante dos ritos",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "3aa618ca-fa7e-4772-9102-74ebb9a46b87",
+      "titulo": "Mestre da postura",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "edc03896-1b85-41a4-96de-8a1dd0c5c80c",
+      "titulo": "Memória viva",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "157725a3-9102-4eaa-9a0c-b18fe4851d67",
+      "titulo": "Inspirador",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "ed9be742-8212-4d3d-b62d-ee693b07280b",
+      "titulo": "Embaixador da música",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "73c25867-3aa7-4676-8a8e-581595bd7716",
+      "titulo": "Boas-vindas",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "0c475497-c2f2-438a-8a39-3814a6166af1",
+      "titulo": "Ninja da atenção",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "546e1b48-b45d-4f11-85ab-4bd81db6992d",
+      "titulo": "Detetive da sacristia",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "0e39fdab-bdd4-45b6-b156-00ba0c90e155",
+      "titulo": "Deu tempo?",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "8a495360-2f57-4309-a5f8-4c51f582c2fa",
+      "titulo": "Uma história em cores",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "66484919-9c69-4cda-ab81-418070802018",
+      "titulo": "Pause no corpo, play na atenção",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "83a03741-ac8d-4407-a670-2b0a72b161bf",
+      "titulo": "Quem é esse santo?",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "eb7c267b-3f32-4757-ace1-f0e23bf4ee5a",
+      "titulo": "Rei da concentração",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "8b36163c-537c-4f78-8f53-9ed5c34663bf",
+      "titulo": "Mestre do latim",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "539450e0-5d19-43c7-a9e4-937f084b4421",
+      "titulo": "Guia turístico",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "9f6fffa0-9301-44ef-9995-7a8f895b3e8b",
+      "titulo": "Quantos altares?",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "b45e9270-47e1-4f48-bfbd-1fa25b833381",
+      "titulo": "Caça ao crucifixo",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "d4a22f8e-c629-41bd-ae1f-f2bb1dd40fd8",
+      "titulo": "Nome do padre",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "67e67892-7482-44e3-a7c2-5e4153b67dcd",
+      "titulo": "Cor do dia",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "0159057e-5b1e-4c70-8a71-33bf7ed72ea3",
+      "titulo": "Quantos bancos?",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "a60b3264-e334-4610-bec6-678bcdae9c65",
+      "titulo": "Passo tranquilo",
+      "decisao": "reserva",
+      "motivo": "Potencial editorial; exige fonte e revisão antes de aprovação"
+    },
+    {
+      "id": "a45c8a7d-b787-4a90-838d-f9e81c6f4e2b",
+      "titulo": "Via-Sacra",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "c049725f-5075-42e4-a7c7-959a96a01877",
+      "titulo": "Coroa do Advento",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "a51d9625-f60e-4a8d-90e0-d78f54f4e344",
+      "titulo": "O primeiro presépio",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "1e8ee9de-5af3-4f51-bd1a-333ac9e95b95",
+      "titulo": "Missa do Galo",
+      "decisao": "sazonal",
+      "motivo": "Depende do calendário"
+    },
+    {
+      "id": "bcfbe141-6e88-45df-935b-ab997552f599",
+      "titulo": "Vermelho de fogo",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "0e3f29b5-9d69-4f7b-876c-494393b3221a",
+      "titulo": "Roxo da Quaresma",
+      "decisao": "sazonal",
+      "motivo": "Depende do calendário"
+    },
+    {
+      "id": "c42ba731-6866-482a-8561-272e13f49e93",
+      "titulo": "Os 40 dias",
+      "decisao": "sazonal",
+      "motivo": "Depende do calendário"
+    },
+    {
+      "id": "ce2aab9e-02cc-40cf-9d9e-f9297bd92612",
+      "titulo": "Aleluia!",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "92017abd-3e50-4d18-a49a-534ca26a4aaf",
+      "titulo": "Círio pascal",
+      "decisao": "sazonal",
+      "motivo": "Depende do calendário"
+    },
+    {
+      "id": "53df657d-7445-4341-b856-191a1a2b8044",
+      "titulo": "Quem foi São Tarcísio",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "997d2410-b4aa-41af-bb17-4d44664edaf3",
+      "titulo": "Coragem de Tarcísio",
+      "decisao": "revisar",
+      "motivo": "Hook genérico; localizar fonte e reescrever"
+    },
+    {
+      "id": "7c8273fa-aae3-47aa-939c-7c37b2183d80",
+      "titulo": "Festa do padroeiro",
+      "decisao": "sazonal",
+      "motivo": "Depende do calendário"
+    }
+  ],
+  "novas_18": "Candidatas principais; nova redação em rascunho, não aprovação automática."
+}
