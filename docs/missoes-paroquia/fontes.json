@@ -1,0 +1,13 @@
+{
+  "catalogo_local": "/Users/erickmartins/projetos/iajcbp/projetos/acolitos/aventuras-catalogo.json",
+  "sha256": "5c85d435e516d55a086f52fb05983678d2c215f0af6d615cca1c513ff8ef4670",
+  "total_aventuras": 110,
+  "inventario": "/Users/erickmartins/Downloads/decupagem-missoes/catalogo-detalhado.json",
+  "total_registros": 209,
+  "aviso": "Leitura do catálogo local. Não foi consultado o estado ativo em produção.",
+  "fontes_adicionais": [
+    "/Users/erickmartins/projetos/iajcbp/projetos/acolitos/jornada-catalogo.json",
+    "/Users/erickmartins/projetos/iajcbp/projetos/acolitos/jornada-piloto.json",
+    "/Users/erickmartins/projetos/iajcbp/docs/superpowers/specs/2026-11-02-missoes-que-brilham-design.md"
+  ]
+}

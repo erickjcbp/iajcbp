@@ -3,6 +3,12 @@ import {MODELOS,criarDesafio} from './_bonus-banco.js';
 import {conexao,calendario} from './_bonus-rotina.js';
 const uuid=s=>typeof s==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(s);
 export async function bonusAdmin(req,res,raw){const action=req.body.action;
+ if(action==='jornada_programacao_gabaritos'){
+  const ids=req.body.ids;if(!Array.isArray(ids)||ids.length>100||ids.some(id=>!uuid(id)))return res.status(400).json({error:'Missões inválidas.'});
+  const missions=ids.length?await raw('acolitos_missoes?id=in.('+ids.join(',')+')&select=id,criterio'):[];
+  const gabaritos={};for(const q of missions){const m=MODELOS.find(m=>m.id===q.criterio?.bonus_semanal?.modelo&&m.tipo==='descoberta');if(m)gabaritos[q.id]={resposta:m.gabarito,ajuda:m.ajuda,ambiente:m.ambiente};}
+  return res.status(200).json({gabaritos});
+ }
  if(action==='jornada_programacao_ver'){const cfg=(await raw('acolitos_jornada_rotina?id=eq.true&select=cfg'))[0]?.cfg;const semanas=await raw('acolitos_bonus_semanas?select=semana,origem,criado_em,modelos&order=semana.desc&limit=4');const logs=await raw('acolitos_jornada_push?select=slot,estado,aceitos,criado_em&order=criado_em.desc&limit=40');return res.status(200).json({cfg,semanas,envios:logs});}
  if(action==='jornada_programacao_salvar'){const c=req.body.cfg;if(!c||typeof c.ativa!=='boolean'||typeof c.renovar!=='boolean'||typeof c.push!=='boolean'||typeof c.resumo_coord!=='boolean'||![1,2,3,4].includes(c.limite_fim_semana)||['sexta','sabado','domingo','domingo2','resumo'].some(k=>!/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(c[k])||Number(c[k].slice(0,2))<6||Number(c[k].slice(0,2))>=21))return res.status(400).json({error:'Use horários entre 06h e 20h59 e limite de um a quatro convites.'});
  const minute=t=>Number(t.slice(0,2))*60+Number(t.slice(3));if(c.resumo_coord&&minute(c.resumo)-Math.max(minute(c.domingo),minute(c.domingo2))<120)return res.status(400).json({error:'Deixe o resumo da coordenação pelo menos duas horas após o convite de domingo.'});
@@ -23,7 +29,7 @@ export default async function bonusHandler(req,res){res.setHeader('Cache-Control
  if(req.body.action==='bonus_iniciar'){const id=req.body.missao_id;if(!uuid(id))return res.status(400).json({error:'Missão inválida.'});const mission=(await raw('acolitos_missoes?id=eq.'+id+'&select=id,criterio,ativo,expira_em'))[0];const meta=mission?.criterio?.bonus_semanal,model=MODELOS.find(m=>m.id===meta?.modelo);if(!model)return res.status(404).json({error:'Aventura não encontrada.'});
   const previous=(await raw('acolitos_bonus_jogos?membro_id=eq.'+member+'&missao_id=eq.'+id+'&select=id,publico,concluido_em,iniciado_em'))[0];
   if(previous){const deadline=new Date(mission.expira_em+'T23:59:59-03:00').getTime()+7*86400000;if(Date.now()>deadline)return res.status(410).json({error:'O prazo desta aventura terminou.'});return res.status(200).json({id:previous.id,publico:previous.publico,concluido:!!previous.concluido_em});}
-  const challenge=model.tipo==='jogo'?criarDesafio(model,()=>randomInt(1000000000)/1000000000):{publico:{passos:model.passos},respostas:[]};
+  const challenge=model.tipo==='jogo'?criarDesafio(model,()=>randomInt(1000000000)/1000000000):{publico:{passos:model.passos,...(model.tipo==='descoberta'?{ajuda:model.ajuda,resposta_curta:true}: {})},respostas:[]};
   const data=await raw('rpc/acolitos_bonus_iniciar',{method:'POST',body:{p_membro:member,p_missao:id,p_publico:challenge.publico,p_resposta:challenge.respostas}});return res.status(200).json(data);
  }
  return res.status(400).json({error:'Ação inválida.'});

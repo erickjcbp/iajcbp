@@ -38,3 +38,10 @@ supabase/migrations/20261103190548_davi_funda_arraste.sql
 
 projetos/acolitos/navegacao-conexao.test.js
 projetos/acolitos/provas/navegacao-conexao.prova.mjs
+
+# Materiais de revisão e gabaritos da paróquia não são arquivos públicos.
+docs/missoes-paroquia
+supabase/migrations/*_missoes_paroquia_descobertas.sql
+projetos/acolitos/provas/paroquia-descobertas.prova.mjs
+
+testes-api/paroquia-descobertas.test.mjs

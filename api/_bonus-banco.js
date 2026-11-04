@@ -1,3 +1,4 @@
+import {DESCOBERTAS_PAROQUIA} from './_paroquia-banco.js';
 import {randomUUID} from 'node:crypto';
 // Banco editorial do servidor. A IA escolhe IDs aprovados; não publica texto livre.
 export const MODELOS=[
@@ -40,8 +41,9 @@ export const MODELOS=[
  {id:'troca-com-catequese',tipo:'grupo',titulo:'Troca com a Catequese',gancho:'Ensine algo do altar. Aprenda algo novo.',xp:20,icone:'dupla',passos:['Com um adulto da Catequese, combine um encontro curto.','Ensine algo do serviço do altar e conte o que aprendeu com eles.','Conte aqui. A coordenação avalia sua participação.']},
  {id:'de-onde-vem',tipo:'grupo',titulo:'De onde vem?',gancho:'Existe obra da paróquia que quase ninguém sabe.',xp:20,icone:'dupla',passos:['Procure alguém da pastoral do Dízimo fora do horário das celebrações.','Descubra uma obra da paróquia que quase ninguém conhece.','Conte aqui. A coordenação avalia sua participação.']},
  {id:'pergunta-ao-padre',tipo:'grupo',titulo:'Pergunta ao padre',gancho:'Aquela curiosidade que você nunca teve coragem de perguntar.',xp:20,icone:'dupla',passos:['Em grupo, escolham uma curiosidade sobre a liturgia ou a paróquia.','Combinem um momento com o padre, perguntem e contem a resposta.','Conte aqui. A coordenação avalia sua participação.']},
+ ...DESCOBERTAS_PAROQUIA,
 ];
 export const MODELOS_ATIVOS=MODELOS.filter(m=>!m.aposentado);
-export function escolherModelos(semana,anteriores=[]){const jogos=MODELOS_ATIVOS.filter(m=>m.tipo==='jogo'),fotos=MODELOS_ATIVOS.filter(m=>m.tipo==='foto'),grupos=MODELOS_ATIVOS.filter(m=>m.tipo==='grupo');let h=0;for(const c of semana)h=(h*31+c.charCodeAt(0))>>>0;const pick=arr=>{const fresh=arr.filter(m=>!anteriores.includes(m.id));const pool=fresh.length?fresh:arr;return pool[h%pool.length].id;};return [pick(jogos),pick(fotos),pick(grupos)];}
-export function validarSelecao(ids){return Array.isArray(ids)&&ids.length===3&&new Set(ids).size===3&&['jogo','foto','grupo'].every(t=>ids.filter(id=>MODELOS_ATIVOS.some(m=>m.id===id&&m.tipo===t)).length===1);}
+export function escolherModelos(semana,anteriores=[]){const jogos=MODELOS_ATIVOS.filter(m=>m.tipo==='jogo'),fotos=MODELOS_ATIVOS.filter(m=>['foto','descoberta'].includes(m.tipo)),grupos=MODELOS_ATIVOS.filter(m=>m.tipo==='grupo');let h=0;for(const c of semana)h=(h*31+c.charCodeAt(0))>>>0;const pick=arr=>{const fresh=arr.filter(m=>!anteriores.includes(m.id));const pool=fresh.length?fresh:arr;return pool[h%pool.length].id;};return [pick(jogos),pick(fotos),pick(grupos)];}
+export function validarSelecao(ids){return Array.isArray(ids)&&ids.length===3&&new Set(ids).size===3&&['jogo','foto','grupo'].every(t=>ids.filter(id=>MODELOS_ATIVOS.some(m=>m.id===id&&(t==='foto'?['foto','descoberta'].includes(m.tipo):m.tipo===t))).length===1);}
 export function criarDesafio(modelo,random){if(modelo.tipo!=='jogo')throw Error('Não é jogo.');const publicas=[],respostas=[];for(const [r,round]of modelo.rodadas.entries()){const originais=round.opcoes.map(texto=>({id:randomUUID(),texto}));const items=[...originais];for(let i=items.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[items[i],items[j]]=[items[j],items[i]];}publicas.push({texto:round.texto,ordenar:round.correta.length>1,opcoes:items,...(round.retorno?{retorno:round.retorno}:{})});respostas.push(round.correta.map(i=>originais[i].id));}return {publico:{rodadas:publicas},respostas};}

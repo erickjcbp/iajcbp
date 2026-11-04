@@ -22,3 +22,8 @@
 .bw-history-body{padding:0 16px 16px;min-width:0}
 .bw-history-body h3{font:700 15px var(--font-title);margin:18px 0 6px}
 @media(max-width:639px){.bw-routine .bw-settings{padding:12px;margin:18px 0}.bw-settings legend{font-size:14px}.bw-history>summary{padding:14px 12px}.bw-history-body{padding:0 12px 12px}}
+
+/* A pista abre sob demanda e não antecipa o gabarito. */
+.bw-hint{margin:16px 0;padding:10px 14px;border:1px solid var(--border-wine);border-radius:10px}.bw-hint summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:var(--gold-light);font-weight:700}
+
+.bw-photo[hidden]{display:none}

@@ -234,6 +234,8 @@ async function renderFilas(main) {
 
   // Fila de aprovação
   const { data: fila } = await sb.rpc('acolitos_missoes_fila');
+  let gabaritosParoquia={};if(fila?.length){try{const {data:{session}}=await sb.auth.getSession();const response=await fetch('/api/acolito-admin',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},body:JSON.stringify({action:'jornada_programacao_gabaritos',ids:[...new Set(fila.map(item=>item.missao_id))].slice(0,100)})});if(response.ok)gabaritosParoquia=(await response.json()).gabaritos||{};}catch{}}
+
   const fc = document.createElement('div'); fc.className = 'mx-card';
   const fhd = document.createElement('div'); fhd.className = 'mx-hd'; fhd.textContent = 'Fila de aprovação (' + (fila?.length || 0) + ')'; fc.appendChild(fhd);
   if (fila && fila.length) fila.forEach(item => {
@@ -247,6 +249,7 @@ async function renderFilas(main) {
       const ev=document.createElement('div');ev.className='mx-q-sub';ev.textContent=evidencia?evidencia.relato:'“'+item.evidencia+'”';it.appendChild(ev);
       if(evidencia?.foto){const ver=document.createElement('button');ver.className='bw-button';ver.textContent='Conferir foto da missão';ver.onclick=async()=>{ver.disabled=true;const {data,error}=await sb.storage.from('acolitos-quests-evidencias').createSignedUrl(evidencia.foto,120);if(error){toast('Não foi possível abrir a evidência.','error');ver.disabled=false;return;}const img=document.createElement('img');img.className='bw-evidence-photo';img.alt='Evidência enviada para esta missão';img.src=data.signedUrl;it.insertBefore(img,ver);ver.remove();};it.appendChild(ver);}
     }
+    if(gabaritosParoquia[item.missao_id]){const guia=document.createElement('details'),resumo=document.createElement('summary'),texto=document.createElement('p');resumo.textContent='Conferir gabarito da descoberta';resumo.style.minHeight='44px';texto.textContent=gabaritosParoquia[item.missao_id].resposta;guia.append(resumo,texto);it.appendChild(guia);}
     if (item.envolvidos) { const en = document.createElement('div'); en.className = 'mx-q-sub'; en.style.color = 'var(--gold-light)'; comIcone(en, 'users', 'Com: ' + item.envolvidos + ' (ganham XP ao aprovar)'); it.appendChild(en); }
     const acts = document.createElement('div'); acts.className = 'mx-fila-acts';
     const ok = document.createElement('button'); ok.className = 'mx-mini ok'; ok.textContent = '✓ Aprovar'; ok.onclick = () => decidir(item.missao_id, item.membro_id, 'aprovar');
