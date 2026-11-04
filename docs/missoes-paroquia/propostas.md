@@ -161,7 +161,7 @@ Escolha editorial desta rodada: 10 propostas para primeira seleção e 8 de rese
 
 **Acesso:** Nave, em horário combinado fora da celebração
 
-**Cruzamento:** Sem equivalente direto; nova descoberta proposta. 
+**Cruzamento:** Sem equivalente direto; nova descoberta proposta.
 
 **Gravação:** IMG_3135.MOV · 01:52.60. [Quadro de evidência](../detalhes/3135/0054.jpg). Tempo é referência visual; corte contínuo ainda precisa de conferência.
 
@@ -179,7 +179,7 @@ Escolha editorial desta rodada: 10 propostas para primeira seleção e 8 de rese
 
 **Acesso:** Biblioteca, com acesso liberado e observação acompanhada
 
-**Cruzamento:** Sem equivalente direto; nova descoberta proposta. 
+**Cruzamento:** Sem equivalente direto; nova descoberta proposta.
 
 **Gravação:** IMG_3137.MOV · 02:41.91. [Quadro de evidência](../detalhes/3137/0077.jpg). Tempo é referência visual; corte contínuo ainda precisa de conferência.
 
@@ -197,7 +197,7 @@ Escolha editorial desta rodada: 10 propostas para primeira seleção e 8 de rese
 
 **Acesso:** Biblioteca, com acesso liberado e observação acompanhada
 
-**Cruzamento:** Sem equivalente direto; nova descoberta proposta. 
+**Cruzamento:** Sem equivalente direto; nova descoberta proposta.
 
 **Gravação:** IMG_3137.MOV · 03:22.28. [Quadro de evidência](../detalhes/3137/0096.jpg). Tempo é referência visual; corte contínuo ainda precisa de conferência.
 
@@ -215,7 +215,7 @@ Escolha editorial desta rodada: 10 propostas para primeira seleção e 8 de rese
 
 **Acesso:** Biblioteca, com acesso liberado; não desmontar a pilha
 
-**Cruzamento:** Sem equivalente direto; nova descoberta proposta. 
+**Cruzamento:** Sem equivalente direto; nova descoberta proposta.
 
 **Gravação:** IMG_3137.MOV · 02:41.91. [Quadro de evidência](../detalhes/3137/0077.jpg). Tempo é referência visual; corte contínuo ainda precisa de conferência.
 
@@ -251,7 +251,7 @@ Escolha editorial desta rodada: 10 propostas para primeira seleção e 8 de rese
 
 **Acesso:** Biblioteca com guia; complementar D07, sem repetir recompensa pela mesma resposta
 
-**Cruzamento:** Sem equivalente direto; nova descoberta proposta. 
+**Cruzamento:** Sem equivalente direto; nova descoberta proposta.
 
 **Gravação:** IMG_3137.MOV · 05:23.65. [Quadro de evidência](../detalhes/3137/0153.jpg). Tempo é referência visual; corte contínuo ainda precisa de conferência.
 
@@ -341,7 +341,7 @@ Escolha editorial desta rodada: 10 propostas para primeira seleção e 8 de rese
 
 **Acesso:** Somente se o armário já estiver aberto pelo responsável; alternativa: quadro do vídeo
 
-**Cruzamento:** Sem equivalente direto; nova descoberta proposta. 
+**Cruzamento:** Sem equivalente direto; nova descoberta proposta.
 
 **Gravação:** IMG_3136.MOV · 00:21.17. [Quadro de evidência](../detalhes/3136/0011.jpg). Tempo é referência visual; corte contínuo ainda precisa de conferência.
 

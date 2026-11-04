@@ -43,4 +43,15 @@ Catálogo local: 110 aventuras; semana real 02–08/11/2026: Aperto no altar, Do
 
 ## Publicação
 
-A preencher com commit, deploy e resultado da verificação final no banco.
+Concluída em 03/11/2026 (Brasília; migração com timestamp UTC de 04/11).
+
+- Commit de implementação: f48a9cb — enviado para main.
+- Deploy produção: https://iajcbp-5j5vzv1k8-erickjcbp-1650s-projects.vercel.app (READY).
+- App: https://coroinhas.jcbplimeira.com.br/projetos/acolitos/missoes.html#aventuras
+- Migração aplicada e registrada: 20261104001120_missoes_paroquia_descobertas.
+- Conferência real: 18 novas ativas + 3 anteriores = 21 na semana 02–08/11. Cinco registros da semana (três ativos e dois históricos inativos) permaneceram idênticos; quatro registros prévios de progresso preservados.
+- 19 arquivos (cinco arquivos de interface e 14 capas) comparados por SHA-256 no domínio real. Materiais privados e migração respondem 404; consulta anônima à API de gabaritos responde 401.
+- Nenhuma notificação foi enviada manualmente. A programação existente de convites não foi alterada.
+- Capas finais em projetos/acolitos/quests-capas; prompts e originais referenciados em capas-prompts.md e capas-manifesto.json. Algumas missões compartilham famílias visuais; os oito primeiros cards têm capas distintas.
+- Fotos finais da tela real com sessão simulada em historico-tarcisio/paroquia-descobertas-2026-11-03 (390, 768, 1440 e 2560 px, cards e modais).
+- A ampliação além das 18 segue pendente por escolha do dono: usar os 209 registros aprovados para destrinchar novas missões e percursos. As 18 não encerram o trabalho editorial.

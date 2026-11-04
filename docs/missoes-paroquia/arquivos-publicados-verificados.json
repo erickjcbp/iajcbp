@@ -1,0 +1,112 @@
+[
+  {
+    "arquivo": "projetos/acolitos/quests-ux.js",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/bonus-semana.js",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/jornada-admin.html",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/bonus-semana.css",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/sw.js",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/quests-capas/biblioteca.webp",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/quests-capas/equipe.webp",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/quests-capas/barco.webp",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/quests-capas/asas.webp",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/quests-capas/sala.webp",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/quests-capas/oferta.webp",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/quests-capas/caderno.webp",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/quests-capas/caminho.webp",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/quests-capas/sacristia.webp",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/quests-capas/jogo.webp",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/quests-capas/vitral.webp",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/quests-capas/pomba.webp",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/quests-capas/igreja.webp",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "arquivo": "projetos/acolitos/quests-capas/pedra.webp",
+    "status": 200,
+    "hash_confere": true
+  },
+  {
+    "privado": "docs/missoes-paroquia/propostas.json",
+    "status": 404
+  },
+  {
+    "privado": "testes-api/paroquia-descobertas.test.mjs",
+    "status": 404
+  },
+  {
+    "privado": "supabase/migrations/20261104001120_missoes_paroquia_descobertas.sql",
+    "status": 404
+  },
+  {
+    "api_gabarito_anonimo": 401
+  }
+]
