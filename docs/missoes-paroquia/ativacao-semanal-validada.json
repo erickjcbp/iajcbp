@@ -1,0 +1,115 @@
+{
+  "commit": "04a0b94",
+  "producao": "https://iajcbp-7piyjjm8c-erickjcbp-1650s-projects.vercel.app",
+  "estado": {
+    "banco": [
+      {
+        "tipo": "investigacao",
+        "estado": "aprovada",
+        "quantidade": 8
+      },
+      {
+        "tipo": "desafio",
+        "estado": "aprovada",
+        "quantidade": 80
+      },
+      {
+        "tipo": "investigacao",
+        "estado": "rascunho",
+        "quantidade": 4
+      },
+      {
+        "tipo": "simples",
+        "estado": "aprovada",
+        "quantidade": 16
+      },
+      {
+        "tipo": "interacao",
+        "estado": "aprovada",
+        "quantidade": 8
+      }
+    ],
+    "membros": 174,
+    "progresso": 818,
+    "xp_missoes": 15340,
+    "atribuicoes": 1392,
+    "ativada_desde": "2026-11-02",
+    "geracao_ativa": true
+  },
+  "todas_selecoes_verificadas": true,
+  "testes_focados": 63,
+  "suite": {
+    "passaram": 687,
+    "total": 690,
+    "falhas_preexistentes": 3
+  },
+  "maximo_membros_mesma_quest": 44,
+  "larguras": [
+    390,
+    768,
+    1440,
+    2560
+  ],
+  "prova_rpc_comum": "8 ofertas / 2 jogos / 130 XP; sem gabaritos privados",
+  "publicacao": [
+    {
+      "arquivo": "projetos/acolitos/missoes.html",
+      "hash_confere": true
+    },
+    {
+      "arquivo": "projetos/acolitos/bonus-semana.js",
+      "hash_confere": true
+    },
+    {
+      "arquivo": "projetos/acolitos/jornada-admin.html",
+      "hash_confere": true
+    },
+    {
+      "arquivo": "projetos/acolitos/missoes-motor-admin.js",
+      "hash_confere": true
+    },
+    {
+      "arquivo": "projetos/acolitos/missoes-motor.css",
+      "hash_confere": true
+    },
+    {
+      "arquivo": "projetos/acolitos/sw.js",
+      "hash_confere": true
+    },
+    {
+      "arquivo": "projetos/acolitos/shared.js",
+      "hash_confere": true
+    },
+    {
+      "privado": "docs/missoes-paroquia/triagem-motor.json",
+      "status": 404
+    },
+    {
+      "privado": "docs/superpowers/specs/2026-11-04-motor-missoes-design.md",
+      "status": 404
+    },
+    {
+      "privado": "supabase/migrations/20261104120200_motor_missoes_execucao.sql",
+      "status": 404
+    },
+    {
+      "privado": "testes-api/missoes-editorial.test.mjs",
+      "status": 404
+    },
+    {
+      "privado": "api/_missoes-banco-curado.js",
+      "status": 404
+    },
+    {
+      "privado": "supabase/migrations/20261104140000_motor_missoes_ativacao.sql",
+      "status": 404
+    },
+    {
+      "privado": "api/_missoes-fontes.js",
+      "status": 404
+    },
+    {
+      "motor_anonimo": 401
+    }
+  ]
+}

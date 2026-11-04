@@ -37,3 +37,7 @@ Desligar a distribuição remove sua data de início na programação; preserva 
 - Depois de gerar novos alvos locais, reabrir o painel para atualizar os campos de capacidade.
 - Na fila de aprovação, consultar o gabarito da missão do motor em sua versão no Banco de missões; o atalho de gabarito da fila ainda cobre o banco estático.
 - Tornar mais explícita uma asserção da prova da RPC genérica legada. A execução autenticada e as travas do motor têm provas próprias.
+
+## Ativação inicial concluída
+
+Em 04/11, a pedido expresso do dono, foi ativada a semana corrente com banco inicial curado e validado: 112 versões aceitas (80 digitais e 32 práticas). Cada um dos 174 perfis recebeu 6 práticas e 2 desafios, 130 XP. Esta semana exibe oito; Minhas missões guarda o legado iniciado. Os quatro rascunhos livres da IA permanecem para decisão humana. A ativação imediata usa RPC privada de servidor; o fluxo comum de programação continua disponível na coordenação. Limites controlam concentração por missão, não representam agendamento de visita.
