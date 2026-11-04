@@ -5,7 +5,7 @@ insert into acolitos_motor_fontes values('fixture',1,'formacao','Conteúdo confi
 -- Conteúdo fictício: só dentro desta transação revertida.
 insert into acolitos_motor_versoes(id,estado,conteudo,publico)
 select gen_random_uuid(),'aprovada',jsonb_build_object('tipo',t,'niveis',jsonb_build_array(n),'objetivo_chave','fixture-'||t||i||n,'alvo_local','fixture','avaliacao',jsonb_build_object('itens',jsonb_build_array(jsonb_build_object('explicacao','Explicação depois da tentativa.')))),jsonb_build_object('titulo','Missão fictícia de prova','gancho','Descubra uma pista fictícia.','passos',jsonb_build_array('Observe.','Registre.'),'pistas',jsonb_build_array('Uma pista.'),'xp',case t when 'investigacao' then 20 when 'interacao' then 40 else 10 end,'foto_obrigatoria',t<>'desafio')
-from unnest(array['simples','investigacao','interacao','desafio']) t cross join generate_series(1,3) i cross join (select distinct nivel n from acolitos_membros where status='ativo' and serve and user_id is not null) levels;
+from unnest(array['simples','investigacao','interacao','desafio']) t cross join generate_series(1,4) i cross join (select distinct nivel n from acolitos_membros where status='ativo' and serve and user_id is not null) levels;
 update acolitos_motor_config set capacidades='{"fixture":10000}';
 select public.acolitos_motor_publicar_semana(date_trunc('week',now() at time zone 'America/Sao_Paulo')::date,
 (select jsonb_agg(jsonb_build_object('membro_id',m.id,'slot',s,'versao_id',(select v.id from acolitos_motor_versoes v where v.conteudo->>'tipo'=(array['simples','simples','simples','investigacao','investigacao','interacao','desafio','desafio'])[s+1] and v.conteudo->'niveis' ? m.nivel order by v.conteudo->>'objetivo_chave' offset (array[0,1,2,0,1,0,0,1])[s+1] limit 1))) from acolitos_membros m cross join generate_series(0,7) s where status='ativo' and serve and user_id is not null));
@@ -17,10 +17,24 @@ perform acolitos_motor_iniciar(rec.membro_id,rec.missao_id,'{}','[]');
 insert into storage.objects(bucket_id,name,metadata) values('acolitos-quests-evidencias',rec.user_id||'/'||rec.missao_id||'/motor-proof.jpg','{"mimetype":"image/jpeg"}');
 select x.*,m.user_id into rec from acolitos_motor_atribuicoes x join acolitos_membros m on m.id=x.membro_id where x.membro_id=current_setting('proof.member')::uuid and x.slot=6;
 j:=acolitos_motor_iniciar(rec.membro_id,rec.missao_id,'{"rodadas":[]}','[["a"]]');perform set_config('proof.game',j->>'id',true);
+
+perform set_config('proof.free',(select id::text from acolitos_motor_atribuicoes where membro_id=current_setting('proof.member')::uuid and slot=1),true);
+perform set_config('proof.again',(select id::text from acolitos_motor_atribuicoes where membro_id=current_setting('proof.member')::uuid and slot=2),true);
+update acolitos_motor_config set capacidades=jsonb_build_object('fixture',(select count(*) from acolitos_motor_atribuicoes));
 end $p$;
+do $late$ declare a acolitos_motor_atribuicoes;v acolitos_motor_versoes;cl uuid:=gen_random_uuid();mi uuid:=gen_random_uuid();begin
+select * into a from acolitos_motor_atribuicoes where membro_id=current_setting('proof.member')::uuid and slot=2;
+select * into v from acolitos_motor_versoes where id=a.versao_id;
+insert into acolitos_motor_versoes(id,estado,conteudo,publico) values(cl,'aprovada',jsonb_set(v.conteudo,'{objetivo_chave}','"paroquia-proof-late"'),v.publico);
+update acolitos_motor_atribuicoes set versao_id=cl where id=a.id;
+insert into acolitos_missoes(id,titulo,descricao,tipo,validacao,xp,ativo,exclusiva,criterio) values(mi,'Prova de aprovação legada tardia','Fictícia','bonus','reivindicada',10,true,true,'{"bonus_semanal":{"modelo":"paroquia-proof-late","tipo":"descoberta","semana":"2026-11-02"}}');
+insert into acolitos_missao_progresso(membro_id,missao_id,status,evidencia) values(a.membro_id,mi,'em_analise','Evidência fictícia anterior à migração.');
+perform set_config('proof.legacy',mi::text,true);
+end $late$;
 select set_config('request.jwt.claims',jsonb_build_object('role','authenticated','sub',current_setting('proof.user'))::text,true);
 set local role authenticated;
 do $p$ declare bad boolean:=false;r jsonb;begin
+begin r:=acolitos_motor_trocar(current_setting('proof.member')::uuid,current_setting('proof.free')::uuid);perform set_config('proof.trade_failed',(coalesce(r->>'ok','false')<>'true')::text,true);exception when others then perform set_config('proof.trade_failed','true',true);end;
 begin perform acolitos_motor_enviar(current_setting('proof.member')::uuid,current_setting('proof.mission')::uuid,'VII',null);exception when others then bad:=true;end;if not bad then raise exception 'Foto ausente aceita';end if;
 r:=acolitos_motor_enviar(current_setting('proof.member')::uuid,current_setting('proof.mission')::uuid,'VII',current_setting('proof.user')||'/'||current_setting('proof.mission')||'/motor-proof.jpg');if r->>'ok'<>'true' then raise exception 'Foto válida falhou';end if;
 r:=acolitos_motor_responder(current_setting('proof.game')::uuid,'[["x"]]');if r->>'ok'<>'false' then raise exception 'Resposta errada aceita';end if;
@@ -41,7 +55,20 @@ r:=acolitos_missao_decidir(current_setting('proof.mission')::uuid,current_settin
 r:=acolitos_missao_decidir(current_setting('proof.mission')::uuid,current_setting('proof.member')::uuid,'aprovar',null);if coalesce((r->>'xp')::int,0)<>0 then raise exception 'Aprovação repetida premiou';end if;
 end $p$;
 reset role;
-do $p$ begin if (select count(*) from acolitos_motor_recompensas where membro_id=current_setting('proof.member')::uuid)<>current_setting('proof.reward_before')::int+2 then raise exception 'Concessões divergentes';end if;raise notice 'PASS: 8 slots/130 XP, foto obrigatória e vinculada, envio real autenticado, desafio verificado, aprovação real e XP único.';end $p$;
+do $late$ declare r jsonb;blocked boolean:=false;begin
+r:=acolitos_missao_decidir(current_setting('proof.legacy')::uuid,current_setting('proof.member')::uuid,'aprovar',null);
+if r->>'xp'<>'10' then raise exception 'Conclusão legada tardia falhou';end if;
+begin perform acolitos_motor_concluir(current_setting('proof.member')::uuid,(select missao_id from acolitos_motor_atribuicoes where id=current_setting('proof.again')::uuid),null);exception when others then blocked:=true;end;
+perform set_config('proof.late_failed',(not blocked)::text,true);
+if current_setting('proof.trade_failed')='true' or not blocked then raise exception 'RED: trade_failed=%, late_failed=%',current_setting('proof.trade_failed'),not blocked;end if;
+end $late$;
+do $reverse$ declare mi uuid:=gen_random_uuid();r jsonb;begin
+update acolitos_motor_recompensas set objetivo_chave='paroquia-proof-engine-first' where membro_id=current_setting('proof.member')::uuid and missao_id=current_setting('proof.mission')::uuid;
+insert into acolitos_missoes(id,titulo,descricao,tipo,validacao,xp,ativo,exclusiva,criterio) values(mi,'Prova legada depois do motor','Fictícia','bonus','reivindicada',10,true,true,'{"bonus_semanal":{"modelo":"paroquia-proof-engine-first","tipo":"descoberta","semana":"2026-11-02"}}');
+insert into acolitos_missao_progresso(membro_id,missao_id,status,evidencia) values(current_setting('proof.member')::uuid,mi,'em_analise','Evidência fictícia.');
+r:=acolitos_missao_decidir(mi,current_setting('proof.member')::uuid,'aprovar',null);if coalesce((r->>'xp')::int,-1)<>0 then raise exception 'RED: legado depois do motor duplicou XP';end if;
+end $reverse$;
+do $p$ begin if (select count(*) from acolitos_motor_recompensas where membro_id=current_setting('proof.member')::uuid)<>current_setting('proof.reward_before')::int+3 then raise exception 'Concessões divergentes';end if;raise notice 'PASS: 8 slots/130 XP, foto obrigatória e vinculada, envio real autenticado, desafio verificado, aprovação real e XP único.';end $p$;
 rollback;
 '''
 Path('/tmp/motor-runtime-prova.sql').write_text(sql+proof)

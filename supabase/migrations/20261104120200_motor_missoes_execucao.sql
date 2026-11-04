@@ -5,7 +5,17 @@ $$;
 create function public.acolitos_motor_progresso_guard() returns trigger language plpgsql security definer set search_path=public,pg_temp as $$
 declare a acolitos_motor_atribuicoes;v acolitos_motor_versoes;
 begin
- if not exists(select 1 from acolitos_missoes where id=coalesce(new.missao_id,old.missao_id) and criterio->'motor' is not null) then return coalesce(new,old);end if;
+ if not exists(select 1 from acolitos_missoes where id=coalesce(new.missao_id,old.missao_id) and criterio->'motor' is not null) then
+  if tg_op<>'DELETE' and new.status='concluida' then
+   if exists(select 1 from acolitos_missoes m where m.id=new.missao_id and m.criterio->'bonus_semanal'->>'modelo' like 'paroquia-%') then
+    perform pg_advisory_xact_lock(hashtextextended('motor-xp:'||new.membro_id,0));
+    if tg_op='UPDATE' and old.status='concluida' then raise exception 'Objetivo legado já concluído.';end if;
+    if coalesce(new.xp_ganho,0)>0 and exists(select 1 from acolitos_motor_recompensas r join acolitos_missoes awarded on awarded.id=r.missao_id join acolitos_missoes current_m on current_m.id=new.missao_id where r.membro_id=new.membro_id and r.objetivo_chave=current_m.criterio->'bonus_semanal'->>'modelo' and r.missao_id<>new.missao_id and awarded.criterio->'motor' is not null) then raise exception 'Objetivo já recompensado pelo motor.';end if;
+   end if;
+   insert into acolitos_motor_recompensas(membro_id,objetivo_chave,missao_id) select new.membro_id,m.criterio->'bonus_semanal'->>'modelo',m.id from acolitos_missoes m where m.id=new.missao_id and m.criterio->'bonus_semanal'->>'modelo' like 'paroquia-%' on conflict do nothing;
+   insert into acolitos_motor_historico(membro_id,semana,versao_id,objetivo_chave,missao_id,concluida) select new.membro_id,coalesce((m.criterio->'bonus_semanal'->>'semana')::date,date_trunc('week',now())::date),m.id,m.criterio->'bonus_semanal'->>'modelo',m.id,true from acolitos_missoes m where m.id=new.missao_id and m.criterio->'bonus_semanal'->>'modelo' like 'paroquia-%' on conflict(membro_id,missao_id) do update set concluida=true;
+  end if;return coalesce(new,old);
+ end if;
  if current_setting('app.motor_operacao',true) is distinct from coalesce(new.missao_id,old.missao_id)::text||':'||coalesce(new.membro_id,old.membro_id)::text then raise exception 'Use o fluxo da missão atribuída.' using errcode='42501';end if;
  if tg_op='DELETE' then raise exception 'Evidência do motor é preservada.';end if;
  select * into a from acolitos_motor_atribuicoes where missao_id=new.missao_id and membro_id=new.membro_id;
@@ -61,7 +71,7 @@ begin
  if a.id is null then raise exception 'Missão não atribuída.';end if;
  if exists(select 1 from acolitos_missao_progresso where membro_id=p_membro and missao_id=p_missao and status='concluida') then return jsonb_build_object('ok',true,'novo',false,'xp',0);end if;
  select * into v from acolitos_motor_versoes where id=a.versao_id;gain:=(v.publico->>'xp')::int;
- if exists(select 1 from acolitos_motor_recompensas where membro_id=p_membro and objetivo_chave=v.conteudo->>'objetivo_chave') then raise exception 'Este objetivo já foi recompensado.';end if;
+ if exists(select 1 from acolitos_missao_progresso p join acolitos_missoes m on m.id=p.missao_id where p.membro_id=p_membro and p.status='concluida' and m.criterio->'bonus_semanal'->>'modelo'=v.conteudo->>'objetivo_chave') or exists(select 1 from acolitos_motor_recompensas where membro_id=p_membro and objetivo_chave=v.conteudo->>'objetivo_chave') then raise exception 'Este objetivo já foi recompensado.';end if;
  select id into temp from acolitos_temporadas where ativa order by created_at desc limit 1;
  perform 1 from acolitos_membros where id=p_membro for update;
  select coalesce(sum(xp_ganho),0) into from_xp from acolitos_missao_progresso where membro_id=p_membro and status='concluida';
@@ -123,6 +133,13 @@ begin
  if public.acolitos_get_role(auth.uid()) is null or public.acolitos_get_role(auth.uid()) not in ('coord_admin','subadmin','membro_equipe') then return jsonb_build_object('erro','sem_permissao');end if;
  perform pg_advisory_xact_lock(hashtextextended('missao:'||p_missao::text||':'||p_membro::text,0));
  if p_decisao='aprovar' and exists(select 1 from public.acolitos_missao_progresso where missao_id=p_missao and membro_id=p_membro and status='concluida') then return jsonb_build_object('ok',true,'acao','ja_concluida','xp',0);end if;
+ if p_decisao='aprovar' and exists(select 1 from acolitos_missoes where id=p_missao and criterio->'bonus_semanal'->>'modelo' like 'paroquia-%') then
+  perform pg_advisory_xact_lock(hashtextextended('motor-xp:'||p_membro,0));
+  if exists(select 1 from acolitos_motor_recompensas r join acolitos_missoes old_m on old_m.id=r.missao_id join acolitos_missoes current_m on current_m.id=p_missao where r.membro_id=p_membro and r.objetivo_chave=current_m.criterio->'bonus_semanal'->>'modelo' and r.missao_id<>p_missao and old_m.criterio->'motor' is not null) then
+   update acolitos_missao_progresso set status='concluida',xp_ganho=0,concluida_em=now(),aprovado_por=auth.uid() where membro_id=p_membro and missao_id=p_missao and status<>'concluida';
+   return jsonb_build_object('ok',true,'acao','objetivo_ja_recompensado','xp',0);
+  end if;
+ end if;
  if p_decisao is null or p_decisao not in ('aprovar','recusar','revisar') then return jsonb_build_object('erro','decisao_invalida');end if;
  return public.acolitos_missao_decidir_antes_bonus(p_missao,p_membro,p_decisao,p_obs);
 end $function$;

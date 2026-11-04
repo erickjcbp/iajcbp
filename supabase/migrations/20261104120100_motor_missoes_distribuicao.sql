@@ -51,7 +51,7 @@ begin
  select * into oldv from acolitos_motor_versoes where id=a.versao_id;
  select b.* into v from acolitos_motor_versoes b join acolitos_membros m on m.id=p_membro where b.estado='aprovada' and b.conteudo->>'tipo'=oldv.conteudo->>'tipo' and b.conteudo->'niveis' ? m.nivel
  and not exists(select 1 from acolitos_motor_historico h where h.membro_id=p_membro and h.objetivo_chave=b.conteudo->>'objetivo_chave' and (h.concluida or h.semana>=a.semana-28))
- and coalesce((cfg.capacidades->>(b.conteudo->>'alvo_local'))::int,0)>(select count(*) from acolitos_motor_atribuicoes x join acolitos_motor_versoes y on y.id=x.versao_id where x.semana=a.semana and y.conteudo->>'alvo_local'=b.conteudo->>'alvo_local')
+ and coalesce((cfg.capacidades->>(b.conteudo->>'alvo_local'))::int,0)>(select count(*) from acolitos_motor_atribuicoes x join acolitos_motor_versoes y on y.id=x.versao_id where x.semana=a.semana and x.id<>a.id and y.conteudo->>'alvo_local'=b.conteudo->>'alvo_local')
  order by b.id limit 1 for share of b;
  if v.id is null then raise exception 'Sem alternativa equivalente com vaga. A missão atual continua disponível.';end if;
  mi:=gen_random_uuid();insert into acolitos_missoes(id,titulo,descricao,tipo,validacao,xp,exclusiva,aplica_de,obrigatoria,ativo,expira_em,criterio) values(mi,v.publico->>'titulo',v.publico->>'gancho','bonus','reivindicada',(v.publico->>'xp')::int,true,'__exclusiva__',false,true,a.semana+6,jsonb_build_object('motor',jsonb_build_object('versao',v.id,'semana',a.semana),'bonus_semanal',jsonb_build_object('tipo',case when v.conteudo->>'tipo'='desafio' then 'jogo' else 'descoberta' end,'modelo','motor:'||v.id,'semana',a.semana,'passos',v.publico->'passos','ajuda',v.publico->'pistas'->>0,'foto_obrigatoria',v.publico->'foto_obrigatoria')));
@@ -70,9 +70,10 @@ revoke all on function public.acolitos_motor_publicar_semana(date,jsonb),public.
 grant execute on function public.acolitos_motor_publicar_semana(date,jsonb) to service_role;
 grant execute on function public.acolitos_motor_trocar(uuid,uuid),public.acolitos_motor_minhas(uuid) to authenticated;
 create function public.acolitos_motor_programar(p_config jsonb,p_plano jsonb) returns jsonb language plpgsql security definer set search_path=public,pg_temp as $$
-declare desde date;begin
- select distribuicao_desde into desde from acolitos_motor_config where id=true for update;
+declare desde date;antiga date;begin
+ select distribuicao_desde into antiga from acolitos_motor_config where id=true for update;
  desde:=(p_config->>'distribuicao_desde')::date;
+ if desde=antiga and antiga<=date_trunc('week',now() at time zone 'America/Sao_Paulo')::date then update acolitos_motor_config set geracao_ativa=(p_config->>'geracao_ativa')::boolean,capacidades=p_config->'capacidades',atualizado_em=now() where id=true;return jsonb_build_object('ok',true);end if;
  if desde<=date_trunc('week',now() at time zone 'America/Sao_Paulo')::date or extract(isodow from desde)<>1 then raise exception 'Ative numa próxima segunda-feira.';end if;
  update acolitos_motor_config set geracao_ativa=(p_config->>'geracao_ativa')::boolean,distribuicao_desde=desde,capacidades=p_config->'capacidades',atualizado_em=now() where id=true;
  perform acolitos_motor_publicar_semana(desde,p_plano);

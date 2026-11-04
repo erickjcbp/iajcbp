@@ -1,3 +1,4 @@
+import {anexarLegadoIniciado} from './_missoes-transicao.js';
 import {desafioPublico} from './_missoes-execucao.js';
 import {randomInt} from 'node:crypto';
 import {MODELOS,criarDesafio} from './_bonus-banco.js';
@@ -23,7 +24,7 @@ export default async function bonusHandler(req,res){res.setHeader('Cache-Control
  const available=await raw('acolitos_membros?id=eq.'+member+'&status=eq.ativo&serve=eq.true&select=id');if(!available.length)return res.status(403).json({error:'As aventuras estão disponíveis para perfis ativos de quem serve.'});
  if(req.body.action==='bonus_motor_minhas')return res.status(200).json({missoes:await caller('acolitos_motor_minhas',{p_membro:member})});
  if(req.body.action==='bonus_listar'){
-  const cfg=(await raw('acolitos_motor_config?id=eq.true'))[0];if(cfg?.distribuicao_desde&&cfg.distribuicao_desde<=cal.semana){const missoes=await caller('acolitos_motor_minhas',{p_membro:member});return res.status(200).json({semana:cal.semana,motor:true,xp_semana:130,missoes,aguardando_selecao:!missoes.length});}
+  const cfg=(await raw('acolitos_motor_config?id=eq.true'))[0];if(cfg?.distribuicao_desde&&cfg.distribuicao_desde<=cal.semana){const missoes=await anexarLegadoIniciado(raw,member,cal,await caller('acolitos_motor_minhas',{p_membro:member}));return res.status(200).json({semana:cal.semana,motor:true,xp_semana:130,missoes,aguardando_selecao:!missoes.length});}
   const active=await raw('acolitos_missoes?ativo=eq.true&criterio->motor=is.null&criterio->bonus_semanal=not.is.null&expira_em=gte.'+cal.data+'&select=id,titulo,descricao,xp,criterio,expira_em');
   const sessions=await raw('acolitos_bonus_jogos?membro_id=eq.'+member+'&select=id,missao_id,concluido_em,iniciado_em&order=iniciado_em.desc&limit=60');const activeIds=new Set(active.map(q=>q.id));const oldIds=[...new Set(sessions.filter(s=>!s.concluido_em&&!activeIds.has(s.missao_id)).map(s=>s.missao_id))];
   let old=[];if(oldIds.length){const cutoff=new Date(cal.data+'T12:00:00Z');cutoff.setUTCDate(cutoff.getUTCDate()-7);old=await raw('acolitos_missoes?id=in.('+oldIds.join(',')+')&expira_em=gte.'+cutoff.toISOString().slice(0,10)+'&criterio->bonus_semanal=not.is.null&select=id,titulo,descricao,xp,criterio,expira_em');}
