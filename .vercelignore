@@ -45,3 +45,5 @@ supabase/migrations/*_missoes_paroquia_descobertas.sql
 projetos/acolitos/provas/paroquia-descobertas.prova.mjs
 
 testes-api/paroquia-descobertas.test.mjs
+
+supabase/migrations/*_missoes_foto_esforco_sem_acompanhamento.sql

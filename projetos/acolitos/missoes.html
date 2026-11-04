@@ -344,6 +344,8 @@ async function abrirClaimModal(q) {
   if(editorialAtual)ta.placeholder=editorialAtual.pergunta;
   ta.placeholder = editorialAtual?.pergunta||(aptidao ? 'Com suas palavras: o que você faz nessa função, em que momentos da missa, e como — pra mostrar que sabe servir.' : 'Descreva com suas palavras como você cumpriu (obrigatório)');
   md.appendChild(ta);
+  const fotoObrigatoria=!!editorialAtual;let fotoMissao=null;
+  if(fotoObrigatoria){const label=document.createElement('label');label.textContent='Foto da missão (obrigatória)';label.htmlFor='quest-photo';const input=document.createElement('input');input.id='quest-photo';input.type='file';input.accept='image/jpeg,image/png,image/webp';input.setAttribute('capture','environment');input.className='form-input';input.onchange=()=>{const f=input.files?.[0];if(f&&(!['image/jpeg','image/png','image/webp'].includes(f.type)||f.size>20*1024*1024)){toast('Escolha uma foto JPG, PNG ou WebP de até 20 MB.','error');input.value='';fotoMissao=null;return;}fotoMissao=f||null;};const camera=document.createElement('button');camera.type='button';camera.className='bw-button';camera.textContent='Tirar foto';camera.onclick=()=>input.click();md.append(label,camera,input);}
   const aviso = document.createElement('div'); aviso.style.cssText = 'font-size:11px;color:var(--wine-bright,#d45050);margin-top:5px;font-style:italic;'; aviso.textContent = ('Conta do seu jeito. A equipe quer entender o que você aprendeu e onde ainda precisa de ajuda.'); md.appendChild(aviso);
   // marcar participantes
   lab('Envolveu alguém? marque (ganham XP)');
@@ -367,8 +369,10 @@ async function abrirClaimModal(q) {
   const enviar = document.createElement('button'); enviar.className = 'btn gold'; enviar.style.flex = '1'; enviar.textContent = 'Enviar';
   enviar.onclick = async () => {
     if (!ta.value.trim()) { toast('A resposta é obrigatória', 'error'); ta.focus(); return; }
+    if(fotoObrigatoria&&!fotoMissao){toast('Tire ou escolha uma foto antes de enviar.','error');return;}
     enviar.disabled = true; enviar.textContent = 'Enviando…';
-    const { data, error } = await sb.rpc('acolitos_missao_reivindicar', { p_missao: q.id, p_evidencia: ta.value.trim(), p_envolvidos: selecionados.length ? selecionados.map(p => p.id) : null });
+    let evidencia=ta.value.trim();if(fotoObrigatoria){try{const foto=await BonusSemana.enviarFoto(fotoMissao,q.id,ctx.user.id,sb);evidencia=JSON.stringify({tipo:'bonus_evidencia',relato:ta.value.trim(),foto});}catch(e){toast(e.message,'error');enviar.disabled=false;enviar.textContent='Enviar';return;}}
+    const { data, error } = await sb.rpc('acolitos_missao_reivindicar', { p_missao: q.id, p_evidencia: evidencia, p_envolvidos: selecionados.length ? selecionados.map(p => p.id) : null });
     if (error || data?.erro) { toast('Erro: ' + (data?.erro || error?.message), 'error'); enviar.disabled = false; enviar.textContent = 'Enviar'; return; }
     try{sessionStorage.removeItem(draftKey);}catch{}ov.remove(); toast('✓ Enviado pra coordenação aprovar'); await renderAll();
   };

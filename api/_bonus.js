@@ -28,7 +28,7 @@ export default async function bonusHandler(req,res){res.setHeader('Cache-Control
  }
  if(req.body.action==='bonus_iniciar'){const id=req.body.missao_id;if(!uuid(id))return res.status(400).json({error:'Missão inválida.'});const mission=(await raw('acolitos_missoes?id=eq.'+id+'&select=id,criterio,ativo,expira_em'))[0];const meta=mission?.criterio?.bonus_semanal,model=MODELOS.find(m=>m.id===meta?.modelo);if(!model)return res.status(404).json({error:'Aventura não encontrada.'});
   const previous=(await raw('acolitos_bonus_jogos?membro_id=eq.'+member+'&missao_id=eq.'+id+'&select=id,publico,concluido_em,iniciado_em'))[0];
-  if(previous){const deadline=new Date(mission.expira_em+'T23:59:59-03:00').getTime()+7*86400000;if(Date.now()>deadline)return res.status(410).json({error:'O prazo desta aventura terminou.'});return res.status(200).json({id:previous.id,publico:previous.publico,concluido:!!previous.concluido_em});}
+  if(previous){const deadline=new Date(mission.expira_em+'T23:59:59-03:00').getTime()+7*86400000;if(Date.now()>deadline)return res.status(410).json({error:'O prazo desta aventura terminou.'});return res.status(200).json({id:previous.id,publico:model.tipo==='jogo'?previous.publico:{passos:model.passos,...(model.tipo==='descoberta'?{ajuda:model.ajuda,resposta_curta:true}: {})},concluido:!!previous.concluido_em});}
   const challenge=model.tipo==='jogo'?criarDesafio(model,()=>randomInt(1000000000)/1000000000):{publico:{passos:model.passos,...(model.tipo==='descoberta'?{ajuda:model.ajuda,resposta_curta:true}: {})},respostas:[]};
   const data=await raw('rpc/acolitos_bonus_iniciar',{method:'POST',body:{p_membro:member,p_missao:id,p_publico:challenge.publico,p_resposta:challenge.respostas}});return res.status(200).json(data);
  }

@@ -18,7 +18,7 @@ São Tarcísio no quadro atrás de Aparecida na sala; tochas de procissão; São
 
 ## Retomada da ampliação
 
-Destrinchar o inventário por vitrais, personagens, atributos, símbolos, livros, imagens e objetos; criar descobertas e percursos encadeados. Quantidade deve representar descobertas diferentes, sem inflar com mera troca de redação. Não usar fotos de evidência nem gabaritos como capas que revelem a resposta. Sem caça no sacrário/presbitério; sacristia guiada, demais espaços liberados fora das celebrações. Não exigir foto ou relato longo para uma resposta de nome/número. Identificações descartadas não voltam por inferência.
+Destrinchar o inventário por vitrais, personagens, atributos, símbolos, livros, imagens e objetos; criar descobertas e percursos encadeados. Quantidade deve representar descobertas diferentes, sem inflar com mera troca de redação. Não usar fotos de evidência nem gabaritos como capas que revelem a resposta. Sem caça no sacrário/presbitério. Sem acompanhamento obrigatório; manusear com cuidado e devolver ao lugar. Exigir foto, mantendo respostas curtas de nome/número. Identificações descartadas não voltam por inferência.
 
 ## Estado no início da implementação
 
@@ -26,7 +26,7 @@ Catálogo local: 110 aventuras; semana real 02–08/11/2026: Aperto no altar, Do
 
 ## Implementação desta rodada
 
-- Novo tipo `descoberta`: resposta de um caractere ou mais, foto opcional, pista aberta sob demanda, revisão humana e 10 XP por descoberta aprovada. Jogos existentes continuam decididos no servidor; fotos antigas seguem obrigatórias.
+- Novo tipo `descoberta`: resposta de um caractere ou mais, foto obrigatória, pista aberta sob demanda, revisão humana e 10 ou 20 XP por descoberta aprovada. Jogos existentes continuam decididos no servidor; fotos antigas seguem obrigatórias.
 - As 18 foram acrescentadas à semana de 02 a 08/11 junto com as três já publicadas (21 no total), sem substituir IDs nem progresso. Registro idempotente em semana-2026-11-02.json e na migração desta rodada. Nas semanas seguintes, as descobertas entram no sorteio do slot de foto/descoberta, junto a um jogo e uma missão de grupo.
 - Gabaritos ficam no banco editorial privado do servidor e são consultados pela fila de aprovação via a API já protegida da coordenação. Materiais desta pasta ficam fora do deploy público.
 - Ajuste editorial D13: a pergunta foi reescrita para não revelar Rafael antes da descoberta. Não confundir o anjo confirmado com a identificação descartada.
@@ -55,3 +55,9 @@ Concluída em 03/11/2026 (Brasília; migração com timestamp UTC de 04/11).
 - Capas finais em projetos/acolitos/quests-capas; prompts e originais referenciados em capas-prompts.md e capas-manifesto.json. Algumas missões compartilham famílias visuais; os oito primeiros cards têm capas distintas.
 - Fotos finais da tela real com sessão simulada em historico-tarcisio/paroquia-descobertas-2026-11-03 (390, 768, 1440 e 2560 px, cards e modais).
 - A ampliação além das 18 segue pendente por escolha do dono: usar os 209 registros aprovados para destrinchar novas missões e percursos. As 18 não encerram o trabalho editorial.
+
+## Atualização — fotos, esforço e autonomia (04/11/2026)
+
+Decisão do dono: nenhuma das 18 exige acompanhamento. Apenas cuidado com os objetos e devolução ao lugar. Foto obrigatória nas descobertas e atividades práticas, com botão Tirar foto no app. Descoberta simples: 10 XP; dois pontos: 20 XP; conversa/pastoral/interação: pelo menos 40 XP. Progresso e XP já conquistado preservados. Jogos digitais mantêm seu fluxo. Esta decisão substitui as regras anteriores de foto opcional e visita guiada.
+
+Validação: 29 testes API passaram; prova SQL em transação revertida confirmou foto obrigatória, propriedade da evidência, bloqueio de bypass e ausência de XP antes da aprovação; prova de telas em 390, 768, 1440 e 2560 px, envio com foto, habilitação e aventuras anteriores passou.

@@ -22,12 +22,13 @@
         "resposta_curta": true,
         "passos": [
           "Encontre o vitral em que aparecem várias talhas junto de Jesus. Leia a legenda: em qual festa acontece essa cena?",
-          "Nave, em horário combinado fora da celebração. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Igreja. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d01",
-        "icone": "vitral"
+        "icone": "vitral",
+        "foto_obrigatoria": true
       }
     }
   },
@@ -54,12 +55,13 @@
         "resposta_curta": true,
         "passos": [
           "Uma das janelas tem barco, rede e peixes. Encontre-a e diga o nome da cena que aparece na legenda.",
-          "Nave, em horário combinado fora da celebração. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Igreja. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d02",
-        "icone": "vitral"
+        "icone": "vitral",
+        "foto_obrigatoria": true
       }
     }
   },
@@ -86,12 +88,13 @@
         "resposta_curta": true,
         "passos": [
           "Há um vitral com uma ressurreição que traz o nome de outra pessoa na legenda. Qual é esse nome?",
-          "Nave, em horário combinado fora da celebração. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Igreja. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d03",
-        "icone": "vitral"
+        "icone": "vitral",
+        "foto_obrigatoria": true
       }
     }
   },
@@ -118,12 +121,13 @@
         "resposta_curta": true,
         "passos": [
           "Localize uma janela cuja legenda fala de uma oferta. Quem faz essa oferta?",
-          "Nave, em horário combinado fora da celebração. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Igreja. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d04",
-        "icone": "vitral"
+        "icone": "vitral",
+        "foto_obrigatoria": true
       }
     }
   },
@@ -150,12 +154,13 @@
         "resposta_curta": true,
         "passos": [
           "Encontre a cena de pessoas caminhando com Jesus. Qual é o lugar escrito na legenda?",
-          "Nave, em horário combinado fora da celebração. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Igreja. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d05",
-        "icone": "vitral"
+        "icone": "vitral",
+        "foto_obrigatoria": true
       }
     }
   },
@@ -182,12 +187,13 @@
         "resposta_curta": true,
         "passos": [
           "Procure um vitral com pessoas reunidas e uma pomba acima delas. Qual acontecimento está nomeado na legenda?",
-          "Nave, em horário combinado fora da celebração. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Igreja. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d06",
-        "icone": "vitral"
+        "icone": "vitral",
+        "foto_obrigatoria": true
       }
     }
   },
@@ -197,7 +203,7 @@
     "descricao": "Leia as legendas de dois vitrais próximos: um tem uma figura com bastão; o outro, espada e escudo. Escreva os dois nomes.",
     "tipo": "bonus",
     "validacao": "reivindicada",
-    "xp": 10,
+    "xp": 20,
     "exclusiva": true,
     "niveis_alvo": null,
     "aplica_de": "__exclusiva__",
@@ -214,12 +220,13 @@
         "resposta_curta": true,
         "passos": [
           "Leia as legendas de dois vitrais próximos: um tem uma figura com bastão; o outro, espada e escudo. Escreva os dois nomes.",
-          "Nave, em horário combinado fora da celebração. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Igreja. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d07",
-        "icone": "vitral"
+        "icone": "vitral",
+        "foto_obrigatoria": true
       }
     }
   },
@@ -246,12 +253,13 @@
         "resposta_curta": true,
         "passos": [
           "Encontre a estação em que Jesus cai pela segunda vez. Qual número romano está no quadro?",
-          "Nave, em horário combinado fora da celebração. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Igreja. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d08",
-        "icone": "vitral"
+        "icone": "vitral",
+        "foto_obrigatoria": true
       }
     }
   },
@@ -278,12 +286,13 @@
         "resposta_curta": true,
         "passos": [
           "Entre as Bíblias, encontre uma cuja capa ou lombada traz o nome de uma cidade. Qual é a cidade?",
-          "Biblioteca, com acesso liberado e observação acompanhada. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Biblioteca. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d09",
-        "icone": "biblioteca"
+        "icone": "biblioteca",
+        "foto_obrigatoria": true
       }
     }
   },
@@ -310,12 +319,13 @@
         "resposta_curta": true,
         "passos": [
           "Encontre o livro com o título Maria, toda de Deus e tão humana. Qual nome de autor aparece na lombada?",
-          "Biblioteca, com acesso liberado e observação acompanhada. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Biblioteca. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d10",
-        "icone": "biblioteca"
+        "icone": "biblioteca",
+        "foto_obrigatoria": true
       }
     }
   },
@@ -342,19 +352,20 @@
         "resposta_curta": true,
         "passos": [
           "Procure na pilha de livros um título que começa com Curso de… e trata do que celebramos na igreja. Complete o título.",
-          "Biblioteca, com acesso liberado; não desmontar a pilha. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Biblioteca. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d11",
-        "icone": "biblioteca"
+        "icone": "biblioteca",
+        "foto_obrigatoria": true
       }
     }
   },
   {
     "id": "bbe1d27c-4fb0-5864-a1e2-5cb3d195fafa",
     "titulo": "O santo da Pastoral da Saúde",
-    "descricao": "Com o guia da biblioteca, encontre a imagem do santo da Pastoral da Saúde. Qual é o nome dele?",
+    "descricao": "Encontre na biblioteca a imagem do santo da Pastoral da Saúde. Qual é o nome dele?",
     "tipo": "bonus",
     "validacao": "reivindicada",
     "xp": 10,
@@ -373,13 +384,14 @@
         "ajuda": "A equipe pode apontar a imagem; a resposta pode ser descoberta em conversa.",
         "resposta_curta": true,
         "passos": [
-          "Com o guia da biblioteca, encontre a imagem do santo da Pastoral da Saúde. Qual é o nome dele?",
-          "Biblioteca, acompanhado; o guia deve saber qual imagem foi confirmada. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Encontre na biblioteca a imagem do santo da Pastoral da Saúde. Qual é o nome dele?",
+          "Biblioteca. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d12",
-        "icone": "biblioteca"
+        "icone": "biblioteca",
+        "foto_obrigatoria": true
       }
     }
   },
@@ -389,7 +401,7 @@
     "descricao": "Na mesa da biblioteca, ao lado de Santa Teresinha, há a imagem de um arcanjo. Ele também aparece num vitral da igreja. Qual é o nome?",
     "tipo": "bonus",
     "validacao": "reivindicada",
-    "xp": 10,
+    "xp": 20,
     "exclusiva": true,
     "niveis_alvo": null,
     "aplica_de": "__exclusiva__",
@@ -402,16 +414,17 @@
         "tipo": "descoberta",
         "arte": "asas",
         "ambiente": "Biblioteca",
-        "ajuda": "Peça ao guia uma pista sobre o anjo da mesa.",
+        "ajuda": "Observe o anjo da mesa, ao lado de Santa Teresinha.",
         "resposta_curta": true,
         "passos": [
           "Na mesa da biblioteca, ao lado de Santa Teresinha, há a imagem de um arcanjo. Ele também aparece num vitral da igreja. Qual é o nome?",
-          "Biblioteca com guia; complementar D07, sem repetir recompensa pela mesma resposta. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Biblioteca. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d13",
-        "icone": "biblioteca"
+        "icone": "biblioteca",
+        "foto_obrigatoria": true
       }
     }
   },
@@ -438,19 +451,20 @@
         "resposta_curta": true,
         "passos": [
           "Na sala dos coroinhas, encontre o quadro de um jovem com uma hóstia junto ao peito, atrás da imagem de Aparecida. Quem é ele?",
-          "Sala dos coroinhas, em encontro acompanhado. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Sala dos coroinhas. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d14",
-        "icone": "sala"
+        "icone": "sala",
+        "foto_obrigatoria": true
       }
     }
   },
   {
     "id": "097f8428-d83e-5739-ab0d-20af5bc8b290",
     "titulo": "Guardado pelas correntes",
-    "descricao": "Encontre o objeto de metal que fica suspenso por correntes. Descubra com quem orienta o nome desse objeto.",
+    "descricao": "Encontre o objeto de metal que fica suspenso por correntes. Como se chama esse objeto?",
     "tipo": "bonus",
     "validacao": "reivindicada",
     "xp": 10,
@@ -469,20 +483,21 @@
         "ajuda": "Observe as correntes sem puxar nem tocar.",
         "resposta_curta": true,
         "passos": [
-          "Encontre o objeto de metal que fica suspenso por correntes. Descubra com quem orienta o nome desse objeto.",
-          "Sala dos coroinhas, acompanhado e sem manuseio. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Encontre o objeto de metal que fica suspenso por correntes. Como se chama esse objeto?",
+          "Sala dos coroinhas. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d15",
-        "icone": "sala"
+        "icone": "sala",
+        "foto_obrigatoria": true
       }
     }
   },
   {
     "id": "b48ea37e-ae2d-5c36-a2d3-5cf50364690e",
     "titulo": "Luzes que caminham",
-    "descricao": "Peça ao guia para mostrar os objetos compridos guardados junto ao armário. Como a nossa equipe chama esses objetos usados na procissão?",
+    "descricao": "Observe os objetos compridos guardados junto ao armário. Como a nossa equipe chama esses objetos usados na procissão?",
     "tipo": "bonus",
     "validacao": "reivindicada",
     "xp": 10,
@@ -501,20 +516,21 @@
         "ajuda": "A descoberta é pelo olhar e pela conversa; não é preciso retirar os objetos.",
         "resposta_curta": true,
         "passos": [
-          "Peça ao guia para mostrar os objetos compridos guardados junto ao armário. Como a nossa equipe chama esses objetos usados na procissão?",
-          "Sala dos coroinhas, com guia e sem manuseio. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Observe os objetos compridos guardados junto ao armário. Como a nossa equipe chama esses objetos usados na procissão?",
+          "Sala dos coroinhas. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d16",
-        "icone": "sala"
+        "icone": "sala",
+        "foto_obrigatoria": true
       }
     }
   },
   {
     "id": "68ffbc9f-0d99-5345-af4d-c8b76d9c8598",
     "titulo": "O trio da procissão",
-    "descricao": "Na visita acompanhada, observe a cruz processional e as lanternas ao lado. Quantas lanternas formam esse conjunto com a cruz?",
+    "descricao": "Observe a cruz processional e as lanternas ao lado. Quantas lanternas formam esse conjunto com a cruz?",
     "tipo": "bonus",
     "validacao": "reivindicada",
     "xp": 10,
@@ -530,23 +546,24 @@
         "tipo": "descoberta",
         "arte": "igreja",
         "ambiente": "Sacristia",
-        "ajuda": "Conte somente as lanternas ao lado da cruz indicada pelo guia.",
+        "ajuda": "Conte somente as lanternas ao lado da cruz processional.",
         "resposta_curta": true,
         "passos": [
-          "Na visita acompanhada, observe a cruz processional e as lanternas ao lado. Quantas lanternas formam esse conjunto com a cruz?",
-          "Somente visita guiada à sacristia; não abrir armários nem retirar objetos. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Observe a cruz processional e as lanternas ao lado. Quantas lanternas formam esse conjunto com a cruz?",
+          "Sacristia. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d17",
-        "icone": "sacristia"
+        "icone": "sacristia",
+        "foto_obrigatoria": true
       }
     }
   },
   {
     "id": "f91e88e7-3817-5466-a4bc-82b145d7e247",
     "titulo": "Uma etiqueta com um dia",
-    "descricao": "Durante a visita guiada, leia a etiqueta que menciona velas numa prateleira. Qual dia está escrito nela?",
+    "descricao": "Leia a etiqueta que menciona velas numa prateleira da sacristia. Qual dia está escrito nela?",
     "tipo": "bonus",
     "validacao": "reivindicada",
     "xp": 10,
@@ -565,13 +582,14 @@
         "ajuda": "A etiqueta também menciona Caixinha de Oração e Agenda.",
         "resposta_curta": true,
         "passos": [
-          "Durante a visita guiada, leia a etiqueta que menciona velas numa prateleira. Qual dia está escrito nela?",
-          "Somente se o armário já estiver aberto pelo responsável; alternativa: quadro do vídeo. Não toque nem retire objetos do lugar.",
-          "Envie só o nome ou número que descobriu. Foto é opcional; se precisar, descubra e responda com ajuda da equipe."
+          "Leia a etiqueta que menciona velas numa prateleira da sacristia. Qual dia está escrito nela?",
+          "Sacristia. Manuseie os objetos com cuidado e deixe tudo no lugar.",
+          "Tire uma foto da descoberta pelo app e envie junto com o nome ou número que encontrou."
         ],
         "semana": "2026-11-02",
         "modelo": "paroquia-d18",
-        "icone": "sacristia"
+        "icone": "sacristia",
+        "foto_obrigatoria": true
       }
     }
   }

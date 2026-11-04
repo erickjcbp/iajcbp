@@ -12,7 +12,7 @@
     "resposta": "Bodas de Caná. Aceitar Caná ou casamento em Caná.",
     "ajuda": "Procure recipientes grandes na parte de baixo da cena.",
     "aprendizagem": "Observar os objetos e usar a legenda para identificar uma cena.",
-    "acesso": "Nave, em horário combinado fora da celebração",
+    "acesso": "Igreja. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Igreja",
       "video": "IMG_3135.MOV",
@@ -24,7 +24,8 @@
       "imagem": "detalhes/3135/0051.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido."
+    "xp": 10,
+    "foto_obrigatoria": true
   },
   {
     "id": "D02",
@@ -39,7 +40,7 @@
     "resposta": "A pesca milagrosa.",
     "ajuda": "Olhe as janelas que mostram água e um barco.",
     "aprendizagem": "Descobrir uma narrativa pela imagem e conferir seu nome.",
-    "acesso": "Nave, em horário combinado fora da celebração",
+    "acesso": "Igreja. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Igreja",
       "video": "IMG_3135.MOV",
@@ -51,7 +52,8 @@
       "imagem": "detalhes/3135/0093.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido."
+    "xp": 10,
+    "foto_obrigatoria": true
   },
   {
     "id": "D03",
@@ -66,7 +68,7 @@
     "resposta": "Lázaro.",
     "ajuda": "Procure o nome de uma pessoa depois da palavra ressurreição.",
     "aprendizagem": "Distinguir duas cenas diferentes sem adivinhar só pelo tema.",
-    "acesso": "Nave, em horário combinado fora da celebração",
+    "acesso": "Igreja. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Igreja",
       "video": "IMG_3135.MOV",
@@ -78,7 +80,8 @@
       "imagem": "detalhes/3135/0116.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido."
+    "xp": 10,
+    "foto_obrigatoria": true
   },
   {
     "id": "D04",
@@ -93,7 +96,7 @@
     "resposta": "A viúva.",
     "ajuda": "Busque a palavra oferta nas legendas.",
     "aprendizagem": "Perceber uma cena que costuma passar despercebida.",
-    "acesso": "Nave, em horário combinado fora da celebração",
+    "acesso": "Igreja. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Igreja",
       "video": "IMG_3135.MOV",
@@ -105,7 +108,8 @@
       "imagem": "detalhes/3135/0112.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido."
+    "xp": 10,
+    "foto_obrigatoria": true
   },
   {
     "id": "D05",
@@ -120,7 +124,7 @@
     "resposta": "Emaús. Aceitar Emaus sem acento.",
     "ajuda": "A legenda começa com O caminho de…",
     "aprendizagem": "Usar a leitura da legenda para localizar uma cena.",
-    "acesso": "Nave, em horário combinado fora da celebração",
+    "acesso": "Igreja. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Igreja",
       "video": "IMG_3135.MOV",
@@ -132,7 +136,8 @@
       "imagem": "detalhes/3135/0179.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido."
+    "xp": 10,
+    "foto_obrigatoria": true
   },
   {
     "id": "D06",
@@ -147,7 +152,7 @@
     "resposta": "Pentecostes ou a vinda do Espírito Santo.",
     "ajuda": "A palavra procurada aparece na parte de baixo do vitral.",
     "aprendizagem": "Relacionar um símbolo ao nome da cena.",
-    "acesso": "Nave, em horário combinado fora da celebração",
+    "acesso": "Igreja. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Igreja",
       "video": "IMG_3135.MOV",
@@ -159,7 +164,8 @@
       "imagem": "detalhes/3135/0187.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido."
+    "xp": 10,
+    "foto_obrigatoria": true
   },
   {
     "id": "D07",
@@ -174,7 +180,7 @@
     "resposta": "São Rafael Arcanjo e São Miguel Arcanjo. Aceitar Rafael e Miguel.",
     "ajuda": "As duas legendas terminam com Arcanjo.",
     "aprendizagem": "Conferir atributos e legendas, sem confundir as representações.",
-    "acesso": "Nave, em horário combinado fora da celebração",
+    "acesso": "Igreja. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Igreja",
       "video": "IMG_3135.MOV",
@@ -186,7 +192,7 @@
       "imagem": "detalhes/3135/0137.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido.",
+    "xp": 20,
     "evidencia_complementar": {
       "ambiente": "Igreja",
       "video": "IMG_3135.MOV",
@@ -196,7 +202,8 @@
       "confirmacao": "Lido na gravação",
       "observacao": "",
       "imagem": "detalhes/3135/0143.jpg"
-    }
+    },
+    "foto_obrigatoria": true
   },
   {
     "id": "D08",
@@ -211,7 +218,7 @@
     "resposta": "VII. Aceitar 7 na resposta oral.",
     "ajuda": "Leia as placas das estações; esta fala em segunda vez.",
     "aprendizagem": "Relacionar a legenda ao número de uma estação.",
-    "acesso": "Nave, em horário combinado fora da celebração",
+    "acesso": "Igreja. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Igreja",
       "video": "IMG_3135.MOV",
@@ -223,7 +230,8 @@
       "imagem": "detalhes/3135/0054.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido."
+    "xp": 10,
+    "foto_obrigatoria": true
   },
   {
     "id": "D09",
@@ -238,7 +246,7 @@
     "resposta": "Jerusalém.",
     "ajuda": "Nesta missão, observe os títulos visíveis sem retirar os livros.",
     "aprendizagem": "Conhecer uma obra real do acervo.",
-    "acesso": "Biblioteca, com acesso liberado e observação acompanhada",
+    "acesso": "Biblioteca. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Biblioteca",
       "video": "IMG_3137.MOV",
@@ -250,7 +258,8 @@
       "imagem": "detalhes/3137/0077.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido."
+    "xp": 10,
+    "foto_obrigatoria": true
   },
   {
     "id": "D10",
@@ -265,7 +274,7 @@
     "resposta": "Afonso Murad.",
     "ajuda": "A lombada é roxa.",
     "aprendizagem": "Identificar título e autoria de uma publicação.",
-    "acesso": "Biblioteca, com acesso liberado e observação acompanhada",
+    "acesso": "Biblioteca. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Biblioteca",
       "video": "IMG_3137.MOV",
@@ -277,7 +286,8 @@
       "imagem": "detalhes/3137/0096.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido."
+    "xp": 10,
+    "foto_obrigatoria": true
   },
   {
     "id": "D11",
@@ -292,7 +302,7 @@
     "resposta": "Curso de liturgia.",
     "ajuda": "O título está escrito na horizontal.",
     "aprendizagem": "Localizar um recurso de formação do acervo.",
-    "acesso": "Biblioteca, com acesso liberado; não desmontar a pilha",
+    "acesso": "Biblioteca. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Biblioteca",
       "video": "IMG_3137.MOV",
@@ -304,7 +314,8 @@
       "imagem": "detalhes/3137/0077.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido."
+    "xp": 10,
+    "foto_obrigatoria": true
   },
   {
     "id": "D12",
@@ -315,11 +326,11 @@
     "base_id": "46831222-1b76-43c3-9b9b-86b754e438db",
     "base_titulo": "Pista de santidade",
     "relacao": "Variante proposta",
-    "pista": "Com o guia da biblioteca, encontre a imagem do santo da Pastoral da Saúde. Qual é o nome dele?",
+    "pista": "Encontre na biblioteca a imagem do santo da Pastoral da Saúde. Qual é o nome dele?",
     "resposta": "São Camilo de Lellis. Aceitar São Camilo ou Camilo de Lellis.",
     "ajuda": "A equipe pode apontar a imagem; a resposta pode ser descoberta em conversa.",
     "aprendizagem": "Reconhecer uma imagem e a ligação local informada pelo responsável.",
-    "acesso": "Biblioteca, acompanhado; o guia deve saber qual imagem foi confirmada",
+    "acesso": "Biblioteca. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Biblioteca",
       "video": "IMG_3137.MOV",
@@ -331,7 +342,8 @@
       "imagem": "detalhes/3137/0029.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido."
+    "xp": 10,
+    "foto_obrigatoria": true
   },
   {
     "id": "D13",
@@ -344,9 +356,9 @@
     "relacao": "Nova descoberta proposta",
     "pista": "Na mesa da biblioteca, ao lado de Santa Teresinha, há a imagem de um arcanjo. Ele também aparece num vitral da igreja. Qual é o nome?",
     "resposta": "São Rafael Arcanjo. Aceitar Rafael.",
-    "ajuda": "Peça ao guia uma pista sobre o anjo da mesa.",
+    "ajuda": "Observe o anjo da mesa, ao lado de Santa Teresinha.",
     "aprendizagem": "Conectar representações do mesmo nome em dois ambientes.",
-    "acesso": "Biblioteca com guia; complementar D07, sem repetir recompensa pela mesma resposta",
+    "acesso": "Biblioteca. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Biblioteca",
       "video": "IMG_3137.MOV",
@@ -358,7 +370,8 @@
       "imagem": "detalhes/3137/0153.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido."
+    "xp": 20,
+    "foto_obrigatoria": true
   },
   {
     "id": "D14",
@@ -373,7 +386,7 @@
     "resposta": "São Tarcísio. Aceitar Tarcísio sem acento.",
     "ajuda": "Olhe os quadros do espaço de oração.",
     "aprendizagem": "Localizar a representação de Tarcísio na própria sala. A etapa sobre a história dele continua na formação.",
-    "acesso": "Sala dos coroinhas, em encontro acompanhado",
+    "acesso": "Sala dos coroinhas. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Sala dos coroinhas",
       "video": "IMG_3138.MOV",
@@ -385,7 +398,8 @@
       "imagem": "detalhes/3138/0004.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido."
+    "xp": 10,
+    "foto_obrigatoria": true
   },
   {
     "id": "D15",
@@ -396,11 +410,11 @@
     "base_id": "c33b8f99-c3fa-4ee8-8c0b-fa3b641ddbad",
     "base_titulo": "Por que o incenso?",
     "relacao": "Variante proposta",
-    "pista": "Encontre o objeto de metal que fica suspenso por correntes. Descubra com quem orienta o nome desse objeto.",
+    "pista": "Encontre o objeto de metal que fica suspenso por correntes. Como se chama esse objeto?",
     "resposta": "Turíbulo. Aceitar turibulo sem acento.",
     "ajuda": "Observe as correntes sem puxar nem tocar.",
     "aprendizagem": "Associar o nome ao objeto real. Complementa a formação sobre o incenso.",
-    "acesso": "Sala dos coroinhas, acompanhado e sem manuseio",
+    "acesso": "Sala dos coroinhas. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Sala dos coroinhas",
       "video": "IMG_3138.MOV",
@@ -412,7 +426,8 @@
       "imagem": "detalhes/3138/0010.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido."
+    "xp": 10,
+    "foto_obrigatoria": true
   },
   {
     "id": "D16",
@@ -423,11 +438,11 @@
     "base_id": "a1293b86-0229-43e5-8464-127dbec122d7",
     "base_titulo": "Luz no caminho",
     "relacao": "Variante proposta",
-    "pista": "Peça ao guia para mostrar os objetos compridos guardados junto ao armário. Como a nossa equipe chama esses objetos usados na procissão?",
+    "pista": "Observe os objetos compridos guardados junto ao armário. Como a nossa equipe chama esses objetos usados na procissão?",
     "resposta": "Tochas de procissão. Aceitar tochas.",
     "ajuda": "A descoberta é pelo olhar e pela conversa; não é preciso retirar os objetos.",
     "aprendizagem": "Reconhecer o material da equipe. O treino com vela continua separado.",
-    "acesso": "Sala dos coroinhas, com guia e sem manuseio",
+    "acesso": "Sala dos coroinhas. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Sala dos coroinhas",
       "video": "IMG_3138.MOV",
@@ -439,7 +454,8 @@
       "imagem": "detalhes/3138/0011.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido."
+    "xp": 10,
+    "foto_obrigatoria": true
   },
   {
     "id": "D17",
@@ -450,11 +466,11 @@
     "base_id": "aa2f40e8-1c0f-48b5-a2f7-9035b2322119",
     "base_titulo": "Caso aberto na sacristia",
     "relacao": "Variante proposta",
-    "pista": "Na visita acompanhada, observe a cruz processional e as lanternas ao lado. Quantas lanternas formam esse conjunto com a cruz?",
+    "pista": "Observe a cruz processional e as lanternas ao lado. Quantas lanternas formam esse conjunto com a cruz?",
     "resposta": "Duas lanternas. Aceitar 2.",
-    "ajuda": "Conte somente as lanternas ao lado da cruz indicada pelo guia.",
+    "ajuda": "Conte somente as lanternas ao lado da cruz processional.",
     "aprendizagem": "Distinguir os elementos de um conjunto usado pela equipe.",
-    "acesso": "Somente visita guiada à sacristia; não abrir armários nem retirar objetos",
+    "acesso": "Sacristia. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Sacristia",
       "video": "IMG_3136.MOV",
@@ -466,7 +482,8 @@
       "imagem": "detalhes/3136/0014.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido."
+    "xp": 10,
+    "foto_obrigatoria": true
   },
   {
     "id": "D18",
@@ -477,11 +494,11 @@
     "base_id": null,
     "base_titulo": null,
     "relacao": "Nova descoberta proposta",
-    "pista": "Durante a visita guiada, leia a etiqueta que menciona velas numa prateleira. Qual dia está escrito nela?",
+    "pista": "Leia a etiqueta que menciona velas numa prateleira da sacristia. Qual dia está escrito nela?",
     "resposta": "7º dia. Aceitar sétimo dia ou 7.",
     "ajuda": "A etiqueta também menciona Caixinha de Oração e Agenda.",
     "aprendizagem": "Descobrir como um material está identificado na organização local.",
-    "acesso": "Somente se o armário já estiver aberto pelo responsável; alternativa: quadro do vídeo",
+    "acesso": "Sacristia. Manuseie os objetos com cuidado e deixe tudo no lugar.",
     "evidencia": {
       "ambiente": "Sacristia",
       "video": "IMG_3136.MOV",
@@ -493,6 +510,7 @@
       "imagem": "detalhes/3136/0011.jpg"
     },
     "entrega": "Nome ou resposta curta; pode responder oralmente à equipe. Foto opcional.",
-    "xp": "Manter a recompensa da aventura de origem, se esta variante for aprovada. Novas propostas: XP ainda não definido."
+    "xp": 10,
+    "foto_obrigatoria": true
   }
 ]
