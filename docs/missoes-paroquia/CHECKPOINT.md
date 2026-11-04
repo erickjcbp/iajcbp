@@ -77,3 +77,11 @@ Entrada: Jornada → Preparar conteúdo → Banco de missões (`jornada-admin.ht
 **Histórico preservado:** antes/depois: 818 progressos e 15340 XP de missões; não foi alterado saldo já adquirido. Código de instalação publicado em paralelo foi integrado sem perder alterações. Arquivos sujos do robô, gitignore e materiais locais ficaram fora dos commits/deploy.
 
 Operação, limites e pequenas melhorias pendentes: `motor-operacao.md`. Decisões e evidências de execução: `motor-execucao.md`. Próximo passo editorial: revisar as 22 propostas, completar diversidade/níveis da reserva e confirmar capacidade antes de programar uma segunda-feira. Não confundir rascunhos criados com missões já disponibilizadas ao membro.
+
+## Decisões rápidas das propostas — 04/11/2026
+
+Pedido do dono: simplificar revisão/aprovação com Aceitar, Recusar e Revisar. Publicado em `c62f056`, produção READY https://iajcbp-m562r7p5c-erickjcbp-1650s-projects.vercel.app. Banco de missões começa pela fila, com filtros Propostas/Aceitas/Recusadas e ferramentas de geração/programação recolhidas. Os três botões ficam no próprio card, visíveis no primeiro card em 390px; mostra XP, tempo, nível, foto, resposta esperada, alertas e detalhes/fontes.
+
+Aceitar é a decisão humana explícita e coloca na reserva, sem programar uma semana. Recusar arquiva sem apagar e verifica revisão concorrente antes de confirmar sucesso. Revisar abre o rascunho; se já aceito ou recusado, cria cópia para preservar a versão anterior. Edição tem Salvar alterações e Cancelar edição, sem misturar edição e aceite. Durante gravação os controles ficam bloqueados para evitar decisões duplicadas ou perda de ajustes. Campos técnicos de objetivo/mecânica foram retirados da edição comum; valores internos permanecem preservados.
+
+Validação: 53 testes focados passaram; suíte 677/680 com as mesmas três falhas anteriores de navigator no teste de notificações. Prova de aceitar/recusar/revisar/filtros/cópia em 390/768/1440/2560 e regressão do motor passaram. Revisão independente sem achados bloqueantes. Sete arquivos públicos com hash conferido, fontes e prova nova privadas (404), acesso anônimo do motor negado (401). Sem migração nova. Banco antes/depois idêntico: 22 propostas, zero aceitas, zero recusadas, distribuição individual sem data. Não foram tomadas decisões reais em nome do dono.

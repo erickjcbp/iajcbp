@@ -81,5 +81,97 @@
     {
       "motor_anonimo": 401
     }
-  ]
+  ],
+  "decisoes_rapidas": {
+    "commit": "c62f056",
+    "antes": {
+      "aceitas": 0,
+      "rascunhos": 22,
+      "recusadas": 0,
+      "distribuicao_desde": null
+    },
+    "depois": {
+      "aceitas": 0,
+      "rascunhos": 22,
+      "recusadas": 0,
+      "distribuicao_desde": null
+    },
+    "testes_focados": 53,
+    "suite": {
+      "passaram": 677,
+      "total": 680,
+      "falhas_preexistentes": 3
+    },
+    "larguras": [
+      390,
+      768,
+      1440,
+      2560
+    ],
+    "fluxos": [
+      "aceitar",
+      "recusar",
+      "revisar",
+      "filtros",
+      "copia",
+      "bloqueio_durante_gravacao"
+    ],
+    "publicacao": [
+      {
+        "arquivo": "projetos/acolitos/missoes.html",
+        "hash_confere": true
+      },
+      {
+        "arquivo": "projetos/acolitos/bonus-semana.js",
+        "hash_confere": true
+      },
+      {
+        "arquivo": "projetos/acolitos/jornada-admin.html",
+        "hash_confere": true
+      },
+      {
+        "arquivo": "projetos/acolitos/missoes-motor-admin.js",
+        "hash_confere": true
+      },
+      {
+        "arquivo": "projetos/acolitos/missoes-motor.css",
+        "hash_confere": true
+      },
+      {
+        "arquivo": "projetos/acolitos/sw.js",
+        "hash_confere": true
+      },
+      {
+        "arquivo": "projetos/acolitos/shared.js",
+        "hash_confere": true
+      },
+      {
+        "privado": "docs/missoes-paroquia/triagem-motor.json",
+        "status": 404
+      },
+      {
+        "privado": "docs/superpowers/specs/2026-11-04-motor-missoes-design.md",
+        "status": 404
+      },
+      {
+        "privado": "supabase/migrations/20261104120200_motor_missoes_execucao.sql",
+        "status": 404
+      },
+      {
+        "privado": "testes-api/missoes-editorial.test.mjs",
+        "status": 404
+      },
+      {
+        "privado": "projetos/acolitos/provas/missoes-motor-decisoes.prova.mjs",
+        "status": 404
+      },
+      {
+        "privado": "api/_missoes-fontes.js",
+        "status": 404
+      },
+      {
+        "motor_anonimo": 401
+      }
+    ]
+  }
 }

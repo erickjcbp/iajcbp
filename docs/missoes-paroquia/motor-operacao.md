@@ -6,7 +6,7 @@ Na Jornada, abra **Banco de missões**. O inventário inicial entra como fonte c
 
 1. Selecione até dez fontes, formato, nível e até quatro propostas por lote.
 2. O motor reserva duas chamadas da quota diária, gera e revisa. Limite global: oito chamadas por dia; pedidos repetidos não cobram nova reserva.
-3. Confira título, hook, instruções, fonte completa, viabilidade, foto e gabarito. Salve antes de aprovar. Aprovação coloca a versão na reserva, não na tela do membro.
+3. Na fila **Propostas**, confira título, chamada, instruções, resposta e fontes. **Aceitar** coloca na reserva; **Recusar** retira das próximas seleções sem apagar; **Revisar** abre ajustes. Depois de editar, use **Salvar alterações** e decida no card. Para revisar uma missão já aceita ou recusada, uma cópia é criada e a versão anterior permanece preservada. Aceitar não programa a distribuição semanal.
 4. Nas capacidades, confirme quantas pessoas cada objeto/local/pastoral consegue receber por semana. Zero não tem vaga. Não há capacidade presumida pela IA.
 5. Confira a seleção semanal e programe uma próxima segunda-feira. O banco só aceita conjuntos completos: 3x10 XP, 2x20 XP, 1x40 XP e 2 desafios de 10 XP = 130 XP por membro, respeitando nível e histórico.
 6. Uma troca semanal ocupa o mesmo slot e esforço. Depois do envio, aguarde revisão; não há troca de missão concluída ou em análise.
