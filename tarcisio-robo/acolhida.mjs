@@ -42,10 +42,8 @@ export function criarAcolhida({db,evo=null,relogio=()=>new Date(),log=console,vi
   const enviar=async(m,numero,chave,texto)=>exigir(await db.from('tarcisio_envios').upsert({tipo:'aviso',destino_numero:numero,texto,chave_unica:chave,membro_id:m.id,agendado_para:new Date(+agora).toISOString()},{onConflict:'chave_unica',ignoreDuplicates:true}),'mensagem de grupo');
   for(const c of pend){const m=dados.membros.find(x=>x.id===c.membro_id),st=dados.estados.find(s=>s.membro_id===c.membro_id);if(!m||!st?.marcos?.integracao_realizada||st.marcos.grupo_confirmado||st.pausado)continue;
    const rota=destinatario(m,dados.membros,sp.data);if(rota.erro)continue;
-   // controle humano: o Tarcísio só PROPÕe; ele adiciona ao grupo depois que a coordenação confirma no CRM
-   const prop=(dados.propostas||[]).find(p=>p.membro_id===m.id);
-   if(!prop){exigir(await db.rpc('tarcisio_acolhida_propor',{p_membro:m.id,p_acao:'grupos',p_motivo:`integração concluída; adicionar ${rota.canal==='jovem'?'o jovem ao grupo Acólitos e Coroinhas (e o responsável ao Pais)':'o responsável ao grupo Pais'}`}),'propor grupos');continue;}
-   if(prop.estado!=='confirmada')continue;
+   // dono (04/11): o Tarcísio adiciona sem esperar a coordenação; só uma recusa registrada no CRM segura
+   if((dados.propostas||[]).some(p=>p.membro_id===m.id&&p.estado==='recusada'))continue;
    const alvos=[];if(rota.canal==='responsavel')alvos.push({n:rota.numero,papel:'pais'});else{alvos.push({n:rota.numero,papel:'acolitos'});const g=normalizarNumero(m.celular_responsavel||m.celular_mae);if(g&&g!==rota.numero)alvos.push({n:g,papel:'pais'});}
    if(alvos.some(a=>!por[a.papel]))continue;
    const faltam=async fresco=>{const f=[];for(const a of alvos)if(!(await lista(por[a.papel].jid,fresco)).has(a.n))f.push(a);return f;};

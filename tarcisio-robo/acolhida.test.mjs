@@ -66,12 +66,13 @@ test('etapa WhatsApp: adiciona ao grupo certo, confirma pela lista de participan
  assert.ok(!rpcs.some(r=>r[0]==='tarcisio_acolhida_grupo_confirmado'));const envs=(await no.db.from('tarcisio_envios').select('*')).data;assert.equal(envs.filter(e=>/^grupo-convite:/.test(e.chave_unica)).length,1);assert.match(envs[0].texto,/chat\.whatsapp\.com\/XYZ/);
 });
 
-test('grupos: sem confirmação da coordenação o Tarcísio só propõe (não adiciona ninguém); recusada ou pendente também não adicionam',async()=>{
+test('grupos: o Tarcísio adiciona sem esperar a coordenação; só proposta recusada segura',async()=>{
  const agoraT=new Date('2026-10-28T15:00:00Z');
  const rodar=async(propostas)=>{const adds=[],rpcs=[];const db=bancoMemoria({tarcisio_acolhida_config:[{id:true,ativa:true}],acolitos_crm:[{membro_id:'m1',etapa:'whatsapp'}],acolitos_membros:[{...m,responsavel_whatsapp:true}],tarcisio_acolhida:[{membro_id:'m1',acolhido_em:'2026-10-20T11:00:00Z',marcos:{integracao_realizada:{em:'x'}}}],tarcisio_acolhida_envios:[],tarcisio_envios:[],tarcisio_pendencias:[],acolitos_celebracoes:[],tarcisio_grupos:[{jid:'pais@g.us',nome:'Pais',papel:'pais'}],tarcisio_acolhida_propostas:propostas});db.rpc=async(n,a)=>{rpcs.push(n);return {data:{ok:true},error:null};};
   const evo={participantes:async()=>[],adicionarAoGrupo:async(j,ns)=>{adds.push([j,ns]);return {};},linkConvite:async()=>null,numerosComWhatsapp:async ns=>ns.map(numero=>({numero,existe:true}))};await criarAcolhida({db,evo,relogio:()=>agoraT}).cuidar(agoraT,{pausado:false});return {adds,rpcs};};
- const sem=await rodar([]);assert.equal(sem.adds.length,0);assert.ok(sem.rpcs.includes('tarcisio_acolhida_propor'));
- for(const estado of ['pendente','recusada']){const r=await rodar([{membro_id:'m1',acao:'grupos',estado}]);assert.equal(r.adds.length,0);assert.ok(!r.rpcs.includes('tarcisio_acolhida_propor'));}
+ const sem=await rodar([]);assert.equal(sem.adds.length,1);assert.ok(!sem.rpcs.includes('tarcisio_acolhida_propor'));
+ const rec=await rodar([{membro_id:'m1',acao:'grupos',estado:'recusada'}]);assert.equal(rec.adds.length,0);
+ for(const estado of ['pendente','confirmada']){const r=await rodar([{membro_id:'m1',acao:'grupos',estado}]);assert.equal(r.adds.length,1);}
 });
 
 
