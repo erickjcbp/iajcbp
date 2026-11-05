@@ -27,6 +27,16 @@
     .dest-member-head { display:flex;align-items:center;gap:20px;margin-bottom:24px;min-width:0; }
     .dest-member-name { font:700 clamp(21px,2.3vw,30px)/1.4 var(--font-title);color:var(--gold-light);margin:0;overflow-wrap:anywhere; }
     .dest-member-level { color:var(--text-muted);font-size:14px;line-height:1.6;margin-top:8px;overflow-wrap:anywhere; }
+    .dest-marcos { display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:0 0 20px; }
+    .dest-marco { display:flex;align-items:center;gap:14px;min-width:0;padding:14px;border:1px solid var(--border-wine);border-radius:12px;background:var(--surface); }
+    .dest-marco.tem-marco { border-color:var(--gold-dim,var(--border-wine)); }
+    .dest-marco-arte { flex:none;width:84px;height:84px;display:flex;align-items:center;justify-content:center; }
+    .dest-marco-arte>svg,.dest-marco-arte>.medalhao-tempo { max-width:100%;max-height:100%; }
+    .dest-marco-arte.vazio { border:2px dashed var(--border-wine);border-radius:50%;opacity:.7; }
+    .dest-marco-texto { display:flex;flex-direction:column;gap:4px;min-width:0; }
+    .dest-marco-rotulo { font-size:11px;font-weight:700;letter-spacing:1.2px;color:var(--gold); }
+    .dest-marco-titulo { font:700 clamp(18px,2vw,24px)/1.25 var(--font-title);color:var(--gold-light);overflow-wrap:anywhere; }
+    .dest-marco-sub { font-size:13px;line-height:1.5;color:var(--text-muted);overflow-wrap:anywhere; }
     .dest-member-stats { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0; }
     .dest-member-stat { display:flex;flex-direction:column; min-width:0;padding:14px 10px;border:1px solid var(--border-wine);border-radius:10px;background:var(--surface);text-align:center; }
     .dest-member-stat dd { order:-1; margin:0 0 8px;font:700 22px/1.4 var(--font-title);color:var(--gold-light);overflow-wrap:anywhere; }
@@ -218,6 +228,48 @@ const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const FUNCAO_LABEL = { cred_altar:'Cerimonial de Altar', cred_credencia:'Cerimonial de Credência', missal:'Missal', turibulo:'Turíbulo', naveta:'Naveta', altar:'Altar', cruz:'Cruz', vela:'Vela', sineta:'Sineta', sinao:'Sinão', apoio:'Apoio', mitra:'Mitra', baculo:'Báculo' };
 function dataCurta(d){ const x=new Date(d+'T00:00:00'); return DIAS[x.getDay()]+' '+x.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}); }
 
+// Nível e tempo de pastoral no cartão de OUTRO membro: dois painéis do mesmo tamanho, com o selo grande,
+// o rótulo e o título em destaque. O cartão não traz datas pessoais (de propósito); o tempo vem do marco
+// já registrado (acolitos_tempo_marcos_lote devolve só o marco: rótulo, medalhão e faixa, sem datas).
+function painelMarco(tipo, rotulo) {
+  const p = document.createElement('div'); p.className = 'dest-marco dest-marco-' + tipo;
+  const arte = document.createElement('div'); arte.className = 'dest-marco-arte'; arte.setAttribute('aria-hidden', 'true');
+  const txt = document.createElement('div'); txt.className = 'dest-marco-texto';
+  const r = document.createElement('span'); r.className = 'dest-marco-rotulo'; r.textContent = rotulo;
+  const t = document.createElement('strong'); t.className = 'dest-marco-titulo';
+  const sub = document.createElement('span'); sub.className = 'dest-marco-sub';
+  txt.append(r, t, sub); p.append(arte, txt);
+  return { p, arte, t, s: sub };
+}
+function montarMarcosDoCartao(id, m, ni, fechado) {
+  const box = document.createElement('section'); box.className = 'dest-marcos'; box.setAttribute('aria-label', 'Nível e tempo de pastoral');
+  const nivel = painelMarco('nivel', 'NÍVEL');
+  const svg = typeof nivelOficialSvg === 'function' ? nivelOficialSvg(m.nivel || 'aspirante', 84) : null;   // slug validado pela lista oficial
+  if (svg) nivel.arte.innerHTML = svg; else nivel.arte.classList.add('vazio');
+  nivel.t.textContent = ni.label; nivel.s.textContent = ni.titulo || '';
+  const tempo = painelMarco('tempo', 'TEMPO DE PASTORAL'); tempo.t.textContent = 'Carregando…';
+  box.append(nivel.p, tempo.p);
+  (async () => {
+    try {
+      const [arte, resp] = await Promise.all([carregarMedalhasArte(), sb.rpc('acolitos_tempo_marcos_lote', { p_membros: [id] })]);
+      if (fechado()) return;
+      if (resp.error) throw resp.error;
+      const marco = resp.data && resp.data[id];
+      if (marco) {
+        tempo.arte.innerHTML = arte.html(marco.icone, marco.tier, 84);
+        tempo.t.textContent = marco.label; tempo.s.textContent = 'Marco de tempo de pastoral conquistado';
+        tempo.p.classList.add('tem-marco');
+      } else {
+        tempo.arte.classList.add('vazio');
+        tempo.t.textContent = 'Ainda sem marco'; tempo.s.textContent = 'O primeiro marco chega com 1 ano de pastoral.';
+      }
+    } catch (e) {
+      if (!fechado()) { tempo.arte.classList.add('vazio'); tempo.t.textContent = 'Marco indisponível'; tempo.s.textContent = 'Não foi possível carregar agora.'; }
+    }
+  })();
+  return box;
+}
+
 let _destCardN=0;
 async function abrirCard(id) {
   const origem=document.activeElement,overflowAnterior=document.body.style.overflow;
@@ -240,7 +292,7 @@ async function abrirCard(id) {
   const avatar=buildAvatarEl(m.foto_url,nivelInfo(m.nivel||'aspirante').base,84,{ membro:m, tempoMembroId:id, nivelSlug: m.nivel||'aspirante',casaSlug:casaSlugDe(m)});avatar.style.flex='none';
   const info=document.createElement('div');info.style.minWidth='0';
   const name=document.createElement('h3');name.className='dest-member-name';name.textContent=m.nome_completo||m.nome;info.append(name,estrelaTagAsync(id));
-  const level=document.createElement('p');level.className='dest-member-level';const ni=nivelInfo(m.nivel||'aspirante');level.textContent=ni.label+(ni.titulo?' · '+ni.titulo:'');info.append(level);head.append(avatar,info);profile.append(head);
+  const ni=nivelInfo(m.nivel||'aspirante');head.append(avatar,info);const marcos=montarMarcosDoCartao(id,m,ni,()=>fechado);profile.append(head,marcos);
   const stats=document.createElement('dl');stats.className='dest-member-stats';
   [['Celebrações servidas',m.total_servido??0],['Funções que domina',m.funcoes??0],['Comunidade',({matriz:'Matriz',santo_antonio:'Sto. Antônio'})[m.comunidade]||'Não informada']].forEach(([label,value])=>{const item=document.createElement('div');item.className='dest-member-stat';const dt=document.createElement('dt');dt.textContent=label;const dd=document.createElement('dd');dd.textContent=value;item.append(dt,dd);stats.append(item);});profile.append(stats);
   const recent=document.createElement('section');recent.className='dest-member-recent';const h=document.createElement('h3');h.textContent='Últimas missas';recent.append(h);
