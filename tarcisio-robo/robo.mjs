@@ -55,15 +55,18 @@ export async function prepararApresentacaoGrupos(db, evo) {
 // cada ~10 s fazia 187 mil chamadas por dia ao Supabase (97% do egress do projeto, plano Free de
 // 5 GB). Conversa, envio e pedidos de apagar/rascunho têm gente esperando: 30 s no ritmo normal, mas
 // o webhook as acorda (acordar) e elas voltam ao passo de 5 s por 1 minuto sempre que chega mensagem.
-// 1ª passada (18:01 UTC): 133 -> 55 chamadas/min; sobrou o envio/conversas a cada 10 s.
+// 1ª passada (18:01 UTC): 133 -> 55 chamadas/min. 2ª (18:10): -> ~33. 3ª (esta): meta ~8/min (~21 MB/dia),
+// a conta que fecha os 5 GB do ciclo. Conversa não depende do polling: o webhook acorda a etapa.
+// Pausa/config pode levar até 60 s para valer; o batimento (robo_visto_em) fica em 60 s (a tela espera < 2 min).
 // O resto é disparado por horário (minuto ou hora) e não precisa de checagem a cada 10 s.
 // 'conexão' fica sem ritmo (QR pedido na tela) e 'acolhida'/'grupo do retiro' já se limitam sozinhos.
 const S = 1000
 export const RITMO_PRODUCAO = {
-  config: [30 * S, 60 * S],
-  conversas: [30 * S, 60 * S], envio: [30 * S, 60 * S], 'apagar mensagens': [30 * S, 60 * S], rascunhos: [20 * S, 60 * S],
-  lembretes: [60 * S, 300 * S], 'aniversários': [60 * S, 300 * S], avisos: [60 * S, 300 * S], 'ausência': [60 * S, 300 * S],
-  escala: [60 * S, 300 * S], 'escala automática': [60 * S, 300 * S], 'validade': [300 * S, 900 * S], 'presença nos grupos': [60 * S, 300 * S],
+  config: [60 * S, 120 * S],
+  conversas: [120 * S, 300 * S], envio: [60 * S, 120 * S], 'apagar mensagens': [60 * S, 120 * S], rascunhos: [60 * S, 120 * S],
+  lembretes: [120 * S, 600 * S], 'aniversários': [120 * S, 600 * S], avisos: [120 * S, 600 * S], 'ausência': [120 * S, 600 * S],
+  escala: [120 * S, 600 * S], 'escala automática': [120 * S, 600 * S], 'validade': [300 * S, 900 * S], 'presença nos grupos': [120 * S, 600 * S],
+  acolhida: [120 * S, 300 * S],
 }
 
 export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, escalaAuto = null, acolhida = null, presencaGrupos = null, ritmo = null, relogio = () => new Date(), rnd = Math.random, log = console }) {
@@ -86,7 +89,8 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
   // ── conexão: estado a cada 30 s, QR quando a tela pede, grupos quando a tela pede ──
   async function cuidarConexao(cfg, agora) {
     const mudancas = {}
-    if (agora - st.estadoEm >= 30_000) {
+    // Batimento (robo_visto_em): a tela só acusa "robô não responde" depois de 2 min; com ritmo, 60 s.
+    if (agora - st.estadoEm >= (ritmo ? 60_000 : 30_000)) {
       st.estadoEm = +agora
       st.conexao = await evo.estado()
       mudancas.conexao = st.conexao
@@ -314,6 +318,9 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
     const reservada = exigir(await db.from('tarcisio_envios').update({ estado: 'enviando' })
       .eq('id', item.id).eq('estado', 'pendente').select('id'), 'reservar envio')
     if (!reservada.length) return
+    // Fila com item: mantém o envio no passo de 5 s por mais 1 min. Sem isto, um lote (lembretes das
+    // 19h) sairia a 1 mensagem por minuto no ritmo lento; esfria sozinho quando a fila esvazia.
+    if (ritmo) acordar(['envio'])
     const destino = item.destino_jid || item.destino_numero
     // Avisos e comunicados sem arte própria levam a peça oficial ATENÇÃO.
     const avisoGrupoTexto = item.tipo === 'aviso' && String(item.destino_jid || '').endsWith('@g.us')

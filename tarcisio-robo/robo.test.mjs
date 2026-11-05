@@ -423,10 +423,11 @@ test('ritmo: com ritmo, rodadas de 5 s seguidas fazem muito menos chamadas que s
 
 test('ritmo: a config é relida a cada 30 s dentro da janela e a cada 60 s fora dela', async () => {
   const leituras = (r) => r.db.chamadas.filter((c) => c.tabela === 'tarcisio_config' && c.ops.some((o) => o[0] === 'single')).length   // só a leitura da config (o robô também grava o estado da conexão)
-  const dentro = roboComRitmo({ ritmo: RITMO_PRODUCAO })
+  const RITMO_TESTE = { config: [30_000, 60_000] }
+  const dentro = roboComRitmo({ ritmo: RITMO_TESTE })
   await contar(dentro, 12, 5)                                   // 60 s
   assert.equal(leituras(dentro), 2, 'em 60 s dentro da janela: t=0 e t=30')
-  const fora = roboComRitmo({ ritmo: RITMO_PRODUCAO })
+  const fora = roboComRitmo({ ritmo: RITMO_TESTE })
   fora.avancar(10 * 3600)                                       // 22h em São Paulo: fora da janela
   await contar(fora, 24, 5)                                     // 120 s
   assert.equal(leituras(fora), 2, 'em 120 s fora da janela: t=0 e t=60')
@@ -476,4 +477,26 @@ test('ritmo: arquivar conversas velhas roda a cada 5 min com ritmo e a cada roda
   assert.equal(mensagensPatch(com), 1, 'com ritmo: uma vez nos primeiros 10 s')
   com.avancar(300); await com.robo.rodada()
   assert.equal(mensagensPatch(com), 2, 'e de novo depois de 5 min')
+})
+
+test('ritmo: fila com item mantém o envio quente (lote não sai a 1 por minuto) e esfria quando esvazia', async () => {
+  let agora = Date.parse('2026-10-20T15:00:00Z'), enviadas = 0
+  const fila = [{ id: 'a', tipo: 'lembrete', destino_numero: '5519911111111', texto: 'A', tentativas: 0 },
+    { id: 'b', tipo: 'lembrete', destino_numero: '5519922222222', texto: 'B', tentativas: 0 },
+    { id: 'c', tipo: 'lembrete', destino_numero: '5519933333333', texto: 'C', tentativas: 0 }]
+  const db = bancoFalso((tabela, ops) => {
+    if (tabela === 'tarcisio_config') return op(ops, 'single') ? { data: { ...CFG, teto_diario: 99 } } : { data: null }
+    if (tabela === 'tarcisio_avisos') return { data: op(ops, 'maybeSingle') ? null : [] }
+    if (tabela !== 'tarcisio_envios') return { data: [] }
+    if (op(ops, 'update')) return { data: [{ id: 'x' }] }
+    if (op(ops, 'maybeSingle')) return { data: fila[0] ?? null }
+    if (op(ops, 'select')?.[2]?.head) return { count: 0 }
+    return { data: [] }
+  })
+  const evo = { estado: async () => 'open', numeroConectado: async () => '5519900000000',
+    enviarTexto: async () => { enviadas++; fila.shift() } }
+  const robo = criarRobo({ db, evo, supabaseUrl: 'https://p.supabase.co', ritmo: RITMO_PRODUCAO, relogio: () => new Date(agora), rnd: () => 0, log: silencioso })
+  for (let i = 0; i < 40 && fila.length; i++) { await robo.rodada(); agora += 5_000 }   // até 200 s em rodadas de 5 s
+  assert.equal(enviadas, 3, `os 3 saíram (saíram ${enviadas}): sem o "quente" seriam 1 a cada 60 s`)
+  assert.ok(agora - Date.parse('2026-10-20T15:00:00Z') < 120_000, 'em menos de 2 min, não 3 min')
 })
