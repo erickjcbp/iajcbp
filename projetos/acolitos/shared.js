@@ -8,7 +8,7 @@
 
 // ── SUPABASE ─────────────────────────────────────────────────
 const SUPABASE_URL = 'https://fttjgsotuosjfrasttds.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGpnc290dW9zamZyYXN0dGRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MzU3NjUsImV4cCI6MjA5NTExMTc2NX0.BvofcR2cIXP7Bc3r2V0VOgc-JXPefX7JGGwtzv0d_eA';
+const SUPABASE_ANON_KEY = 'sb_publishable_78XX2jFruMChxCJLxgYnBg_13kjZaPs';
 
 // Apenas anon key no browser. Autorização feita via RLS no banco.
 // service_role key pertence somente a Edge Functions (variável de ambiente no servidor).
