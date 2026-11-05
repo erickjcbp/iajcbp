@@ -479,3 +479,11 @@ test('botão da escala de número desconhecido: ignorado e registrado no log só
   await receber(c, toque(OUTRO, CONFIRMAR))
   assert.equal(avisos.length, 2)
 })
+
+test('respostas pausadas guardam entrada sem validar, responder ou executar comandos',async()=>{
+ const c=cenario({banco:{tarcisio_config:[{...CFG,respostas_ligadas:false}]}});let validou=0;
+ const entrada=criarEntradaDono({db:c.db,evo:c.evo,ministros:c.ministros,confirmarSemana:async()=>{throw Error('Não deve confirmar')},validacao:{aguardando:async()=>{validou++;return true},receber:async()=>{throw Error('Não deve responder validação')}},log:silencioso});
+ await entrada.receber({numero:OUTRO,texto:'Sou a mãe',external_id:'pausa-1',midia:null});
+ await entrada.receber(lerMensagemRecebida(toque(DONO,CONFIRMAR,'pausa-2')));
+ assert.equal(validou,0);assert.equal(c.enviados.length,0);assert.equal(c.db.t.tarcisio_mensagens.length,2);assert.ok(c.db.t.tarcisio_mensagens.every(m=>m.respondida===false));
+});

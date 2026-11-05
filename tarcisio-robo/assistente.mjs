@@ -6,6 +6,7 @@ import {
   diaPorExtenso, rotuloMissa, FUNCOES, primeiroNome,
 } from './regras.mjs'
 import { avaliarContato } from './contato-automatico.mjs'
+import { criarContatoServos, montarHistorico, soEncerramento, FERRAMENTAS_CONTATO } from './contato-servos.mjs'
 
 const CAMPOS = 'id,nome,apelido,nivel,user_id,data_nascimento,telefone,celular_recado,celular_responsavel,celular_mae,grupo_irmaos,escalar_com_irmao'
 const MOTIVOS = ['doenca', 'viagem', 'familia', 'outro']
@@ -35,6 +36,7 @@ const FERRAMENTAS_DESCONHECIDO = [
 ]
 
 export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log = console, acolhida = null }) {
+  const contatoServos = criarContatoServos({db,evo})
   async function membrosQueServem() {
     return exigir(await db.from('acolitos_membros').select(CAMPOS).eq('status', 'ativo').eq('serve', true), 'ler membros')
   }
@@ -43,7 +45,7 @@ export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log =
     return (r && typeof r.valor === 'object' && r.valor) || {}
   }
   async function pendencia(tipo, numero, resumo, dados = {}) {
-    exigir(await db.from('tarcisio_pendencias').insert({ tipo, numero, resumo, dados }), 'abrir pendência')
+    exigir(await db.from('tarcisio_pendencias').insert({ tipo, numero, resumo, dados: { ...dados, aguardando_revisao: true } }), 'abrir pendência')
   }
 
   function executorPara(numero, ligados, todos) {
@@ -109,13 +111,14 @@ export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log =
   function sistema(cfg, ligados, hoje) {
     const quem = ligados.length
       ? 'Este número está ligado a: ' + ligados.map((m) => `${m.nome} (id ${m.id})`).join('; ') + '. Fale só destes servos.'
-      : 'Este número NÃO está ligado a nenhum cadastro. Não fale de escala nem registre nada. Peça, com gentileza e uma coisa por vez: o nome COMPLETO do servo, a data de nascimento (ou a idade) e quem está falando (o próprio servo, pai, mãe ou outro responsável). Só com isso use a ferramenta identificar e diga que a coordenação vai confirmar o cadastro.'
+      : 'Este número NÃO está ligado a nenhum cadastro. Não fale de escala nem registre nada. Peça, com gentileza e uma coisa por vez: o nome COMPLETO do servo, a data de nascimento (ou a idade) e quem está falando (o próprio servo, pai, mãe ou outro responsável). Só com isso use a ferramenta identificar sem repetir dados já informados no histórico. Se houver dúvida, registre uma pendência silenciosa e encerre sem resposta.'
     return [
       `Você é ${cfg.persona_nome}, o WhatsApp da Pastoral dos Coroinhas e Acólitos da Paróquia Jesus Cristo Bom Pastor (JCBP), em Limeira.`,
       `Tom: ${cfg.persona_tom}`,
       `Regras: ${cfg.persona_regras}`,
       `Hoje é ${diaPorExtenso(hoje)} (${hoje}), horário de Brasília.`,
       quem,
+      'Pendências são internas: nunca diga que vai mandar, encaminhar ou passar para a coordenação. Se precisar de validação humana, use chamar_coordenacao ou identificar e não envie mais texto à pessoa. Leia a conversa inteira disponível e as mensagens que nós enviamos para entender respostas curtas; não peça novamente nome, idade ou parentesco já esclarecidos. Não invente ações que não existem nas ferramentas.',
       'Ausência: a ferramenta não altera automaticamente semanas já confirmadas; informe as datas registradas e encaminhe pedidos de alteração. Isso não significa que a coordenação não possa corrigir um erro.',
       'Se a família contestar uma informação ou correção nossa, leve a contestação a sério. Consulte os dados atuais e encaminhe a divergência com chamar_coordenacao, preservando o relato da família. Não reafirme como verdade o que nós mesmos acabamos de alterar, não diga que a escala não muda nem peça à pessoa para procurar alguém na igreja. Não declare horários dos pais ministros sem fonte confirmada.',
       'Quando faltar informação suficiente ou houver vínculo de ministro incerto, use chamar_coordenacao para deixar a validação na Caixa do dono. Não deduza identidade por primeiro nome, não altere escala e não envie uma correção à família antes da validação. A presença do outro pai/mãe na mesma missa é pista de conferência, não prova isolada.',
@@ -124,8 +127,9 @@ export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log =
       'Para dizer se uma semana está confirmada, chame escala_dos_meus de novo: o estado muda ao longo do dia. Nunca repita de memória.',
       'Se a pessoa diz que já registrou ausência pelo link ou já avisou antes, isso NÃO é pedido de ausência: agradeça, não registre e, se houver dúvida a resolver, chame chamar_coordenacao UMA vez para o assunto.',
       'Se a mensagem só agradece, confirma ou se despede (obrigado, ok, amém), a conversa terminou: não pergunte "em que posso ajudar", não ofereça ajuda nem puxe assunto novo. Se precisar responder, uma frase curta de despedida.',
-      'Responda só ao que a pessoa perguntou: uma saudação recebe uma saudação curta; não consulte escala nem traga assunto antigo da conversa se ninguém perguntou.',
+      'Se nós iniciamos uma coleta ainda em andamento, mantenha o objetivo: uma saudação ou resposta curta NÃO reinicia o atendimento. Fora de coleta ativa, responda só ao assunto atual, sem consultar escala por uma simples saudação.',
       'Leia o histórico para dar continuidade natural. Se já houve conversa, não se reapresente nem repita Oi/Olá ou Aqui é o Tarcísio em cada resposta. Vá direto ao assunto com o contexto do que a pessoa acabou de dizer. Apresente-se apenas no primeiro contato ou se perguntarem quem está falando; uma saudação nova da pessoa pode receber saudação curta, sem reapresentação.',
+      'As regras operacionais acima prevalecem sobre orientações antigas da persona: nunca anuncie encaminhamento à coordenação. Na coleta ativa, o objetivo pendente prevalece sobre respostas genéricas de recepção.',
       'Responda em português do Brasil, em mensagem curta de WhatsApp, sem markdown.',
     ].join('\n')
   }
@@ -165,6 +169,12 @@ export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log =
     const acolhimento=await acolhida?.contexto(numero);
     const ligados = membrosDoNumero(numero, todos);for(const a of acolhimento||[])if(!ligados.some(m=>m.id===a.membro.id))ligados.push(a.membro)
     if (await contatoAutomatico(cfg, numero, pendentes, ligados.length > 0)) return marcar()
+    const revisao = exigir(await db.from('tarcisio_pendencias').select('id').eq('numero', numero).eq('estado', 'aberta').contains('dados', { aguardando_revisao: true }).limit(1), 'ler revisão silenciosa')
+    if (revisao?.length) return marcar({ membro_ids: ligados.map((m) => m.id) })
+    const estadoColeta = await contatoServos.carregar(numero, agoraSP(relogio()).data)
+    if(estadoColeta?.encerrada && pendentes.every(p=>soEncerramento(p.texto)))return marcar({membro_ids:ligados.map(m=>m.id)})
+    const coleta = estadoColeta?.encerrada ? null : estadoColeta
+    let pendenciaSilenciosa = false
     let texto
     let usadas = []
     const comandoAcolhida=acolhimento?.length?await acolhida.comando(numero,pendentes):null;
@@ -176,25 +186,31 @@ export function criarAssistente({ db, evo, ia, relogio = () => new Date(), log =
     } else if (!chaveIA) {
       return   // sem chave da IA: fica guardado, sem resposta (Configurações mostra o aviso)
     } else {
-      const hist = exigir(await db.from('tarcisio_mensagens').select('direcao,texto,midia').eq('numero', numero)
-        .order('created_at', { ascending: false }).limit(20), 'ler histórico').reverse()
-      const mensagens = []
-      for (const h of hist) {
-        const role = h.direcao === 'entrada' ? 'user' : 'assistant'
-        const conteudo = h.texto || `[${h.midia || 'mídia'} sem texto]`
-        if (mensagens.length && mensagens.at(-1).role === role) mensagens.at(-1).content += '\n' + conteudo
-        else mensagens.push({ role, content: conteudo })
-      }
-      while (mensagens.length && mensagens[0].role !== 'user') mensagens.shift()
+      const hist = exigir(await db.from('tarcisio_mensagens').select('id,direcao,texto,midia,created_at').eq('numero', numero)
+        .lte('created_at', pendentes.at(-1).created_at || relogio().toISOString()).order('created_at', { ascending: false }).limit(20), 'ler histórico').reverse()
+      const mensagens = montarHistorico(hist)
       if (!mensagens.length) return marcar()
       const hoje = agoraSP(relogio()).data
       const ferramentas=ligados.length?[...FERRAMENTAS_CONHECIDO]:[...FERRAMENTAS_DESCONHECIDO];const executarPadrao=executorPara(numero,ligados,todos);let contextoAcolhida='';if(acolhimento?.length){ferramentas.push({name:'registrar_acolhida',description:'Registra UM fato explícito da mensagem atual ou pausa/retomada pedida. Não inferir por silêncio, previsão ou prazo. Envio de catequese não é aprendizado comprovado.',input_schema:{type:'object',required:['membro_id','mensagem_id','marco'],properties:{membro_id:{type:'string'},mensagem_id:{type:'string'},marco:{type:'string',enum:['contato_raquel','pedido_confirmado','confeccao_iniciada','tunica_recebida','respondeu_tunica','integracao_realizada','grupo_confirmado','pausar','retomar','interacao']}}}});contextoAcolhida='\nVocê também acompanha a acolhida. Dados atuais: '+JSON.stringify(acolhimento.map(a=>({id:a.membro.id,nome:a.membro.nome,canal:a.canal,etapa:a.etapa,marcos:a.estado.marcos,ultimo_encontro:a.estado.ultimo_encontro,pausado:a.estado.pausado})))+'\nMensagem(ns) atual(is), com IDs para comprovar fatos: '+JSON.stringify(pendentes.map(p=>({id:p.id,texto:p.texto})))+'\nRegras da acolhida: (1) Os números ligados acima SÃO os membros em questão; se só há um membro ligado, os fatos são dele, sem pedir o nome. Apelidos valem (ex.: Bia = Beatriz). Se há vários, confirme de qual se trata. (2) Os encontros de formação NÃO são presenciais (são 14 textos curtos, 2 por semana, terça e quinta, por volta de 7 semanas; cada um é uma leitura rápida; se perguntarem quanto duram, responda isso, sem encaminhar à coordenação):  são textos curtos que você envia por este WhatsApp às terças e quintas, para ler a qualquer hora, sem comparecer e sem avisar ausência. NUNCA registre ausência por causa dos encontros e nunca fale em horário de comparecimento. Se a pessoa entender que é presencial, corrija com gentileza. Só explique os encontros depois que a família responder sobre a túnica; o primeiro texto de formação já traz a explicação. (2b) registrar_acolhida só vale para os membros listados em "Dados atuais" da acolhida. Outros cadastros ligados ao mesmo número não estão em acompanhamento: se só há um membro em "Dados atuais", os fatos sobre túnica são dele; NÃO pergunte de qual cadastro se trata nem cite os outros. (3) Sempre que a pessoa falar da túnica, registre com registrar_acolhida: tunica_recebida se disse que já tem, recebeu, buscou, está usando ou já serviu com ela (comemore com a pessoa; diga que a coordenação confirma a conclusão no CRM e que, confirmada, ela passa a aspirante, apta em apoio; não diga que já saiu do CRM); respondeu_tunica para qualquer outra resposta sobre a túnica (medidas marcadas, ainda não pediu, vai buscar, pronta mas não retirada). Se a túnica está pronta mas ainda não foi retirada, não é recebida. Responda de acordo com o que registrou e só afirme o que a ferramenta confirmou. (4) Quem está na etapa integracao recebe de você um vídeo curto apresentando a pastoral (o que é, missas, escala e ausências, vestes e roupas, chegada e conduta). Responda dúvidas com o que o vídeo e as ferramentas trazem; não invente regra. Quando a família disser que assistiu e entendeu (ex.: \"li e entendi\"), registre integracao_realizada: a coordenação segue com o grupo de WhatsApp. Para mães/responsáveis, proponha leitura para conversar com o filho; para o jovem, fale com ele. A família trata diretamente com a Raquel, +55 19 99195-8657, medidas, valor, pagamento e prazo; 30-45 dias é só referência. Nunca prometa data, preço, admissão ou aptidão além do que o sistema registrou. Se estiver pausado, respeite; só retome por pedido explícito. Para dizer que atualizou o CRM, execute registrar_acolhida com sucesso. O executor interpreta semanticamente a mensagem, sem exigir palavras-chave. Se retornar confirmacao_necessaria, faça uma pergunta curta à própria pessoa para esclarecer o que falta; não chame a coordenação apenas por ambiguidade e não diga que registrou. Só encaminhe se for uma questão real da coordenação ou se a pessoa pedir. Não use interacao como substituto para um fato recusado.';}
       if(acolhida?.trocarResponsavel&&ligados.length){ferramentas.push({name:'trocar_responsavel',description:'A pedido do contato responsável atual, troca o contato responsável da criança e adiciona o novo ao grupo de Pais; se pedido, retira o solicitante apenas após confirmar a entrada do novo. Não é pausa nem desistência da criança. Autorizado pela coordenação, sem nova aprovação.',input_schema:{type:'object',required:['membro_id','mensagem_id','novo_numero','retirar_solicitante'],properties:{membro_id:{type:'string'},mensagem_id:{type:'string'},novo_numero:{type:'string'},retirar_solicitante:{type:'boolean'}}}});contextoAcolhida+='\nTroca de responsável: o dono autorizou executar pedidos claros do responsável atual sem encaminhar para aprovação. Se pediu para o pai/mãe/outro responsável assumir e para sair do grupo, use trocar_responsavel com o número informado e retirar_solicitante=true. NUNCA confunda sair do grupo de Pais com pausar ou desligar a criança. Se faltar número ou o pedido for ambíguo, pergunte à pessoa. Só confirme mudança e saída do grupo conforme o resultado da ferramenta; se a entrada do novo não for confirmada, explique a pendência sem dizer que retirou o antigo.';}
-      const r = await ia.conversar({ modelo: cfg.ia_modelo, sistema: sistema(cfg, ligados, hoje)+contextoAcolhida, mensagens,ferramentas,executar:(nome,e)=>nome==='registrar_acolhida'?acolhida.executar(numero,e,pendentes,hist):nome==='trocar_responsavel'?acolhida.trocarResponsavel(numero,e,pendentes):executarPadrao(nome,e) })
-      texto = r.texto
+      if(coleta) ferramentas.splice(0,ferramentas.length,FERRAMENTAS_CONTATO.find(f=>f.name==='continuar_coleta'),FERRAMENTAS_CONHECIDO.find(f=>f.name==='chamar_coordenacao'))
+      const r = await ia.conversar({ modelo: cfg.ia_modelo, somenteFerramentas:!!coleta, limite:coleta?1:4, sistema: coleta?contatoServos.contexto(coleta,hist):sistema(cfg, ligados, hoje)+contextoAcolhida, mensagens,ferramentas,executar:async(nome,e)=>{
+        const daColeta=FERRAMENTAS_CONTATO.some(f=>f.name===nome)
+        const resultado = await (daColeta&&coleta?contatoServos.executar(coleta,nome,e,hist,pendentes):nome==='registrar_acolhida'?acolhida.executar(numero,e,pendentes,hist):nome==='trocar_responsavel'?acolhida.trocarResponsavel(numero,e,pendentes):executarPadrao(nome,e))
+        if (['chamar_coordenacao','identificar'].includes(nome) && resultado?.ok) pendenciaSilenciosa=true
+        if(daColeta&&resultado?.erro){await executarPadrao('chamar_coordenacao',{resumo:'Coleta de contato de '+coleta.membro.nome+': '+resultado.erro});pendenciaSilenciosa=true}
+        return pendenciaSilenciosa ? {...resultado,silencioso:true} : resultado
+      } })
+      texto = coleta && r.origemTexto !== 'executor' ? '' : r.texto
       usadas = r.usadas
     }
-    if (!texto) texto = 'Recebi sua mensagem e passei para a coordenação. Logo alguém responde. 🙏'
+    if (!texto && !pendenciaSilenciosa) {
+      await executorPara(numero, ligados, todos)('chamar_coordenacao', { resumo: 'Não houve resposta segura para a mensagem: ' + pendentes.map(p => p.texto || '[mídia]').join(' / ').slice(0, 380) })
+      pendenciaSilenciosa = true
+    }
+    if (pendenciaSilenciosa) return marcar({ membro_ids: ligados.map((m) => m.id) })
+    const cfgAgora = exigir(await db.from('tarcisio_config').select('respostas_ligadas').eq('id',1).maybeSingle(), 'conferir pausa antes do envio')
+    if(cfgAgora?.respostas_ligadas === false) return // conserva a entrada pendente para a revisão
     const enviada = await evo.enviarTexto(numero, texto)
     exigir(await db.from('tarcisio_mensagens').insert({ numero, direcao: 'saida', texto, external_id: enviada?.key?.id || null, membro_ids: ligados.map((m) => m.id), ferramentas: usadas.length ? usadas : null, respondida: true }), 'gravar resposta')
     await marcar({ membro_ids: ligados.map((m) => m.id) })

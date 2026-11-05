@@ -146,10 +146,11 @@ export function criarEntradaDono({ db, evo, confirmarSemana, ministros, validaca
     // sem a config não dá para saber quem é o dono: guarda como conversa comum (como antes)
     let cfg = null
     try { cfg = await lerCfg() } catch (e) { log.error(`webhook sem config: ${e.message}`) }
-    const olhar = !!cfg && precisaOlhar(msg, cfg)
+    const respostasAtivas = cfg?.respostas_ligadas !== false
+    const olhar = respostasAtivas && !!cfg && precisaOlhar(msg, cfg)
     // resposta da validação de contato não pode cair na IA: já entra como respondida
     let emValidacao = false
-    try { emValidacao = !!validacao && await validacao.aguardando(msg.numero) } catch (e) { log.error(`validação de contato: ${e.message}`) }
+    try { emValidacao = respostasAtivas && !!validacao && await validacao.aguardando(msg.numero) } catch (e) { log.error(`validação de contato: ${e.message}`) }
     const linha = { numero: msg.numero, external_id: msg.external_id, texto: msg.texto, midia: msg.midia, direcao: 'entrada', respondida: olhar || emValidacao }
     const gravada = exigir(await db.from('tarcisio_mensagens').upsert(linha, { onConflict: 'external_id', ignoreDuplicates: true }).select('id'), 'guardar mensagem')
     if (emValidacao && gravada.length) {

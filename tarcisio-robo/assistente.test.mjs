@@ -201,3 +201,45 @@ test('"obrigada" sem conversa anterior ainda passa pela IA (primeiro contato)', 
   await a.responder({ ia_modelo: 'm' }, NUM_MAE, true)
   assert.equal(chamou, true)
 })
+
+test('pendência interna não envia texto de encaminhamento e consome a entrada', async () => {
+  const marcadas = [], enviados = [];
+  const db = bancoFalso((t, ops) => {
+    if (t === 'acolitos_membros') return { data: TODOS };
+    if (t === 'tarcisio_mensagens' && ops.some(o=>o[0]==='update')) { marcadas.push(ops); return {data:[]}; }
+    if (t === 'tarcisio_mensagens') return {data:[{id:'msg-duvida',direcao:'entrada',texto:'Não entendi essa alteração',created_at:'2026-10-21T15:00:00Z'}]};
+    return {data:[]};
+  });
+  const ia = {conversar: async ({executar}) => { await executar('chamar_coordenacao',{resumo:'Conferir alteração'}); return {texto:'Vou encaminhar para a coordenação',usadas:[]}; }};
+  const a=criarAssistente({db,evo:{enviarTexto:async(...args)=>enviados.push(args)},ia,log:silencioso});
+  await a.responder({ia_modelo:'m'},NUM_MAE,true);
+  assert.equal(enviados.length,0);
+  assert.equal(marcadas.length,1);
+  assert.equal(db.gravado.find(g=>g.tabela==='tarcisio_pendencias').dados.dados.aguardando_revisao,true);
+});
+
+test('sem resposta segura abre pendência e não inventa mensagem de encaminhamento', async () => {
+  const db=bancoFalso(t=>t==='acolitos_membros'?{data:TODOS}:t==='tarcisio_mensagens'?{data:[{id:'m',direcao:'entrada',texto:'Tenho uma dúvida sobre a alteração'}]}:{data:[]});
+  const enviados=[];
+  const a=criarAssistente({db,evo:{enviarTexto:async(...args)=>enviados.push(args)},ia:{conversar:async()=>({texto:'',usadas:[]})},log:silencioso});
+  await a.responder({ia_modelo:'m'},NUM_MAE,true);
+  assert.equal(enviados.length,0);
+  assert.equal(db.gravado.filter(g=>g.tabela==='tarcisio_pendencias').length,1);
+});
+
+test('pausa acionada enquanto a IA estava respondendo impede o envio e conserva entrada pendente',async()=>{
+ const marcadas=[],enviados=[];const db=bancoFalso((t,ops)=>{
+ if(t==='acolitos_membros')return{data:TODOS};if(t==='tarcisio_config')return{data:{respostas_ligadas:false}};
+ if(t==='tarcisio_mensagens'&&ops.some(o=>o[0]==='update')){marcadas.push(ops);return{data:[]}};
+ if(t==='tarcisio_mensagens')return{data:[{id:'pausada',direcao:'entrada',texto:'Preciso saber uma orientação',created_at:'2026-11-04T12:00:00Z'}]};return{data:[]};});
+ const a=criarAssistente({db,evo:{enviarTexto:async(...args)=>enviados.push(args)},ia:{conversar:async()=>({texto:'Uma orientação',usadas:[]})},log:silencioso});await a.responder({ia_modelo:'m'},NUM_MAE,true);assert.equal(enviados.length,0);assert.equal(marcadas.length,0)
+});
+
+test('replay Daniela após conclusão manual: Boa tarde + Ah ótimo + Obrigada não chama IA nem reabre coleta',async()=>{
+ const {bancoMemoria}=await import('./banco-memoria.mjs');
+ const numero='5519997387364',m={id:'aylla',nome:'Aylla Paes',status:'ativo',serve:true,data_nascimento:'2013-10-14',telefone:'19996071815',celular_responsavel:'19997387364',no_grupo_whatsapp:true};
+ const entradas=['Boa tarde','Ah ótimo','Obrigada 🙏🏻'].map((texto,i)=>({id:'x'+i,numero,direcao:'entrada',texto,respondida:false,created_at:'2026-11-04T15:59:3'+i+'Z'}));
+ const db=bancoMemoria({acolitos_membros:[m],tarcisio_grupos:[{jid:'ac@g.us',papel:'acolitos'}],tarcisio_envios:[{id:'camp-aylla',membro_id:'aylla',destino_numero:numero,estado:'enviado',enviado_em:'2026-11-04T12:12:00Z',chave_unica:'contato-13-mais:2026-11-04:aylla',texto:'Ainda serve?'}],tarcisio_mensagens:entradas});
+ let chamadas=0,envios=0;await criarAssistente({db,evo:{enviarTexto:async()=>{envios++}},ia:{conversar:async()=>{chamadas++;throw Error('Não deve reabrir')}},relogio:()=>new Date('2026-11-04T16:00:00Z'),log:silencioso}).responder({ia_modelo:'claude-haiku-5-5'},numero,true);
+ assert.equal(chamadas,0);assert.equal(envios,0);assert.ok(db.t.tarcisio_mensagens.every(m=>m.respondida===true));assert.equal(db.t.tarcisio_validacao_contato[0].pendente.coleta_concluida,true)
+})

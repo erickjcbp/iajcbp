@@ -1,28 +1,30 @@
 // Cliente mínimo da API da Anthropic (Messages + ferramentas). Mesmo provedor que o TENET usa.
-export function criarIA({ chave, fetchFn = fetch }) {
-  async function mensagem({ modelo, sistema, mensagens, ferramentas, maxTokens = 1200 }) {
+export function criarIA({ chave, fetchFn = fetch, logConsumo = console }) {
+  async function mensagem({ modelo, sistema, mensagens, ferramentas, maxTokens = 1200, somenteFerramentas = false }) {
     const resp = await fetchFn('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       signal: AbortSignal.timeout(60_000),
       headers: { 'x-api-key': chave, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       // thinking desligado: com o prompt longo do assistente o raciocínio interno gastava os 700 tokens e a resposta saía vazia (stop_reason=max_tokens), virando o aviso genérico
-      body: JSON.stringify({ model: modelo, max_tokens: maxTokens, thinking: { type: 'disabled' }, system: sistema, messages: mensagens, ...(ferramentas ? { tools: ferramentas } : {}) }),
+      body: JSON.stringify({ model: modelo, max_tokens: maxTokens, thinking: { type: 'disabled' }, system: sistema, messages: mensagens, ...(ferramentas ? { tools: ferramentas, ...(somenteFerramentas ? {tool_choice:{type:'any'}} : {}) } : {}) }),
     })
     const json = await resp.json().catch(() => null)
     if (!resp.ok) throw new Error(`IA respondeu ${resp.status}: ${json?.error?.message || 'sem detalhe'}`)
+    if (json?.usage) logConsumo.info?.('ia_consumo '+JSON.stringify({modelo: json.model || modelo, input_tokens:json.usage.input_tokens||0, output_tokens:json.usage.output_tokens||0, cache_creation_input_tokens:json.usage.cache_creation_input_tokens||0, cache_read_input_tokens:json.usage.cache_read_input_tokens||0}))
     return json
   }
 
   // Conversa com ferramentas: a IA pede, o robô executa (com as travas dele) e devolve, até
   // ela responder em texto — no máximo `limite` rodadas de ferramenta.
-  async function conversar({ modelo, sistema, mensagens, ferramentas, executar, limite = 4, log = console }) {
+  async function conversar({ modelo, sistema, mensagens, ferramentas, executar, limite = 4, log = console, somenteFerramentas = false }) {
     const historico = [...mensagens]
     const usadas = []
     let reforco = false
     for (let i = 0; i <= limite; i++) {
-      const r = await mensagem({ modelo, sistema: reforco ? sistema + '\nResponda SEMPRE em texto à última mensagem da pessoa; nunca devolva resposta vazia.' : sistema, mensagens: historico, ferramentas: i < limite ? ferramentas : undefined })
+      const r = await mensagem({ modelo, sistema: reforco ? sistema + '\nResponda SEMPRE em texto à última mensagem da pessoa; nunca devolva resposta vazia.' : sistema, mensagens: historico, ferramentas: i < limite ? ferramentas : undefined, somenteFerramentas })
       const pedidos = (r.content || []).filter((c) => c.type === 'tool_use')
       if (!pedidos.length || r.stop_reason !== 'tool_use') {
+        if(somenteFerramentas) return {texto:'',usadas,semAcaoSegura:true}
         const texto = (r.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('\n').trim()
         // Resposta vazia (sem texto e sem ferramenta): tenta uma vez de novo com reforço, em vez de mandar o aviso genérico.
         if (!texto && !reforco) { log.warn(`IA devolveu resposta vazia (stop_reason=${r.stop_reason}); repetindo uma vez com reforço`); reforco = true; i--; continue }
@@ -34,6 +36,9 @@ export function criarIA({ chave, fetchFn = fetch }) {
         let saida
         try { saida = await executar(p.name, p.input || {}) } catch (e) { saida = { erro: e.message } }
         usadas.push({ ferramenta: p.name, entrada: p.input, saida })
+        // Uma pendência silenciosa encerra aqui; não gasta outra chamada pedindo texto.
+        if(saida?.silencioso === true) return {texto:'',usadas}
+        if(typeof saida?.resposta_direta === 'string') return {texto:saida.resposta_direta,usadas,origemTexto:'executor'}
         resultados.push({ type: 'tool_result', tool_use_id: p.id, content: JSON.stringify(saida) })
       }
       historico.push({ role: 'user', content: resultados })
