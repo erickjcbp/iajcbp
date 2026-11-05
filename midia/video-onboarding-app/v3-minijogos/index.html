@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Sua jornada – Coroinhas e Acólitos</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0406;--wine:#e01228;--gold:#e8b94a;--gold-l:#ffd97a;--text:#f7ebe7;--muted:#b99a96;--line:rgba(247,235,231,.14)}
+*{box-sizing:border-box;margin:0}
+html,body{width:1080px;height:1920px;background:var(--bg);overflow:hidden}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:radial-gradient(900px 900px at 50% 36%,#2a0d15 0%,#12060a 55%,#0a0406 100%)}
+#world{position:absolute;left:0;top:0;height:1920px}
+.scene{position:absolute;top:0;width:1080px;height:1920px;overflow:hidden;perspective:1500px}
+.topo{position:absolute;z-index:5;left:90px;top:70px;width:900px;font:600 28px/1 "Plus Jakarta Sans",sans-serif;color:var(--muted)}
+#prog{position:absolute;z-index:5;left:90px;top:124px;width:900px;height:20px}
+#prog .trilho{position:absolute;left:10px;right:10px;top:9px;height:2px;background:var(--line)}
+#prog .cheio{position:absolute;left:10px;top:9px;height:2px;width:0;background:linear-gradient(90deg,var(--wine),var(--gold))}
+#prog .no{position:absolute;top:0;width:20px;height:20px;border-radius:50%;background:var(--bg);border:2px solid rgba(247,235,231,.3)}
+.glow{position:absolute;left:90px;top:170px;width:900px;height:900px;border-radius:50%;background:radial-gradient(circle,rgba(232,185,74,.26),transparent 65%)}
+.raios{position:absolute;left:-60px;top:-60px;width:1200px;height:1200px;opacity:.5;background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(232,185,74,.2) 0 6deg,transparent 6deg 18deg);-webkit-mask:radial-gradient(circle,#000 8%,transparent 62%);mask:radial-gradient(circle,#000 8%,transparent 62%)}
+.brasao{position:absolute;left:240px;top:200px;width:600px;filter:drop-shadow(0 30px 60px rgba(0,0,0,.6))}
+.fone{position:absolute;left:260px;top:180px;width:560px;height:1000px;border-radius:70px;background:#050203;border:3px solid #4a363b;box-shadow:0 50px 100px rgba(0,0,0,.7),0 0 70px rgba(232,185,74,.14);padding:18px;transform-style:preserve-3d}
+.vis{position:relative;width:524px;height:964px;border-radius:54px;overflow:hidden;background:#12060a}
+.shot{position:absolute;inset:0;overflow:hidden;background:#12060a}
+.shot>img{position:absolute;left:0;top:0;width:524px;display:block}
+.hd,.nv{position:absolute;left:0;width:524px;background-size:524px auto;background-repeat:no-repeat}
+.hd{top:0;height:65px;background-position:top}.nv{bottom:0;height:79px;background-position:bottom}
+.chip{position:absolute;z-index:4;padding:20px 32px;border-radius:50px;background:linear-gradient(135deg,#ffd97a,#e8b94a);color:#2a0d15;font:800 36px/1 Sora,sans-serif;white-space:nowrap;box-shadow:0 18px 40px rgba(0,0,0,.55)}
+.voa{position:absolute;z-index:4;object-fit:contain;filter:drop-shadow(0 18px 28px rgba(0,0,0,.6))}
+.sp{position:absolute;z-index:3;width:10px;height:10px;border-radius:50%;background:var(--gold-l);box-shadow:0 0 14px var(--gold)}
+.foco{position:absolute;z-index:3;border:4px solid var(--gold-l);border-radius:18px;box-shadow:0 0 34px rgba(255,217,122,.65)}
+.dig{position:absolute;display:flex;align-items:center;padding-left:18px;background:#1b0a0e;color:var(--text);font:600 22px/1 "Plus Jakarta Sans"}
+.toque{position:absolute;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.55)}
+.chave{position:absolute;z-index:5;left:90px;top:1236px;font:800 190px/1 Sora,sans-serif;letter-spacing:-7px;color:var(--gold-l);white-space:nowrap}
+.chave .l{display:inline-block}
+.fio{position:absolute;z-index:5;left:90px;top:1456px;width:140px;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--wine),var(--gold));transform-origin:left}
+.leg{position:absolute;z-index:5;left:90px;top:1494px;width:900px;height:300px;font:600 56px/1.26 "Plus Jakarta Sans",sans-serif;color:var(--text)}
+.leg .fr{position:absolute;left:0;top:0;width:900px}
+.leg .w{display:inline-block;margin-right:.26em;opacity:0}
+
+.mk{position:absolute;inset:0;overflow:hidden;font-family:"Plus Jakarta Sans",sans-serif;color:#1b1b1f}
+.mk .sb{position:absolute;left:0;top:0;width:524px;height:50px;display:flex;justify-content:space-between;align-items:center;padding:0 30px;font:700 22px/1 "Plus Jakarta Sans"}
+.mk .url{position:absolute;height:64px;border-radius:32px;background:#eceaf0;display:flex;align-items:center;padding-left:24px;font:600 22px/1 "Plus Jakarta Sans";color:#333;white-space:nowrap}
+.mk .pg{position:absolute;left:0;width:524px;background:linear-gradient(#2a0d15,#12060a)}
+.mk .pg img{position:absolute;left:162px;top:200px;width:200px}
+.mk .pg b{position:absolute;left:0;width:524px;top:430px;text-align:center;font:800 34px/1.2 Sora,sans-serif;color:#ffd97a}
+.menu{position:absolute;right:16px;top:100px;width:360px;border-radius:22px;background:#fff;box-shadow:0 20px 50px rgba(0,0,0,.45);padding:10px 0;transform-origin:100% 0}
+.menu div{height:76px;display:flex;align-items:center;padding-left:28px;font:600 27px/1 "Plus Jakarta Sans"}
+.menu .al{background:#ffe9a8;font-weight:800}
+.sheet{position:absolute;left:0;bottom:0;width:524px;height:620px;border-radius:34px 34px 0 0;background:#f2f2f7;box-shadow:0 -20px 60px rgba(0,0,0,.4);padding:26px 24px}
+.sheet .tt{font:700 25px/1 "Plus Jakarta Sans";text-align:center;margin-bottom:22px;color:#555}
+.sheet .li{height:84px;border-radius:18px;background:#fff;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font:600 26px/1 "Plus Jakarta Sans"}
+.sheet .al{background:#ffe9a8;font-weight:800}
+.safb{position:absolute;left:0;bottom:0;width:524px;height:130px;background:#f2f2f7;display:flex;align-items:flex-start;justify-content:space-around;padding-top:26px;font:700 40px/1 "Plus Jakarta Sans";color:#0a64d8}
+.addbar{position:absolute;left:0;top:0;width:524px;height:110px;background:#f2f2f7;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 18px;font:600 28px/1 "Plus Jakarta Sans";color:#0a64d8}
+.home{background:linear-gradient(160deg,#3a1822,#12060a 70%)}
+.home .ic{position:absolute;width:104px;height:104px;border-radius:26px;background:rgba(255,255,255,.14)}
+.home .ic.me{background:#150a0d;border:3px solid #ffd97a;box-shadow:0 0 40px rgba(255,217,122,.7)}
+.home .ic img{width:100%;height:100%;object-fit:cover;border-radius:22px}
+.home .lb{position:absolute;width:140px;text-align:center;font:600 20px/1.1 "Plus Jakarta Sans";color:#fff}
+</style></head><body>
+<div id="stage">
+ <div class="topo">Pastoral dos Coroinhas e Acólitos · JCBP Limeira</div>
+ <div id="prog"><div class="trilho"></div><div class="cheio"></div></div>
+ <div id="world"></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/CustomEase.min.js"></script>
+<script src="tempos.js"></script>
+<script>
+gsap.registerPlugin(CustomEase);
+const SaaS=CustomEase.create('saas','.86,0,.07,1'),E=524/390; // 1 px da tela do app vira E px no vídeo
+const SEM_BARRAS=['caminho','nivel-coroinha','jogo-pergunta','jogo-retorno'],GRAVADOS=['jogo-tiquico','jogo-davi']; // GRAVADOS: partidas reais, quadro a quadro
+const shot=(n,i)=>GRAVADOS.includes(n)?`<div class="shot" data-i="${i}"><img class="seq" data-seq="${n}" src="telas/${n}/0001.jpg" style="width:524px;height:964px;object-fit:cover"></div>`:SEM_BARRAS.includes(n)?`<div class="shot" data-i="${i}"><img src="telas/${n}.png"></div>`:`<div class="shot" data-i="${i}"><img src="telas/${n}.png"><div class="hd" style="background-image:url(telas/${n}-tela.png)"></div><div class="nv" style="background-image:url(telas/${n}-tela.png)"></div></div>`;
+const BT=60/71.4,bat=t=>Math.round(t/BT)*BT; // batida da música, medida no trecho usado
+const TELAS={comeco:['index','conquistas'],niveis:['caminho','nivel-coroinha','conquistas'],capitulos:['missoes'],aventuras:['missoes'],medalhas:['conquistas'],temporada:['destaques'],evolucao:['jogo-pergunta','jogo-retorno'],minijogos:['jogo-tiquico','jogo-davi']};
+const mkAndroid=()=>`<div class="shot" data-i="0" style="background:#fff"><div class="mk"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="url" style="left:18px;top:58px;width:410px">🔒 coroinhas.jcbplimeira.com.br</div><div style="position:absolute;right:26px;top:66px;font:800 40px/1 Sora" id="tres">⋮</div><div class="pg" style="top:140px;height:824px"><img src="arte/brasao-pastoral.png"><b>Sua jornada</b></div><div class="menu" id="menu-a"><div>Nova guia</div><div>Histórico</div><div class="al" id="al-a">⬇  Instalar app</div><div>Configurações</div></div><div class="toque" id="toque-a" style="right:30px;top:72px;display:block"></div></div></div>`;
+const mkIos=()=>`<div class="shot" data-i="1" style="background:#fff"><div class="mk"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="pg" style="top:50px;height:784px"><img src="arte/brasao-pastoral.png"><b>Sua jornada</b></div><div class="url" style="left:18px;top:850px;width:488px;height:56px;font-size:20px">🔒 coroinhas.jcbplimeira.com.br</div><div class="safb"><span>‹</span><span>›</span><span id="shr" style="border:4px solid transparent;border-radius:14px;padding:0 10px">⬆︎</span><span>▢</span></div><div class="sheet" id="sheet-i"><div class="tt">coroinhas.jcbplimeira.com.br</div><div class="li"><span>Copiar</span><span>⧉</span></div><div class="li"><span>Favoritos</span><span>☆</span></div><div class="li al" id="al-i"><span>Adicionar à Tela de Início</span><span>＋</span></div><div class="li"><span>Imprimir</span><span>⎙</span></div></div><div class="addbar" id="addbar" style="transform:translateY(-110px)"><span>Cancelar</span><b style="color:#000;font-size:24px;white-space:nowrap">Tela de Início</b><span id="addb" style="font-weight:800;border:4px solid transparent;border-radius:12px;padding:0 8px">Adicionar</span></div><div class="toque" id="toque-i" style="left:245px;top:850px;display:block"></div></div></div>`;
+const mkHome=()=>{const g=[],nm=['Fotos','Mapas','Câmera','Relógio','Notas','Música','Mensagens','Tempo'];for(let k=0;k<12;k++){const x=36+(k%4)*116,y=140+Math.floor(k/4)*150;if(k==9)continue;g.push(`<div class="ic" style="left:${x}px;top:${y}px"></div><div class="lb" style="left:${x-18}px;top:${y+110}px">${nm[k%8]}</div>`);}
+ return `<div class="shot home" data-i="2"><div class="mk"><div class="sb" style="color:#fff"><span>9:41</span><span>5G ▮▮▮</span></div>${g.join('')}<div class="ic me" id="ic-me" style="left:${36+1*116}px;top:${140+2*150}px"><img src="arte/brasao-pastoral.png"></div><div class="lb" id="lb-me" style="left:${36+116-18}px;top:${140+2*150+110}px;color:#ffd97a;font-weight:800">Acólitos JCBP</div></div></div>`;};
+const fone=c=>{if(c=='instalar')return `<div class="fone"><div class="vis">${mkAndroid()}${mkIos()}${mkHome()}</div></div>`;if(c=='entrar')return `<div class="fone"><div class="vis"><div class="shot" data-i="0"><img src="telas/login.png"><div class="dig" id="d-user" style="left:${29*E}px;top:${226*E}px;width:${332*E}px;height:${40*E}px"></div><div class="dig" id="d-pass" style="left:${29*E}px;top:${297*E}px;width:${332*E}px;height:${40*E}px"></div><div class="toque" id="toque" style="left:${195*E-45}px;top:${372*E-45}px"></div></div>${shot('index',1)}</div></div>`;
+ return `<div class="fone"><div class="vis">${TELAS[c].map(shot).join('')}</div></div>`;};
+const world=document.getElementById('world');world.style.width=T.cenas.length*1080+'px';
+const prog=document.getElementById('prog'),cheio=prog.querySelector('.cheio');
+T.cenas.forEach((c,i)=>{const s=document.createElement('section'),ponta=!TELAS[c.id]&&c.id!='entrar'&&c.id!='instalar';s.className='scene';s.style.left=i*1080+'px';s.id='s-'+c.id;
+ s.innerHTML=`${ponta?'<div class="raios"></div>':''}<div class="glow"></div>${ponta?'<img class="brasao" src="arte/'+(c.id=='gancho'?'estrela-ouro.webp':'brasao-pastoral.png')+'">':fone(c.id)}
+ <div class="chave" style="font-size:${Math.min(190,Math.floor(900/(c.chave.length*0.6)))}px">${[...c.chave].map(ch=>`<span class="l">${ch==' '?'&nbsp;':ch}</span>`).join('')}</div><div class="fio"></div>
+ <div class="leg">${c.frases.map(f=>`<div class="fr">${f.show.split(' ').map(w=>`<span class="w">${w}</span>`).join('')}</div>`).join('')}</div>`;
+ world.appendChild(s);const n=document.createElement('div');n.className='no';n.style.left=(i*(880/(T.cenas.length-1)))+'px';prog.appendChild(n);});
+const nos=[...prog.querySelectorAll('.no')],cam={x:0},tl=gsap.timeline({paused:true});
+const rola=(s,i,css,ini,dur)=>{const im=s.querySelector(`.shot[data-i="${i}"]>img`);tl.to(im,{y:-css*E,duration:dur,ease:'power2.inOut'},ini);};
+const troca=(s,i,ini)=>tl.fromTo(s.querySelector(`.shot[data-i="${i}"]`),{xPercent:100},{xPercent:0,duration:.6,ease:SaaS},ini);
+const soco=(s,esc,ori,ini,dur=.7)=>{const f=s.querySelector('.fone');tl.set(f,{transformOrigin:ori},ini);tl.to(f,{scale:esc,duration:dur,ease:SaaS},ini);};
+const chip=(s,txt,lado,top,ini)=>{const e=document.createElement('div');e.className='chip';e.textContent=txt;e.style[lado]='34px';e.style.top=top+'px';s.appendChild(e);
+ tl.fromTo(e,{scale:0,rotate:lado=='left'?-14:14,opacity:0},{scale:1,rotate:lado=='left'?-4:4,opacity:1,duration:.5,ease:'back.out(2.6)'},ini);tl.to(e,{y:-14,duration:.9,ease:'sine.inOut',yoyo:true,repeat:1},ini+.5);tl.to(e,{scale:0,opacity:0,duration:.25,ease:'power2.in'},ini+2.4);};
+const voa=(s,src,x,y,w,ini)=>{const e=document.createElement('img');e.className='voa';e.src=src;e.style.cssText=`left:${x}px;top:${y}px;width:${w}px;height:${w}px`;s.appendChild(e);
+ tl.fromTo(e,{x:540-x-w/2,y:680-y-w/2,scale:.1,rotate:-120,opacity:0},{x:0,y:0,scale:1,rotate:0,opacity:1,duration:.75,ease:'back.out(1.5)'},ini);tl.to(e,{y:-18,rotate:6,duration:1.2,ease:'sine.inOut',yoyo:true,repeat:3},ini+.75);};
+const digita=(id,txt,ini,dur,masc)=>{const el=document.getElementById(id),o={n:0};tl.to(o,{n:txt.length,duration:dur,ease:'none',onUpdate(){const k=Math.round(o.n);el.textContent=masc?'•'.repeat(k):txt.slice(0,k);}},ini);};
+const SPS=[],SEQS=[];
+T.cenas.forEach((c,i)=>{const s=document.getElementById('s-'+c.id),t0=c.inicio,t1=t0+1.05,f=c.frases,fo=s.querySelector('.fone');
+ for(let k=0;k<26;k++){const p=document.createElement('div');p.className='sp';s.appendChild(p);SPS.push({p,x:(k*197)%1080,v:40+(k*37)%90,f:k*.7,r:.4+((k*13)%10)/12});}
+ if(i>0)tl.to(cam,{x:-i*1080,duration:.8,ease:SaaS},t0-.05);
+ tl.to(cheio,{width:(i/(T.cenas.length-1))*880,duration:.8,ease:SaaS},t0-.05);
+ tl.to(nos[i],{background:'#e8b94a',borderColor:'#ffd97a',scale:1.35,duration:.5,ease:'back.out(2.2)'},t0+.5);
+ if(fo)tl.fromTo(fo,{y:300,rotateY:i%2?-32:32,rotateX:12,scale:.8,opacity:0},{y:0,rotateY:i%2?-7:7,rotateX:0,scale:1,opacity:1,duration:1,ease:'power3.out'},t0+.45);
+ else tl.fromTo(s.querySelector('.brasao'),{scale:.5,opacity:0,rotate:-8},{scale:1,opacity:1,rotate:0,duration:1.1,ease:'back.out(1.6)'},t0+.5);
+ tl.from(s.querySelectorAll('.chave .l'),{yPercent:70,opacity:0,rotate:8,duration:.5,ease:'back.out(2)',stagger:.04},t1);
+ tl.from(s.querySelector('.fio'),{scaleX:0,duration:.6,ease:SaaS},t1+.25);
+ const a=f[0].inicio,b=f[f.length-1].inicio;
+ if(c.id=='gancho'){const m=s.querySelector('.brasao'),r=f[1].inicio+.4;tl.fromTo(m,{filter:'brightness(.15) blur(14px)'},{filter:'brightness(1) blur(0px)',duration:.9,ease:'power2.out'},bat(r));tl.to(m,{scale:1.14,duration:.4,ease:'back.out(3)'},bat(r));}
+ if(c.id=='comeco'){tl.set(s.querySelector('.shot[data-i="1"]'),{xPercent:100},0);soco(s,1.08,'50% 40%',bat(a));rola(s,0,300,bat(a),BT*2);
+  chip(s,'Escalas','left',320,bat(a+.6));chip(s,'XP','right',620,bat(a+1.6));troca(s,1,bat(f[1].inicio));soco(s,1,'50% 50%',bat(f[1].inicio));rola(s,1,1090,bat(f[1].inicio)+BT,BT*2);chip(s,'Medalhas','right',380,bat(f[1].inicio+.5));}
+ if(c.id=='niveis'){[1,2].forEach(i=>tl.set(s.querySelector(`.shot[data-i="${i}"]`),{xPercent:100},0));
+  const lg=document.createElement('div');lg.className='foco';fo.querySelector('.vis').appendChild(lg);lg.style.cssText=`left:${10*E}px;top:${77*E}px;width:${370*E}px;height:${70*E}px`;tl.from(lg,{opacity:0,duration:.3},bat(a));tl.set(s.querySelector('.shot[data-i="0"]>img'),{y:-150*E},0);
+  const T5=[['Aspirante: Aprendiz do Altar','left',0],['Coroinha do Senhor','right',1],['Acólito Guardião','left',3],['Acólito Sentinela','right',4],['Guardião Supremo das Celebrações','left',9]],p=(f[0].dur-.6)/5,sobe=130;
+  T5.forEach((n,k)=>{const t=bat(a+.2+k*p),ult=n[2]==9;chip(s,n[0],n[1],ult?1040:250+k*170,t);if(ult)rola(s,0,150+sobe,t-.1,.5);if(k)tl.to(lg,{y:(n[2]*80-(ult?sobe:0))*E,duration:.4,ease:SaaS},t-(ult?.1:0));});tl.to(lg,{opacity:0,duration:.2},f[1].inicio-.2);
+  const d=f[1],p2=d.dur/5;troca(s,1,bat(d.inicio));soco(s,1.1,'50% 35%',bat(d.inicio));
+  const lc=document.createElement('div');lc.className='foco';fo.querySelector('.vis').appendChild(lc);lc.style.cssText=`left:${12*E}px;top:${218*E}px;width:${366*E}px;height:${52*E}px`;tl.fromTo(lc,{opacity:0},{opacity:1,duration:.3},d.inicio+p2*1.1);
+  chip(s,'De observador a servidor','left',300,d.inicio+p2*1.1);tl.to(lc,{y:80*E,height:30*E,duration:.35,ease:SaaS},d.inicio+p2*2.9);chip(s,'Missão: servir','right',540,d.inicio+p2*2.9);tl.to(lc,{y:142*E,duration:.35,ease:SaaS},d.inicio+p2*3.6);chip(s,'Próximo: formação de Acólito','left',780,d.inicio+p2*3.6);tl.to(lc,{opacity:0,duration:.2},d.inicio+d.dur);
+  soco(s,1,'50% 50%',bat(f[2].inicio));troca(s,2,bat(f[2].inicio));rola(s,2,120,bat(f[2].inicio)+BT,BT*2);chip(s,'10 níveis','right',300,bat(f[2].inicio+.3));chip(s,'10 insígnias','left',620,bat(f[2].inicio+1.6));}
+ if(c.id=='capitulos'){soco(s,1.06,'50% 40%',bat(a));rola(s,0,310,bat(a),BT*2);chip(s,'Capítulo 2','left',330,bat(a+.5));chip(s,'+10 XP','right',560,bat(f[1].inicio+1));chip(s,'Estrelas','left',800,bat(f[1].inicio+2));}
+ if(c.id=='aventuras'){rola(s,0,810,bat(a),BT*2);rola(s,0,1500,bat(a+2.5),BT*6);soco(s,1.06,'50% 50%',bat(a));chip(s,'Casos reais da missa','left',330,bat(a+2.2));chip(s,'Descobertas','right',560,bat(a+5.2));chip(s,'Galera e pastorais','left',800,bat(a+7.4));}
+ if(c.id=='minijogos'){const s1=s.querySelector('.shot[data-i="1"]'),ts=bat(a+f[0].dur*.5);tl.set(s1,{xPercent:100},0);
+  SEQS.push({img:s.querySelector('.shot[data-i="0"] .seq'),ini:t0+.45,n:270,ult:0},{img:s1.querySelector('.seq'),ini:ts,n:270,ult:0});
+  soco(s,1.06,'50% 50%',bat(a));chip(s,'Tíquico, o mensageiro','left',330,bat(a+1.4));troca(s,1,ts);chip(s,'Davi, Guardião do Rebanho','right',560,ts+.4);
+  chip(s,'+XP','left',800,bat(f[1].inicio+.3));chip(s,'Ranking','right',1000,bat(f[1].inicio+1.5));}
+ if(c.id=='medalhas'){rola(s,0,1090,bat(a),BT);rola(s,0,1800,bat(a)+BT,BT*3);const z=f[1].inicio,p=(f[1].dur-.4)/5;
+  [['pomba-ouro','Anjo da Guarda',20,230],['estrela-prata','Pontualidade Lendária',860,230],['coroa-prata','Faz-Tudo do Altar',20,530],['coroa-ouro','Mãos de Ouro',860,530],['espadas-ouro','Lenda do Altar',20,830]].forEach((m,k)=>{const t=z+k*p;voa(s,`arte/${m[0]}.webp`,m[2],m[3],200,t);chip(s,m[1],m[2]<500?'left':'right',m[2]<500?m[3]+195:m[3]-72,t+.15);});}
+ if(c.id=='temporada'){soco(s,1.1,'50% 40%',bat(a));chip(s,'Sua liga','left',280,bat(a+.8));chip(s,'Destaque','right',560,bat(f[1].inicio+.5));chip(s,'Troféu','left',800,bat(f[1].inicio+1.7));chip(s,'Fecha em dezembro','left',1060,bat(f[2].inicio+.2));
+  const lg=document.createElement('div');lg.className='foco';fo.querySelector('.vis').appendChild(lg);lg.style.cssText=`left:${14*E}px;top:${435*E}px;width:${362*E}px;height:${60*E}px`;tl.from(lg,{opacity:0,scale:1.3,duration:.4,ease:'back.out(2)'},bat(a+1.4));}
+ if(c.id=='evolucao'){tl.set(s.querySelector('.shot[data-i="1"]'),{xPercent:100},0);soco(s,1.06,'50% 55%',bat(a));chip(s,'Casos reais','left',340,bat(a+.4));const q=bat(f[1].inicio+1.2);troca(s,1,q);chip(s,'Liturgia','right',340,q+.3);chip(s,'Segurança','left',640,bat(q+1.8));chip(s,'Fé','right',860,bat(q+3.3));}
+ if(c.id=='casas'){tl.fromTo(s.querySelector('.brasao'),{scale:1},{scale:1.08,duration:Math.max(c.fim-a,1),ease:'none'},a);}
+ if(c.id=='entrar'){tl.set(s.querySelector('.shot[data-i="1"]'),{xPercent:100},0);soco(s,1.1,'50% 25%',bat(a));chip(s,'Link na mensagem','right',860,bat(a+.2));
+  digita('d-user','joaosilva',a+.2,1);digita('d-pass','senhadafolha',a+1.2,.9,true);const tk=bat(a+2.3);
+  tl.fromTo('#toque',{scale:0,opacity:.9},{scale:2.4,opacity:0,duration:.45,ease:'power2.out'},tk);troca(s,1,tk+.2);soco(s,1,'50% 50%',tk+.2);
+  tl.to(fo,{scale:2.4,opacity:0,duration:1.1,ease:'power2.in'},f[1].inicio+f[1].dur-.3);}
+
+ if(c.id=='instalar'){const sh=k=>s.querySelector(`.shot[data-i="${k}"]`),f0=f[0],f1=f[1],f2=f[2],f3=f[3];[1,2].forEach(k=>tl.set(sh(k),{xPercent:100},0));
+  tl.set('#menu-a',{scale:0,opacity:0},0);tl.set('#sheet-i',{yPercent:100},0);tl.set('#ic-me,#lb-me',{scale:0,opacity:0},0);
+  soco(s,1.06,'50% 40%',bat(f0.inicio));chip(s,'Leva 30 segundos','left',330,bat(f0.inicio+1.4));
+  const a=f1.inicio,pa=f1.dur/6;chip(s,'ANDROID · Chrome','left',300,bat(a+.1));
+  tl.fromTo('#toque-a',{scale:0,opacity:.9},{scale:2.2,opacity:0,duration:.45,ease:'power2.out'},a+pa*1.4);
+  tl.to('#menu-a',{scale:1,opacity:1,duration:.4,ease:'back.out(1.8)'},a+pa*1.6);chip(s,'1 · Toque nos 3 pontinhos','left',330,a+pa*1.4);
+  tl.fromTo('#al-a',{backgroundColor:'#fff'},{backgroundColor:'#ffe9a8',duration:.2},a+pa*3.4);chip(s,'2 · Instalar app','left',820,a+pa*3.5);chip(s,'3 · Confirme','right',1040,a+pa*4.9);
+  const b=f2.inicio,pb=f2.dur/7;troca(s,1,bat(b));chip(s,'iPHONE · Safari','right',300,bat(b+.3));
+  tl.fromTo('#toque-i',{scale:0,opacity:.9},{scale:2.2,opacity:0,duration:.45,ease:'power2.out'},b+pb*1.4);tl.to('#shr',{borderColor:'#0a64d8',duration:.2},b+pb*1.3);chip(s,'1 · Toque em Compartilhar','left',560,b+pb*1.4);
+  tl.to('#sheet-i',{yPercent:0,duration:.55,ease:SaaS},b+pb*2.2);chip(s,'2 · Tela de Início','right',820,b+pb*3.2);
+  tl.to('#addbar',{y:110,duration:.45,ease:SaaS},b+pb*4.6);tl.to('#sheet-i',{yPercent:100,duration:.4,ease:'power2.in'},b+pb*4.5);tl.to('#addb',{borderColor:'#0a64d8',duration:.2},b+pb*5.2);chip(s,'3 · Adicionar','left',1040,b+pb*5.2);
+  troca(s,2,bat(f3.inicio));soco(s,1.04,'50% 50%',bat(f3.inicio));tl.to('#ic-me,#lb-me',{scale:1,opacity:1,duration:.7,ease:'back.out(2.4)'},f3.inicio+.6);
+  tl.to('#ic-me',{scale:1.12,duration:.5,ease:'sine.inOut',yoyo:true,repeat:5},f3.inicio+1.4);chip(s,'Ícone na sua tela','left',330,f3.inicio+.9);chip(s,'Um toque e abre','right',620,f3.inicio+2.4);}
+ if(!fo){const rs=s.querySelector('.raios');tl.fromTo(rs,{rotate:0},{rotate:120,duration:Math.max(c.fim-t0,3),ease:'none'},t0);}
+ f.forEach((fr,fi)=>{const el=s.querySelectorAll('.leg .fr')[fi],ws=el.querySelectorAll('.w');
+  tl.fromTo(ws,{opacity:0,y:36,scale:.8},{opacity:1,y:0,scale:1,duration:.34,ease:'back.out(2.2)',stagger:Math.min(.09,(fr.dur*.55)/ws.length)},fr.inicio);
+  tl.to(el,{opacity:0,y:-22,duration:.26,ease:'power2.in'},fr.inicio+fr.dur+.04);});
+});
+function seek(t){tl.time(t);const esperas=[];
+ SEQS.forEach(q=>{const k=Math.max(0,Math.min(q.n-1,Math.floor((t-q.ini)*30)))+1;if(k!==q.ult){q.ult=k;q.img.src=q.img.dataset.base+String(k).padStart(4,'0')+'.jpg';esperas.push(q.img.decode().catch(()=>{}));}});const dx=Math.sin(t*.55)*6,dy=Math.cos(t*.43)*7;world.style.transform=`translate3d(${cam.x+dx}px,${dy}px,0)`;
+ SPS.forEach(o=>{const y=1240-((t*o.v+o.f*170)%1240);o.p.style.transform=`translate(${o.x+Math.sin(t+o.f)*34}px,${y}px) scale(${o.r})`;o.p.style.opacity=.15+.55*Math.abs(Math.sin(t*.8+o.f));});return Promise.all(esperas);}
+document.querySelectorAll('.seq').forEach(im=>im.dataset.base='telas/'+im.dataset.seq+'/');window.seek=seek;window.ready=Promise.all([document.fonts.ready,...[...document.images].map(i=>i.decode().catch(()=>{}))]).then(()=>true);seek(0);
+</script></body></html>

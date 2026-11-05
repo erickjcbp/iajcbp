@@ -1,0 +1,5 @@
+*.wav
+audio/*.wav
+quadros/
+*.mp4
+sfx/

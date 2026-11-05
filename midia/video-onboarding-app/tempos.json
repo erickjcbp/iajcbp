@@ -1,0 +1,139 @@
+{
+ "total": 61.18,
+ "cenas": [
+  {
+   "id": "abertura",
+   "chave": "Paz e bem",
+   "inicio": 0.6,
+   "frases": [
+    {
+     "show": "Paz e bem! Seu acesso ao app já está pronto.",
+     "arquivo": "audio/01.wav",
+     "inicio": 1.7,
+     "dur": 4.398
+    },
+    {
+     "show": "Falta só entrar pela primeira vez.",
+     "arquivo": "audio/02.wav",
+     "inicio": 6.448,
+     "dur": 1.687
+    }
+   ],
+   "fim": 8.885
+  },
+  {
+   "id": "entrar",
+   "chave": "Entrar",
+   "inicio": 8.885,
+   "frases": [
+    {
+     "show": "coroinhas.jcbplimeira.com.br",
+     "arquivo": "audio/03.wav",
+     "inicio": 9.985,
+     "dur": 5.068
+    },
+    {
+     "show": "Usuário: primeiro nome + último sobrenome, junto, sem acento.",
+     "arquivo": "audio/04.wav",
+     "inicio": 15.404,
+     "dur": 5.545
+    },
+    {
+     "show": "Senha: a da folha da sua família.",
+     "arquivo": "audio/05.wav",
+     "inicio": 21.299,
+     "dur": 2.791
+    }
+   ],
+   "fim": 24.84
+  },
+  {
+   "id": "senha",
+   "chave": "Senha nova",
+   "inicio": 24.84,
+   "frases": [
+    {
+     "show": "No 1º acesso, o app pede uma senha nova.",
+     "arquivo": "audio/06.wav",
+     "inicio": 25.94,
+     "dur": 3.153
+    },
+    {
+     "show": "Escolha uma que só você saiba.",
+     "arquivo": "audio/07.wav",
+     "inicio": 29.442,
+     "dur": 2.013
+    }
+   ],
+   "fim": 32.205
+  },
+  {
+   "id": "inicio",
+   "chave": "Início",
+   "inicio": 32.205,
+   "frases": [
+    {
+     "show": "Na tela inicial: seus avisos e sua próxima escala.",
+     "arquivo": "audio/08.wav",
+     "inicio": 33.305,
+     "dur": 5.232
+    }
+   ],
+   "fim": 39.287
+  },
+  {
+   "id": "escala",
+   "chave": "Escala",
+   "inicio": 39.287,
+   "frases": [
+    {
+     "show": "Em escalas, veja quando você serve.",
+     "arquivo": "audio/09.wav",
+     "inicio": 40.387,
+     "dur": 2.716
+    },
+    {
+     "show": "Não pode? Registre a ausência com antecedência.",
+     "arquivo": "audio/10.wav",
+     "inicio": 43.454,
+     "dur": 2.863
+    }
+   ],
+   "fim": 47.066
+  },
+  {
+   "id": "avisos",
+   "chave": "Avisos",
+   "inicio": 47.066,
+   "frases": [
+    {
+     "show": "Ative as notificações: escala e recados da coordenação.",
+     "arquivo": "audio/11.wav",
+     "inicio": 48.166,
+     "dur": 3.9
+    }
+   ],
+   "fim": 52.816
+  },
+  {
+   "id": "fecho",
+   "chave": "Paz e bem",
+   "inicio": 52.816,
+   "frases": [
+    {
+     "show": "Dúvida? Fale com a coordenação.",
+     "arquivo": "audio/12.wav",
+     "inicio": 53.916,
+     "dur": 2.848
+    },
+    {
+     "show": "Estamos juntos. Paz e bem!",
+     "arquivo": "audio/13.wav",
+     "inicio": 57.114,
+     "dur": 2.516
+    }
+   ],
+   "fim": 60.38
+  }
+ ]
+}

@@ -1,0 +1,263 @@
+{
+ "total": 182.947,
+ "cenas": [
+  {
+   "id": "gancho",
+   "chave": "Sua jornada",
+   "inicio": 0.6,
+   "frases": [
+    {
+     "show": "Enquanto você servia, uma jornada começou com o seu nome.",
+     "arquivo": "audio/01.wav",
+     "inicio": 1.7,
+     "dur": 4.848
+    },
+    {
+     "show": "Você só não viu ainda.",
+     "arquivo": "audio/02.wav",
+     "inicio": 6.898,
+     "dur": 1.696
+    }
+   ],
+   "fim": 9.344
+  },
+  {
+   "id": "comeco",
+   "chave": "Já começou",
+   "inicio": 9.344,
+   "frases": [
+    {
+     "show": "Cada vez que você serviu, ficou registrado.",
+     "arquivo": "audio/03.wav",
+     "inicio": 10.444,
+     "dur": 3.688
+    },
+    {
+     "show": "Tem medalha sua que você nunca viu.",
+     "arquivo": "audio/04.wav",
+     "inicio": 14.482,
+     "dur": 2.351
+    },
+    {
+     "show": "E isso é só o começo da sua jornada.",
+     "arquivo": "audio/05.wav",
+     "inicio": 17.182,
+     "dur": 2.519
+    }
+   ],
+   "fim": 20.452
+  },
+  {
+   "id": "niveis",
+   "chave": "Níveis",
+   "inicio": 20.452,
+   "frases": [
+    {
+     "show": "De Aspirante a Cerimoniário Mor.",
+     "arquivo": "audio/06.wav",
+     "inicio": 21.552,
+     "dur": 13.518
+    },
+    {
+     "show": "Cada nível muda o seu lugar no altar.",
+     "arquivo": "audio/07.wav",
+     "inicio": 35.42,
+     "dur": 17.227
+    },
+    {
+     "show": "10 níveis. Cada um vira uma insígnia sua.",
+     "arquivo": "audio/08.wav",
+     "inicio": 52.997,
+     "dur": 4.012
+    }
+   ],
+   "fim": 57.758
+  },
+  {
+   "id": "capitulos",
+   "chave": "Capítulos",
+   "inicio": 57.758,
+   "frases": [
+    {
+     "show": "Cada nível é contado em capítulos.",
+     "arquivo": "audio/09.wav",
+     "inicio": 58.858,
+     "dur": 3.569
+    },
+    {
+     "show": "Cumpra missões, ganhe XP e estrelas.",
+     "arquivo": "audio/10.wav",
+     "inicio": 62.777,
+     "dur": 5.253
+    }
+   ],
+   "fim": 68.781
+  },
+  {
+   "id": "aventuras",
+   "chave": "Aventuras",
+   "inicio": 68.781,
+   "frases": [
+    {
+     "show": "Toda semana tem aventura nova.",
+     "arquivo": "audio/11.wav",
+     "inicio": 69.881,
+     "dur": 11.732
+    }
+   ],
+   "fim": 82.363
+  },
+  {
+   "id": "minijogos",
+   "chave": "Minijogos",
+   "inicio": 82.363,
+   "frases": [
+    {
+     "show": "Agora o app tem até minijogos!",
+     "arquivo": "audio/12.wav",
+     "inicio": 83.463,
+     "dur": 9.737
+    },
+    {
+     "show": "Cada partida vale XP e conta no ranking.",
+     "arquivo": "audio/13.wav",
+     "inicio": 93.55,
+     "dur": 4.302
+    }
+   ],
+   "fim": 98.602
+  },
+  {
+   "id": "medalhas",
+   "chave": "Medalhas",
+   "inicio": 98.602,
+   "frases": [
+    {
+     "show": "Cada conquista pode virar medalha, do bronze ao ouro.",
+     "arquivo": "audio/14.wav",
+     "inicio": 99.702,
+     "dur": 4.135
+    },
+    {
+     "show": "Qual vai ser a sua?",
+     "arquivo": "audio/15.wav",
+     "inicio": 104.187,
+     "dur": 8.39
+    }
+   ],
+   "fim": 113.328
+  },
+  {
+   "id": "temporada",
+   "chave": "Temporada",
+   "inicio": 113.328,
+   "frases": [
+    {
+     "show": "Dispute o ranking da sua liga.",
+     "arquivo": "audio/16.wav",
+     "inicio": 114.428,
+     "dur": 2.968
+    },
+    {
+     "show": "Quem fecha em 1º vira Destaque e leva um troféu.",
+     "arquivo": "audio/17.wav",
+     "inicio": 117.746,
+     "dur": 3.976
+    },
+    {
+     "show": "A temporada termina em dezembro.",
+     "arquivo": "audio/18.wav",
+     "inicio": 122.072,
+     "dur": 2.365
+    }
+   ],
+   "fim": 125.187
+  },
+  {
+   "id": "evolucao",
+   "chave": "Evolução",
+   "inicio": 125.187,
+   "frases": [
+    {
+     "show": "Mas o app não é só diversão.",
+     "arquivo": "audio/19.wav",
+     "inicio": 126.287,
+     "dur": 2.342
+    },
+    {
+     "show": "Conheça a liturgia, sirva com segurança e cresça na fé.",
+     "arquivo": "audio/20.wav",
+     "inicio": 128.979,
+     "dur": 5.681
+    }
+   ],
+   "fim": 135.411
+  },
+  {
+   "id": "casas",
+   "chave": "4 casas",
+   "inicio": 135.411,
+   "frases": [
+    {
+     "show": "Em 2027, você entra para uma das 4 casas.",
+     "arquivo": "audio/21.wav",
+     "inicio": 136.511,
+     "dur": 4.321
+    }
+   ],
+   "fim": 141.582
+  },
+  {
+   "id": "entrar",
+   "chave": "Entra lá",
+   "inicio": 141.582,
+   "frases": [
+    {
+     "show": "Seu acesso já está pronto. O link está na mensagem.",
+     "arquivo": "audio/22.wav",
+     "inicio": 142.682,
+     "dur": 3.422
+    },
+    {
+     "show": "Sua jornada já está lá. Vai deixar ela esperando?",
+     "arquivo": "audio/23.wav",
+     "inicio": 146.453,
+     "dur": 3.9
+    }
+   ],
+   "fim": 151.103
+  },
+  {
+   "id": "instalar",
+   "chave": "Baixe o app",
+   "inicio": 151.103,
+   "frases": [
+    {
+     "show": "Deixe o app no seu celular. É rapidinho.",
+     "arquivo": "audio/24.wav",
+     "inicio": 152.203,
+     "dur": 6.545
+    },
+    {
+     "show": "Android: abra no Chrome, toque nos 3 pontinhos e em Instalar app.",
+     "arquivo": "audio/25.wav",
+     "inicio": 159.098,
+     "dur": 7.069
+    },
+    {
+     "show": "iPhone: abra no Safari, toque em Compartilhar e em Adicionar à Tela de Início.",
+     "arquivo": "audio/26.wav",
+     "inicio": 166.517,
+     "dur": 9.101
+    },
+    {
+     "show": "Pronto! Sua jornada a um toque.",
+     "arquivo": "audio/27.wav",
+     "inicio": 175.968,
+     "dur": 5.43
+    }
+   ],
+   "fim": 182.147
+  }
+ ]
+}
