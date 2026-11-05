@@ -51,8 +51,22 @@ export async function prepararApresentacaoGrupos(db, evo) {
   return gravadas.length
 }
 
-export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, escalaAuto = null, acolhida = null, presencaGrupos = null, relogio = () => new Date(), rnd = Math.random, log = console }) {
-  const st = { proximoEnvioEm: 0, lembreteEm: null, anivEm: null, estadoEm: 0, conexao: 'desconhecida', gruposPedidoEm: null, grupoRetiroEm: 0 }
+// Ritmo de produção: [ms dentro da janela de envio, ms fora dela]. Medido em 05/11/2026: o laço a
+// cada ~10 s fazia 187 mil chamadas por dia ao Supabase (97% do egress do projeto, plano Free de
+// 5 GB). Conversa, envio e pedidos de apagar/rascunho têm gente esperando: seguem rápidos.
+// O resto é disparado por horário (minuto ou hora) e não precisa de checagem a cada 10 s.
+// 'conexão' fica sem ritmo (QR pedido na tela) e 'acolhida'/'grupo do retiro' já se limitam sozinhos.
+const S = 1000
+export const RITMO_PRODUCAO = {
+  config: [30 * S, 60 * S],
+  conversas: [10 * S, 30 * S], envio: [10 * S, 30 * S], 'apagar mensagens': [10 * S, 30 * S], rascunhos: [15 * S, 60 * S],
+  lembretes: [60 * S, 300 * S], 'aniversários': [60 * S, 300 * S], avisos: [60 * S, 300 * S], 'ausência': [60 * S, 300 * S],
+  escala: [60 * S, 300 * S], 'escala automática': [60 * S, 300 * S], 'validade': [60 * S, 300 * S], 'presença nos grupos': [60 * S, 300 * S],
+}
+
+export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, escalaAuto = null, acolhida = null, presencaGrupos = null, ritmo = null, relogio = () => new Date(), rnd = Math.random, log = console }) {
+  const st = { proximoEnvioEm: 0, lembreteEm: null, anivEm: null, estadoEm: 0, conexao: 'desconhecida', gruposPedidoEm: null, grupoRetiroEm: 0,
+    etapaEm: {}, cfg: null, cfgEm: 0 }
 
   async function inserirNaFila(linhas) {
     if (!linhas.length) return 0
@@ -409,7 +423,23 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
   async function rodada() {
     const agora = relogio()
     const sp = agoraSP(agora)
-    const cfg = exigir(await db.from('tarcisio_config').select('*').eq('id', 1).single(), 'ler config')
+    // Ritmo por etapa (RITMO_PRODUCAO): sem ele, toda etapa roda em toda rodada — é o que os testes
+    // esperam. Com ele, a config é relida a cada 30 s (60 s fora da janela de envio) e cada etapa só
+    // consulta o banco quando chega a vez dela; o resto do tempo a rodada não faz NENHUMA chamada.
+    let cfg = st.cfg
+    const dentroAntes = cfg ? dentroDaJanela(sp.hm, cfg.janela_inicio, cfg.janela_fim) : true
+    if (!cfg || !ritmo?.config || +agora - st.cfgEm >= ritmo.config[dentroAntes ? 0 : 1]) {
+      cfg = exigir(await db.from('tarcisio_config').select('*').eq('id', 1).single(), 'ler config')
+      st.cfg = cfg; st.cfgEm = +agora
+    }
+    const dentro = dentroDaJanela(sp.hm, cfg.janela_inicio, cfg.janela_fim)
+    const vez = (nome) => {
+      const r = ritmo?.[nome]
+      if (!r) return true
+      if (+agora - (st.etapaEm[nome] || 0) < r[dentro ? 0 : 1]) return false
+      st.etapaEm[nome] = +agora
+      return true
+    }
     const etapas = [
       ['conexão', () => cuidarConexao(cfg, agora)],
       ['grupo do retiro', async () => {
@@ -434,6 +464,7 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
       ['envio', () => enviarProximo(cfg, agora, sp)],
     ]
     for (const [nome, fazer] of etapas) {
+      if (!vez(nome)) continue
       try { await fazer() } catch (e) { log.error(`[${nome}] ${e.message}`) }
     }
   }

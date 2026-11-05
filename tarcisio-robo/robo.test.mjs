@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { criarRobo, vincularGrupoRetiro, prepararApresentacaoGrupos } from './robo.mjs'
+import { criarRobo, vincularGrupoRetiro, prepararApresentacaoGrupos, RITMO_PRODUCAO } from './robo.mjs'
 import { ErroGateway } from './evolution.mjs'
 
 // Banco falso: cada consulta encadeada (from().select().eq()…) termina chamando `responder`,
@@ -387,3 +387,56 @@ test('catequese usa arte própria e preserva texto longo sem cortar a legenda',a
  }
  const sem=cenario({item:{...ITEM,tipo:'aviso',chave_unica:'acolhida:teste',imagem_url:null}});await sem.robo.rodada();assert.deepEqual(sem.enviados,[{d:ITEM.destino_numero,t:ITEM.texto}]);
 });
+
+// ── ritmo por etapa: o laço de 5 s não pode martelar o banco (187 mil chamadas/dia em 05/11/2026) ──
+function roboComRitmo({ ritmo, cfg = {} }) {
+  let agora = Date.parse('2026-10-20T15:00:00Z')            // 12h em São Paulo: dentro da janela
+  const db = bancoFalso((tabela, ops) => {
+    if (tabela === 'tarcisio_config') return op(ops, 'single') ? { data: { ...CFG, ...cfg } } : { data: null }
+    if (tabela === 'tarcisio_avisos') return { data: op(ops, 'maybeSingle') ? null : [] }
+    return { data: [] }
+  })
+  const evo = { estado: async () => 'open', numeroConectado: async () => '5519900000000' }
+  const robo = criarRobo({ db, evo, supabaseUrl: 'https://p.supabase.co', ritmo, relogio: () => new Date(agora), rnd: () => 0, log: silencioso })
+  return { robo, db, avancar: (s) => { agora += s * 1000 } }
+}
+const contar = async (r, vezes, passoS) => {
+  const antes = r.db.chamadas.length
+  for (let i = 0; i < vezes; i++) { await r.robo.rodada(); r.avancar(passoS) }
+  return r.db.chamadas.length - antes
+}
+
+test('ritmo: sem ritmo toda rodada consulta o banco (comportamento antigo, o que os testes esperam)', async () => {
+  const r = roboComRitmo({ ritmo: null })
+  await r.robo.rodada(); const primeira = r.db.chamadas.length
+  await r.robo.rodada()
+  const segunda = r.db.chamadas.length - primeira
+  assert.ok(segunda >= 5, `a segunda rodada repete as consultas (fez ${segunda})`)
+  assert.equal(r.db.chamadas.filter((c) => c.tabela === 'tarcisio_config' && c.ops.some((o) => o[0] === 'single')).length, 2, 'config relida nas duas rodadas')
+})
+
+test('ritmo: com ritmo, rodadas de 5 s seguidas fazem muito menos chamadas que sem ritmo', async () => {
+  const semRitmo = await contar(roboComRitmo({ ritmo: null }), 12, 5)
+  const comRitmo = await contar(roboComRitmo({ ritmo: RITMO_PRODUCAO }), 12, 5)          // 1 minuto em rodadas de 5 s
+  assert.ok(comRitmo < semRitmo * 0.4, `com ritmo ${comRitmo} vs sem ritmo ${semRitmo}`)
+})
+
+test('ritmo: a config é relida a cada 30 s dentro da janela e a cada 60 s fora dela', async () => {
+  const leituras = (r) => r.db.chamadas.filter((c) => c.tabela === 'tarcisio_config' && c.ops.some((o) => o[0] === 'single')).length   // só a leitura da config (o robô também grava o estado da conexão)
+  const dentro = roboComRitmo({ ritmo: RITMO_PRODUCAO })
+  await contar(dentro, 12, 5)                                   // 60 s
+  assert.equal(leituras(dentro), 2, 'em 60 s dentro da janela: t=0 e t=30')
+  const fora = roboComRitmo({ ritmo: RITMO_PRODUCAO })
+  fora.avancar(10 * 3600)                                       // 22h em São Paulo: fora da janela
+  await contar(fora, 24, 5)                                     // 120 s
+  assert.equal(leituras(fora), 2, 'em 120 s fora da janela: t=0 e t=60')
+})
+
+test('ritmo: uma etapa lenta só roda quando chega a vez dela', async () => {
+  const celebracoes = (r) => r.db.chamadas.filter((c) => c.tabela === 'acolitos_celebracoes').length
+  const r = roboComRitmo({ ritmo: { ...RITMO_PRODUCAO, escala: [60_000, 300_000] } })
+  await contar(r, 6, 5)                                         // 30 s
+  const aos30 = celebracoes(r)
+  await contar(r, 6, 5)                                         // 60 s
+  assert.ok(celebracoes(r) - aos30 <= 3, 'não repete a consulta a cada rodada')
+})

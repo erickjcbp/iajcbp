@@ -8,7 +8,7 @@ import { createClient } from '@supabase/supabase-js'
 import { criarEvolution, lerMensagemRecebida } from './evolution.mjs'
 import { criarValidacaoContato } from './validacao-contato.mjs'
 import { criarPresencaGrupos } from './presenca-grupos.mjs'
-import { criarRobo } from './robo.mjs'
+import { criarRobo, RITMO_PRODUCAO } from './robo.mjs'
 import { criarIA } from './ia.mjs'
 import { criarAcolhida } from './acolhida.mjs'
 import { criarAssistente } from './assistente.mjs'
@@ -70,7 +70,7 @@ const confirmarSemana = async (sabado) => {
 const validacao = criarValidacaoContato({ db, evo, ia, log: console })
 const entradaDono = criarEntradaDono({ db, evo, ministros, confirmarSemana, validacao, log: console })
 const presencaGrupos = criarPresencaGrupos({ db, evo, log: console })
-const robo = criarRobo({ db, evo, ia, assistente, escalaAuto, acolhida, presencaGrupos, supabaseUrl: process.env.SUPABASE_URL })
+const robo = criarRobo({ db, evo, ia, assistente, escalaAuto, acolhida, presencaGrupos, ritmo: RITMO_PRODUCAO, supabaseUrl: process.env.SUPABASE_URL })
 
 // Entrada das mensagens: só a Evolution, de dentro do compose, fala com esta porta (não é publicada).
 const PORTA = 3000
