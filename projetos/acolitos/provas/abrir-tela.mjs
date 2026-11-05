@@ -434,7 +434,8 @@ async function abrirTela({ navegador, porta }, arquivo, opcoes = {}) {
         botao.click();
       } else if (passo.responder) {
         // Clica num botão do diálogo aberto (uiConfirm/uiAlert): o modal mora fora do conteúdo.
-        const caixa = [...document.querySelectorAll('.modal-overlay.open')].pop();
+        // o tutorial guiado também é um diálogo (role=dialog), mas não usa .modal-overlay
+        const caixa = [...document.querySelectorAll('.modal-overlay.open')].pop() || document.getElementById('tutorial-guiado');
         const botao = caixa && [...caixa.querySelectorAll('button')].find((x) => x.textContent.trim() === passo.responder);
         if (!botao) { passosFalhos.push('não achei "' + passo.responder + '" num diálogo aberto'); continue; }
         botao.click();

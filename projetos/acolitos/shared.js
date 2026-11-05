@@ -1578,6 +1578,41 @@ function renderHeader(ctx, activePage) {
   el.appendChild(actions);
 
   renderModeSwitch(ctx); // barra de alternância Jornada/Coordenação (se aplicável)
+  prepararTutorial(ctx, activePage, actions);
+}
+
+// ── TUTORIAL GUIADO (só modo membro; seis telas: ver tutorial-core.js) ──────────────
+// Carrega sob demanda, só quando a tela tem tutorial: o resto do app não paga por isso.
+// Falha de rede ou de script aqui NUNCA pode atrapalhar a tela — por isso o try/catch em volta de tudo.
+const TUTORIAL_VERSAO = '20261104a';
+function carregarScriptTutorial(arquivo) {
+  return new Promise((ok, falha) => {
+    const s = document.createElement('script');
+    s.src = arquivo + '?v=' + TUTORIAL_VERSAO; s.onload = ok; s.onerror = falha;
+    document.head.appendChild(s);
+  });
+}
+async function prepararTutorial(ctx, activePage, actions) {
+  try {
+    if (!ctx || !ctx.membro || !activePage) return;
+    if (!window.TutorialCore) await carregarScriptTutorial('tutorial-core.js');
+    const TC = window.TutorialCore;
+    if (!TC || !TC.tutorialDa(activePage)) return;
+    const modo = navMode(ctx);
+    if (!TC.aplicaA(ctx, modo)) return;
+    if (!window.TutorialGuiado) await carregarScriptTutorial('tutorial.js');
+    if (!window.TutorialGuiado) return;
+    if (!document.getElementById('tutorial-ajuda') && actions && actions.isConnected !== false) {
+      const ajuda = document.createElement('button');
+      ajuda.type = 'button'; ajuda.id = 'tutorial-ajuda'; ajuda.className = 'btn-icon';
+      ajuda.style.cssText = 'width:44px;height:44px;font-weight:800;font-size:18px;';
+      ajuda.title = 'Ajuda desta tela'; ajuda.setAttribute('aria-label', 'Ajuda desta tela');
+      ajuda.textContent = '?';
+      ajuda.onclick = () => window.TutorialGuiado.abrir(activePage, ctx, { manual: true });
+      actions.insertBefore(ajuda, actions.firstChild);
+    }
+    window.TutorialGuiado.abrirSeNovo(ctx, activePage, modo);
+  } catch (_) { /* tutorial é cortesia: sem ele a tela segue igual */ }
 }
 
 // ── CONTA DE FAMÍLIA (irmãos no mesmo login) ──────────────────────
