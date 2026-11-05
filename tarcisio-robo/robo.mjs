@@ -51,7 +51,7 @@ export async function prepararApresentacaoGrupos(db, evo) {
   return gravadas.length
 }
 
-export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, escalaAuto = null, acolhida = null, relogio = () => new Date(), rnd = Math.random, log = console }) {
+export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, escalaAuto = null, acolhida = null, presencaGrupos = null, relogio = () => new Date(), rnd = Math.random, log = console }) {
   const st = { proximoEnvioEm: 0, lembreteEm: null, anivEm: null, estadoEm: 0, conexao: 'desconhecida', gruposPedidoEm: null, grupoRetiroEm: 0 }
 
   async function inserirNaFila(linhas) {
@@ -427,6 +427,7 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
       ['escala automática', () => escalaAuto?.cuidar(agora, cfg)],
       ['validade', () => expirar(agora)],
       ['acolhida', () => acolhida?.cuidar(agora,cfg)],
+      ['presença nos grupos', () => st.conexao === 'open' ? presencaGrupos?.cuidar(agora) : null],
       ['apagar mensagens', () => st.conexao === 'open' ? cuidarApagarPedidos({ db, evo, log }) : null],
       ['conversas', () => cuidarConversas(cfg, agora)],
       ['rascunhos', () => cuidarRascunhos(cfg)],
