@@ -138,6 +138,7 @@
 
 <script src="navegacao-core.js"></script>
 <script src="portao-notificacoes-core.js"></script>
+<script src="rank-progresso-core.js"></script>
 <script src="boas-vindas-core.js"></script>
 <script src="foto-recado-core.js"></script>
 <script src="horario-core.js"></script>
@@ -489,7 +490,7 @@ function renderRankProgress(main, nivel, membro) {
         stars.innerHTML = (n > 0
           ? '<span class="rs-n">' + cheias + '</span><span class="rs-c">' + n + ' estrela' + (n > 1 ? 's' : '') + ' conquistada' + (n > 1 ? 's' : '') + ' neste nível</span>'
           : '<span class="rs-z">Primeira estrela a caminho ✨</span>')
-          + '<span class="rs-x">faltam ' + data.xp_prox + ' XP pra próxima ⭐</span>';
+          + (Number.isFinite(Number(data.xp_prox)) ? '<span class="rs-x">faltam ' + Number(data.xp_prox) + ' XP pra próxima ⭐</span>' : '');
         const key = 'estrelas-vistas-' + membro.id;
         const prev = parseInt(localStorage.getItem(key) || '-1', 10);
         if (prev < 0) localStorage.setItem(key, String(n));
@@ -505,9 +506,17 @@ function renderRankProgress(main, nivel, membro) {
       if (data && data.proximo_nivel) {
         const caps = data.capitulos || [];
         const tot = caps.length, fez = caps.filter(c => c.completo).length;
-        fill.style.setProperty('--pct', (tot ? Math.round(100 * fez / tot) : 0) + '%');
+        // Capítulo em andamento também conta (rank-progresso-core.js): só capítulo FECHADO deixava a barra
+        // em 0% para quase todo mundo. Se o core não carregar, volta à conta antiga.
+        const prog = (typeof progressoProximoNivel === 'function') ? progressoProximoNivel(caps)
+          : { pct: tot ? Math.round(100 * fez / tot) : 0, missoesFeitas: 0, missoesTotal: 0 };
+        const largura = prog.pct > 0 ? Math.max(prog.pct, 4) : 0;       // quem já começou vê um pedaço, não uma linha vazia
+        fill.style.setProperty('--pct', largura + '%');
+        bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', '100');
+        bar.setAttribute('aria-valuenow', String(prog.pct)); bar.setAttribute('aria-label', 'Progresso até ' + nivelInfo(data.proximo_nivel).label);
         nx.textContent = 'Próximo: ' + nivelInfo(data.proximo_nivel).label + '  ·  ' + fez + '/' + tot + ' capítulos';
-        xpLine.textContent = '✦ ' + data.xp_total + ' XP adquiridos na Jornada Principal';
+        xpLine.textContent = '✦ ' + data.xp_total + ' XP adquiridos na Jornada Principal'
+          + (prog.missoesTotal ? '  ·  ' + prog.missoesFeitas + '/' + prog.missoesTotal + ' missões do capítulo atual' : '');
       }
     } catch (e) {}
   })();
