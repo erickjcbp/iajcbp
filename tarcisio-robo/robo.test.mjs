@@ -440,3 +440,40 @@ test('ritmo: uma etapa lenta só roda quando chega a vez dela', async () => {
   await contar(r, 6, 5)                                         // 60 s
   assert.ok(celebracoes(r) - aos30 <= 3, 'não repete a consulta a cada rodada')
 })
+
+test('ritmo: mensagem recebida acorda conversa e envio (passo de 5 s por 1 minuto), depois volta ao ritmo lento', async () => {
+  const chamadasDe = (r, tabela) => r.db.chamadas.filter((c) => c.tabela === tabela).length
+  const r = roboComRitmo({ ritmo: RITMO_PRODUCAO })
+  await r.robo.rodada()                                         // t=0: tudo roda uma vez
+  const base = chamadasDe(r, 'tarcisio_envios')
+  r.avancar(5); await r.robo.rodada()                           // 5 s depois: dorme (ritmo 30 s)
+  assert.equal(chamadasDe(r, 'tarcisio_envios'), base, 'sem mensagem, envio espera os 30 s')
+  r.robo.acordar(['conversas', 'envio'])                        // webhook: chegou mensagem
+  r.avancar(5); await r.robo.rodada()
+  const acordado = chamadasDe(r, 'tarcisio_envios')
+  assert.ok(acordado > base, 'acordado, envio roda já na próxima rodada')
+  r.avancar(5); await r.robo.rodada()
+  assert.ok(chamadasDe(r, 'tarcisio_envios') > acordado, 'e segue no passo de 5 s durante o minuto quente')
+  r.avancar(90); await r.robo.rodada()                          // passou o minuto: volta ao lento
+  const depois = chamadasDe(r, 'tarcisio_envios')
+  r.avancar(5); await r.robo.rodada()
+  assert.equal(chamadasDe(r, 'tarcisio_envios'), depois, 'esfriou: de novo espera os 30 s')
+})
+
+test('ritmo: arquivar conversas velhas roda a cada 5 min com ritmo e a cada rodada sem ritmo', async () => {
+  const mensagensPatch = (r) => r.db.chamadas.filter((c) => c.tabela === 'tarcisio_mensagens' && c.ops.some((o) => o[0] === 'update')).length
+  const assistente = { responder: async () => {} }
+  const monta = (ritmo) => {
+    let agora = Date.parse('2026-10-20T15:00:00Z')
+    const db = bancoFalso((tabela, ops) => tabela === 'tarcisio_config' ? (op(ops, 'single') ? { data: { ...CFG, respostas_ligadas: true } } : { data: null }) : { data: [] })
+    const robo = criarRobo({ db, evo: { estado: async () => 'open', numeroConectado: async () => '5519900000000' }, supabaseUrl: 'https://p.supabase.co',
+      assistente, ritmo, relogio: () => new Date(agora), rnd: () => 0, log: silencioso })
+    return { robo, db, avancar: (s) => { agora += s * 1000 } }
+  }
+  const sem = monta(null); await sem.robo.rodada(); sem.avancar(5); await sem.robo.rodada()
+  assert.equal(mensagensPatch(sem), 2, 'sem ritmo: arquiva em toda rodada')
+  const com = monta({ conversas: [5_000, 5_000] }); await com.robo.rodada(); com.avancar(5); await com.robo.rodada(); com.avancar(5); await com.robo.rodada()
+  assert.equal(mensagensPatch(com), 1, 'com ritmo: uma vez nos primeiros 10 s')
+  com.avancar(300); await com.robo.rodada()
+  assert.equal(mensagensPatch(com), 2, 'e de novo depois de 5 min')
+})

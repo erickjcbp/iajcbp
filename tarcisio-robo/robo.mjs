@@ -53,20 +53,22 @@ export async function prepararApresentacaoGrupos(db, evo) {
 
 // Ritmo de produção: [ms dentro da janela de envio, ms fora dela]. Medido em 05/11/2026: o laço a
 // cada ~10 s fazia 187 mil chamadas por dia ao Supabase (97% do egress do projeto, plano Free de
-// 5 GB). Conversa, envio e pedidos de apagar/rascunho têm gente esperando: seguem rápidos.
+// 5 GB). Conversa, envio e pedidos de apagar/rascunho têm gente esperando: 30 s no ritmo normal, mas
+// o webhook as acorda (acordar) e elas voltam ao passo de 5 s por 1 minuto sempre que chega mensagem.
+// 1ª passada (18:01 UTC): 133 -> 55 chamadas/min; sobrou o envio/conversas a cada 10 s.
 // O resto é disparado por horário (minuto ou hora) e não precisa de checagem a cada 10 s.
 // 'conexão' fica sem ritmo (QR pedido na tela) e 'acolhida'/'grupo do retiro' já se limitam sozinhos.
 const S = 1000
 export const RITMO_PRODUCAO = {
   config: [30 * S, 60 * S],
-  conversas: [10 * S, 30 * S], envio: [10 * S, 30 * S], 'apagar mensagens': [10 * S, 30 * S], rascunhos: [15 * S, 60 * S],
+  conversas: [30 * S, 60 * S], envio: [30 * S, 60 * S], 'apagar mensagens': [30 * S, 60 * S], rascunhos: [20 * S, 60 * S],
   lembretes: [60 * S, 300 * S], 'aniversários': [60 * S, 300 * S], avisos: [60 * S, 300 * S], 'ausência': [60 * S, 300 * S],
-  escala: [60 * S, 300 * S], 'escala automática': [60 * S, 300 * S], 'validade': [60 * S, 300 * S], 'presença nos grupos': [60 * S, 300 * S],
+  escala: [60 * S, 300 * S], 'escala automática': [60 * S, 300 * S], 'validade': [300 * S, 900 * S], 'presença nos grupos': [60 * S, 300 * S],
 }
 
 export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, escalaAuto = null, acolhida = null, presencaGrupos = null, ritmo = null, relogio = () => new Date(), rnd = Math.random, log = console }) {
   const st = { proximoEnvioEm: 0, lembreteEm: null, anivEm: null, estadoEm: 0, conexao: 'desconhecida', gruposPedidoEm: null, grupoRetiroEm: 0,
-    etapaEm: {}, cfg: null, cfgEm: 0 }
+    etapaEm: {}, quente: {}, arquivoEm: 0, cfg: null, cfgEm: 0 }
 
   async function inserirNaFila(linhas) {
     if (!linhas.length) return 0
@@ -372,7 +374,11 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
   async function cuidarConversas(cfg, agora) {
     if (!assistente) return
     const velho = new Date(+agora - 30 * MINUTO).toISOString()
-    exigir(await db.from('tarcisio_mensagens').update({ respondida: true }).eq('direcao', 'entrada').eq('respondida', false).lt('created_at', velho), 'arquivar velhas')
+    // Arquivar as velhas (30 min) não precisa ser a cada ciclo: com ritmo, a cada 5 min.
+    if (!ritmo || +agora - st.arquivoEm >= 5 * MINUTO) {
+      st.arquivoEm = +agora
+      exigir(await db.from('tarcisio_mensagens').update({ respondida: true }).eq('direcao', 'entrada').eq('respondida', false).lt('created_at', velho), 'arquivar velhas')
+    }
     if (!cfg.respostas_ligadas || st.conexao !== 'open') return
     const novas = exigir(await db.from('tarcisio_mensagens').select('numero,created_at').eq('direcao', 'entrada').eq('respondida', false)
       .order('created_at', { ascending: false }).limit(200), 'ler conversas')
@@ -436,7 +442,10 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
     const vez = (nome) => {
       const r = ritmo?.[nome]
       if (!r) return true
-      if (+agora - (st.etapaEm[nome] || 0) < r[dentro ? 0 : 1]) return false
+      // "Quente": chegou mensagem pelo webhook (acordar), então esta etapa volta ao passo de 5 s por
+      // um minuto — a conversa responde tão rápido quanto antes, e só nesse minuto.
+      const limite = (st.quente[nome] || 0) > +agora ? 5_000 : r[dentro ? 0 : 1]
+      if (+agora - (st.etapaEm[nome] || 0) < limite) return false
       st.etapaEm[nome] = +agora
       return true
     }
@@ -469,5 +478,11 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
     }
   }
 
-  return { iniciar, rodada, estado: st }
+  // Chamado pelo webhook quando entra mensagem de verdade: acorda as etapas que têm gente esperando.
+  function acordar(nomes, ms = MINUTO) {
+    const ate = +relogio() + ms
+    for (const n of nomes) { st.quente[n] = ate; st.etapaEm[n] = 0 }
+  }
+
+  return { iniciar, rodada, acordar, estado: st }
 }

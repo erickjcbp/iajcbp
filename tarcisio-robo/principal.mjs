@@ -81,7 +81,9 @@ http.createServer((req, res) => {
   req.on('end', async () => {
     res.writeHead(200); res.end()
     try {
-      await entradaDono.receber(lerMensagemRecebida(JSON.parse(corpo || '{}')))
+      const recebida = lerMensagemRecebida(JSON.parse(corpo || '{}'))
+      await entradaDono.receber(recebida)
+      if (recebida) robo.acordar(['conversas', 'envio', 'apagar mensagens'])   // só mensagem de verdade (não evento de presença/status)
     } catch (e) { console.error('webhook:', e.message) }
   })
 }).listen(PORTA, () => console.info(`entrada de mensagens na porta ${PORTA}`))
