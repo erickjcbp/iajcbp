@@ -7,6 +7,13 @@
 // O limite é maior que o do nome (LIMITE_ERROS = 3) de propósito: aqui somam famílias
 // diferentes que digitaram um nome parecido, e uma parede curta barraria cadastro de
 // gente de boa-fé. Seis por dia ainda leva séculos para varrer as datas de nascimento.
+//
+// Conta SÓ 'prova_nao_bateu'. O 'travado' é o que este próprio freio grava ao barrar: contá-lo
+// faria cada tentativa barrada renovar a janela, e a ficha ficaria trancada para sempre enquanto
+// alguém continuasse tentando. Assim a trava expira 24h depois do 6º erro de verdade.
+//
+// Escrito em CommonJS de propósito, como o _vinculo.js e o _nomes.js: `node --test` carrega
+// direto, sem banco.
 const nomes = require('./_nomes.js');
 
 const LIMITE_POR_FICHA = 6;
@@ -18,7 +25,7 @@ async function errosPorFicha({ URL, h, nome, membros }) {
   const desde = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
   const r = await fetch(
     `${URL}/rest/v1/acolitos_vinculo_tentativas?select=id&membro_id=in.(${ids.join(',')})` +
-    `&resultado=in.(prova_nao_bateu,travado)&quando=gte.${desde}`, { headers: h });
+    `&resultado=eq.prova_nao_bateu&quando=gte.${desde}`, { headers: h });
   if (!r.ok) throw new Error('Não consegui conferir as tentativas. Tente novamente em instantes.');
   return { erros: (await r.json()).length, ids };
 }

@@ -21,13 +21,18 @@ async function podeCadastrar({ URL, SRK, req, max = LIMITE_POR_HORA }) {
     const ipHash = crypto.createHash('sha256').update(`${SRK}:${ip}`).digest('hex');
     const h = { apikey: SRK, Authorization: `Bearer ${SRK}`, 'Content-Type': 'application/json' };
     const desde = new Date(Date.now() - 3600 * 1000).toISOString();
+    // GRAVA ANTES DE CONTAR. Contar e depois gravar deixava N pedidos simultâneos verem a mesma
+    // contagem e passarem todos. Gravando primeiro, cada um já se enxerga na conta: o excesso de
+    // uma rajada é no máximo o que ainda não gravou. (O pedido barrado também fica registrado:
+    // quem insiste só renova a própria janela.)
+    const w = await fetch(`${URL}/rest/v1/acolitos_signup_tentativas`, {
+      method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ ip_hash: ipHash }),
+    });
+    if (!w.ok) return true;
     const r = await fetch(`${URL}/rest/v1/acolitos_signup_tentativas?select=id&ip_hash=eq.${ipHash}` +
       `&created_at=gte.${encodeURIComponent(desde)}&limit=${max + 1}`, { headers: h });
     if (!r.ok) return true;
-    if ((await r.json()).length >= max) return false;
-    await fetch(`${URL}/rest/v1/acolitos_signup_tentativas`, {
-      method: 'POST', headers: { ...h, Prefer: 'return=minimal' }, body: JSON.stringify({ ip_hash: ipHash }),
-    });
+    if ((await r.json()).length > max) return false;
     return true;
   } catch (e) { return true; }
 }

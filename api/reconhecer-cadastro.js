@@ -80,6 +80,14 @@ export default async function handler(req, res) {
   if (!mRes.ok) return res.status(500).json({ error: 'Não consegui consultar o cadastro.' });
   const membros = await mRes.json();
 
+  // A coordenação já olhou o caso desta conta e disse "não é a mesma pessoa": passa.
+  const liberadoRes = await fetch(
+    `${URL}/rest/v1/acolitos_vinculo_tentativas?select=id&user_id=eq.${caller.id}&liberado=is.true&limit=1`,
+    { headers: h });
+  if (liberadoRes.ok && (await liberadoRes.json()).length) {
+    return res.status(200).json({ situacao: 'seguir', liberado: true });
+  }
+
   // Freio por FICHA-ALVO (api/_freio.js): o da conta se contorna criando outra conta, e o
   // signup-acolito cria conta de graça. A ficha da criança não muda.
   let porFicha;
@@ -88,14 +96,6 @@ export default async function handler(req, res) {
   if (porFicha.erros >= LIMITE_POR_FICHA) {
     await registrar('travado', porFicha.ids[0] || null);
     return res.status(200).json({ situacao: 'travado' });
-  }
-
-  // A coordenação já olhou o caso desta conta e disse "não é a mesma pessoa": passa.
-  const liberadoRes = await fetch(
-    `${URL}/rest/v1/acolitos_vinculo_tentativas?select=id&user_id=eq.${caller.id}&liberado=is.true&limit=1`,
-    { headers: h });
-  if (liberadoRes.ok && (await liberadoRes.json()).length) {
-    return res.status(200).json({ situacao: 'seguir', liberado: true });
   }
 
   const v = decidirVinculo({
