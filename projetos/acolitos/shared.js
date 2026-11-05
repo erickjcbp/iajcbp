@@ -1696,31 +1696,64 @@ function notifStatus() {
 }
 // O userId vem de fora porque a parede do portão sobe DURANTE o boot, quando o `ctx` da
 // tela ainda não existe. Sem ele, ativar pela parede quebrava em `ctx.user.id`.
-async function ativarNotificacoes(btn, userId) {
+async function ativarNotificacoes(btn, userId, aoFalhar) {
   const uid = userId || (typeof ctx !== 'undefined' && ctx && ctx.user ? ctx.user.id : null);
+  // A parede do portão cobre o toast (z-index 9000 contra 200): erro dado só por toast é erro que a
+  // pessoa nunca vê — "aperto e não acontece nada". Quem chama de dentro da parede passa `aoFalhar`
+  // e a frase vai escrita DENTRO dela; as outras telas seguem com o toast.
+  const falha = (motivo, detalhe, msgSemCore) => {
+    const msg = (typeof explicarFalhaNotificacao === 'function')
+      ? explicarFalhaNotificacao(motivo, detalhe) : (msgSemCore || 'Não foi possível ativar as notificações.');
+    console.warn('Ativar notificações falhou:', motivo, detalhe || '');
+    if (typeof aoFalhar === 'function') aoFalhar(msg); else toast(msg, 'error');
+    return false;
+  };
+  // Cada espera tem hora marcada: o aparelho que nunca responde deixava o botão "pensando" ou voltando
+  // calado. Agora a etapa que travou vira motivo.
+  const comTempo = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('tempo-esgotado')), ms))]);
   try {
-    if (!uid) { toast('Sessão não reconhecida. Saia e entre novamente.', 'error'); return false; }
-    if (notifStatus() === 'nao-suportado') { toast('Seu navegador não suporta notificações.', 'error'); return false; }
+    if (!uid) return falha('sessao', null, 'Sessão não reconhecida. Saia e entre novamente.');
+    if (notifStatus() === 'nao-suportado') return falha('suporte');
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
     if (isIOS && navigator.standalone !== true) {
       uiAlert('Para receber notificações no iPhone: toque em Compartilhar → "Adicionar à Tela de Início" e abra o app por lá. Depois volte aqui e ative.');
       return false;
     }
-    const perm = await Notification.requestPermission();
-    if (perm !== 'granted') { toast('Permissão negada. Ative nas configurações do aparelho.', 'error'); return false; }
-    const reg = await navigator.serviceWorker.ready;
-    let sub = await reg.pushManager.getSubscription();
-    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
-    const j = sub.toJSON();
-    const { error } = await sb.from('acolitos_push_subs').upsert({
-      user_id: uid, endpoint: sub.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, user_agent: navigator.userAgent,
-    }, { onConflict: 'endpoint' });
-    if (error) { toast('Erro ao salvar a inscrição.', 'error'); return false; }
+    let perm;
+    try { perm = await comTempo(Notification.requestPermission(), 20000); } catch (e) { return falha('permissao', e && e.message); }
+    if (perm !== 'granted') return falha('permissao');
+    let reg = await _swPronto(8000);
+    if (!reg) { try { await navigator.serviceWorker.register('sw.js'); } catch (_) {} reg = await _swPronto(8000); }
+    if (!reg) return falha('sw');
+    const assinar = () => comTempo(reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) }), 20000);
+    let sub = null;
+    try { sub = await reg.pushManager.getSubscription(); } catch (_) {}
+    if (!sub) {
+      try { sub = await assinar(); }
+      catch (e1) {   // segunda chance: desfaz uma inscrição velha quebrada e tenta de novo
+        try { const velha = await reg.pushManager.getSubscription(); if (velha) await velha.unsubscribe(); sub = await assinar(); }
+        catch (e2) { return falha('inscricao', (e2 && (e2.name || e2.message)) || null); }
+      }
+    }
+    const gravar = async () => {
+      if (typeof registrarInscricaoPush === 'function') return registrarInscricaoPush(sb, uid, sub, navigator.userAgent);
+      const j = sub.toJSON();
+      const { error } = await sb.from('acolitos_push_subs').upsert({
+        user_id: uid, endpoint: sub.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, user_agent: navigator.userAgent,
+      }, { onConflict: 'endpoint' });
+      return error ? { ok: false, motivo: 'salvar', detalhe: error.code || error.message } : { ok: true };
+    };
+    let r = await gravar();
+    if (!r.ok && r.motivo === 'outro-aparelho') {
+      // A inscrição deste aparelho é de outra conta e não é desta: cria uma nova (endpoint novo) e grava essa.
+      try { await sub.unsubscribe(); sub = await assinar(); r = await gravar(); } catch (_) {}
+    }
+    if (!r.ok) return falha(r.motivo || 'salvar', r.detalhe);
     if (typeof desbloquearSomNotif === 'function') desbloquearSomNotif(); // gesto do usuário → libera o áudio (iOS)
     toast('Notificações ativadas! 🔔', 'success');
     if (btn) pintarBotaoNotif(btn, true);
     return true;
-  } catch (e) { toast('Não foi possível ativar as notificações.', 'error'); return false; }
+  } catch (e) { return falha('inscricao', (e && (e.name || e.message)) || null); }
 }
 // Não existe mais DESLIGAR pela tela: as notificações são obrigatórias (portaoNotificacoes).
 // Desligar aqui só levava a pessoa a bater na parede na tela seguinte, sem entender por quê.
@@ -2081,11 +2114,15 @@ async function _fatosNotificacao(userId) {
     if (data) { fatos.inscrito = true; return fatos; }
     // Sumiu a linha (desativou antes, faxina, troca de conta): grava de novo, calado. Isto
     // não custa nada à pessoa e evita parede por um problema que é nosso, não dela.
-    const j = sub.toJSON();
-    const { error } = await sb.from('acolitos_push_subs').upsert({
-      user_id: userId, endpoint: sub.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, user_agent: navigator.userAgent,
-    }, { onConflict: 'endpoint' });
-    fatos.inscrito = !error;
+    if (typeof registrarInscricaoPush === 'function') {
+      fatos.inscrito = (await registrarInscricaoPush(sb, userId, sub, navigator.userAgent)).ok;
+    } else {
+      const j = sub.toJSON();
+      const { error } = await sb.from('acolitos_push_subs').upsert({
+        user_id: userId, endpoint: sub.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, user_agent: navigator.userAgent,
+      }, { onConflict: 'endpoint' });
+      fatos.inscrito = !error;
+    }
   } catch (_) {}
   return fatos;
 }
@@ -2267,20 +2304,25 @@ function mostrarParedeNotificacoes(qual, userId) {
   const btn = document.createElement('button');
   btn.className = 'btn gold'; btn.style.cssText = 'width:100%;margin-bottom:10px;';
   btn.textContent = cfg.botao;
+  // Onde o erro aparece. O toast fica ATRÁS da parede (z-index), então toda falha escreve aqui.
+  const erro = document.createElement('p');
+  erro.setAttribute('role', 'alert'); erro.id = 'parede-notif-erro';
+  erro.style.cssText = 'font-size:14px;line-height:1.55;color:var(--danger-text,#ff9c9c);margin:0 0 12px;min-height:0;';
   btn.onclick = async () => {
     const antes = btn.textContent;
-    btn.disabled = true; btn.textContent = 'Um instante...';
+    btn.disabled = true; btn.textContent = 'Um instante...'; erro.textContent = '';
     try {
       // "Pedir" é o único caso em que o aparelho ainda pergunta. Nos outros a pessoa foi
       // resolver por fora, então aqui a gente só reconfere os fatos.
-      if (qual === 'pedir') await ativarNotificacoes(null, userId);
+      if (qual === 'pedir') await ativarNotificacoes(null, userId, (m) => { erro.textContent = m; });
       const r = await portaoNotificacoes(userId, { _crmEtapa: null });
       if (r.entra) { location.reload(); return; }   // recarrega: a tela precisa nascer inteira
       btn.disabled = false; btn.textContent = antes;
       if (r.parede !== qual) { tela.remove(); mostrarParedeNotificacoes(r.parede, userId); return; }
-      toast('Ainda não está ativado.', 'error');
-    } catch (_) { btn.disabled = false; btn.textContent = antes; }
+      if (!erro.textContent) erro.textContent = 'Ainda não está ativado. Toque em "' + antes + '" de novo.';
+    } catch (_) { btn.disabled = false; btn.textContent = antes; erro.textContent = 'Não foi possível conferir agora. Toque de novo em instantes.'; }
   };
+  cartao.appendChild(erro);
   cartao.appendChild(btn);
 
   if (cfg.rodape) {
