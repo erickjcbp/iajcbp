@@ -65,8 +65,10 @@ async function pedirRedefinicao(req, res, URL, KEY) {
       return res.status(200).setHeader('Cache-Control', 'no-store').json(resposta);
     }
     trilha.user_id = membro.user_id;
-    const porUsuario = await resetRest(URL, KEY, `acolitos_password_resets?select=id&user_id=eq.${membro.user_id}&created_at=gte.${encodeURIComponent(umaHora)}&limit=3`);
-    if (porUsuario.length >= 2) {
+    const porUsuario = await resetRest(URL, KEY, `acolitos_password_resets?select=id&user_id=eq.${membro.user_id}&created_at=gte.${encodeURIComponent(umaHora)}&limit=5`);
+    // 4 por hora, e só 3 por IP (acima): quem pede em nome de outra pessoa não consegue travar o
+    // pedido dela sozinho — com 2, dois pedidos de um estranho deixavam a vítima sem link por uma hora.
+    if (porUsuario.length >= 4) {
       await resetRest(URL, KEY, 'acolitos_password_resets', { method: 'POST', body: JSON.stringify(trilha), headers: { Prefer: 'return=minimal' } });
       return res.status(200).setHeader('Cache-Control', 'no-store').json(resposta);
     }
@@ -193,8 +195,25 @@ export default async function handler(req, res) {
   const { action, user_id, usuario, password, nome, membro_id, role } = req.body || {};
   const jh = { ...h, 'Content-Type': 'application/json' };
 
+  // ids entram em filtro do PostgREST (`id=eq.${...}`): só UUID passa, nada de `&campo=...` extra.
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if ((user_id && !UUID.test(String(user_id))) || (membro_id && !UUID.test(String(membro_id)))) return res.status(400).json({ error: 'Identificador inválido.' });
+  // A conta pertence ao módulo acolitos? (get/vincular não podem espiar nem sobrescrever conta de fora dele)
+  async function papelNoModulo(uid) {
+    const r = await fetch(`${URL}/rest/v1/pastoral_members?user_id=eq.${uid}&module_id=eq.${mod.id}&select=role`, { headers: h });
+    return (await r.json())[0]?.role || null;
+  }
+
   if (action === 'create') {
     if (!usuario || !password) return res.status(400).json({ error: 'Usuário e senha obrigatórios.' });
+    // Ligar a conta nova a uma ficha que JÁ tem dono tomava a ficha (e o papel) de outra pessoa,
+    // inclusive de um coord_admin, sem passar pelo podeMexer. Ficha com conta não recebe outra.
+    if (membro_id) {
+      const fr = await fetch(`${URL}/rest/v1/acolitos_membros?id=eq.${membro_id}&select=user_id`, { headers: h });
+      const f = (await fr.json())[0];
+      if (!f) return res.status(404).json({ error: 'Ficha não encontrada.' });
+      if (f.user_id) return res.status(409).json({ error: 'Essa ficha já está ligada a uma conta.' });
+    }
     const cr = await fetch(`${URL}/auth/v1/admin/users`, { method: 'POST', headers: jh, body: JSON.stringify({ email: synthEmail(usuario), password, email_confirm: true, user_metadata: { nome: nome || usuario } }) });
     const cd = await cr.json();
     if (!cr.ok) { const ja = /registered|already|exists/i.test(cd.msg || cd.message || ''); return res.status(cr.status).json({ error: ja ? 'Esse usuário já existe.' : (cd.msg || cd.message || 'Erro ao criar.') }); }
@@ -226,6 +245,8 @@ export default async function handler(req, res) {
     if (alvo.user_id && alvo.user_id !== user_id) return res.status(409).json({ error: 'Essa ficha já está ligada a outra conta.' });
     const outro = await fetch(`${URL}/rest/v1/acolitos_membros?user_id=eq.${user_id}&select=id&id=neq.${membro_id}`, { headers: h });
     if ((await outro.json()).length) return res.status(409).json({ error: 'Essa conta já está ligada a outra pessoa.' });
+    // Conta que já tem papel no módulo: só mexe quem tem privilégio MAIOR (o upsert abaixo regrava o papel).
+    if ((await papelNoModulo(user_id)) && !(await podeMexer(user_id))) return res.status(403).json({ error: 'Sem permissão sobre este usuário.' });
     await fetch(`${URL}/rest/v1/acolitos_membros?id=eq.${membro_id}`, { method: 'PATCH', headers: { ...jh, Prefer: 'return=minimal' }, body: JSON.stringify({ user_id }) });
     const nv = alvo.nivel || '';
     const papel = nv.startsWith('cerimoniario') ? 'cerimonario'
@@ -237,6 +258,7 @@ export default async function handler(req, res) {
 
   if (action === 'get') {
     if (!user_id) return res.status(400).json({ error: 'Faltam dados.' });
+    if (!(await papelNoModulo(user_id))) return res.status(403).json({ error: 'Sem permissão sobre este usuário.' });
     const r = await fetch(`${URL}/auth/v1/admin/users/${user_id}`, { headers: h });
     const d = await r.json(); if (!r.ok) return res.status(r.status).json({ error: 'Erro ao consultar.' });
     const email = d.email || '';

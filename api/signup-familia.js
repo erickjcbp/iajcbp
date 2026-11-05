@@ -10,6 +10,7 @@
 // é a mesma dos dois lados agora, e mora num arquivo só: api/_vinculo.js.
 import { decidirVinculo, LIMITE_ERROS } from './_vinculo.js';
 import { errosPorFicha, LIMITE_POR_FICHA } from './_freio.js';
+import { podeCadastrar } from './_limite-cadastro.js';
 
 const DOMINIO = '@coroinhas.jcbplimeira.com.br';
 const COMUNIDADES = ['matriz', 'santo_antonio', 'outra'];
@@ -23,6 +24,8 @@ export default async function handler(req, res) {
   const URL = process.env.SUPABASE_URL;
   const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!URL || !SRK) return res.status(500).json({ error: 'Server misconfigured' });
+
+  if (!(await podeCadastrar({ URL, SRK, req }))) return res.status(429).json({ error: 'Muitos cadastros deste endereço. Tente novamente em uma hora ou fale com a coordenação.' });
 
   const { senha, pais, filhos } = req.body || {};
   if (!senha || String(senha).length < 6) return res.status(400).json({ error: 'A senha deve ter ao menos 6 caracteres.' });

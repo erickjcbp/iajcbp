@@ -1,5 +1,7 @@
 // Vercel serverless — auto-cadastro do Acólito por USUÁRIO (conta já confirmada).
 // Público (a aprovação do admin no CRM é a trava). Usa a service role key.
+import { podeCadastrar } from './_limite-cadastro.js';
+
 const DOMINIO = '@coroinhas.jcbplimeira.com.br';
 
 // Cadastro público: o e-mail é SEMPRE o sintético. Aceitar um '@' digitado deixava qualquer
@@ -14,6 +16,8 @@ export default async function handler(req, res) {
   const URL = process.env.SUPABASE_URL;
   const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!URL || !SRK) return res.status(500).json({ error: 'Server misconfigured' });
+
+  if (!(await podeCadastrar({ URL, SRK, req }))) return res.status(429).json({ error: 'Muitos cadastros deste endereço. Tente novamente em uma hora ou fale com a coordenação.' });
 
   const { usuario, password, nome } = req.body || {};
   if (!usuario || !password) return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });

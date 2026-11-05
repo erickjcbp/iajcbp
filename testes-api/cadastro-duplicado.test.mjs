@@ -4,7 +4,7 @@ import fs from 'node:fs';
 async function carregar(nome) {
   const dep = new URL('../api/_vinculo.js', import.meta.url).href;
   const dep2 = new URL('../api/_freio.js', import.meta.url).href;
-  const src = fs.readFileSync(new URL('../api/' + nome, import.meta.url), 'utf8').replace("'./_vinculo.js'", JSON.stringify(dep)).replace("'./_freio.js'", JSON.stringify(dep2));
+  const src = fs.readFileSync(new URL('../api/' + nome, import.meta.url), 'utf8').replace("'./_vinculo.js'", JSON.stringify(dep)).replace("'./_freio.js'", JSON.stringify(dep2)).replace("'./_limite-cadastro.js'", JSON.stringify(new URL('../api/_limite-cadastro.js', import.meta.url).href));
   return (await import('data:text/javascript;base64,' + Buffer.from(src).toString('base64'))).default;
 }
 const reconhecer = await carregar('reconhecer-cadastro.js');

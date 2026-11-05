@@ -7,7 +7,7 @@ import fs from 'node:fs';
 async function carregar(nome) {
   const href = (f) => JSON.stringify(new URL('../api/' + f, import.meta.url).href);
   const src = fs.readFileSync(new URL('../api/' + nome, import.meta.url), 'utf8')
-    .replace("'./_vinculo.js'", href('_vinculo.js')).replace("'./_freio.js'", href('_freio.js'));
+    .replace("'./_vinculo.js'", href('_vinculo.js')).replace("'./_freio.js'", href('_freio.js')).replace("'./_limite-cadastro.js'", href('_limite-cadastro.js'));
   return (await import('data:text/javascript;base64,' + Buffer.from(src).toString('base64'))).default;
 }
 const familia = await carregar('signup-familia.js');
@@ -88,4 +88,32 @@ test('Cadastro público não aceita e-mail digitado: sempre o sintético', async
   assert.equal(chamadas[0].body.email, 'vitima@coroinhas.jcbplimeira.com.br');
   const vazio = await chamar(signupAcolito, { method: 'POST', body: { usuario: '@gmail.com', password: 'senha-ficticia' } }, responder);
   assert.equal(vazio.res.code, 400);
+});
+
+test('Cadastro público: o 21º pedido do mesmo IP na hora leva 429; falha da tabela não derruba o cadastro', async () => {
+  const guardados = [];
+  const responder = (c) => {
+    const u = decodeURIComponent(c.url);
+    if (u.includes('acolitos_signup_tentativas')) {
+      if (c.metodo === 'POST') { guardados.push(c.body.ip_hash); return resposta(null); }
+      const ip = (u.match(/ip_hash=eq\.([0-9a-f]+)/) || [])[1];
+      return resposta(guardados.filter((g) => g === ip).map((_, i) => ({ id: i })));
+    }
+    return resposta({ id: 'novo' });
+  };
+  const codigos = [];
+  for (let i = 0; i < 22; i++) {
+    const { res } = await chamar(signupAcolito, { method: 'POST', headers: { 'x-forwarded-for': '203.0.113.9, 10.0.0.1' }, body: { usuario: 'crianca' + i, password: 'senha-ficticia' } }, responder);
+    codigos.push(res.code);
+  }
+  assert.equal(codigos.filter((c) => c === 200).length, 20);
+  assert.deepEqual(codigos.slice(20), [429, 429]);
+  assert.equal(new Set(guardados).size, 1, 'o IP vira hash: nada de IP em claro no banco');
+  // outro IP não é afetado
+  const outro = await chamar(signupAcolito, { method: 'POST', headers: { 'x-forwarded-for': '198.51.100.7' }, body: { usuario: 'outra', password: 'senha-ficticia' } }, responder);
+  assert.equal(outro.res.code, 200);
+  // tabela fora do ar (migration ainda não aplicada): cadastro segue
+  const falha = await chamar(signupAcolito, { method: 'POST', headers: { 'x-forwarded-for': '192.0.2.1' }, body: { usuario: 'ok', password: 'senha-ficticia' } },
+    (c) => decodeURIComponent(c.url).includes('acolitos_signup_tentativas') ? resposta({}, false) : resposta({ id: 'novo' }));
+  assert.equal(falha.res.code, 200);
 });
