@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { interpretar, acharFicha, lerResposta, lerNumero, lerFilhos, lerCelulares, mesmoNumero, decidir, idadeEm, criarValidacaoContato, RESPOSTAS } from './validacao-contato.mjs'
+import { interpretar, acharFicha, lerResposta, lerNumero, lerFilhos, lerCelulares, mesmoNumero, decidir, idadeEm, criarValidacaoContato, RESPOSTAS, PERGUNTA } from './validacao-contato.mjs'
 
 const hoje = '2026-11-02'
 const membros = [
@@ -326,4 +326,34 @@ test('inicial só vale palavra por palavra: nome extra ou ficha sem inicial não
   assert.equal(acharFicha({ nome: 'ana luisa campos guerra', idade: 14, membros: lista, hoje }).sugestao?.id, 'g')
   assert.equal(acharFicha({ nome: 'ana luisa campos guerra silva', idade: 14, membros: [lista[0]], hoje }).sugestao, undefined)
   assert.equal(acharFicha({ nome: 'ana luisa pereira', idade: 14, membros: [lista[1]], hoje }).sugestao, undefined)
+})
+
+test('revisão de identidade fica na Caixa sem resposta de encaminhamento', async () => {
+  const f=falso(dados('filho_dados'));
+  await f.v.receber({numero:'5519911112222',texto:'Fulano de Tal, 12 anos'});
+  assert.equal(f.enviadas.length,0);
+  const p=f.escritas.find(([t])=>t==='tarcisio_pendencias');
+  assert.equal(p[1].dados.aguardando_revisao,true);
+  assert.equal(p[1].tipo,'coordenacao');
+});
+
+test('mãe que responde com o nome da filha no número da família: pede o número do servo, não grava', async () => {
+  const { v, escritas, enviadas } = falso({ numero: FAM, situacao: 'perguntado', tentativas: 0, teste: false })
+  await v.receber({ numero: FAM, texto: 'João Pedro da Silva, 14 anos' })
+  assert.equal(enviadas[0], RESPOSTAS.familia_numero('João'))
+  assert.equal(escritas.some(([t]) => t === 'acolitos_membros'), false)
+  assert.equal(escritas.findLast(([t]) => t === 'tarcisio_validacao_contato')[1].situacao, 'filho_numero')
+})
+test('"é da minha filha", "sou mãe" e "responsável" são lidos como família', () => {
+  for (const t of ['Oi e da me filha', 'Oi, é da minha filha', 'sou mãe', 'Mãe', 'responsável', 'sou o pai']) assert.equal(lerResposta(t).filho, true, t)
+  assert.equal(lerResposta('João Pedro da Silva, 14').filho, undefined)
+})
+test('servo sem celular: responder "não tem" mantém o contato da família', async () => {
+  const { v, enviadas } = falso(dados('filho_numero', { membro_id: 'a' }))
+  await v.receber({ numero: FAM, texto: 'não tem' })
+  assert.equal(enviadas[0], RESPOSTAS.filhos_sem_celular)
+})
+test('a pergunta inicial diz de quem é o número e pede o servo quando é de mãe, pai ou responsável', () => {
+  assert.match(PERGUNTA, /este número é do próprio servo/i)
+  assert.match(PERGUNTA, /mãe, pai ou responsável/)
 })

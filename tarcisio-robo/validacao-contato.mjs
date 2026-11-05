@@ -8,15 +8,16 @@ const exigir = ({ data, error }, onde) => {
   return data
 }
 
-export const PERGUNTA = 'Paz e bem! Aqui é o Tarcísio, da Pastoral dos Coroinhas e Acólitos. Estou atualizando os cadastros do grupo. Pode me dizer seu nome completo e sua idade? Se você não serve no altar, é só me avisar. Obrigado!'
+export const PERGUNTA = 'Paz e bem! Aqui é o Tarcísio, da Pastoral dos Coroinhas e Acólitos. Estou atualizando os cadastros e preciso saber de quem é este número.\n\nSe este número é do próprio servo ou servo(a): responda o nome completo e a idade dele(a).\nSe este número é de mãe, pai ou responsável: responda "sou mãe" (ou pai/responsável) e o nome completo e a idade de quem serve.\nSe ninguém da família serve no altar, é só me avisar. Obrigado!'
 export const RESPOSTAS = {
   gravado: (nome) => `Obrigado, ${nome}! Seu cadastro foi atualizado. 🙏`,
-  revisar: 'Obrigado! Vou conferir com a coordenação. 🙏',
+  revisar: undefined, // revisão interna: não envia mensagem à pessoa
   nao_serve: 'Obrigado pelo retorno! Paz e bem. 🙏',
   repetir: 'Para eu localizar seu cadastro, pode me mandar seu nome completo e sua idade?',
   filho_dados: 'Que bom saber! Para eu localizar o cadastro, pode me passar o nome completo e a idade de quem serve?',
   filho_repetir: 'Pode me mandar o nome completo e a idade de quem serve, por favor?',
   filho_numero: (nome) => `Encontrei o cadastro de ${nome}! Qual é o WhatsApp próprio de ${nome}? Vou incluir no grupo de Acólitos e Coroinhas. Esse grupo é somente para comunicados.`,
+  familia_numero: (nome) => `Desculpe a confusão! Este WhatsApp é seu (mãe, pai ou responsável), certo? Então preciso do WhatsApp de ${nome} para incluir no grupo de Acólitos e Coroinhas, que é somente para comunicados. Mande o número com DDD, por exemplo 19 99999-9999. Se ${nome} ainda não tem celular, responda "não tem".`,
   filho_numero_repetir: 'Não consegui ler o número. Pode mandar com DDD, por exemplo 19 99999-9999?',
   filhos_dados: 'Que bom! Pode me mandar o nome completo e a idade de cada um, um por linha?',
   filhos_repetir: 'Preciso do nome completo e da idade de cada um. Pode mandar assim, um por linha: Nome Sobrenome, 12',
@@ -31,7 +32,7 @@ export const RESPOSTAS = {
 
 const semAcento = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim()
 const VARIOS_FILHOS = /\b(?:meus|minhas)\s+(?:filhos|filhas|meninos|meninas|netos|netas)\b/
-const FILHO = /\b(?:meu|minha)\s+(?:filho|filha|menino|menina|enteado|enteada|neto|neta)\b|\bsou\s+(?:o\s+|a\s+)?(?:mae|pai|responsavel|avo)\s+d[oa]\b/
+const FILHO = /\b(?:meu|minha|me|mi)\s+(?:filho|filha|menino|menina|enteado|enteada|neto|neta)\b|\bsou\s+(?:o\s+|a\s+)?(?:mae|pai|responsavel|avo)\b|^\s*(?:a\s+|o\s+)?(?:mae|pai|responsavel)\s*$/
 const NAO_SERVE = /\bn(?:ao|o)\s+(?:sirvo|servo|sou\s+(?:servo|coroinha|acolito)|faco\s+parte)\b|\bsou\s+(?:o\s+|a\s+)?(?:pai|mae|responsavel|coordenador|coordenadora|padre|ministro|ministra)\b/
 const SOBRA = /\b(?:meu|minha|nome|completo|e|eh|sou|o|a|me|chamo|tenho|anos|ano|idade|de|paz|bem|ola|oi|bom|boa|dia|tarde|noite)\b/g
 
@@ -228,7 +229,9 @@ export function criarValidacaoContato({ db, evo, ia = null, relogio = () => new 
     if (!ficha) return { motivo: 'ficha do filho não encontrada' }
     if ([ficha.celular_mae, ficha.celular_recado, ficha.celular_responsavel].some((c) => mesmoNumero(c, novo))) return { motivo: 'filho usa o número da família' }
     const digitos = String(ficha.telefone || '').replace(/\D/g, '')
-    if (digitos && !mesmoNumero(digitos, novo)) return { motivo: 'ficha já tem outro número' }
+    // telefone igual ao da mãe/pai na ficha é o número da família reaproveitado: pode ser trocado pelo do servo
+    const reaproveitado = !!digitos && DA_FAMILIA(ficha, digitos)
+    if (digitos && !reaproveitado && !mesmoNumero(digitos, novo)) return { motivo: 'ficha já tem outro número' }
     if (evo.numerosComWhatsapp) {
       let existe = false
       try { existe = (await evo.numerosComWhatsapp([novo])).some((r) => r.existe) } catch (e) { log.warn(`validação de contato: não conferi o WhatsApp: ${e.message}`) }
@@ -236,8 +239,8 @@ export function criarValidacaoContato({ db, evo, ia = null, relogio = () => new 
     }
     const nome = ficha.nome.split(' ')[0]
     if (teste) return { nome }
-    if (!digitos) {
-      const feitas = exigir(await db.from('acolitos_membros').update({ telefone: novo.replace(/^55/, '') }).eq('id', ficha.id).or('telefone.is.null,telefone.eq.').select('id'), 'gravar telefone do filho')
+    if (!digitos || reaproveitado) {
+      const feitas = exigir(await db.from('acolitos_membros').update({ telefone: novo.replace(/^55/, '') }).eq('id', ficha.id).or(reaproveitado ? `telefone.eq.${ficha.telefone}` : 'telefone.is.null,telefone.eq.').select('id'), 'gravar telefone do filho')
       if (!feitas.length) return { motivo: 'ficha ganhou telefone durante a validação' }
     }
     const grupo = exigir(await db.from('tarcisio_grupos').select('jid').eq('papel', 'acolitos').maybeSingle(), 'ler grupo')
@@ -251,6 +254,11 @@ export function criarValidacaoContato({ db, evo, ia = null, relogio = () => new 
 
   async function receberNumeroDoFilho({ msg, linha, salvar, revisar }) {
     const novo = msg.contatos?.length === 1 ? msg.contatos[0].numero : lerNumero(msg.texto)
+    if (!novo && /^\s*(?:n[aã]o|nenhum)\b/i.test(msg.texto)) {
+      exigir(await salvar({ situacao: 'gravado' }), 'manter contato da família')
+      await responder(msg.numero, RESPOSTAS.filhos_sem_celular)
+      return true
+    }
     if (!novo) {
       if (linha.tentativas >= 1) return revisar('número do filho não informado')
       exigir(await salvar({ tentativas: linha.tentativas + 1 }), 'contar tentativa')
@@ -354,7 +362,13 @@ export function criarValidacaoContato({ db, evo, ia = null, relogio = () => new 
       await responder(msg.numero, RESPOSTAS.filho_numero(f.nome.split(' ')[0]))
       return true
     }
-    const ficha = exigir(await db.from('acolitos_membros').select('id,nome,telefone').eq('id', f.id).maybeSingle(), 'ler ficha')
+    const ficha = exigir(await db.from('acolitos_membros').select('id,nome,telefone,celular_mae,celular_recado,celular_responsavel').eq('id', f.id).maybeSingle(), 'ler ficha')
+    // o número é o da família na ficha: não dá para gravar como do servo; pede o número do servo
+    if (!linha.teste && DA_FAMILIA(ficha, msg.numero)) {
+      exigir(await salvar({ ...base, ...aviso, situacao: 'filho_numero', tentativas: 0, membro_id: f.id }), 'pedir número do servo')
+      await responder(msg.numero, RESPOSTAS.familia_numero(f.nome.split(' ')[0]))
+      return true
+    }
     const r = decidirTelefone(ficha, msg.numero)
     if (r.situacao === 'revisar') return revisar(r.motivo, { ...base, membro_id: f.id })
     if (r.gravar && !linha.teste) {
@@ -385,7 +399,7 @@ export function criarValidacaoContato({ db, evo, ia = null, relogio = () => new 
     const salvar = (extra) => db.from('tarcisio_validacao_contato').update({ ...extra, resposta: msg.texto, atualizado_em: relogio().toISOString() }).eq('numero', msg.numero)
     const revisar = async (motivo, extra = {}) => {
       exigir(await salvar({ ...extra, situacao: 'revisar', motivo }), 'marcar revisão')
-      await responder(msg.numero, RESPOSTAS.revisar)
+      exigir(await db.from('tarcisio_pendencias').insert({ tipo: 'coordenacao', numero: msg.numero, resumo: ('Validação de contato: ' + motivo).slice(0, 500), dados: { aguardando_revisao: true, validacao_contato: true, membro_id: extra.membro_id || linha.membro_id || null } }), 'abrir pendência silenciosa')
       return true
     }
     if (!msg.texto) {
