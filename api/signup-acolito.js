@@ -2,10 +2,11 @@
 // Público (a aprovação do admin no CRM é a trava). Usa a service role key.
 const DOMINIO = '@coroinhas.jcbplimeira.com.br';
 
+// Cadastro público: o e-mail é SEMPRE o sintético. Aceitar um '@' digitado deixava qualquer
+// um criar conta já confirmada com o e-mail de outra pessoa, sem provar que é dono dele.
 function synthEmail(u) {
-  const c = String(u || '').trim().toLowerCase();
-  if (c.includes('@')) return c;
-  return c.replace(/[^a-z0-9._-]/g, '') + DOMINIO;
+  const c = String(u || '').trim().toLowerCase().split('@')[0];
+  return c.replace(/[^a-z0-9._-]/g, '').slice(0, 60) + DOMINIO;
 }
 
 export default async function handler(req, res) {
@@ -19,6 +20,7 @@ export default async function handler(req, res) {
   if (String(password).length < 6) return res.status(400).json({ error: 'A senha deve ter ao menos 6 caracteres.' });
 
   const email = synthEmail(usuario);
+  if (email === DOMINIO) return res.status(400).json({ error: 'Usuário inválido.' });
   const r = await fetch(`${URL}/auth/v1/admin/users`, {
     method: 'POST',
     headers: { apikey: SRK, Authorization: `Bearer ${SRK}`, 'Content-Type': 'application/json' },

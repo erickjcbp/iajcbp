@@ -8,7 +8,8 @@
 // Das 4 fichas criadas desde que a conferência subiu (27/08), TRÊS entraram por aqui, e
 // foi assim que a Beatriz Dutra Correia virou duas fichas com o nome IDÊNTICO. A regra
 // é a mesma dos dois lados agora, e mora num arquivo só: api/_vinculo.js.
-import { decidirVinculo } from './_vinculo.js';
+import { decidirVinculo, LIMITE_ERROS } from './_vinculo.js';
+import { errosPorFicha, LIMITE_POR_FICHA } from './_freio.js';
 
 const DOMINIO = '@coroinhas.jcbplimeira.com.br';
 const COMUNIDADES = ['matriz', 'santo_antonio', 'outra'];
@@ -132,12 +133,16 @@ export default async function handler(req, res) {
 
       // 0) ESSA CRIANÇA JÁ ESTÁ NA PASTORAL? Mesma regra da porta "Novos" — a decisão
       // mora no _vinculo.js, e é decidida ANTES de criar qualquer conta.
+      // Dois freios: pelo nome digitado e pela FICHA-ALVO (api/_freio.js). Só o do nome se
+      // contorna trocando a grafia do nome; o da ficha soma todo mundo que tentou aquela criança.
+      const porFicha = await errosPorFicha({ URL, h: auth, nome, membros });
+      const errosRecentes = porFicha.erros >= LIMITE_POR_FICHA ? LIMITE_ERROS : await errosDe(nome);
       const v = decidirVinculo({
         nome, nascimento: f.data_nascimento, nome_mae: nomeMae,
-        membros, userId: null, errosRecentes: await errosDe(nome),
+        membros, userId: null, errosRecentes,
       });
       if (v.acao === 'travado') {
-        await registrar('travado', nome, f.data_nascimento, null);
+        await registrar('travado', nome, f.data_nascimento, porFicha.ids[0] || null);
         throw new Error('O limite de tentativas foi atingido. Se você já é membro, use "Esqueci minha senha" ou fale com a coordenação para conferir seu cadastro.');
       }
       // Antes do limite, a prova BATEU e a ficha já é de outra conta. Aí a

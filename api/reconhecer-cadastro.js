@@ -22,6 +22,7 @@
 // Quem DECIDE não é este arquivo: é o api/_vinculo.js, que a porta Família usa também.
 // Enquanto a regra morou aqui dentro, a outra porta seguiu sem conferir nada.
 import { decidirVinculo, LIMITE_ERROS } from './_vinculo.js';
+import { errosPorFicha, LIMITE_POR_FICHA } from './_freio.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -78,6 +79,16 @@ export default async function handler(req, res) {
     { headers: h });
   if (!mRes.ok) return res.status(500).json({ error: 'Não consegui consultar o cadastro.' });
   const membros = await mRes.json();
+
+  // Freio por FICHA-ALVO (api/_freio.js): o da conta se contorna criando outra conta, e o
+  // signup-acolito cria conta de graça. A ficha da criança não muda.
+  let porFicha;
+  try { porFicha = await errosPorFicha({ URL, h, nome, membros }); }
+  catch (e) { return res.status(503).json({ error: e.message }); }
+  if (porFicha.erros >= LIMITE_POR_FICHA) {
+    await registrar('travado', porFicha.ids[0] || null);
+    return res.status(200).json({ situacao: 'travado' });
+  }
 
   // A coordenação já olhou o caso desta conta e disse "não é a mesma pessoa": passa.
   const liberadoRes = await fetch(

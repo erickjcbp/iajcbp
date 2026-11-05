@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 async function carregar(nome) {
   const dep = new URL('../api/_vinculo.js', import.meta.url).href;
-  const src = fs.readFileSync(new URL('../api/' + nome, import.meta.url), 'utf8').replace("'./_vinculo.js'", JSON.stringify(dep));
+  const dep2 = new URL('../api/_freio.js', import.meta.url).href;
+  const src = fs.readFileSync(new URL('../api/' + nome, import.meta.url), 'utf8').replace("'./_vinculo.js'", JSON.stringify(dep)).replace("'./_freio.js'", JSON.stringify(dep2));
   return (await import('data:text/javascript;base64,' + Buffer.from(src).toString('base64'))).default;
 }
 const reconhecer = await carregar('reconhecer-cadastro.js');
