@@ -19,20 +19,45 @@ const noGrupo = (numeros, grupo) => numeros.some((n) => n && grupo.has(n))
 export function calcularPresenca(ficha, listas) {
   const proprio = [fim(ficha.telefone)]
   const familia = [fim(ficha.celular_responsavel), fim(ficha.celular_mae), fim(ficha.celular_recado)]
-  const todos = [...proprio, ...familia]
   const r = {}
-  if (listas.servo) r.no_grupo_whatsapp = noGrupo(todos, listas.servo)
+  // Grupos de SERVOS: só o telefone PRÓPRIO conta. Antes qualquer número da ficha contava, e uma mãe dentro
+  // do grupo dos acólitos fazia a ficha do filho aparecer como "está no grupo" sem ele estar (05/11/2026).
+  if (listas.servo) r.no_grupo_whatsapp = noGrupo(proprio, listas.servo)
   if (listas.pais) r.no_grupo_pais = noGrupo(familia, listas.pais)
-  if (listas.cerimoniarios) r.no_grupo_cerimoniarios = NIVEIS_CERIMONIARIO.includes(ficha.nivel) && noGrupo(todos, listas.cerimoniarios)
+  if (listas.cerimoniarios) r.no_grupo_cerimoniarios = NIVEIS_CERIMONIARIO.includes(ficha.nivel) && noGrupo(proprio, listas.cerimoniarios)
   return r
 }
 
 // Grupo(s) em que a ficha deve estar: cerimoniário no dos Cerimoniários; os demais no dos servos; responsável no de Pais.
 // Cerimoniário estar também no dos servos não é erro (regra ainda não decidida pelo dono).
+// Servo sem telefone próprio não é cobrado no grupo dos servos: família não entra lá, só no de Pais.
 export function gruposEsperados(ficha) {
-  const esperados = NIVEIS_CERIMONIARIO.includes(ficha.nivel) ? ['cerimoniarios'] : ['servo']
+  const esperados = []
+  if (fim(ficha.telefone)) esperados.push(NIVEIS_CERIMONIARIO.includes(ficha.nivel) ? 'cerimoniarios' : 'servo')
   if (fim(ficha.celular_mae) || fim(ficha.celular_responsavel)) esperados.push('pais')
   return esperados
+}
+
+// Números de FAMÍLIA que estão dentro de um grupo de servos. Telefone próprio de alguma ficha, exceção
+// registrada pela coordenação e número que não é de família nenhuma (o do Tarcísio) não são intrusos.
+// `participantes` e `excecoes` usam os últimos 8 dígitos; excecoes tem chaves 'papel:fim'.
+export function intrusosDeFamilia({ participantes, fichas, papel, excecoes = new Set(), ignorar = new Set() }) {
+  const proprios = new Set(fichas.map((f) => fim(f.telefone)).filter(Boolean))
+  const familia = new Map()
+  for (const f of fichas) {
+    for (const campo of ['celular_responsavel', 'celular_mae', 'celular_recado']) {
+      const v = fim(f[campo])
+      if (!v) continue
+      if (!familia.has(v)) familia.set(v, [])
+      familia.get(v).push({ nome: f.nome, campo: campo.replace('celular_', '') })
+    }
+  }
+  const achados = []
+  for (const p of participantes) {
+    if (!p || proprios.has(p) || ignorar.has(p) || excecoes.has(`${papel}:${p}`)) continue
+    if (familia.has(p)) achados.push({ fim: p, membros: familia.get(p) })
+  }
+  return achados
 }
 const COLUNA = { servo: 'no_grupo_whatsapp', pais: 'no_grupo_pais', cerimoniarios: 'no_grupo_cerimoniarios' }
 const NOME_GRUPO = { servo: 'Acólitos e Coroinhas', pais: 'Pais', cerimoniarios: 'Cerimoniários' }
@@ -67,7 +92,7 @@ export function criarPresencaGrupos({ db, evo, log = console }) {
       if (g) { const l = await lerLista(g.jid, papel); if (l) listas[chave] = l }
     }
     if (!Object.keys(listas).length) return { lidos: 0 }
-    const fichas = exigir(await db.from('acolitos_membros').select('id,nivel,telefone,celular_responsavel,celular_mae,celular_recado,no_grupo_whatsapp,no_grupo_pais,no_grupo_cerimoniarios').limit(5000), 'ler fichas')
+    const fichas = exigir(await db.from('acolitos_membros').select('id,nome,nivel,telefone,celular_responsavel,celular_mae,celular_recado,no_grupo_whatsapp,no_grupo_pais,no_grupo_cerimoniarios').limit(5000), 'ler fichas')
     let mudou = 0
     for (const f of fichas) {
       const novo = calcularPresenca(f, listas)
@@ -76,6 +101,21 @@ export function criarPresencaGrupos({ db, evo, log = console }) {
       exigir(await db.from('acolitos_membros').update(diff).eq('id', f.id), 'gravar presença')
       mudou++
     }
+    // Família dentro de grupo de servos: avisa a coordenação (uma pendência por número e grupo, enquanto estiver aberta).
+    let excecoes = new Set()
+    try { const r = await db.from('tarcisio_grupo_excecoes').select('numero_fim,papel'); if (!r.error && Array.isArray(r.data)) excecoes = new Set(r.data.map((e) => `${e.papel}:${e.numero_fim}`)) } catch (_) { /* tabela ainda não existe: sem exceções */ }
+    let intrusos = 0
+    for (const [chave, papel] of [['servo', 'acolitos'], ['cerimoniarios', 'cerimoniarios']]) {
+      if (!listas[chave]) continue
+      for (const x of intrusosDeFamilia({ participantes: listas[chave], fichas, papel, excecoes })) {
+        const abertas = exigir(await db.from('tarcisio_pendencias').select('id').eq('tipo', 'coordenacao').eq('estado', 'aberta').contains('dados', { intruso_grupo: papel, numero_fim: x.fim }), 'ler pendências de intruso')
+        if (abertas.length) continue
+        const de = x.membros.slice(0, 3).map((m) => `${m.nome} (${m.campo})`).join(', ')
+        exigir(await db.from('tarcisio_pendencias').insert({ tipo: 'coordenacao', numero: x.fim, resumo: `Número de família no grupo ${NOME_GRUPO[chave]}: ${de}, final ${x.fim.slice(-4)}. Esse grupo é só dos servos — remova do grupo ou registre a exceção.`, dados: { intruso_grupo: papel, numero_fim: x.fim, membros: x.membros } }), 'avisar coordenação do intruso')
+        intrusos++
+      }
+    }
+    if (intrusos) log.warn(`presença nos grupos: ${intrusos} número(s) de família em grupo de servos; coordenação avisada`)
     const iso = new Date(+agora).toISOString()
     for (const [chave, , coluna] of PAPEIS) {
       if (listas[chave]) exigir(await db.from('acolitos_membros').update({ [coluna]: iso }).not('id', 'is', null), 'gravar conferência')

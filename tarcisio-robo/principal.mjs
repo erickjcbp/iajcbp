@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js'
 import { criarEvolution, lerMensagemRecebida } from './evolution.mjs'
 import { criarValidacaoContato } from './validacao-contato.mjs'
 import { criarPresencaGrupos } from './presenca-grupos.mjs'
+import { criarGuardaGrupos } from './guarda-grupos.mjs'
 import { criarRobo, RITMO_PRODUCAO } from './robo.mjs'
 import { criarIA } from './ia.mjs'
 import { criarAcolhida } from './acolhida.mjs'
@@ -24,7 +25,10 @@ const precisa = (nome) => {
 }
 
 const db = createClient(precisa('SUPABASE_URL'), precisa('SUPABASE_SERVICE_KEY'), { auth: { persistSession: false } })
-const evo = criarEvolution({ url: precisa('EVOLUTION_URL'), chave: precisa('EVOLUTION_API_KEY'), instancia: process.env.EVOLUTION_INSTANCIA || 'SaoTarcisio' })
+const evoBruto = criarEvolution({ url: precisa('EVOLUTION_URL'), chave: precisa('EVOLUTION_API_KEY'), instancia: process.env.EVOLUTION_INSTANCIA || 'SaoTarcisio' })
+// Porta única de entrada nos grupos de servos: família entra no grupo de Pais, nunca no de Acólitos/Cerimoniários
+// (guarda-grupos.mjs). Vale para a acolhida, a coleta de contato e a validação de contato — e para o que vier depois.
+const evo = criarGuardaGrupos({ db, evo: evoBruto, log: console })
 const ia = process.env.ANTHROPIC_API_KEY ? criarIA({ chave: process.env.ANTHROPIC_API_KEY }) : null
 const acolhida = criarAcolhida({ db, evo, ia, supabaseUrl: process.env.SUPABASE_URL, videoIntegracao: `${String(process.env.SUPABASE_URL).replace(/\/$/, '')}/storage/v1/object/public/tarcisio/integracao/apresentacao-pastoral-v1.mp4` })
 const assistente = criarAssistente({ db, evo, ia, acolhida })
