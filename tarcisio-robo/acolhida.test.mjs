@@ -117,3 +117,41 @@ test('se novo responsável não entra no grupo, não remove antigo nem muda cada
 });
 
 test('contato novo em integração zera só o passo do vídeo, para o vídeo seguir a acolhida',()=>{const st=[{membro_id:'m1',acolhido_em:'2026-10-20T18:00:00Z',ultimo_encontro:0,integracao_passo:1}],base={membros:[m],crm:[{...c,etapa:'integracao'}],estados:st,agora};const r=planejar({...base,envios:[{membros:['m1'],numero:'5519900000000'}]});assert.equal(r.planos[0].tipo,'acolhida');assert.deepEqual(r.planos[0].refazerVideo,['m1']);});
+
+// ── Ritmo de grupo (restrição do WhatsApp, 05/11/2026) ────────────────────────────────────────────
+function cenarioGrupo({ liberado = { ok: true }, aceita = true, jovem = false } = {}) {
+  const adds = [], rpcs = [], membro = jovem ? { ...m, data_nascimento: '2012-01-01', responsavel_whatsapp: true } : { ...m, responsavel_whatsapp: true }
+  const grupos = [{ jid: 'pais@g.us', nome: 'Pais', papel: 'pais' }, { jid: 'ac@g.us', nome: 'Acólitos', papel: 'acolitos' }], part = { 'pais@g.us': new Set(), 'ac@g.us': new Set() }
+  const db = bancoMemoria({ tarcisio_acolhida_config: [{ id: true, ativa: true }], acolitos_crm: [{ membro_id: 'm1', etapa: 'whatsapp' }], acolitos_membros: [membro],
+    tarcisio_acolhida: [{ membro_id: 'm1', acolhido_em: '2026-10-20T11:00:00Z', marcos: { integracao_realizada: { em: 'x' } } }], tarcisio_acolhida_envios: [], tarcisio_envios: [], tarcisio_pendencias: [], acolitos_celebracoes: [], tarcisio_grupos: grupos, tarcisio_acolhida_propostas: [] })
+  db.rpc = async (n, a) => { rpcs.push([n, a.p_membro]); return { data: { ok: true }, error: null } }
+  const evo = { participantes: async (j) => [...part[j]], adicionarAoGrupo: async (j, ns) => { adds.push([j, ns]); if (aceita) ns.forEach((n) => part[j].add(n)); return {} },
+    linkConvite: async () => 'https://chat.whatsapp.com/XYZ', numerosComWhatsapp: async (ns) => ns.map((numero) => ({ numero, existe: true })), gruposLiberados: async () => liberado }
+  return { db, evo, adds, rpcs }
+}
+const T0 = new Date('2026-10-28T15:00:00Z')
+test('grupos em pausa: não tenta entrar, não marca a tentativa e NÃO manda link de convite à família', async () => {
+  const c = cenarioGrupo({ liberado: { ok: false, motivo: 'pausa' } })
+  await criarAcolhida({ db: c.db, evo: c.evo, relogio: () => T0 }).cuidar(T0, { pausado: false })
+  assert.equal(c.adds.length, 0)
+  assert.equal((await c.db.from('tarcisio_envios').select('*')).data.filter((e) => /^grupo-convite:/.test(e.chave_unica)).length, 0)
+  assert.ok(!(await c.db.from('tarcisio_acolhida').select('*')).data[0].marcos.grupo_tentativa, 'a tentativa continua disponível para depois')
+})
+test('dois grupos para o mesmo servo: um por rodada (o ritmo de grupo é uma operação por vez)', async () => {
+  const c = cenarioGrupo({ jovem: true })
+  const a = criarAcolhida({ db: c.db, evo: c.evo, relogio: () => T0 })
+  await a.cuidar(T0, { pausado: false })
+  assert.equal(c.adds.length, 1, 'só o primeiro alvo na 1ª rodada')
+  assert.ok(!(await c.db.from('tarcisio_acolhida').select('*')).data[0].marcos.grupo_tentativa, 'ainda falta o segundo: não marca tentativa nem manda convite')
+  assert.equal((await c.db.from('tarcisio_envios').select('*')).data.filter((e) => /^grupo-convite:/.test(e.chave_unica)).length, 0)
+  await a.cuidar(new Date(+T0 + 61_000), { pausado: false })   // a acolhida só roda de 60 em 60 s
+  assert.equal(c.adds.length, 2, 'o segundo alvo na rodada seguinte')
+  assert.notDeepEqual(c.adds[0][0], c.adds[1][0], 'grupos diferentes')
+  await a.cuidar(new Date(+T0 + 122_000), { pausado: false })
+  assert.ok(c.rpcs.some((r) => r[0] === 'tarcisio_acolhida_grupo_confirmado'), 'com os dois dentro, confirma')
+})
+test('sem gruposLiberados no cliente (testes antigos) o comportamento é o de antes', async () => {
+  const c = cenarioGrupo(); delete c.evo.gruposLiberados
+  await criarAcolhida({ db: c.db, evo: c.evo, relogio: () => T0 }).cuidar(T0, { pausado: false })
+  assert.ok(c.adds.length >= 1)
+})

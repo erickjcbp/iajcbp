@@ -239,6 +239,8 @@ export function criarValidacaoContato({ db, evo, ia = null, relogio = () => new 
     }
     const nome = ficha.nome.split(' ')[0]
     if (teste) return { nome }
+    // Grupo em pausa ou no intervalo (restrição do WhatsApp, 05/11/2026): não grava telefone sem poder incluir no grupo.
+    if (evo.gruposLiberados) { const lib = await evo.gruposLiberados(); if (!lib.ok) return { motivo: 'entrada em grupo em pausa por segurança do WhatsApp' } }
     if (!digitos || reaproveitado) {
       const feitas = exigir(await db.from('acolitos_membros').update({ telefone: novo.replace(/^55/, '') }).eq('id', ficha.id).or(reaproveitado ? `telefone.eq.${ficha.telefone}` : 'telefone.is.null,telefone.eq.').select('id'), 'gravar telefone do filho')
       if (!feitas.length) return { motivo: 'ficha ganhou telefone durante a validação' }

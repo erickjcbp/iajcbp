@@ -496,7 +496,10 @@ test('ritmo: fila com item mantém o envio quente (lote não sai a 1 por minuto)
   const evo = { estado: async () => 'open', numeroConectado: async () => '5519900000000',
     enviarTexto: async () => { enviadas++; fila.shift() } }
   const robo = criarRobo({ db, evo, supabaseUrl: 'https://p.supabase.co', ritmo: RITMO_PRODUCAO, relogio: () => new Date(agora), rnd: () => 0, log: silencioso })
-  for (let i = 0; i < 40 && fila.length; i++) { await robo.rodada(); agora += 5_000 }   // até 200 s em rodadas de 5 s
-  assert.equal(enviadas, 3, `os 3 saíram (saíram ${enviadas}): sem o "quente" seriam 1 a cada 60 s`)
-  assert.ok(agora - Date.parse('2026-10-20T15:00:00Z') < 120_000, 'em menos de 2 min, não 3 min')
+  for (let i = 0; i < 100 && fila.length; i++) { await robo.rodada(); agora += 5_000 }   // até 500 s em rodadas de 5 s
+  assert.equal(enviadas, 3, `os 3 saíram (saíram ${enviadas})`)
+  const gasto = agora - Date.parse('2026-10-20T15:00:00Z')
+  // Pausa entre envios = 90 s (rnd 0): 3 mensagens = 2 pausas = 180 s. Sem o "quente" cada envio ainda esperaria
+  // até 60 s de polling por cima da pausa (>= 300 s).
+  assert.ok(gasto >= 180_000 && gasto < 200_000, `no ritmo da pausa, sem espera extra do polling (gastou ${gasto / 1000} s)`)
 })

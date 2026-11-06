@@ -318,9 +318,10 @@ export function criarRobo({ db, evo, supabaseUrl, ia = null, assistente = null, 
     const reservada = exigir(await db.from('tarcisio_envios').update({ estado: 'enviando' })
       .eq('id', item.id).eq('estado', 'pendente').select('id'), 'reservar envio')
     if (!reservada.length) return
-    // Fila com item: mantém o envio no passo de 5 s por mais 1 min. Sem isto, um lote (lembretes das
-    // 19h) sairia a 1 mensagem por minuto no ritmo lento; esfria sozinho quando a fila esvazia.
-    if (ritmo) acordar(['envio'])
+    // Fila com item: mantém o envio no passo de 5 s por mais 5 min (a pausa entre envios é de 90–180 s, maior que 1 min:
+    // com a janela de 1 min o envio esfriava no meio da pausa e perdia até 60 s). Durante a pausa a rodada nem consulta
+    // o banco (enviarProximo sai antes). Esfria sozinho quando a fila esvazia.
+    if (ritmo) acordar(['envio'], 5 * MINUTO)
     const destino = item.destino_jid || item.destino_numero
     // Avisos e comunicados sem arte própria levam a peça oficial ATENÇÃO.
     const avisoGrupoTexto = item.tipo === 'aviso' && String(item.destino_jid || '').endsWith('@g.us')

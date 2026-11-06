@@ -48,7 +48,12 @@ export function criarAcolhida({db,evo=null,relogio=()=>new Date(),log=console,vi
    if(alvos.some(a=>!por[a.papel]))continue;
    const faltam=async fresco=>{const f=[];for(const a of alvos)if(!(await lista(por[a.papel].jid,fresco)).has(a.n))f.push(a);return f;};
    let f=await faltam(false),tent=st.marcos.grupo_tentativa;
-   if(f.length&&!tent){for(const a of f){try{await evo.adicionarAoGrupo(por[a.papel].jid,[a.n]);}catch(e){log.warn('Acolhida: não foi possível adicionar ao grupo ('+e.message+')');}}
+   if(f.length&&!tent){
+    // RITMO DE GRUPO (restrição do WhatsApp, 05/11/2026): em pausa ou no intervalo, nada é tentado, a tentativa NÃO é
+    // marcada e nenhum link de convite vai à família (a mensagem diria que a privacidade impediu, e não foi isso).
+    const lib=evo.gruposLiberados?await evo.gruposLiberados():{ok:true};if(!lib.ok)continue;
+    const a=f[0];try{await evo.adicionarAoGrupo(por[a.papel].jid,[a.n]);}catch(e){log.warn('Acolhida: não foi possível adicionar ao grupo ('+e.message+')');if(e?.name==='ErroGruposLimitados'||e?.name==='ErroGrupoProtegido')continue;}
+    if(f.length>1)continue; // sobrou outro grupo: um por rodada, no ritmo permitido
     exigir(await db.from('tarcisio_acolhida').update({marcos:{...st.marcos,grupo_tentativa:{em:new Date(+agora).toISOString()}}}).eq('membro_id',m.id),'registrar tentativa de grupo');st.marcos={...st.marcos,grupo_tentativa:{em:new Date(+agora).toISOString()}};tent=st.marcos.grupo_tentativa;
     await new Promise(r=>setTimeout(r,3000));f=await faltam(true);
     if(f.length&&!tent.convite){for(const a of f){const url=await evo.linkConvite(por[a.papel].jid).catch(()=>null);if(url)await enviar(m,a.n,`grupo-convite:${m.id}:${a.papel}`,`Olá! Tentei colocar você no grupo "${por[a.papel].nome}", mas as configurações de privacidade do WhatsApp não deixaram. Entre pelo link: ${url}\n\nDepois me avise por aqui. 🙏`);}
@@ -96,6 +101,7 @@ if(!['pausar','retomar','interacao'].includes(marco)){const sem=x=>String(x).nor
   let parecer;try{const cfg=exigir(await db.from('tarcisio_config').select('ia_modelo').eq('id',1).single(),'modelo da troca');parecer=await ia?.avaliarTrocaResponsavel({modelo:cfg.ia_modelo,membro:m,novo_numero:novo,retirar_solicitante:retirar,mensagens:recentes});}catch{return {erro:'não foi possível conferir o pedido; nenhuma troca foi feita'};}
   if(!parecer?.confirmado)return {erro:parecer?.motivo||'confirme de quem é o novo número e se deseja a troca',confirmacao_necessaria:true};
   if(!evo?.numerosComWhatsapp||!evo?.participantes||!evo?.adicionarAoGrupo||(retirar&&!evo?.removerDoGrupo))return {erro:'gateway indisponível para concluir a troca'};
+  if(evo.gruposLiberados){const lib=await evo.gruposLiberados();if(!lib.ok)return {erro:'entrada e saída de grupo estão em pausa por segurança do WhatsApp; a troca não foi feita. Tentar de novo depois.'};}
   const wa=await evo.numerosComWhatsapp([novo]);if(!wa.some(x=>x.existe&&normalizarNumero(x.numero)===novo))return {erro:'o novo número não foi confirmado no WhatsApp; peça para conferir o telefone',confirmacao_necessaria:true};
   const grupo=exigir(await db.from('tarcisio_grupos').select('jid,nome').eq('papel','pais').single(),'grupo de Pais');if(!grupo?.jid)return {erro:'grupo de Pais não configurado'};
   const lista=async()=>new Set((await evo.participantes(grupo.jid)).map(x=>normalizarNumero(x)||x));

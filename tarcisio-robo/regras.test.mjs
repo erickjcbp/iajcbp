@@ -97,8 +97,8 @@ test('repetição: diária, semanal, mensal no fim do mês e fim pela data final
 })
 
 test('pausa entre envios fica entre 20 e 40 segundos', () => {
-  assert.equal(pausaEntreEnvios(() => 0), 20_000)
-  assert.equal(pausaEntreEnvios(() => 0.999), 39_980)
+  assert.equal(pausaEntreEnvios(() => 0), 90_000)
+  assert.equal(pausaEntreEnvios(() => 0.999), 179_910)
 })
 
 import { semanaDe, semanaConfirmada, membrosDoNumero, comIrmaosJuntos, candidatosPorNome, cumprimentoValido } from './regras.mjs'

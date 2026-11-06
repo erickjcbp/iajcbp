@@ -97,6 +97,9 @@ export function criarContatoServos({db,evo}) {
   async function executar(c, acao, entrada, hist, atuais) {
     if(acao==='continuar_coleta')return continuar(c,hist,atuais)
     if(!FERRAMENTAS_CONTATO.some(f=>f.name===acao)) return {erro:'Ação fora da coleta.'}
+    // Entrada/saída de grupo em pausa ou no intervalo (restrição do WhatsApp, 05/11/2026): decide ANTES de gravar
+    // qualquer coisa na ficha, para a coleta não ficar pela metade (telefone salvo, grupo não).
+    if(evo.gruposLiberados){const lib=await evo.gruposLiberados();if(!lib.ok)return {erro:'Entrada e saída de grupo estão em pausa por segurança do WhatsApp; a ficha não foi alterada. Retomar a coleta depois.'}}
     const responsavelConfirmado=!!normalizarNumero(c.campanha.destino_numero)&&normalizarNumero(c.membro.celular_responsavel)===normalizarNumero(c.campanha.destino_numero)
     const prova=conferirEvidencias({campanha:c.campanha,mensagens:hist,atuais,entrada,acao,responsavelConfirmado})
     if(!prova.ok) return prova

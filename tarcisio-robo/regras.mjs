@@ -182,8 +182,10 @@ export function proximaVez(quandoIso, repetir, ate) {
   return d.toISOString()
 }
 
-// Pausa entre envios: 20–40 s, sorteada, para o número não parecer robô em rajada.
-export const pausaEntreEnvios = (rnd = Math.random) => 20_000 + Math.floor(rnd() * 20_000)
+// Pausa entre envios: 90–180 s, sorteada, para o número não parecer robô em rajada.
+// Era 20–40 s até 05/11/2026, quando o WhatsApp restringiu o número do Tarcísio (dia com 86 envios contra ~35 de média).
+// Com 90–180 s (média 135 s) saem ~26 mensagens por hora: os 30–50 lembretes das 19h cabem antes das 21h.
+export const pausaEntreEnvios = (rnd = Math.random) => 90_000 + Math.floor(rnd() * 90_000)
 
 // Imagem só das pastas do próprio projeto (avisos e artes da escala). A Evolution baixa o link de
 // DENTRO da VPS: um link livre a faria buscar endereços internos (a Evolution da SATOR ou da Pink).

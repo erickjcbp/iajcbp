@@ -53,3 +53,20 @@ retirou antes do robô): 72 → 68 participantes. O número do grupo que apareci
   lado do WhatsApp** (Aparelhos conectados, no celular do Tarcísio). Não é falha do robô.
 - Efeito: nada sai nem entra pelo Tarcísio; 21 envios ficaram pendentes.
 - Para religar é preciso ler um QR com o celular do Tarcísio (Aparelhos conectados → Conectar um aparelho).
+
+## Terceira ocorrência — restrição do WhatsApp (~20 h) e ritmo conservador
+- O dono avisou na noite de 05/11 que o WhatsApp **restringiu** o número do Tarcísio por cerca de 20 horas: mensagens
+  normais ainda saem, mas o número ficou restrito. **A causa não foi confirmada.** Hipótese de trabalho: o volume de
+  envios do dia (86, contra 18–49 nos dias anteriores) somado a mudanças de grupo em série.
+- O que mudou (mais conservador em tudo que mexe com o número):
+  - **Pausa entre mensagens da fila: 20–40 s → 90–180 s** (`regras.mjs`, ~26 mensagens por hora; os lembretes das 19h
+    ainda cabem antes das 21h).
+  - **Teto diário de envios: 150 → 70** (maior dia normal: 49). Ajustável no painel.
+  - **Entrada e saída de grupo:** pausa geral até **08/11/2026 00:00 UTC** (`tarcisio_config.pausa_grupos_ate`); depois
+    disso, no máximo **1 operação a cada 30 min e 3 números por 24 h**, registradas em `tarcisio_grupo_operacoes`
+    (só os 4 últimos dígitos). Vale para entrar **e** sair, em qualquer rotina (`guarda-grupos.mjs`).
+  - A acolhida, a coleta de contato e a validação de contato **perguntam antes** se podem mexer em grupo; em pausa ou
+    no intervalo, não gravam nada pela metade, não marcam a tentativa e **não mandam link de convite** à família.
+  - A acolhida adiciona **um grupo por rodada** (antes tentava os dois de uma vez).
+- Migration 149. Testes: guarda (19), acolhida (28), robô inteiro 326/326.
+- Para liberar antes do prazo ou estender: alterar `pausa_grupos_ate` (é só uma data) na tabela `tarcisio_config`.
